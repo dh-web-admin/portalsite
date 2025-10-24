@@ -1,0 +1,38 @@
+<?php
+// Shared Portal header
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
+$name = isset($_SESSION['name']) ? $_SESSION['name'] : 'User';
+$title = 'Employee Dashboard';
+
+// Determine role to set the title
+if (!empty($_SESSION['email'])) {
+    // Try to use DB to get the latest role
+    $configPath = __DIR__ . '/../config.php';
+    if (file_exists($configPath)) {
+        require_once $configPath;
+        if (isset($conn) && $conn instanceof mysqli) {
+            if ($stmt = $conn->prepare('SELECT role FROM users WHERE email = ? LIMIT 1')) {
+                $stmt->bind_param('s', $_SESSION['email']);
+                if ($stmt->execute()) {
+                    $res = $stmt->get_result();
+                    if ($res && $res->num_rows > 0) {
+                        $row = $res->fetch_assoc();
+                        if (isset($row['role']) && $row['role'] === 'admin') {
+                            $title = 'Admin Dashboard';
+                        }
+                    }
+                }
+                $stmt->close();
+            }
+        }
+    }
+}
+?>
+<div class="welcome-section">
+  <div class="welcome-left">
+    <h1>Welcome, <?php echo htmlspecialchars($name); ?></h1>
+    <h2><?php echo htmlspecialchars($title); ?></h2>
+  </div>
+    <img src="/PortalSite/assets/images/eportal.svg" alt="Portal logo" class="welcome-logo" />
+</div>

@@ -1,0 +1,66 @@
+/*----------------------------------*
+ * Dashboard Page Styles
+ * Used by: admin/dashboard.php
+ *---------------------------------*/
+
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start; /* Align items to the left */
+  margin: 20px 0;
+  gap: 15px;
+}
+
+.tile {
+  background: #3173d479;
+  border: none;
+  border-radius: 12px;
+  padding: 35px;
+  margin: 0;
+  text-align: left;
+  width: calc(33.333% - 10px);
+  min-height: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: rgb(255, 255, 255);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  cursor: pointer;
+}
+
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  background: #8c929c;
+}
+
+.tile h2 {
+  margin: 0;
+  font-size: 28px;
+  color: rgb(32, 30, 30);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+}
+
+.tile:hover h2 {
+  color: rgb(82, 48, 48);
+  transform: translateX(5px);
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 1024px) {
+  .tile {
+    width: calc(50% - 10px);
+  }
+}
+
+@media (max-width: 600px) {
+  .tile {
+    width: 100%;
+  }
+}

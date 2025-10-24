@@ -1,0 +1,259 @@
+/*----------------------------------*
+ * Admin Layout Styles
+ * Shared across all admin pages
+ * Used by: dashboard.php, user_list.php, register_new.php, 
+ *          remove_user.php, edit_user.php
+ *---------------------------------*/
+
+body.admin-page {
+  background: #ffffff;
+  min-height: 100vh;
+  padding: 0;
+  --admin-header-h: 160px; /* increased to allow a larger logo */
+}
+
+.admin-container {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/*----------------------------------*
+ * Admin Header (Welcome Section)
+ *---------------------------------*/
+
+.welcome-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 0;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--admin-header-h);
+  z-index: 1000;
+  display: flex;
+  flex-direction: row; /* text left, logo right */
+  align-items: center;
+  justify-content: space-between;
+}
+
+.welcome-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.welcome-section h1 {
+  color: white;
+  font-size: 32px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+.welcome-section h2 {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 24px;
+}
+
+.welcome-logo {
+  padding-top: 10px;
+  height: 100px; /* larger logo for better visibility */
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+}
+
+@media (max-width: 600px) {
+  .welcome-logo {
+    height: 80px;
+  }
+}
+
+/*----------------------------------*
+ * Admin Layout Structure
+ *---------------------------------*/
+
+.admin-layout {
+  display: flex;
+  margin-top: var(--admin-header-h);
+  min-height: calc(100vh - var(--admin-header-h));
+}
+
+/*----------------------------------*
+ * Side Navigation
+ *---------------------------------*/
+
+.side-nav {
+  width: 240px;
+  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+  color: white;
+  padding: 24px 16px;
+  padding-top: 0%;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: var(--admin-header-h);
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+}
+
+.side-nav h3 {
+  margin-bottom: 18px;
+  font-size: 18px;
+  letter-spacing: 0.4px;
+}
+
+.nav-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-size: 14px;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.adminnav {
+  background-color: #ffffff; /* white background */
+  color: #b91c1c; /* red text */
+  padding: 12px 16px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  display: block;
+  width: calc(
+    100% + 32px
+  ); /* extend to the side-nav edges (compensate for side-nav padding) */
+  margin-left: -16px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* Nav group / dropdown for side navigation */
+.nav-group {
+  margin-bottom: 12px;
+}
+
+.nav-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub-nav {
+  display: none;
+  margin-top: 6px;
+  padding-left: 6px;
+}
+
+.nav-group.open .sub-nav {
+  display: block;
+}
+
+.sub-nav .nav-btn {
+  padding-left: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 8px;
+}
+
+/* Logout button styling (distinct, but consistent) */
+.logout-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fff;
+  margin-top: auto; /* push logout to bottom */
+  display: block;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/*----------------------------------*
+ * Main Content Area
+ *---------------------------------*/
+
+.content-area {
+  flex: 1;
+  padding: 40px;
+  margin-left: 240px; /* account for fixed side-nav */
+  height: calc(100vh - var(--admin-header-h));
+  overflow-y: auto;
+}
+
+.main-content {
+  margin-top: 0;
+}
+
+.main-content h1 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/*----------------------------------*
+ * Role Edit Components (User List)
+ *---------------------------------*/
+
+.role-edit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.role-edit-wrap select.edit-role {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  color: #111;
+  font-size: 14px;
+}
+
+.role-caret {
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.role-caret:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Popup row for role editing (appears below the user row) */
+.role-popup-row {
+  background: rgba(102, 126, 234, 0.04);
+}
+
+.role-popup-row .nav-btn {
+  min-width: 80px;
+  height: 34px;
+  padding: 6px 10px;
+}
+
+.nav-btn.btn-edit,
+.nav-btn-remove {
+  width: 100px;
+  color: black;
+}

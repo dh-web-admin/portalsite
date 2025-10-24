@@ -1,0 +1,72 @@
+# PortalSite - Git Ignore File
+# Files and folders that should NOT be pushed to GitHub
+
+# Sensitive Configuration Files
+config/config.php
+
+# Backup Files
+*.bak
+*_backup.php
+*_old.php
+*.backup
+
+# Database Files
+*.sql
+*.sqlite
+*.db
+
+# Log Files
+*.log
+error_log
+debug.log
+
+# Temporary Files
+*.tmp
+*.temp
+*~
+
+# Windows System Files
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Mac System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Composer (if you add it later)
+vendor/
+composer.phar
+composer.lock
+
+# Node modules (if you add npm later)
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+
+# Cache directories
+cache/
+tmp/
+temp/
+
+# Upload directories (if you have user uploads)
+uploads/
+files/
+
+# Old/Legacy files
+home.html
+stylesheet.css
+remove_user.php
+user_list.php
+user_list_backup.php

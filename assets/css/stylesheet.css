@@ -1,0 +1,491 @@
+/*----------------------------------*
+ * Global / Reset styles
+ *---------------------------------*/
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/*----------------------------------*
+ * Page: Login (index.php)
+ *---------------------------------*/
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(180deg, #ffffff 0%, #e61c1c 50%, #cecf7b 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(220, 38, 38, 0.3) 0%,
+    rgba(107, 114, 128, 0.3) 100%
+  );
+  backdrop-filter: blur(100px);
+  z-index: 0;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+/*----------------------------------*
+ * Shared components
+ *---------------------------------*/
+
+.logo {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  margin: 0 auto 20px auto;
+  display: block;
+  object-fit: cover;
+}
+/*----------------------------------*
+ * Login page styles
+ * (applies to `index.php` login form)
+ *---------------------------------*/
+
+.login-container {
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-container h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.login-form label {
+  color: #555;
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: -12px;
+}
+
+.login-form input {
+  padding: 12px 16px;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.login-form input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.login-form button {
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-top: 10px;
+}
+
+.login-form button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.login-form button:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    padding: 30px 20px;
+  }
+
+  .login-container h1 {
+    font-size: 24px;
+  }
+}
+
+/*----------------------------------*
+ * Utility / Message styles
+ *---------------------------------*/
+
+.error-message {
+  background-color: #ffe5e5;
+  color: #d8000c;
+  padding: 10px 15px;
+  border: 1px solid #d8000c;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/*----------------------------------*
+ * Page: Register New (register_new.php)
+ *---------------------------------*/
+
+.register-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.form-group {
+  margin-bottom: 15px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.hint {
+  display: block;
+  margin-top: 6px;
+  color: white;
+  font-size: 12px;
+}
+.error {
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+.success {
+  color: white;
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.back-btn {
+  background-color: #666;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+.add-user-btn {
+  background-color: #497285;
+  color: white;
+  padding: 15px 30px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  text-decoration: none;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+.add-user-btn:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+}
+
+/*----------------------------------*
+ * Page: Admin Dashboard (admin_dashboard.php)
+ *---------------------------------*/
+
+body.admin-page {
+  background: #ffffff;
+  min-height: 100vh;
+  padding: 0;
+  --admin-header-h: 160px; /* increased to allow a larger logo */
+}
+
+.admin-container {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.welcome-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 0;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--admin-header-h);
+  z-index: 1000;
+  display: flex;
+  flex-direction: row; /* text left, logo right */
+  align-items: center;
+  justify-content: space-between;
+}
+.welcome-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.welcome-section h1 {
+  color: white;
+  font-size: 32px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+.welcome-section h2 {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 24px;
+}
+.welcome-logo {
+  padding-top: 10px;
+  height: 100px; /* larger logo for better visibility */
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+}
+@media (max-width: 600px) {
+  .welcome-logo {
+    height: 80px;
+  }
+}
+.bodycontent {
+  display: flex;
+  flex-wrap: row;
+}
+.addremove {
+  display: flex;
+  flex-direction: column;
+}
+.main-content {
+  margin-top: 50px;
+}
+.error {
+  color: white;
+}
+
+/*----------------------------------*
+ * Admin Dashboard - Side navigation
+ *---------------------------------*/
+.admin-layout {
+  display: flex;
+  margin-top: var(--admin-header-h);
+  min-height: calc(100vh - var(--admin-header-h));
+}
+.side-nav {
+  width: 240px;
+  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+  color: white;
+  padding: 24px 16px;
+  padding-top: 0%;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: var(--admin-header-h);
+  left: 0;
+  bottom: 0;
+  overflow-y: auto;
+}
+.side-nav h3 {
+  margin-bottom: 18px;
+  font-size: 18px;
+  letter-spacing: 0.4px;
+}
+.nav-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+}
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.content-area {
+  flex: 1;
+  padding: 40px;
+  margin-left: 240px; /* account for fixed side-nav */
+  height: calc(100vh - var(--admin-header-h));
+  overflow-y: auto;
+}
+.adminnav {
+  background-color: #ffffff; /* white background */
+  color: #b91c1c; /* red text */
+  padding: 12px 16px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  display: block;
+  width: calc(
+    100% + 32px
+  ); /* extend to the side-nav edges (compensate for side-nav padding) */
+  margin-left: -16px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* Nav group / dropdown for side navigation */
+.nav-group {
+  margin-bottom: 12px;
+}
+.nav-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sub-nav {
+  display: none;
+  margin-top: 6px;
+  padding-left: 6px;
+}
+.nav-group.open .sub-nav {
+  display: block;
+}
+.sub-nav .nav-btn {
+  padding-left: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 8px;
+}
+.sidecontent {
+  width: 200px;
+  background-color: white;
+  padding: 20px;
+}
+
+/* Logout button styling (distinct, but consistent) */
+.logout-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fff;
+  margin-top: auto; /* push logout to bottom */
+  display: block;
+}
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* Role edit wrapper: select + caret button */
+.role-edit-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.role-edit-wrap select.edit-role {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fff;
+  color: #111;
+  font-size: 14px;
+}
+.role-caret {
+  background: rgba(255, 255, 255, 0.06);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.role-caret:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Popup row for role editing (appears below the user row) */
+.role-popup-row {
+  background: rgba(102, 126, 234, 0.04);
+}
+.role-popup-row .nav-btn {
+  min-width: 80px;
+  height: 34px;
+  padding: 6px 10px;
+}
+.nav-btn.btn-edit,
+.nav-btn-remove {
+  width: 100px;
+  color: black;
+}
+/* admin main content tiles */
+.tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start; /* Align items to the left */
+  margin: 20px 0;
+  gap: 15px;
+}
+.tile {
+  background: #3173d479;
+  border: none;
+  border-radius: 12px;
+  padding: 35px;
+  margin: 0;
+  text-align: left;
+  width: calc(33.333% - 10px);
+  min-height: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: rgb(255, 255, 255);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  background: #8c929c;
+}
+.tile h2 {
+  margin: 0;
+  font-size: 28px;
+  color: rgb(32, 30, 30);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+}
+.tile:hover h2 {
+  color: rgb(82, 48, 48);
+  transform: translateX(5px);
+  letter-spacing: 0.5px;
+}

@@ -1,0 +1,131 @@
+/*----------------------------------*
+ * Register User Page Styles
+ * Used by: admin/register_new.php
+ *---------------------------------*/
+
+.register-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.register-container h1 {
+  margin-bottom: 25px;
+  color: #333;
+  font-size: 28px;
+}
+
+.register-container .form-group {
+  margin-bottom: 20px;
+}
+
+.register-container .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #333;
+}
+
+.register-container .form-group input,
+.register-container .form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.register-container .form-group input:focus,
+.register-container .form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.register-container .hint {
+  display: block;
+  margin-top: 6px;
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.register-container .error {
+  color: #ef4444;
+  background: #fee2e2;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #ef4444;
+}
+
+.register-container .success {
+  color: #15803d;
+  background: #dcfce7;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-left: 4px solid #15803d;
+}
+
+.add-user-btn {
+  background-color: #667eea;
+  color: white;
+  padding: 14px 30px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.add-user-btn:hover {
+  background-color: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.add-user-btn:active {
+  transform: translateY(0);
+}
+
+/* Password strength indicator */
+.password-strength {
+  margin-top: 8px;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.password-strength-bar {
+  height: 100%;
+  width: 0;
+  transition: all 0.3s ease;
+}
+
+.password-strength-bar.weak {
+  width: 33%;
+  background: #ef4444;
+}
+
+.password-strength-bar.medium {
+  width: 66%;
+  background: #f59e0b;
+}
+
+.password-strength-bar.strong {
+  width: 100%;
+  background: #10b981;
+}
