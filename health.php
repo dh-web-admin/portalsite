@@ -5,6 +5,11 @@ echo "ok\n";
 echo 'php: ' . PHP_VERSION . "\n";
 echo 'sapi: ' . php_sapi_name() . "\n";
 echo 'mysqli: ' . (function_exists('mysqli_connect') ? 'yes' : 'no') . "\n";
+echo 'php_extensions_env: ' . (getenv('PHP_EXTENSIONS') ?: '(not set)') . "\n";
+echo 'php_ini: ' . (php_ini_loaded_file() ?: '(none)') . "\n";
+// Show a compact list of loaded extensions
+$ext = get_loaded_extensions(); sort($ext);
+echo 'extensions_loaded: ' . implode(',', array_slice($ext, 0, min(20, count($ext)))) . (count($ext) > 20 ? ',...' : '') . "\n";
 
 // Test basic file access
 $paths = [
