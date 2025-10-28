@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../session_init.php';
 
 // Check if user is logged in and is admin
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {

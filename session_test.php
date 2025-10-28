@@ -19,4 +19,8 @@ echo "cookies: " . json_encode($_COOKIE) . "\n";
 // Also show headers that might affect cookies
 echo "cookie_params: " . json_encode(session_get_cookie_params()) . "\n";
 
+// Show session backend info
+echo "save_handler: " . (ini_get('session.save_handler') ?: '(default)') . "\n";
+echo "save_path: " . (ini_get('session.save_path') ?: '(none)') . "\n";
+
 ?>
