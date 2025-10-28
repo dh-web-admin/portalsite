@@ -3,6 +3,10 @@
 header('Content-Type: text/plain');
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
+// Avoid mysqli throwing exceptions that kill the script; we'll handle errors manually
+if (function_exists('mysqli_report')) {
+    mysqli_report(MYSQLI_REPORT_OFF);
+}
 
 echo "create_admin start\n";
 
@@ -47,31 +51,48 @@ if (!$conn->query($createSql)) {
 
 // Repair schema if table exists but id is not AUTO_INCREMENT/PRIMARY KEY
 echo "Verifying users.id is AUTO_INCREMENT PRIMARY KEY...\n";
-$needsRepair = false;
-$autoSql = "SELECT EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'id'";
-$res = $conn->query($autoSql);
-if ($res && $row = $res->fetch_assoc()) {
-    $extra = strtolower($row['EXTRA'] ?? '');
-    if (strpos($extra, 'auto_increment') === false) {
-        $needsRepair = true;
-    }
-} else {
-    // If we can't read schema info, attempt repair anyway
-    $needsRepair = true;
+
+// Check if id has AUTO_INCREMENT
+$autoSql = "SELECT LOWER(EXTRA) AS extra FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'id'";
+$autoRes = $conn->query($autoSql);
+$hasAuto = false;
+if ($autoRes && ($row = $autoRes->fetch_assoc())) {
+    $hasAuto = (strpos($row['extra'] ?? '', 'auto_increment') !== false);
 }
-if ($needsRepair) {
-    echo "Applying schema repair for users.id...\n";
-    // Try to ensure id is not null
-    if (!$conn->query("ALTER TABLE users MODIFY COLUMN id INT NOT NULL")) {
-        echo "Note: MODIFY id NOT NULL may have failed: " . $conn->error . "\n";
+
+// Check if a PRIMARY KEY exists and which columns it covers
+$pkSql = "SELECT GROUP_CONCAT(k.COLUMN_NAME ORDER BY k.ORDINAL_POSITION) AS pk_cols\n          FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS t\n          JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k\n            ON t.CONSTRAINT_NAME = k.CONSTRAINT_NAME\n           AND t.TABLE_SCHEMA = k.TABLE_SCHEMA\n           AND t.TABLE_NAME = k.TABLE_NAME\n         WHERE t.TABLE_SCHEMA = DATABASE()\n           AND t.TABLE_NAME = 'users'\n           AND t.CONSTRAINT_TYPE = 'PRIMARY KEY'";
+$pkRes = $conn->query($pkSql);
+$pkCols = '';
+if ($pkRes && ($row = $pkRes->fetch_assoc())) {
+    $pkCols = (string)($row['pk_cols'] ?? '');
+}
+
+// If PK exists but not on id, drop it first (fresh schema safety)
+if ($pkCols !== '' && strtolower(trim($pkCols)) !== 'id') {
+    echo "Primary key exists on ($pkCols); switching to id...\n";
+    if (!$conn->query("ALTER TABLE users DROP PRIMARY KEY")) {
+        echo "Note: DROP PRIMARY KEY failed: " . $conn->error . "\n";
     }
-    // Try to add AUTO_INCREMENT
-    if (!$conn->query("ALTER TABLE users MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT")) {
-        echo "Note: ADD AUTO_INCREMENT may have failed: " . $conn->error . "\n";
-    }
-    // Try to add PRIMARY KEY on id
+    $pkCols = '';
+}
+
+// Ensure id is NOT NULL
+if (!$conn->query("ALTER TABLE users MODIFY COLUMN id INT NOT NULL")) {
+    echo "Note: MODIFY id NOT NULL may have failed: " . $conn->error . "\n";
+}
+
+// Ensure PK on id if missing
+if ($pkCols === '') {
     if (!$conn->query("ALTER TABLE users ADD PRIMARY KEY (id)")) {
-        echo "Note: ADD PRIMARY KEY may have failed (already exists?): " . $conn->error . "\n";
+        echo "Note: ADD PRIMARY KEY (id) failed or already exists: " . $conn->error . "\n";
+    }
+}
+
+// Ensure AUTO_INCREMENT on id
+if (!$hasAuto) {
+    if (!$conn->query("ALTER TABLE users MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT")) {
+        echo "Note: ADD AUTO_INCREMENT failed: " . $conn->error . "\n";
     }
 }
 
