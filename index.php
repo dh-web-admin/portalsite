@@ -1,5 +1,6 @@
 <?php
-// Root index - redirects to login page
-header("Location: /PortalSite/auth/login.php");
-exit();
+// Root index - redirect to login page using a relative path
+// Works on both local (http://localhost/PortalSite/) and production (domain root)
+header('Location: auth/login.php');
+exit;
 ?>
