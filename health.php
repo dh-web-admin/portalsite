@@ -8,33 +8,34 @@ echo 'mysqli: ' . (function_exists('mysqli_connect') ? 'yes' : 'no') . "\n";
 
 // Test basic file access
 $paths = [
-  __DIR__ . '/auth/login.php',
-  __DIR__ . '/config/config.php',
-  __DIR__ . '/admin/create_admin.php'
+    __DIR__ . '/auth/login.php',
+    __DIR__ . '/config/config.php',
+    __DIR__ . '/admin/create_admin.php'
 ];
 foreach ($paths as $p) {
-  echo basename($p) . ': ' . (file_exists($p) ? 'found' : 'missing') . "\n";
+    echo basename($p) . ': ' . (file_exists($p) ? 'found' : 'missing') . "\n";
 }
 
-// Try DB connect using our config; on failure config.php will print a generic message and exit
-echo "db_connect: ";
-ob_start();
-$ok = true;
-try {
-    require __DIR__ . '/config/config.php';
-} catch (Throwable $e) {
-    $ok = false;
-}
-$buff = ob_get_clean();
-if (isset($conn) && $conn instanceof mysqli && empty($conn->connect_error)) {
-    echo "ok\n";
-    // Check users table exists
-    $res = $conn->query("SHOW TABLES LIKE 'users'");
+// Try DB connect using env vars directly (avoid config.php die())
+$host = getenv('DB_HOST') ?: 'localhost';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASSWORD') ?: '';
+$name = getenv('DB_NAME') ?: 'railway';
+$port = (int)(getenv('DB_PORT') ?: 3306);
+
+echo 'db_host: ' . $host . "\n";
+echo 'db_port: ' . $port . "\n";
+echo 'db_name: ' . $name . "\n";
+
+$mysqli = @new mysqli($host, $user, $pass, $name, $port);
+if ($mysqli && !$mysqli->connect_error) {
+    echo "db_connect: ok\n";
+    $res = $mysqli->query("SHOW TABLES LIKE 'users'");
     echo 'users_table: ' . (($res && $res->num_rows > 0) ? 'present' : 'missing') . "\n";
 } else {
-    echo "fail\n";
-    if (!empty($buff)) {
-        echo "note: config output suppressed in prod\n";
+    echo "db_connect: fail\n";
+    if ($mysqli && $mysqli->connect_error) {
+        echo 'db_error: ' . $mysqli->connect_error . "\n";
     }
 }
 ?>
