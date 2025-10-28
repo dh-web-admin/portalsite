@@ -45,6 +45,36 @@ if (!$conn->query($createSql)) {
     exit;
 }
 
+// Repair schema if table exists but id is not AUTO_INCREMENT/PRIMARY KEY
+echo "Verifying users.id is AUTO_INCREMENT PRIMARY KEY...\n";
+$needsRepair = false;
+$autoSql = "SELECT EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'id'";
+$res = $conn->query($autoSql);
+if ($res && $row = $res->fetch_assoc()) {
+    $extra = strtolower($row['EXTRA'] ?? '');
+    if (strpos($extra, 'auto_increment') === false) {
+        $needsRepair = true;
+    }
+} else {
+    // If we can't read schema info, attempt repair anyway
+    $needsRepair = true;
+}
+if ($needsRepair) {
+    echo "Applying schema repair for users.id...\n";
+    // Try to ensure id is not null
+    if (!$conn->query("ALTER TABLE users MODIFY COLUMN id INT NOT NULL")) {
+        echo "Note: MODIFY id NOT NULL may have failed: " . $conn->error . "\n";
+    }
+    // Try to add AUTO_INCREMENT
+    if (!$conn->query("ALTER TABLE users MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT")) {
+        echo "Note: ADD AUTO_INCREMENT may have failed: " . $conn->error . "\n";
+    }
+    // Try to add PRIMARY KEY on id
+    if (!$conn->query("ALTER TABLE users ADD PRIMARY KEY (id)")) {
+        echo "Note: ADD PRIMARY KEY may have failed (already exists?): " . $conn->error . "\n";
+    }
+}
+
 echo "Clearing existing admin (if any)...\n";
 if (!$conn->query("DELETE FROM users WHERE email='admin'")) {
     http_response_code(500);
