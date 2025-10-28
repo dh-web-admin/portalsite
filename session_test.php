@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: text/plain');
-session_start();
+require_once __DIR__ . '/session_init.php';
 
 // Bump a counter to verify persistence
 if (!isset($_SESSION['__test_counter'])) {
