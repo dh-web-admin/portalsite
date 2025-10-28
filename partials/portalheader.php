@@ -8,7 +8,8 @@ $title = 'Employee Dashboard';
 // Determine role to set the title
 if (!empty($_SESSION['email'])) {
     // Try to use DB to get the latest role
-    $configPath = __DIR__ . '/../config.php';
+    // Load DB config from the correct path
+    $configPath = __DIR__ . '/../config/config.php';
     if (file_exists($configPath)) {
         require_once $configPath;
         if (isset($conn) && $conn instanceof mysqli) {
