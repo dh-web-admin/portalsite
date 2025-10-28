@@ -27,6 +27,14 @@ echo 'db_host: ' . $host . "\n";
 echo 'db_port: ' . $port . "\n";
 echo 'db_name: ' . $name . "\n";
 
+// If mysqli extension isn't loaded, skip attempting connection to avoid fatal error
+$hasMysqli = function_exists('mysqli_connect') && class_exists('mysqli');
+if (!$hasMysqli) {
+    echo "db_connect: skipped (mysqli extension not loaded)\n";
+    echo "hint: set PHP_EXTENSIONS='mysqli pdo_mysql' on the web service and redeploy\n";
+    exit; // prevent fatal
+}
+
 $mysqli = @new mysqli($host, $user, $pass, $name, $port);
 if ($mysqli && !$mysqli->connect_error) {
     echo "db_connect: ok\n";
