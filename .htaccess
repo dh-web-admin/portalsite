@@ -3,10 +3,9 @@
 # Enable Rewrite Engine
 RewriteEngine On
 
-# Redirect to HTTPS behind proxy (Railway)
-# Only redirect when the original request was HTTP per proxy header
-# This avoids loops when HTTPS termination happens at the proxy
-RewriteCond %{HTTP:X-Forwarded-Proto} =http
+# Redirect to HTTPS (Railway provides SSL)
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Don't rewrite files or directories
