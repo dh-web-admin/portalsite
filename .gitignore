@@ -2,7 +2,8 @@
 # Files and folders that should NOT be pushed to GitHub
 
 # Sensitive Configuration Files
-config/config.php
+# Note: config/config.php contains no production secrets (uses env vars). Keep it tracked so production can include it.
+# If you later add secrets, switch to config/.env or environment variables.
 
 # Backup Files
 *.bak
