@@ -118,6 +118,7 @@ $email = 'admin';
 $role = 'admin';
 
 echo "Inserting admin...\n";
+// First try normal insert (works when id is AUTO_INCREMENT)
 $sql = "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
@@ -133,8 +134,47 @@ if ($stmt->execute()) {
     echo "Password: admin\n";
     echo "Generated hash: " . $hashed_password . "\n";
 } else {
-    http_response_code(500);
-    echo "Error creating admin user: " . $stmt->error . "\n";
+    $err = $stmt->error;
+    $errno = $stmt->errno;
+    echo "Primary insert failed (errno=$errno): $err\n";
+    // If failure due to id missing default (strict mode, no AUTO_INCREMENT), compute next id and insert explicitly
+    if ($errno === 1364 || stripos($err, "doesn't have a default value") !== false) {
+        echo "Falling back to explicit id insert...\n";
+        $nextId = 1;
+        $rid = $conn->query("SELECT COALESCE(MAX(id)+1,1) AS next_id FROM users");
+        if ($rid && ($r = $rid->fetch_assoc())) {
+            $nextId = (int)$r['next_id'];
+        }
+        $rid && $rid->free();
+        $stmt->close();
+        $sql2 = "INSERT INTO users (id, name, email, password, role) VALUES (?, ?, ?, ?, ?)";
+        $stmt2 = $conn->prepare($sql2);
+        if (!$stmt2) {
+            http_response_code(500);
+            echo "Failed to prepare fallback statement: " . $conn->error . "\n";
+            exit;
+        }
+        $stmt2->bind_param("issss", $nextId, $name, $email, $hashed_password, $role);
+        if ($stmt2->execute()) {
+            echo "Admin user created successfully (explicit id=$nextId)!\n";
+            echo "Email: admin\n";
+            echo "Password: admin\n";
+            echo "Generated hash: " . $hashed_password . "\n";
+        } else {
+            http_response_code(500);
+            echo "Fallback insert failed: " . $stmt2->error . "\n";
+            $stmt2->close();
+            $conn->close();
+            exit;
+        }
+        $stmt2->close();
+    } else {
+        http_response_code(500);
+        echo "Error creating admin user: $err\n";
+        $stmt->close();
+        $conn->close();
+        exit;
+    }
 }
 
 $stmt->close();
