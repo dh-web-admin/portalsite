@@ -18,9 +18,20 @@ if(isset($_POST['login'])){
         // die(); // Stop here to see the output
        
         if(password_verify($password, $user['password'])){
+            // Strengthen session handling to persist reliably on Railway
+            // Regenerate session ID to prevent fixation and force cookie set
+            if (function_exists('session_regenerate_id')) {
+                @session_regenerate_id(true);
+            }
+
             $_SESSION['name'] = $user['name'];
             $_SESSION['email'] = $user['email'];
-           
+
+            // Ensure session data is written before redirect
+            if (function_exists('session_write_close')) {
+                @session_write_close();
+            }
+
             if ($user['role'] === 'admin') {
                 header("Location: ../admin/dashboard.php");
             }
@@ -60,6 +71,10 @@ if(isset($_POST['login'])){
     }
     
     $_SESSION['active_form'] = 'login';
+    // Persist error session data before redirect
+    if (function_exists('session_write_close')) {
+        @session_write_close();
+    }
     header("Location: login.php");
     exit();
 }

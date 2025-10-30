@@ -22,15 +22,17 @@ echo "Step 2: User is logged in<br><br>";
 try {
     require_once __DIR__ . '/../config/config.php';
     echo "Step 3: Config loaded successfully<br>";
-    echo "Database connected: " . ($conn->ping() ? "YES" : "NO") . "<br><br>";
+    // Avoid deprecated ping() usage; assume connected if $conn is mysqli and no connect_error
+    $connected = (isset($conn) && $conn instanceof mysqli && !$conn->connect_error);
+    echo "Database connected: " . ($connected ? "YES" : "NO") . "<br><br>";
 } catch (Exception $e) {
     echo "Step 3 ERROR: " . $e->getMessage() . "<br>";
     die();
 }
 
 // Get admin information
-$email = $_SESSION['email'];
-echo "Step 4: Querying for user: $email<br>";
+$email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
+echo "Step 4: Querying for user: " . htmlspecialchars($email) . "<br>";
 
 $query = "SELECT role FROM users WHERE email='$email'";
 $result = $conn->query($query);
