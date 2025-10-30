@@ -42,7 +42,7 @@ if ($user['role'] !== 'admin') {
                 <div class="main-content">
                     <div class="tiles">
                     <!-- Merged all tiles into a single container -->
-                    <a href="equipments.php" class="tile">
+                    <a href="../pages/equipments.php" class="tile">
                         <h2>Equipments</h2>
                     </a>
                     <a href="Bid_tracking.php" class="tile">
