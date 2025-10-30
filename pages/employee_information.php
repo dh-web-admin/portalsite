@@ -1,64 +1,125 @@
-<?php
+<?php<?php
+
+require_once __DIR__ . '/../session_init.php';
 
 require_once __DIR__ . '/../session_init.php';?php<?php<?php
 
-
-
-// Check if user is logged in and is adminrequire_once __DIR__ . '/../session_init.php';
+// Check if user is logged in and is admin
 
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
-    header("Location: ../auth/login.php");require_once __DIR__ . '/../session_init.php';require_once __DIR__ . '/../session_init.php';
-
-    exit();
-
-}// Check if user is logged in and is admin
-
-
-
-// Include database configurationif (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-
-require_once '../config/config.php';
-
     header("Location: ../auth/login.php");
 
-// Get admin information
-
-$email = $_SESSION['email'];    exit();// Check if user is logged in and is admin// Check if user is logged in and is admin
-
-$query = "SELECT role FROM users WHERE email='$email'";
-
-$result = $conn->query($query);}
-
-$user = $result->fetch_assoc();
-
-if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-
-// Verify user is admin
-
-if ($user['role'] !== 'admin') {// Include database configuration
-
-    header("Location: ../auth/login.php");
-
-    exit();require_once '../config/config.php';    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
+    exit();// Check if user is logged in and is adminrequire_once __DIR__ . '/../session_init.php';
 
 }
 
+if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
+
+// Include database configuration
+
+require_once __DIR__ . '/../config/config.php';    header("Location: ../auth/login.php");require_once __DIR__ . '/../session_init.php';require_once __DIR__ . '/../session_init.php';
+
+
+
+// Get admin information    exit();
+
+$email = $_SESSION['email'];
+
+$query = "SELECT role FROM users WHERE email='$email'";}// Check if user is logged in and is admin
+
+$result = $conn->query($query);
+
+$user = $result->fetch_assoc();
+
+
+
+// Verify user is admin// Include database configurationif (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
+
+if ($user['role'] !== 'admin') {
+
+    header("Location: ../auth/login.php");require_once '../config/config.php';
+
+    exit();
+
+}    header("Location: ../auth/login.php");
+
 ?>
 
+// Get admin information
 
+<!DOCTYPE html>
 
-<!DOCTYPE html>// Get admin information    exit();    exit();
+<html lang="en">$email = $_SESSION['email'];    exit();// Check if user is logged in and is admin// Check if user is logged in and is admin
 
-<html lang="en">
+<head>
 
-<head>$email = $_SESSION['email'];
+    <meta charset="UTF-8">$query = "SELECT role FROM users WHERE email='$email'";
 
-    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">$query = "SELECT role FROM users WHERE email='$email'";}}
+    <title>Employee Information</title>$result = $conn->query($query);
 
-    <title>Employee Information</title>
+    <link rel="stylesheet" href="../assets/css/base.css">
+
+    <link rel="stylesheet" href="../assets/css/admin-layout.css">$user = $result->fetch_assoc();
+
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+
+</head>if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
+
+<body class="admin-page">
+
+    <div class="admin-container">// Verify user is admin
+
+        <?php include __DIR__ . '/../partials/portalheader.php'; ?>
+
+        <div class="admin-layout">if ($user['role'] !== 'admin') {// Include database configuration
+
+            <?php include __DIR__ . '/../partials/admin_sidebar.php'; ?>
+
+            <main class="content-area">    header("Location: ../auth/login.php");
+
+                <div class="main-content">
+
+                    <h1>Employee Information</h1>    exit();require_once '../config/config.php';    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
+
+                    <!-- Employee Information content will go here -->
+
+                </div>}
+
+            </main>
+
+        </div>?>
+
+    </div>
+
+    <script>
+
+    (function(){
+
+        var usersToggle = document.getElementById('usersToggle');<!DOCTYPE html>// Get admin information    exit();    exit();
+
+        var usersGroup = document.getElementById('usersGroup');
+
+        if (usersToggle && usersGroup) {<html lang="en">
+
+            usersToggle.addEventListener('click', function(){
+
+                usersGroup.classList.toggle('open');<head>$email = $_SESSION['email'];
+
+            });
+
+        }    <meta charset="UTF-8">
+
+    })();
+
+    </script>    <meta name="viewport" content="width=device-width, initial-scale=1.0">$query = "SELECT role FROM users WHERE email='$email'";}}
+
+</body>
+
+</html>    <title>Employee Information</title>
+
 
     <link rel="stylesheet" href="../assets/css/base.css">$result = $conn->query($query);
 
