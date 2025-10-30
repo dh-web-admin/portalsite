@@ -44,8 +44,7 @@ if (!can_access($role, 'equipments')) {
       <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-          <h1>equipments</h1>
-          <!-- equipments content will go here -->
+           <img src="../assets/images/maintenance.png" alt="Maintenance Image" />
         </div>
       </main>
     </div>

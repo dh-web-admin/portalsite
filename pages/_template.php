@@ -39,6 +39,7 @@ $stmt->close();
         <div class="main-content">
           <h1>{{TITLE}}</h1>
           <!-- {{TITLE}} content will go here -->
+         <img src="../assets/images/maintenance.png" alt="Maintenance Image" />
         </div>
       </main>
     </div>
