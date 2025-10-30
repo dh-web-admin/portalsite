@@ -415,11 +415,15 @@ body.admin-page {
 .debug-btn-small {
   font-size: 10px;
   padding: 4px 6px;
+  font-size: 9px; /* make text tinier */
+  padding: 3px 5px; /* tighter padding */
   opacity: 0.95;
   background: rgba(255, 255, 255, 0.06);
-  width: auto;           /* smaller than full width */
+  width: auto; /* smaller than full width */
   align-self: flex-start; /* keep it compact to the left */
-  border-radius: 6px;
+  border-radius: 4px;
+  font-weight: 500; /* lighter weight so it looks smaller */
+  line-height: 1.1; /* compact vertical rhythm */
 }
 .debug-btn-small:hover {
   background: rgba(255, 255, 255, 0.12);
