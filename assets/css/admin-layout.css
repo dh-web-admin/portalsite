@@ -257,3 +257,217 @@ body.admin-page {
   width: 100px;
   color: black;
 }
+
+/*----------------------------------*
+ * Responsive Design - Mobile & Tablet
+ *---------------------------------*/
+
+/* Tablet (portrait) and smaller laptops */
+@media (max-width: 1024px) {
+  :root {
+    --admin-header-h: 140px;
+  }
+
+  body.admin-page {
+    --admin-header-h: 140px;
+  }
+
+  .welcome-section h1 {
+    font-size: 28px;
+  }
+
+  .welcome-section h2 {
+    font-size: 20px;
+  }
+
+  .welcome-logo {
+    height: 80px;
+  }
+
+  .content-area {
+    padding: 30px 20px;
+  }
+}
+
+/* Mobile landscape and tablet portrait */
+@media (max-width: 768px) {
+  :root {
+    --admin-header-h: 120px;
+  }
+
+  body.admin-page {
+    --admin-header-h: 120px;
+  }
+
+  .welcome-section {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    height: auto;
+    min-height: 120px;
+  }
+
+  .welcome-left {
+    align-items: center;
+    text-align: center;
+  }
+
+  .welcome-section h1 {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+
+  .welcome-section h2 {
+    font-size: 18px;
+  }
+
+  .welcome-logo {
+    height: 60px;
+    padding-top: 5px;
+  }
+
+  /* Mobile Navigation - Collapsible Sidebar */
+  .side-nav {
+    width: 200px;
+    padding: 16px 12px;
+    z-index: 999;
+  }
+
+  .nav-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .adminnav {
+    font-size: 14px;
+    padding: 10px 12px;
+    width: calc(100% + 24px);
+    margin-left: -12px;
+  }
+
+  .content-area {
+    margin-left: 200px;
+    padding: 20px 15px;
+  }
+}
+
+/* Mobile portrait */
+@media (max-width: 600px) {
+  body.admin-page {
+    --admin-header-h: 110px;
+  }
+
+  .welcome-section {
+    min-height: 110px;
+    padding: 10px;
+  }
+
+  .welcome-section h1 {
+    font-size: 20px;
+  }
+
+  .welcome-section h2 {
+    font-size: 16px;
+  }
+
+  .welcome-logo {
+    height: 50px;
+  }
+
+  /* Hide sidebar on mobile, show hamburger menu */
+  .side-nav {
+    position: fixed;
+    left: -200px;
+    width: 200px;
+    transition: left 0.3s ease;
+    z-index: 1001;
+  }
+
+  .side-nav.mobile-open {
+    left: 0;
+  }
+
+  .content-area {
+    margin-left: 0;
+    padding: 15px 10px;
+    width: 100%;
+  }
+
+  .main-content h1 {
+    font-size: 24px;
+  }
+
+  /* Mobile menu overlay */
+  .mobile-menu-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  .mobile-menu-overlay.active {
+    display: block;
+  }
+
+  /* Hamburger menu button */
+  .mobile-menu-btn {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1002;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mobile-menu-btn span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-menu-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+  }
+
+  .mobile-menu-btn.active span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .mobile-menu-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+  }
+}
+
+/* Very small mobile devices */
+@media (max-width: 380px) {
+  .welcome-section h1 {
+    font-size: 18px;
+  }
+
+  .welcome-section h2 {
+    font-size: 14px;
+  }
+
+  .content-area {
+    padding: 10px 8px;
+  }
+
+  .main-content h1 {
+    font-size: 20px;
+  }
+}

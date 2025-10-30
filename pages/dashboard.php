@@ -68,7 +68,8 @@ switch ($role) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#667eea">
     <title>Admin Dashboard</title>
     <link rel="stylesheet" href="../assets/css/base.css">
     <link rel="stylesheet" href="../assets/css/admin-layout.css">
@@ -108,5 +109,6 @@ switch ($role) {
         }
     })();
     </script>
+    <script src="../assets/js/mobile-menu.js"></script>
 </body>
 </html>

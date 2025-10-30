@@ -80,18 +80,11 @@ $database = 'dhdatabase';
 
 ### 4. Set up web server
 
-**Option A: XAMPP**
+**XAMPP**
 
 ```bash
 # Place project in: C:\xampp\htdocs\PortalSite\
 # Access via: http://localhost/PortalSite/
-```
-
-**Option B: PHP Built-in Server**
-
-```bash
-php -S localhost:8000
-# Access via: http://localhost:8000/
 ```
 
 ## 📁 Project Structure
@@ -171,33 +164,6 @@ See [CSS_ORGANIZATION.md](CSS_ORGANIZATION.md) for details.
 
 - [PHP Organization Guide](PHP_ORGANIZATION.md)
 - [CSS Organization Guide](CSS_ORGANIZATION.md)
-
-## 🚧 Future Enhancements
-
-- [ ] Email functionality for password reset
-- [ ] Two-factor authentication
-- [ ] Activity logging
-- [ ] Password reset tokens
-- [ ] User profile self-service
-- [ ] Email verification
-- [ ] CSRF protection
-- [ ] Rate limiting
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is private and proprietary.
-
-## 📞 Support
-
-For support, email your-email@example.com or open an issue in the repository.
 
 ## ⚠️ Important Notes
 

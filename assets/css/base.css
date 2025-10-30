@@ -126,3 +126,62 @@ body {
   display: block;
   margin: 20px auto;
 }
+
+/*----------------------------------*
+ * Responsive Utilities
+ *---------------------------------*/
+
+/* Ensure images are responsive */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Responsive text sizing */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  .form-group input,
+  .form-group select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .maintenance-image {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 13px;
+  }
+
+  .back-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .maintenance-image {
+    max-width: 250px;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Touch-friendly button sizing */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  .nav-btn,
+  .back-btn,
+  a[role="button"] {
+    min-height: 44px; /* iOS recommended touch target */
+    min-width: 44px;
+  }
+}
