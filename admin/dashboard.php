@@ -42,41 +42,41 @@ if ($user['role'] !== 'admin') {
                 <div class="main-content">
                     <div class="tiles">
                     <!-- Merged all tiles into a single container -->
-                    <a href="equipments.php" class="tile">
+                    <a href="../pages/equipments.php" class="tile">
                         <h2>Equipments</h2>
                     </a>
-                    <a href="Bid_tracking.php" class="tile">
+                    <a href="../pages/Bid_tracking.php" class="tile">
                         <h2>Bid Tracking</h2>
                     </a>
-                    <a href="scheduling.php" class="tile">
+                    <a href="../pages/scheduling.php" class="tile">
                         <h2>Scheduling</h2>
                     </a>
-                    <a href="engineering.php" class="tile">
+                    <a href="../pages/engineering.php" class="tile">
                         <h2>Engineering</h2>
                     </a>
 
-                    <a href="employee_information.php" class="tile">
+                    <a href="../pages/employee_information.php" class="tile">
                         <h2>Employee Information</h2>
                     </a>
-                    <a href="for_sale.php" class="tile">
+                    <a href="../pages/for_sale.php" class="tile">
                         <h2>For Sale</h2>
                     </a>
-                    <a href="project_checklist.php" class="tile">
+                    <a href="../pages/project_checklist.php" class="tile">
                         <h2>Project Checklist</h2>
                     </a>
-                    <a href="pictures.php" class="tile">
+                    <a href="../pages/pictures.php" class="tile">
                         <h2>Pictures</h2>
                     </a>
-                    <a href="forms.php" class="tile">
+                    <a href="../pages/forms.php" class="tile">
                         <h2>Forms</h2>
                     </a>
-                    <a href="manuals.php" class="tile">
+                    <a href="../pages/manuals.php" class="tile">
                         <h2>Manuals</h2>
                     </a>
-                    <a href="videos.php" class="tile">
+                    <a href="../pages/videos.php" class="tile">
                         <h2>Videos</h2>
                     </a>
-                    <a href="maps.php" class="tile">
+                    <a href="../pages/maps.php" class="tile">
                         <h2>Maps</h2>
                     </a>
                 </div>
