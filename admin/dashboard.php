@@ -42,41 +42,42 @@ if ($user['role'] !== 'admin') {
                 <div class="main-content">
                     <div class="tiles">
                     <!-- Merged all tiles into a single container -->
-                    <a href="../pages/equipments.php" class="tile">
+                    <?php require_once __DIR__ . '/../partials/url.php'; ?>
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/equipments.php')); ?>" class="tile">
                         <h2>Equipments</h2>
                     </a>
-                    <a href="../pages/Bid_tracking.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/Bid_tracking.php')); ?>" class="tile">
                         <h2>Bid Tracking</h2>
                     </a>
-                    <a href="../pages/scheduling.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/scheduling.php')); ?>" class="tile">
                         <h2>Scheduling</h2>
                     </a>
-                    <a href="../pages/engineering.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/engineering.php')); ?>" class="tile">
                         <h2>Engineering</h2>
                     </a>
 
-                    <a href="../pages/employee_information.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/employee_information.php')); ?>" class="tile">
                         <h2>Employee Information</h2>
                     </a>
-                    <a href="../pages/for_sale.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/for_sale.php')); ?>" class="tile">
                         <h2>For Sale</h2>
                     </a>
-                    <a href="../pages/project_checklist.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/project_checklist.php')); ?>" class="tile">
                         <h2>Project Checklist</h2>
                     </a>
-                    <a href="../pages/pictures.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/pictures.php')); ?>" class="tile">
                         <h2>Pictures</h2>
                     </a>
-                    <a href="../pages/forms.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/forms.php')); ?>" class="tile">
                         <h2>Forms</h2>
                     </a>
-                    <a href="../pages/manuals.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/manuals.php')); ?>" class="tile">
                         <h2>Manuals</h2>
                     </a>
-                    <a href="../pages/videos.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/videos.php')); ?>" class="tile">
                         <h2>Videos</h2>
                     </a>
-                    <a href="../pages/maps.php" class="tile">
+                    <a href="<?php echo htmlspecialchars(base_url('/pages/maps.php')); ?>" class="tile">
                         <h2>Maps</h2>
                     </a>
                 </div>

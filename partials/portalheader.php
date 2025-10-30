@@ -1,6 +1,7 @@
 <?php
 // Shared Portal header
 if (session_status() === PHP_SESSION_NONE) { require_once __DIR__ . '/../session_init.php'; }
+require_once __DIR__ . '/url.php';
 
 $name = isset($_SESSION['name']) ? $_SESSION['name'] : 'User';
 $title = 'Employee Dashboard';
@@ -35,5 +36,5 @@ if (!empty($_SESSION['email'])) {
     <h1>Welcome, <?php echo htmlspecialchars($name); ?></h1>
     <h2><?php echo htmlspecialchars($title); ?></h2>
   </div>
-    <img src="/PortalSite/assets/images/eportal.svg" alt="Portal logo" class="welcome-logo" />
+    <img src="<?php echo htmlspecialchars(base_url('/assets/images/eportal.svg')); ?>" alt="Portal logo" class="welcome-logo" />
 </div>
