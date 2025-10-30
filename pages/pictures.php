@@ -1,44 +1,44 @@
-<?php<?php<?php
+<?php<?php<?php<?php
 
 require_once __DIR__ . '/../session_init.php';
 
-require_once __DIR__ . '/../session_init.php';require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../session_init.php';
 
 // Check if user is logged in
 
-if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
+if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {require_once __DIR__ . '/../session_init.php';require_once __DIR__ . '/../session_init.php';
 
     header('Location: ../auth/login.php');
 
-    exit();// Check if user is logged in and is admin// Check if user is logged in and is admin
+    exit();// Check if user is logged in
 
 }
 
-if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
+if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
 // Include database configuration
 
-require_once __DIR__ . '/../config/config.php';    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
+require_once __DIR__ . '/../config/config.php';    header('Location: ../auth/login.php');
 
 
 
-// Get user role for sidebar    exit();    exit();
+// Get user role for sidebar    exit();// Check if user is logged in and is admin// Check if user is logged in and is admin
 
 $email = $_SESSION['email'];
 
-$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');}}
+$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');}
 
 $stmt->bind_param('s', $email);
 
-$stmt->execute();
+$stmt->execute();if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
 $res = $stmt->get_result();
 
-$user = $res ? $res->fetch_assoc() : null;// Include database configuration// Include database configuration
+$user = $res ? $res->fetch_assoc() : null;// Include database configuration
 
 $role = $user ? $user['role'] : 'laborer';
 
-$stmt->close();require_once __DIR__ . '/../config/config.php';require_once __DIR__ . '/../config/config.php';
+$stmt->close();require_once __DIR__ . '/../config/config.php';    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
 
 ?>
 
@@ -46,15 +46,73 @@ $stmt->close();require_once __DIR__ . '/../config/config.php';require_once __DIR
 
 <html lang="en">
 
-<head>// Get admin information// Get admin information
+<head>// Get user role for sidebar    exit();    exit();
 
   <meta charset="UTF-8" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />$email = $_SESSION['email'];$email = $_SESSION['email'];
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />$email = $_SESSION['email'];
 
-  <title>pictures</title>
+  <title>Pictures</title>
 
-  <link rel="stylesheet" href="../assets/css/base.css" />$query = "SELECT role FROM users WHERE email='$email'";$query = "SELECT role FROM users WHERE email='$email'";
+  <link rel="stylesheet" href="../assets/css/base.css" />$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');}}
+
+  <link rel="stylesheet" href="../assets/css/admin-layout.css" />
+
+  <link rel="stylesheet" href="../assets/css/dashboard.css" />$stmt->bind_param('s', $email);
+
+</head>
+
+<body class="admin-page">$stmt->execute();
+
+  <div class="admin-container">
+
+    <?php include __DIR__ . '/../partials/portalheader.php'; ?>$res = $stmt->get_result();
+
+    <div class="admin-layout">
+
+      <?php include __DIR__ . '/../partials/sidebar.php'; ?>$user = $res ? $res->fetch_assoc() : null;// Include database configuration// Include database configuration
+
+      <main class="content-area">
+
+        <div class="main-content">$role = $user ? $user['role'] : 'laborer';
+
+          <h1>Pictures</h1>
+
+          <!-- Pictures content will go here -->$stmt->close();require_once __DIR__ . '/../config/config.php';require_once __DIR__ . '/../config/config.php';
+
+        </div>
+
+      </main>?>
+
+    </div>
+
+  </div><!DOCTYPE html>
+
+  <script>
+
+    (function(){<html lang="en">
+
+      var usersToggle = document.getElementById('usersToggle');
+
+      var usersGroup = document.getElementById('usersGroup');<head>// Get admin information// Get admin information
+
+      if (usersToggle && usersGroup) {
+
+        usersToggle.addEventListener('click', function(){  <meta charset="UTF-8" />
+
+          usersGroup.classList.toggle('open');
+
+        });  <meta name="viewport" content="width=device-width, initial-scale=1.0" />$email = $_SESSION['email'];$email = $_SESSION['email'];
+
+      }
+
+    })();  <title>pictures</title>
+
+  </script>
+
+</body>  <link rel="stylesheet" href="../assets/css/base.css" />$query = "SELECT role FROM users WHERE email='$email'";$query = "SELECT role FROM users WHERE email='$email'";
+
+</html>
 
   <link rel="stylesheet" href="../assets/css/admin-layout.css" />
 
