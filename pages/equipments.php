@@ -9,6 +9,7 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
 // Include database configuration
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
 // Get user role for sidebar
 $email = $_SESSION['email'];
@@ -19,6 +20,12 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
 $stmt->close();
+
+// Enforce access control for this page
+if (!can_access($role, 'equipments')) {
+  header('Location: ../pages/dashboard.php');
+  exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

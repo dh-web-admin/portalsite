@@ -1,6 +1,19 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../partials/url.php';
+require_once __DIR__ . '/../config/config.php';
+
+// Admin-only guard
+$email = $_SESSION['email'] ?? null;
+if (!$email) { header('Location: ../auth/login.php'); exit(); }
+$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$res = $stmt->get_result();
+$user = $res ? $res->fetch_assoc() : null;
+$role = $user['role'] ?? 'laborer';
+$stmt->close();
+if ($role !== 'admin') { header('Location: ../pages/dashboard.php'); exit(); }
 
 echo "<h1>Session Debug</h1>";
 echo "<pre>";
