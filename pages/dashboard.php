@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 
-// Check if user is logged in and is admin
+// Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     header("Location: ../auth/login.php");
     exit();
@@ -10,16 +10,57 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 // Include database configuration
 require_once '../config/config.php';
 
-// Get admin information
+// Get user information
 $email = $_SESSION['email'];
 $query = "SELECT role FROM users WHERE email='$email'";
 $result = $conn->query($query);
 $user = $result->fetch_assoc();
 
-// Verify user is admin
-if ($user['role'] !== 'admin') {
-    header("Location: ../auth/login.php");
-    exit();
+// Store role for access control
+$role = $user['role'] ?? 'laborer';
+
+// Define page access by role
+$allPages = [
+    'equipments' => 'Equipments',
+    'Bid_tracking' => 'Bid Tracking',
+    'scheduling' => 'Scheduling',
+    'engineering' => 'Engineering',
+    'employee_information' => 'Employee Information',
+    'for_sale' => 'For Sale',
+    'project_checklist' => 'Project Checklist',
+    'pictures' => 'Pictures',
+    'forms' => 'Forms',
+    'manuals' => 'Manuals',
+    'videos' => 'Videos',
+    'maps' => 'Maps'
+];
+
+// Role-based access control
+$hiddenPages = [];
+switch ($role) {
+    case 'superintendent':
+        $hiddenPages = ['Bid_tracking'];
+        break;
+    case 'foreman':
+        $hiddenPages = ['Bid_tracking', 'maps', 'engineering'];
+        break;
+    case 'mechanic':
+        $hiddenPages = ['Bid_tracking', 'maps', 'engineering', 'forms', 'project_checklist'];
+        break;
+    case 'operator':
+    case 'laborer':
+        // Only show these 3 pages
+        $allowedPages = ['employee_information', 'manuals', 'videos'];
+        $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
+        break;
+    case 'admin':
+    case 'projectmanager':
+    case 'estimator':
+    case 'accounting':
+    default:
+        // All pages visible
+        $hiddenPages = [];
+        break;
 }
 ?>
 
@@ -41,45 +82,15 @@ if ($user['role'] !== 'admin') {
             <main class="content-area">
                 <div class="main-content">
                     <div class="tiles">
-                    <!-- Merged all tiles into a single container -->
+                    <!-- Role-based tiles -->
                     <?php require_once __DIR__ . '/../partials/url.php'; ?>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/equipments.php')); ?>" class="tile">
-                        <h2>Equipments</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/Bid_tracking.php')); ?>" class="tile">
-                        <h2>Bid Tracking</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/scheduling.php')); ?>" class="tile">
-                        <h2>Scheduling</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/engineering.php')); ?>" class="tile">
-                        <h2>Engineering</h2>
-                    </a>
-
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/employee_information.php')); ?>" class="tile">
-                        <h2>Employee Information</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/for_sale.php')); ?>" class="tile">
-                        <h2>For Sale</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/project_checklist.php')); ?>" class="tile">
-                        <h2>Project Checklist</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/pictures.php')); ?>" class="tile">
-                        <h2>Pictures</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/forms.php')); ?>" class="tile">
-                        <h2>Forms</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/manuals.php')); ?>" class="tile">
-                        <h2>Manuals</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/videos.php')); ?>" class="tile">
-                        <h2>Videos</h2>
-                    </a>
-                    <a href="<?php echo htmlspecialchars(base_url('/pages/maps.php')); ?>" class="tile">
-                        <h2>Maps</h2>
-                    </a>
+                    <?php foreach ($allPages as $page => $title): ?>
+                        <?php if (!in_array($page, $hiddenPages)): ?>
+                            <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '.php')); ?>" class="tile">
+                                <h2><?php echo htmlspecialchars($title); ?></h2>
+                            </a>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
                 </div>
             </main>
