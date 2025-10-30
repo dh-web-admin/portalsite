@@ -1,4 +1,19 @@
 <?php
+require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../config/config.php';
+
+// Admin-only guard
+$email = $_SESSION['email'] ?? null;
+if (!$email) { header('Location: ../auth/login.php'); exit(); }
+$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$res = $stmt->get_result();
+$user = $res ? $res->fetch_assoc() : null;
+$role = $user['role'] ?? 'laborer';
+$stmt->close();
+if ($role !== 'admin') { header('Location: ../pages/dashboard.php'); exit(); }
+
 http_response_code(200);
 header('Content-Type: text/plain');
 echo "ok\n";
@@ -11,11 +26,11 @@ echo 'php_ini: ' . (php_ini_loaded_file() ?: '(none)') . "\n";
 $ext = get_loaded_extensions(); sort($ext);
 echo 'extensions_loaded: ' . implode(',', array_slice($ext, 0, min(20, count($ext)))) . (count($ext) > 20 ? ',...' : '') . "\n";
 
-// Test basic file access
+// Test basic file access (fix relative paths)
 $paths = [
-    __DIR__ . '/auth/login.php',
-    __DIR__ . '/config/config.php',
-    __DIR__ . '/admin/create_admin.php'
+    __DIR__ . '/../auth/login.php',
+    __DIR__ . '/../config/config.php',
+    __DIR__ . '/../admin/create_admin.php'
 ];
 foreach ($paths as $p) {
     echo basename($p) . ': ' . (file_exists($p) ? 'found' : 'missing') . "\n";
