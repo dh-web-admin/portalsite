@@ -19,7 +19,7 @@ if (session_status() === PHP_SESSION_NONE) {
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
     @session_set_cookie_params([
-        'lifetime' => 86400, // 24 hours (instead of 0 which expires on browser close)
+        'lifetime' => 2592000, // 30 days to persist across browser restarts
         'path' => '/',
         'domain' => '',
         'secure' => $isHttps,

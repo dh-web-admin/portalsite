@@ -18,7 +18,7 @@ if(isset($_POST['login'])){
         // echo "Password verify: " . (password_verify($password, $user['password']) ? 'SUCCESS' : 'FAILED') . "<br>";
         // die(); // Stop here to see the output
        
-        if(password_verify($password, $user['password'])){
+    if(password_verify($password, $user['password'])){
             // Strengthen session handling to persist reliably on Railway
             // Regenerate session ID to prevent fixation and force cookie set
             if (function_exists('session_regenerate_id')) {
@@ -28,31 +28,29 @@ if(isset($_POST['login'])){
             $_SESSION['name'] = $user['name'];
             $_SESSION['email'] = $user['email'];
             
-            // Handle Remember Me
-            if ($rememberMe) {
-                // Generate secure random token
-                $token = bin2hex(random_bytes(32));
-                $expires = date('Y-m-d H:i:s', time() + (30 * 86400)); // 30 days from now
-                
-                // Store token in database
-                $stmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
-                $stmt->bind_param("sss", $token, $expires, $email);
-                $stmt->execute();
-                $stmt->close();
-                
-                // Set cookie
-                $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-                    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
-                
-                setcookie('remember_token', $token, [
-                    'expires' => time() + (30 * 86400), // 30 days
-                    'path' => '/',
-                    'domain' => '',
-                    'secure' => $isHttps,
-                    'httponly' => true,
-                    'samesite' => 'Lax'
-                ]);
-            }
+            // Issue Remember Me token unconditionally to persist login across browser restarts
+            // Generate secure random token
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', time() + (30 * 86400)); // 30 days from now
+            
+            // Store token in database
+            $stmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
+            $stmt->bind_param("sss", $token, $expires, $email);
+            $stmt->execute();
+            $stmt->close();
+            
+            // Set cookie
+            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+            
+            setcookie('remember_token', $token, [
+                'expires' => time() + (30 * 86400), // 30 days
+                'path' => '/',
+                'domain' => '',
+                'secure' => $isHttps,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
 
             // Ensure session data is written before redirect
             if (function_exists('session_write_close')) {
