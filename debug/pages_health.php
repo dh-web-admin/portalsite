@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../partials/permissions.php';
+require_once __DIR__ . '/../partials/url.php';
 
 // Admin-only access
 $email = $_SESSION['email'] ?? null;
@@ -65,6 +66,14 @@ code{background:#f3f4f6;padding:2px 4px;border-radius:4px}
 <body>
 <h1>Pages Health Check</h1>
 <p>Admin-only. Scans for common file corruption patterns in <code>pages/</code>.</p>
+<p>
+    Quick links:
+    <a href="<?php echo htmlspecialchars(base_url('/debug/health.php')); ?>">App Health</a> ·
+    <a href="<?php echo htmlspecialchars(base_url('/debug/debug_session.php')); ?>">Session Debug</a> ·
+    <a href="<?php echo htmlspecialchars(base_url('/debug/debug_page_load.php')); ?>">Page Load Debug</a>
+    · <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard.php')); ?>">Back to Dashboard</a>
+    · <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>">Logout</a>
+ </p>
 <table class="table">
 <thead>
 <tr><th>Page</th><th>Exists</th><th>Status</th><th>Notes</th></tr>

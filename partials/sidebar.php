@@ -29,6 +29,8 @@ if (!isset($role) && isset($_SESSION['email'])) {
             <a href="<?php echo htmlspecialchars(base_url('/admin/user_list.php')); ?>" class="nav-btn">List Users</a>
         </div>
     </div>
+    <!-- Tiny admin-only debug tools button -->
+    <a href="<?php echo htmlspecialchars(base_url('/debug/pages_health.php')); ?>" class="nav-btn" style="font-size:12px;padding:6px 8px;opacity:0.9;">Debug tools for admin</a>
     <?php endif; ?>
     <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="nav-btn logout-btn">Logout</a>
 </aside>
