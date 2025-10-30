@@ -409,6 +409,11 @@ body.admin-page {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  position: sticky; /* keep footer anchored when scrolling sidebar */
+  bottom: 0;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: linear-gradient(180deg, rgba(15,23,42,0), rgba(15,23,42,0.6));
 }
 
 /* Small debug button style */
