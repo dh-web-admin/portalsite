@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
 
         <div class="admin-layout">
-            <?php include __DIR__ . '/../partials/admin_sidebar.php'; ?>
+            <?php include __DIR__ . '/../partials/sidebar.php'; ?>
 
             <main class="content-area">
                 <div class="register-container">

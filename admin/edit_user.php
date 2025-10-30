@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="admin-container">
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
     <div class="admin-layout">
-        <?php include __DIR__ . '/../partials/admin_sidebar.php'; ?>
+        <?php include __DIR__ . '/../partials/sidebar.php'; ?>
         <main class="content-area">
             <div class="edit-container">
                 <a href="user_list.php" class="back-btn">Back to User List</a>

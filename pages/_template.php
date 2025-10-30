@@ -39,7 +39,7 @@ if (!$user || $user['role'] !== 'admin') {
   <div class="admin-container">
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
     <div class="admin-layout">
-      <?php include __DIR__ . '/../partials/admin_sidebar.php'; ?>
+      <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
           <h1>{{TITLE}}</h1>
