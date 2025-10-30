@@ -396,11 +396,33 @@ body.admin-page {
 .logout-btn {
   background: rgba(239, 68, 68, 0.15);
   color: #fff;
-  margin-top: auto; /* push logout to bottom */
+  margin-top: 0; /* positioning handled by footer container */
   display: block;
 }
 .logout-btn:hover {
   background: rgba(239, 68, 68, 0.25);
+}
+
+/* Footer area at the bottom of the sidebar */
+.sidebar-footer {
+  margin-top: auto; /* push footer to bottom */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Small debug button style */
+.debug-btn-small {
+  font-size: 10px;
+  padding: 4px 6px;
+  opacity: 0.95;
+  background: rgba(255, 255, 255, 0.06);
+  width: auto;           /* smaller than full width */
+  align-self: flex-start; /* keep it compact to the left */
+  border-radius: 6px;
+}
+.debug-btn-small:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* Role edit wrapper: select + caret button */
