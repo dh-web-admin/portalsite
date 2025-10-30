@@ -1,6 +1,15 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../partials/url.php';
+require_once __DIR__ . '/../config/config.php';
+
+// Clear remember token from database if user is logged in
+if (isset($_SESSION['email'])) {
+    $stmt = $conn->prepare("UPDATE users SET remember_token = NULL, remember_token_expires = NULL WHERE email = ?");
+    $stmt->bind_param("s", $_SESSION['email']);
+    $stmt->execute();
+    $stmt->close();
+}
 
 // Unset all session variables
 $_SESSION = [];
@@ -12,6 +21,21 @@ if (ini_get('session.use_cookies')) {
         $params['path'], $params['domain'],
         $params['secure'], isset($params['httponly']) ? $params['httponly'] : false
     );
+}
+
+// Clear remember me cookie
+if (isset($_COOKIE['remember_token'])) {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    
+    setcookie('remember_token', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'domain' => '',
+        'secure' => $isHttps,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
 }
 
 // Destroy the session
@@ -112,7 +136,7 @@ session_destroy();
             </svg>
         </div>
         <h1>You Are Now Logged Out</h1>
-        <p>Thank you for using the portal. You have been successfully logged out.</p>
+        <p>You have been successfully logged out.</p>
         <div class="button-group">
             <a href="<?php echo htmlspecialchars(base_url('/auth/login.php')); ?>" class="btn btn-primary">
                 Return to Login Page
