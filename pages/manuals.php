@@ -32,7 +32,7 @@ if (!can_access($role, 'manuals')) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{TITLE}}</title>
+  <title>Manuals</title>
   <link rel="stylesheet" href="../assets/css/base.css" />
   <link rel="stylesheet" href="../assets/css/admin-layout.css" />
   <link rel="stylesheet" href="../assets/css/dashboard.css" />
@@ -44,7 +44,7 @@ if (!can_access($role, 'manuals')) {
       <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-  <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" />
+  <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image" />
         </div>
       </main>
     </div>
