@@ -30,10 +30,5 @@ if (!isset($role) && isset($_SESSION['email'])) {
         </div>
     </div>
     <?php endif; ?>
-    <div class="sidebar-footer">
-        <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="nav-btn logout-btn">Logout</a>
-        <?php if (isset($role) && $role === 'admin'): ?>
-        <a href="<?php echo htmlspecialchars(base_url('/debug/pages_health.php')); ?>" class="nav-btn debug-btn-small">Debug tools for admin</a>
-        <?php endif; ?>
-    </div>
+    <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="nav-btn logout-btn">Logout</a>
 </aside>

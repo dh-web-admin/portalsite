@@ -322,6 +322,8 @@ body.admin-page {
   bottom: 0;
   overflow-y: auto;
 }
+/* Group top section of the sidebar (Home + Users) */
+/* (sidebar-main removed as part of revert) */
 .side-nav h3 {
   margin-bottom: 18px;
   font-size: 18px;
@@ -396,7 +398,7 @@ body.admin-page {
 .logout-btn {
   background: rgba(239, 68, 68, 0.15);
   color: #fff;
-  margin-top: 0; /* positioning handled by footer container */
+  margin-top: auto; /* push logout to bottom */
   display: block;
 }
 .logout-btn:hover {
@@ -404,35 +406,10 @@ body.admin-page {
 }
 
 /* Footer area at the bottom of the sidebar */
-.sidebar-footer {
-  margin-top: auto; /* push footer to bottom */
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  position: sticky; /* keep footer anchored when scrolling sidebar */
-  bottom: 0;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  background: linear-gradient(180deg, rgba(15,23,42,0), rgba(15,23,42,0.6));
-}
+/* (sidebar-footer removed as part of revert) */
 
 /* Small debug button style */
-.debug-btn-small {
-  font-size: 10px;
-  padding: 4px 6px;
-  font-size: 9px; /* make text tinier */
-  padding: 3px 5px; /* tighter padding */
-  opacity: 0.95;
-  background: rgba(255, 255, 255, 0.06);
-  width: auto; /* smaller than full width */
-  align-self: flex-start; /* keep it compact to the left */
-  border-radius: 4px;
-  font-weight: 500; /* lighter weight so it looks smaller */
-  line-height: 1.1; /* compact vertical rhythm */
-}
-.debug-btn-small:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
+/* (debug-btn-small removed as part of revert) */
 
 /* Role edit wrapper: select + caret button */
 .role-edit-wrap {
