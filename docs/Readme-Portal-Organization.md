@@ -8,48 +8,56 @@ The PortalSite project has been organized into a logical folder structure that s
 
 ```
 PortalSite/
-├── index.php                          # Root redirect to login
+├── index.php                          # Front controller: redirects to login (serves health if matched)
+├── session_init.php                   # Centralized session + remember-me auto-login
 ├── home.html                          # (Legacy file - consider removing)
 │
 ├── admin/                             # Admin-only pages
-│   ├── dashboard.php                  # Main admin dashboard with navigation tiles
-│   ├── user_list.php                  # View all users, edit roles, reset passwords
+│   ├── user_list.php                  # View users, edit roles, reset passwords
 │   ├── register_new.php               # Add new users
 │   ├── edit_user.php                  # Edit existing user details
 │   └── remove_user.php                # Delete users
 │
+├── pages/                             # Main app pages (all roles land on dashboard)
+│   ├── dashboard.php
+│   ├── equipments.php | Bid_tracking.php | scheduling.php | engineering.php | ...
+│   └── _template.php                  # Base scaffold for new pages
+│
 ├── auth/                              # Authentication pages
 │   ├── login.php                      # Login form
-│   ├── login_register.php             # Login authentication handler
-│   └── forgot_password.php            # Password recovery page
+│   ├── login_register.php             # Login handler (issues 12h remember token)
+│   ├── logout.php                     # Logout confirmation (clears token)
+│   └── forgot_password.php            # Password recovery page (UI)
 │
 ├── api/                               # API endpoints for AJAX calls
 │   ├── update_user.php                # Update user details (name, role)
 │   └── update_user_password.php       # Update user password (admin function)
 │
 ├── config/                            # Configuration files
-│   └── config.php                     # Database connection settings
+│   ├── config.php                     # Database connection settings
+│   ├── config.example.php             # Example template
+│   └── config.railway.php             # Railway-specific config
 │
 ├── partials/                          # Reusable PHP components
-│   ├── portalheader.php               # Header with logo (used on admin pages)
-│   └── admin_sidebar.php              # Admin navigation sidebar
+│   ├── portalheader.php               # Header with logo (used on admin/pages)
+│   ├── sidebar.php                    # Side navigation (role-aware)
+│   ├── url.php                        # base_url helper for robust links/assets
+│   └── permissions.php                # Role access helpers (can_access, etc.)
+│
+├── debug/                             # Admin-only diagnostics (guarded)
+│   ├── pages_health.php | debug_session.php | debug_page_load.php | health.php
 │
 ├── assets/                            # Static assets
-│   ├── css/                           # Stylesheets (see CSS_ORGANIZATION.md)
-│   │   ├── base.css
-│   │   ├── login.css
-│   │   ├── forgot-password.css
-│   │   ├── admin-layout.css
-│   │   ├── dashboard.css
-│   │   ├── user-list.css
-│   │   ├── register-user.css
-│   │   ├── remove-user.css
-│   │   └── edit-user.css
-│   └── images/                        # Images and icons
-│       ├── logo.svg
-│       └── eportal.svg
+│   ├── css/                           # Stylesheets (see assets/css/.CSS_ORGANIZATION.md)
+│   │   ├── base.css | admin-layout.css | dashboard.css | login.css | ...
+│   ├── js/
+│   │   └── mobile-menu.js             # Hamburger/overlay for mobile sidebar
+│   └── images/
+│       ├── logo.svg | eportal.svg | maintenance.png
 │
-└── dashboards/                        # Role-specific dashboards (future use)
+└── docs/
+  ├── Readme-Portal-Organization.md  # This document
+  └── RESPONSIVE_DESIGN.md           # Responsive approach details
 ```
 
 ## File Descriptions
@@ -73,17 +81,7 @@ All files in this directory require:
 - Admin role verification
 - Include: `../config/config.php`
 - Include: `../partials/portalheader.php`
-- Include: `../partials/admin_sidebar.php`
-
-#### `dashboard.php`
-
-- **Purpose**: Main admin landing page
-- **Features**:
-  - Welcome message with admin name
-  - Navigation tiles to all admin functions
-  - Quick access to user management
-- **CSS**: base.css, admin-layout.css, dashboard.css
-- **Redirects to**: login.php if not authenticated/admin
+- Include: `../partials/sidebar.php`
 
 #### `user_list.php`
 
@@ -139,6 +137,34 @@ All files in this directory require:
 
 ---
 
+### 📁 pages/ (Application Pages)
+
+All files in this directory require:
+
+- Active session (`$_SESSION['email']`, `$_SESSION['name']`)
+- Include: `../config/config.php`
+- Include: `../partials/portalheader.php`
+- Include: `../partials/sidebar.php`
+- May include: `../partials/permissions.php` for per-page access guards
+
+#### `dashboard.php`
+
+- Purpose: Main landing page for all roles
+- Features:
+  - Role-aware tiles (shows only pages available to the user’s role)
+  - Responsive grid (3 → 2 → 1 columns)
+- CSS: base.css, admin-layout.css, dashboard.css
+- Redirects: to `auth/login.php` if not authenticated
+
+#### Other content pages (e.g., `equipments.php`, `forms.php`, ...)
+
+- Purpose: Placeholder content with maintenance image for now
+- Access: Enforced via `partials/permissions.php`
+- CSS: base.css, admin-layout.css, dashboard.css
+- Assets: Uses `base_url()` for robust image and asset linking
+
+---
+
 ### 📁 auth/ (Authentication Pages)
 
 #### `login.php`
@@ -155,18 +181,18 @@ All files in this directory require:
 
 #### `login_register.php`
 
-- **Purpose**: Authentication handler
-- **Functionality**:
-  - Verifies email and password against database
-  - Uses `password_verify()` for secure password checking
+- Purpose: Authentication handler
+- Functionality:
+  - Verifies email and password using `password_verify()`
+  - Regenerates session ID on login
   - Sets session variables on success
-  - Redirects based on user role
-- **Redirects**:
-  - Success (admin): `../admin/dashboard.php`
-  - Success (other roles): Role-specific dashboard (future)
+  - Issues a secure HttpOnly `remember_token` cookie (12 hours)
+  - Stores token + expiry in DB for auto-login
+- Redirects:
+  - Success (all roles): `../pages/dashboard.php`
   - Failure: Back to `login.php` with error message
-- **Database**: Queries `users` table
-- **Security**: Prepared statements, password hashing
+- Database: Queries `users` table
+- Security: Prepared statements, password hashing
 
 #### `forgot_password.php`
 
@@ -177,6 +203,15 @@ All files in this directory require:
 - **Status**: Frontend only - backend email functionality not implemented
 - **CSS**: base.css, forgot-password.css
 - **Future**: Needs email sending logic and token generation
+
+#### `logout.php`
+
+- Purpose: Explicit logout with confirmation page
+- Functionality:
+  - Clears `remember_token` from DB
+  - Clears cookie, destroys session
+  - Shows confirmation UI with links back to login/site
+- CSS: base.css (page uses inline layout styles)
 
 ---
 
@@ -244,22 +279,31 @@ All files in this directory require:
 - **CSS Classes**: `.welcome-section`, `.welcome-left`, `.welcome-logo`
 - **Assets**: `/PortalSite/assets/images/eportal.svg`
 
-#### `admin_sidebar.php`
+#### `sidebar.php`
 
 - **Purpose**: Navigation sidebar for admin pages
 - **Features**:
   - Navigation menu with sections
-  - "Manage Users" expandable group
-  - Links to all admin functions
-  - Logout button at bottom
+  - "Manage Users" group visible only to admins
+  - Logout button pinned to bottom
 - **Links**:
-  - Dashboard: `/PortalSite/admin/dashboard.php`
-  - User List: `/PortalSite/admin/user_list.php`
-  - Add User: `/PortalSite/admin/register_new.php`
-  - Remove User: `/PortalSite/admin/remove_user.php`
-  - Logout: `/PortalSite/auth/logout.php`
+  - Dashboard: `../pages/dashboard.php`
+  - Users (admin only): `../admin/user_list.php`, `../admin/register_new.php`, `../admin/remove_user.php`
+  - Logout: `../auth/logout.php`
 - **JavaScript**: Toggle functionality for expandable sections
 - **CSS Classes**: `.side-nav`, `.nav-btn`, `.nav-group`, `.logout-btn`
+
+#### `url.php`
+
+- **Purpose**: Environment-aware URL builder
+- **Function**: `base_url($path)` returns a path rooted at the site base (local or prod)
+- **Usage**: Prefer for links and asset URLs to avoid broken paths
+
+#### `permissions.php`
+
+- **Purpose**: Role-based access control helpers
+- **Functions**: `allowed_pages_for_role($role)`, `can_access($role, $page)`
+- **Usage**: Import in each `pages/*.php` and guard as needed
 
 ---
 
@@ -267,7 +311,7 @@ All files in this directory require:
 
 #### assets/css/
 
-See `CSS_ORGANIZATION.md` for detailed CSS file structure
+See `assets/css/.CSS_ORGANIZATION.md` for detailed CSS file structure and mapping.
 
 #### assets/images/
 
@@ -324,15 +368,15 @@ admin/user_list.php
    └── Form submits to auth/login_register.php
 
 3. login_register.php validates credentials
-   ├── Success (admin) → admin/dashboard.php
-   ├── Success (other) → role-specific dashboard
-   └── Failure → back to login.php with error
+  ├── On success → pages/dashboard.php (all roles)
+  ├── Issues a 12-hour remember token (HttpOnly cookie) and stores it in DB
+  └── On failure → back to login.php with error
 
 4. Admin navigates via dashboard tiles or sidebar
    └── All admin pages verify session + admin role
 
 5. User logs out
-   └── auth/logout.php → destroys session → redirects to login.php
+  └── auth/logout.php → clears DB token + cookie → destroys session → confirmation page
 ```
 
 ---
@@ -427,38 +471,24 @@ admin/dashboard.php → "Remove User" tile
 
 ---
 
-## Path Conventions
+## URL and Include Conventions
 
-### Absolute Paths (from document root):
+### base_url helper (for links/assets)
 
-Used in: `partials/admin_sidebar.php`, redirects
+Use `partials/url.php` and call `base_url('/path')` for robust URLs across environments.
 
 ```php
-/PortalSite/admin/dashboard.php
-/PortalSite/auth/login.php
+<link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/assets/css/base.css')); ?>">
+<img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="...">
 ```
 
-### Relative Paths (from current file):
-
-Used in: includes, CSS links
+### Relative includes with **DIR** (for PHP includes)
 
 ```php
-// From admin/*.php:
-../config/config.php
-../assets/css/base.css
-../partials/portalheader.php
-
-// From auth/*.php:
-../config/config.php
-../assets/css/base.css
-```
-
-### Include Paths with **DIR**:
-
-```php
-// From admin/*.php:
-__DIR__ . '/../partials/portalheader.php'
-__DIR__ . '/../partials/admin_sidebar.php'
+// From admin/*.php or pages/*.php
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/portalheader.php';
+require_once __DIR__ . '/../partials/sidebar.php';
 ```
 
 ---
@@ -526,6 +556,6 @@ CREATE TABLE users (
 
 ---
 
-**Last Updated**: October 24, 2025
-**Version**: 1.0
-**Maintained by**: Samip Kafle
+**Last Updated**: October 30, 2025
+**Version**: 1.1
+**Maintained by**: Samip Kafle / dh-web-admin

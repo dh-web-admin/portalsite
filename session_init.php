@@ -19,7 +19,7 @@ if (session_status() === PHP_SESSION_NONE) {
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
     @session_set_cookie_params([
-        'lifetime' => 2592000, // 30 days to persist across browser restarts
+        'lifetime' => 43200, // 12 hours to persist across browser restarts
         'path' => '/',
         'domain' => '',
         'secure' => $isHttps,
@@ -48,7 +48,7 @@ if (session_status() === PHP_SESSION_NONE) {
             
             // Regenerate token for security
             $newToken = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', time() + (30 * 86400)); // 30 days
+            $expires = date('Y-m-d H:i:s', time() + 43200); // 12 hours
             
             $updateStmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
             $updateStmt->bind_param("sss", $newToken, $expires, $user['email']);
@@ -57,7 +57,7 @@ if (session_status() === PHP_SESSION_NONE) {
             
             // Update cookie with new token
             setcookie('remember_token', $newToken, [
-                'expires' => time() + (30 * 86400),
+                'expires' => time() + 43200,
                 'path' => '/',
                 'domain' => '',
                 'secure' => $isHttps,
