@@ -187,8 +187,8 @@ if ($result) {
                     })() +
                     '</select>' +
                     '<div style="margin-left:12px; display:flex; gap:8px;">' +
-                    '<button class="nav-btn popup-apply">Apply</button>' +
-                    '<button class="nav-btn popup-cancel">Cancel</button>' +
+                    '<button class="nav-btn popup-apply" style="background:#4caf50; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s;">Apply</button>' +
+                    '<button class="nav-btn popup-cancel" style="background:#f44336; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s;">Cancel</button>' +
                     '</div></div></td>';
                 return tpl;
             };
