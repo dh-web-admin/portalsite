@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 
-// Check if user is logged in and is admin
+// Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     header('Location: ../auth/login.php');
     exit();
@@ -10,20 +10,15 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 // Include database configuration
 require_once __DIR__ . '/../config/config.php';
 
-// Get admin information
+// Get user role for sidebar
 $email = $_SESSION['email'];
 $stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
 $stmt->bind_param('s', $email);
 $stmt->execute();
 $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
+$role = $user ? $user['role'] : 'laborer';
 $stmt->close();
-
-// Verify user is admin
-if (!$user || $user['role'] !== 'admin') {
-    header('Location: ../auth/login.php');
-    exit();
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
