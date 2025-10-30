@@ -44,7 +44,7 @@ if (!can_access($role, 'forms')) {
       <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-         <img src="../assets/images/maintenance.png" alt="Maintenance Image" />
+         <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" />
         </div>
       </main>
     </div>

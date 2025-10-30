@@ -43,7 +43,7 @@ if (!can_access($role, 'employee_information')) {
     <div class="admin-layout">
       <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
-        <img src="../assets/images/maintenance.png" alt="Maintenance Image" />
+  <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" />
         </div>
       </main>
     </div>
