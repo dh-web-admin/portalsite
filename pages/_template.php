@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../session_init.php';
 
 // Check if user is logged in and is admin
@@ -30,7 +30,7 @@ if (!$user || $user['role'] !== 'admin') {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Project Checklist</title>
+  <title>{{TITLE}}</title>
   <link rel="stylesheet" href="../assets/css/base.css" />
   <link rel="stylesheet" href="../assets/css/admin-layout.css" />
   <link rel="stylesheet" href="../assets/css/dashboard.css" />
@@ -42,8 +42,8 @@ if (!$user || $user['role'] !== 'admin') {
       <?php include __DIR__ . '/../partials/admin_sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-          <h1>Project Checklist</h1>
-          <!-- Project Checklist content will go here -->
+          <h1>{{TITLE}}</h1>
+          <!-- {{TITLE}} content will go here -->
         </div>
       </main>
     </div>
@@ -61,4 +61,3 @@ if (!$user || $user['role'] !== 'admin') {
   </script>
 </body>
 </html>
-

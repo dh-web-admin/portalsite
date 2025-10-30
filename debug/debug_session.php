@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/session_init.php';
+require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../partials/url.php';
 
 echo "<h1>Session Debug</h1>";
 echo "<pre>";
@@ -23,7 +24,7 @@ echo "email set: " . (isset($_SESSION['email']) ? 'YES - ' . $_SESSION['email'] 
 echo "name set: " . (isset($_SESSION['name']) ? 'YES - ' . $_SESSION['name'] : 'NO') . "\n";
 echo "</pre>";
 
-echo '<br><a href="auth/login.php">Go to Login</a>';
-echo ' | <a href="admin/dashboard.php">Go to Dashboard</a>';
-echo ' | <a href="pages/equipments.php">Go to Equipments</a>';
+echo '<br><a href="' . htmlspecialchars(base_url('/auth/login.php')) . '">Go to Login</a>';
+echo ' | <a href="' . htmlspecialchars(base_url('/admin/dashboard.php')) . '">Go to Dashboard</a>';
+echo ' | <a href="' . htmlspecialchars(base_url('/pages/equipments.php')) . '">Go to Equipments</a>';
 ?>
