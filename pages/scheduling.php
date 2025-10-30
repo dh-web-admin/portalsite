@@ -1,64 +1,126 @@
-<?php<?php
+<?php<?php<?php
+
+require_once __DIR__ . '/../session_init.php';
 
 require_once __DIR__ . '/../session_init.php';require_once __DIR__ . '/../session_init.php';
 
+// Check if user is logged in and is admin
 
+if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
-// Check if user is logged in and is admin// Check if user is logged in and is admin
+    header("Location: ../auth/login.php");
+
+    exit();// Check if user is logged in and is admin// Check if user is logged in and is admin
+
+}
 
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
-    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
+// Include database configuration
 
-    exit();    exit();
-
-}}
+require_once '../config/config.php';    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
 
 
 
-// Include database configuration// Include database configuration
+// Get admin information    exit();    exit();
 
-require_once '../config/config.php';require_once '../config/config.php';
+$email = $_SESSION['email'];
+
+$query = "SELECT role FROM users WHERE email='$email'";}}
+
+$result = $conn->query($query);
+
+$user = $result->fetch_assoc();
 
 
+
+// Verify user is admin// Include database configuration// Include database configuration
+
+if ($user['role'] !== 'admin') {
+
+    header("Location: ../auth/login.php");require_once '../config/config.php';require_once '../config/config.php';
+
+    exit();
+
+}
+
+?>
 
 // Get admin information// Get admin information
 
-$email = $_SESSION['email'];$email = $_SESSION['email'];
+<!DOCTYPE html>
 
-$query = "SELECT role FROM users WHERE email='$email'";$query = "SELECT role FROM users WHERE email='$email'";
+<html lang="en">$email = $_SESSION['email'];$email = $_SESSION['email'];
 
-$result = $conn->query($query);$result = $conn->query($query);
+<head>
 
-$user = $result->fetch_assoc();$user = $result->fetch_assoc();
+    <meta charset="UTF-8">$query = "SELECT role FROM users WHERE email='$email'";$query = "SELECT role FROM users WHERE email='$email'";
 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <title>Scheduling</title>$result = $conn->query($query);$result = $conn->query($query);
 
-// Verify user is admin// Verify user is admin
+    <link rel="stylesheet" href="../assets/css/base.css">
 
-if ($user['role'] !== 'admin') {if ($user['role'] !== 'admin') {
+    <link rel="stylesheet" href="../assets/css/admin-layout.css">$user = $result->fetch_assoc();$user = $result->fetch_assoc();
 
-    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
 
-    exit();    exit();
+</head>
 
-}}
+<body class="admin-page">
 
-?>?>
+    <div class="admin-container">// Verify user is admin// Verify user is admin
 
+        <?php include __DIR__ . '/../partials/portalheader.php'; ?>
 
+        <div class="admin-layout">if ($user['role'] !== 'admin') {if ($user['role'] !== 'admin') {
 
-<!DOCTYPE html><!DOCTYPE html>
+            <?php include __DIR__ . '/../partials/admin_sidebar.php'; ?>
 
-<html lang="en"><html lang="en">
+            <main class="content-area">    header("Location: ../auth/login.php");    header("Location: ../auth/login.php");
 
-<head><head>
+                <div class="main-content">
 
-    <meta charset="UTF-8">    <meta charset="UTF-8">
+                    <h1>Scheduling</h1>    exit();    exit();
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <!-- Scheduling content will go here -->
 
-    <title>Scheduling</title>    <title>Equipments</title>
+                </div>}}
+
+            </main>
+
+        </div>?>?>
+
+    </div>
+
+    <script>
+
+    (function(){
+
+        // Toggle users sub-nav<!DOCTYPE html><!DOCTYPE html>
+
+        var usersToggle = document.getElementById('usersToggle');
+
+        var usersGroup = document.getElementById('usersGroup');<html lang="en"><html lang="en">
+
+        if (usersToggle && usersGroup) {
+
+            usersToggle.addEventListener('click', function(){<head><head>
+
+                usersGroup.classList.toggle('open');
+
+            });    <meta charset="UTF-8">    <meta charset="UTF-8">
+
+        }
+
+    })();    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    </script>
+
+</body>    <title>Scheduling</title>    <title>Equipments</title>
+
+</html>
 
     <link rel="stylesheet" href="../assets/css/base.css">    <link rel="stylesheet" href="../assets/css/base.css">
 
