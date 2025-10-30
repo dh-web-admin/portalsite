@@ -25,6 +25,6 @@ echo "name set: " . (isset($_SESSION['name']) ? 'YES - ' . $_SESSION['name'] : '
 echo "</pre>";
 
 echo '<br><a href="' . htmlspecialchars(base_url('/auth/login.php')) . '">Go to Login</a>';
-echo ' | <a href="' . htmlspecialchars(base_url('/admin/dashboard.php')) . '">Go to Dashboard</a>';
+echo ' | <a href="' . htmlspecialchars(base_url('/pages/dashboard.php')) . '">Go to Dashboard</a>';
 echo ' | <a href="' . htmlspecialchars(base_url('/pages/equipments.php')) . '">Go to Equipments</a>';
 ?>

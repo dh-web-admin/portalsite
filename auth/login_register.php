@@ -33,7 +33,7 @@ if(isset($_POST['login'])){
             }
 
             if ($user['role'] === 'admin') {
-                header("Location: ../admin/dashboard.php");
+                header("Location: ../pages/dashboard.php");
             }
             else if ($user['role'] === 'projectmanager') {
                 header("Location: project_manager_dashboard.php");

@@ -4,7 +4,7 @@ require_once __DIR__ . '/url.php';
 ?>
 <aside class="side-nav" role="navigation" aria-label="Admin control panel">
     <p class="adminnav">Admin Control Panel</p>
-    <a href="<?php echo htmlspecialchars(base_url('/admin/dashboard.php')); ?>" class="nav-btn">Home</a>
+    <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard.php')); ?>" class="nav-btn">Home</a>
     <div class="nav-group" id="usersGroup">
         <div class="nav-toggle">
             <button class="nav-btn" id="usersToggle" type="button">Users ▾</button>

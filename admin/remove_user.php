@@ -74,7 +74,7 @@ $stmt->close();
 
             <main class="content-area">
                 <div class="remove-container">
-                    <a href="admin_dashboard.php" class="back-btn">Back to Dashboard</a>
+                    <a href="../pages/dashboard.php" class="back-btn">Back to Dashboard</a>
                     <h1>Remove User</h1>
 
                     <?php if ($error): ?>
