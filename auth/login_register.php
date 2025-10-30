@@ -32,33 +32,8 @@ if(isset($_POST['login'])){
                 @session_write_close();
             }
 
-            if ($user['role'] === 'admin') {
-                header("Location: ../pages/dashboard.php");
-            }
-            else if ($user['role'] === 'projectmanager') {
-                header("Location: project_manager_dashboard.php");
-            }
-            else if ($user['role'] === 'estimator') {
-                header("Location: estimator_dashboard.php");
-            }
-            else if ($user['role'] === 'accounting') {
-                header("Location: accounting_dashboard.php");
-            }
-            else if ($user['role'] === 'superintendent') {
-                header("Location: superintendent_dashboard.php");
-            }
-            else if ($user['role'] === 'foreman') {
-                header("Location: foreman_dashboard.php");
-            }
-            else if ($user['role'] === 'mechanic') {
-                header("Location: mechanic_dashboard.php");
-            }
-            else if ($user['role'] === 'operator') {
-                header("Location: operator_dashboard.php");
-            }
-            else if ($user['role'] === 'laborer') {
-                header("Location: laborer_dashboard.php");
-            }
+            // All users go to the same dashboard
+            header("Location: ../pages/dashboard.php");
             exit();
         }
     }
