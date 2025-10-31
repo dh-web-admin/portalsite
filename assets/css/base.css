@@ -127,6 +127,22 @@ body {
   margin: 20px auto;
 }
 
+/* Large bottom-anchored maintenance image wrapper */
+.maintenance-wrap {
+  min-height: calc(100vh - var(--admin-header-h) - 40px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 24px;
+}
+
+.maintenance-image.large {
+  max-width: 700px;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 /*----------------------------------*
  * Responsive Utilities
  *---------------------------------*/

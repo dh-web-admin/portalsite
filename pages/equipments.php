@@ -43,8 +43,10 @@ if (!can_access($role, 'equipments')) {
     <div class="admin-layout">
       <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
-        <div class="main-content" style="min-height:calc(100vh - var(--admin-header-h) - 40px); display:flex; align-items:flex-end; justify-content:center; padding-bottom:24px;">
-           <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image" style="max-width:700px; width:100%; height:auto;" />
+        <div class="main-content">
+          <div class="maintenance-wrap">
+            <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
+          </div>
         </div>
       </main>
     </div>
