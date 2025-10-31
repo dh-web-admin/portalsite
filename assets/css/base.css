@@ -129,18 +129,28 @@ body {
 
 /* Larger, bottom-anchored maintenance image variant */
 .maintenance-wrap {
+  /* make this container full-bleed (edge-to-edge) while keeping it inside the normal flow
+     - it will expand to the viewport width and center its contents
+     - keeps the visual anchored to the bottom using flex alignment */
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  width: 100vw;
   display: flex;
   align-items: flex-end; /* anchor image to bottom of available area */
   justify-content: center;
   min-height: 60vh; /* leave space so image sits near bottom */
   padding-bottom: 24px;
+  box-sizing: border-box;
 }
 
 .maintenance-image.large {
-  max-width: 900px;
-  width: 100%;
+  max-width: none;
+  width: 100%; /* fill the .maintenance-wrap (which is full viewport width) */
   height: auto;
-  margin: 0 auto;
+  display: block;
 }
 
 /*----------------------------------*
