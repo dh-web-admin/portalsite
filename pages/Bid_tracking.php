@@ -44,8 +44,10 @@ if (!can_access($role, 'Bid_tracking')) {
       <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-  <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image" />
-        </div>
+  <div class="maintenance-wrap">
+           <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
+          </div>
+      </div>
       </main>
     </div>
   </div>

@@ -44,7 +44,9 @@ if (!can_access($role, 'pictures')) {
       <?php include __DIR__ . '/../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-          <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image" />
+ <div class="maintenance-wrap">
+           <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
+          </div>
         </div>
       </main>
     </div>
