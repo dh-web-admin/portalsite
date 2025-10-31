@@ -42,20 +42,27 @@ body.admin-page {
   display: flex;
   flex-direction: row; /* text left, logo right */
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start; /* let left content flow; logo will be absolutely anchored */
+  padding-right: 64px; /* reserve space on the right so logo text isn't flush to the edge */
 }
 
 .welcome-left {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  flex: 1 1 auto; /* allow left area to take available space but remain shrinkable */
+  min-width: 0; /* allow children to truncate instead of forcing overflow */
 }
 
 .welcome-section h1 {
   color: white;
   font-size: 32px;
   margin-bottom: 6px;
-  width: 100%;
+  /* allow h1 to wrap naturally so it doesn't force the logo off-screen */
+  width: auto;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
 }
 
 .welcome-section h2 {
@@ -65,10 +72,25 @@ body.admin-page {
 
 .welcome-logo {
   padding-top: 10px;
-  height: 100px; /* larger logo for better visibility */
+  height: 100px;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+  flex-shrink: 0;
+  max-width: 260px;
+  box-sizing: content-box;
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1001;
+}
+
+/* if the header content becomes very long, ensure the logo still sits inside the header
+   by giving the left side permission to wrap and shrink as needed */
+.welcome-left h1,
+.welcome-left h2 {
+  margin: 0;
 }
 
 @media (max-width: 600px) {
@@ -325,6 +347,26 @@ body.admin-page {
   .welcome-logo {
     height: 60px;
     padding-top: 5px;
+  }
+
+  /* On small screens the logo should stack underneath the welcome text
+     instead of being absolutely positioned to the right. Undo the absolute
+     anchoring we use for large viewports and let the flex column layout stack.
+     This prevents clipping and ensures the header remains responsive. */
+  .welcome-logo {
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    margin-top: 10px;
+    padding-right: 0 !important;
+    max-width: 90% !important;
+    height: auto;
+  }
+
+  /* Reduce the large right padding we reserve for the anchored logo on desktop */
+  .welcome-section {
+    padding-right: 16px;
   }
 
   /* Mobile Navigation - Collapsible Sidebar */
