@@ -127,20 +127,20 @@ body {
   margin: 20px auto;
 }
 
-/* Large bottom-anchored maintenance image wrapper */
+/* Larger, bottom-anchored maintenance image variant */
 .maintenance-wrap {
-  min-height: calc(100vh - var(--admin-header-h) - 40px);
   display: flex;
-  align-items: flex-end;
+  align-items: flex-end; /* anchor image to bottom of available area */
   justify-content: center;
+  min-height: 60vh; /* leave space so image sits near bottom */
   padding-bottom: 24px;
 }
 
 .maintenance-image.large {
-  max-width: 700px;
+  max-width: 900px;
   width: 100%;
   height: auto;
-  display: block;
+  margin: 0 auto;
 }
 
 /*----------------------------------*

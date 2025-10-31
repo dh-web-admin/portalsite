@@ -45,7 +45,7 @@ if (!can_access($role, 'equipments')) {
       <main class="content-area">
         <div class="main-content">
           <div class="maintenance-wrap">
-            <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
+           <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
           </div>
         </div>
       </main>
