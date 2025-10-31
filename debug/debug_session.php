@@ -39,5 +39,5 @@ echo "</pre>";
 
 echo '<br><a href="' . htmlspecialchars(base_url('/auth/login.php')) . '">Go to Login</a>';
 echo ' | <a href="' . htmlspecialchars(base_url('/pages/dashboard.php')) . '">Go to Dashboard</a>';
-echo ' | <a href="' . htmlspecialchars(base_url('/pages/equipment.php')) . '">Go to Equipment</a>';
+echo ' | <a href="' . htmlspecialchars(base_url('/pages/equipments.php')) . '">Go to Equipments</a>';
 ?>

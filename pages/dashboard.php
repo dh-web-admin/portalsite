@@ -21,7 +21,7 @@ $role = $user['role'] ?? 'laborer';
 
 // Define page access by role
 $allPages = [
-    'equipment' => 'Equipment',
+    'equipments' => 'Equipments',
     'Bid_tracking' => 'Bid Tracking',
     'scheduling' => 'Scheduling',
     'engineering' => 'Engineering',

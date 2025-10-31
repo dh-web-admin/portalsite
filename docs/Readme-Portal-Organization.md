@@ -20,7 +20,7 @@ PortalSite/
 │
 ├── pages/                             # Main app pages (all roles land on dashboard)
 │   ├── dashboard.php
-│   ├── equipment.php | Bid_tracking.php | scheduling.php | engineering.php | ...
+│   ├── equipments.php | Bid_tracking.php | scheduling.php | engineering.php | ...
 │   └── _template.php                  # Base scaffold for new pages
 │
 ├── auth/                              # Authentication pages
@@ -156,7 +156,7 @@ All files in this directory require:
 - CSS: base.css, admin-layout.css, dashboard.css
 - Redirects: to `auth/login.php` if not authenticated
 
-#### Other content pages (e.g., `equipment.php`, `forms.php`, ...)
+#### Other content pages (e.g., `equipments.php`, `forms.php`, ...)
 
 - Purpose: Placeholder content with maintenance image for now
 - Access: Enforced via `partials/permissions.php`

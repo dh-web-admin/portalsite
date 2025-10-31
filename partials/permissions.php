@@ -4,7 +4,7 @@
 
 function portal_all_pages(): array {
     return [
-        'equipment',
+    'equipments',
         'Bid_tracking',
         'scheduling',
         'engineering',
