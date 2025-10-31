@@ -216,9 +216,15 @@ body.admin-page {
 .content-area {
   flex: 1;
   padding: 40px;
-  margin-left: 240px; /* account for fixed side-nav */
+  margin-left: 0; /* default: no sidebar reserved space; applied when sidebar exists below */
   height: calc(100vh - var(--admin-header-h));
   overflow-y: auto;
+}
+
+/* When a sidebar is present, push the content over to make room. We use the
+   adjacent sibling selector so non-admin pages (no sidebar) keep full width. */
+.admin-layout > .side-nav + .content-area {
+  margin-left: 240px;
 }
 
 .main-content {
@@ -309,6 +315,10 @@ body.admin-page {
   .content-area {
     padding: 30px 20px;
   }
+
+  .admin-layout > .side-nav + .content-area {
+    margin-left: 240px;
+  }
 }
 
 /* Mobile landscape and tablet portrait */
@@ -389,8 +399,11 @@ body.admin-page {
   }
 
   .content-area {
-    margin-left: 200px;
     padding: 20px 15px;
+  }
+
+  .admin-layout > .side-nav + .content-area {
+    margin-left: 200px;
   }
 }
 

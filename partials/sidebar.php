@@ -14,11 +14,15 @@ if (!isset($role) && isset($_SESSION['email'])) {
     $role = $userData['role'] ?? 'laborer';
     $stmt->close();
 }
+// Only render the control panel for admins
+if (!isset($role) || $role !== 'admin') {
+    // no sidebar for non-admin users
+    return;
+}
 ?>
 <aside class="side-nav" role="navigation" aria-label="Control panel">
     <p class="adminnav">Control Panel</p>
     <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard.php')); ?>" class="nav-btn">Home</a>
-    <?php if (isset($role) && $role === 'admin'): ?>
     <div class="nav-group" id="usersGroup">
         <div class="nav-toggle">
             <button class="nav-btn" id="usersToggle" type="button">Users ▾</button>
@@ -29,6 +33,5 @@ if (!isset($role) && isset($_SESSION['email'])) {
             <a href="<?php echo htmlspecialchars(base_url('/admin/user_list.php')); ?>" class="nav-btn">List Users</a>
         </div>
     </div>
-    <?php endif; ?>
     <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="nav-btn logout-btn">Logout</a>
 </aside>
