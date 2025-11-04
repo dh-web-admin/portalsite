@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
             ?>
 
-            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
               <div style="flex:1;">
                 <!-- Filter tabs -->
                 <div class="filter-tabs" style="display:flex;gap:8px;align-items:center;">
@@ -161,8 +161,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <button type="button" class="nav-btn" onclick="setStatus('cancelled')">Cancelled</button>
                 </div>
               </div>
-              <div style="flex:0 0 auto;">
-                <button id="newBtn" class="nav-btn" type="button">New Project</button>
+              <div style="flex:0 0 auto;margin-left:12px;">
+                <div style="display:flex;align-items:center;">
+                  <button id="newBtn" class="header-action-btn" type="button" style="white-space:nowrap;">New Project</button>
+                </div>
               </div>
             </div>
 
@@ -180,8 +182,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   <input name="new[Project_Name]" placeholder="Project Name" />
                   <input name="new[City]" placeholder="City" />
                   <input name="new[State]" placeholder="State" />
-                  <button type="submit" name="create" class="nav-btn">Create</button>
-                  <button type="button" class="nav-btn" onclick="document.getElementById('newForm').style.display='none'">Cancel</button>
+                  <button type="submit" name="create" class="header-action-btn">Create</button>
+                  <button type="button" class="header-action-btn" onclick="document.getElementById('newForm').style.display='none'">Cancel</button>
                 </div>
               </form>
             </div>
@@ -189,22 +191,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <script>document.getElementById('newBtn').addEventListener('click', function(){var f=document.getElementById('newForm');f.style.display=f.style.display==='none'?'block':'none';});</script>
 
             <form method="post">
-              <div style="overflow:auto;max-width:100%;">
+              <div style="overflow:auto;max-width:100%;padding-bottom:56px;">
+                <!-- Sticky first column (Project Name) styles -->
+                <style>
+                  .data-table .sticky-col {
+                    position: sticky;
+                    left: 0;
+                    background: #fff;
+                    z-index: 5;
+                    min-width: 220px;
+                    box-shadow: 2px 0 6px rgba(0,0,0,0.04);
+                  }
+                  .data-table thead .sticky-col { z-index: 6; }
+                </style>
+
                 <table class="data-table" style="width:100%;border-collapse:collapse;">
                   <thead>
                     <tr>
-                      <th style="border:1px solid #ddd;padding:6px;">ID</th>
                       <?php foreach ($cols as $db => $label): ?>
-                        <th style="border:1px solid #ddd;padding:6px;white-space:nowrap;"><?php echo htmlspecialchars($label); ?></th>
+                        <?php $isName = ($db === 'Project_Name'); ?>
+                        <th <?php if ($isName) echo 'class="sticky-col"'; ?> style="border:1px solid #ddd;padding:6px;white-space:nowrap;"><?php echo htmlspecialchars($label); ?></th>
                       <?php endforeach; ?>
                     </tr>
                   </thead>
                   <tbody>
                   <?php foreach ($projects as $p): ?>
                     <tr>
-                      <td style="border:1px solid #ddd;padding:6px;"><?php echo (int)$p['Project_ID']; ?></td>
                       <?php foreach ($cols as $db => $label): ?>
-                        <td style="border:1px solid #ddd;padding:4px;">
+                        <?php $isName = ($db === 'Project_Name'); ?>
+                        <td <?php if ($isName) echo 'class="sticky-col"'; ?> style="border:1px solid #ddd;padding:4px;">
                           <input style="width:200px;" type="text" name="data[<?php echo (int)$p['Project_ID']; ?>][<?php echo htmlspecialchars($db); ?>]" value="<?php echo htmlspecialchars($p[$db] ?? ''); ?>" />
                         </td>
                       <?php endforeach; ?>
@@ -214,9 +229,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </table>
               </div>
 
-              <div style="margin-top:12px;display:flex;gap:8px;">
-                <button type="submit" name="save" class="nav-btn">Save Changes</button>
-                <button type="submit" name="cancel" class="nav-btn">Cancel</button>
+              <!-- Action bar anchored to bottom of the scrollable content area -->
+              <div class="project-action-bar" style="position:sticky;bottom:12px;display:flex;justify-content:flex-end;gap:8px;padding:8px 0;background:linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0));">
+                <button type="submit" name="save" class="header-action-btn">Save Changes</button>
+                <button type="submit" name="cancel" class="header-action-btn">Cancel</button>
               </div>
             </form>
 
