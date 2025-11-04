@@ -43,7 +43,7 @@ body.admin-page {
   flex-direction: row; /* text left, logo right */
   align-items: center;
   justify-content: flex-start; /* let left content flow; logo will be absolutely anchored */
-  padding-right: 64px; /* reserve space on the right so logo text isn't flush to the edge */
+  padding-right: 340px; /* reserve space for logo + header actions on wide screens */
 }
 
 .welcome-left {
@@ -84,6 +84,42 @@ body.admin-page {
   top: 50%;
   transform: translateY(-50%);
   z-index: 1001;
+}
+
+/* Header actions shown for non-admin users (stacked under the logo on the top-right) */
+.header-actions {
+  position: absolute;
+  right: 24px;
+  top: 50%; /* vertically centered relative to header */
+  transform: translateY(-10%);
+  margin-top: 40px;
+  z-index: 1002;
+  display: flex;
+  flex-direction: row; /* side-by-side */
+  gap: 8px;
+  align-items: center;
+}
+
+.header-action-btn {
+  display: inline-block;
+  text-decoration: none;
+  color: #111; /* dark text to contrast with whitish background */
+  background: rgba(255, 255, 255, 0.95); /* near-white bg */
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.header-action-btn.logout-btn {
+  background: rgba(255, 245, 245, 0.95); /* slightly reddish tint for logout */
+  color: #111;
+  border: 1px solid rgba(239, 68, 68, 0.12);
+}
+
+.header-action-btn:hover {
+  filter: brightness(0.96);
 }
 
 /* if the header content becomes very long, ensure the logo still sits inside the header
@@ -319,6 +355,11 @@ body.admin-page {
   .admin-layout > .side-nav + .content-area {
     margin-left: 240px;
   }
+
+  /* Slightly reduce reserved header right padding at tablet sizes */
+  .welcome-section {
+    padding-right: 300px;
+  }
 }
 
 /* Mobile landscape and tablet portrait */
@@ -374,6 +415,18 @@ body.admin-page {
     height: auto;
   }
 
+  /* Make header actions flow in normal document flow on small screens */
+  .header-actions {
+    position: static !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    margin-top: 8px;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+  }
+
   /* Reduce the large right padding we reserve for the anchored logo on desktop */
   .welcome-section {
     padding-right: 16px;
@@ -404,6 +457,19 @@ body.admin-page {
 
   .admin-layout > .side-nav + .content-area {
     margin-left: 200px;
+  }
+}
+
+/* Extra adjustments for very large screens */
+@media (min-width: 1400px) {
+  .welcome-section {
+    padding-right: 380px;
+  }
+  .welcome-logo {
+    max-width: 320px;
+  }
+  .header-actions {
+    right: 36px;
   }
 }
 

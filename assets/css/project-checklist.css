@@ -1,0 +1,415 @@
+/* Styles for pages/project_checklist.php - moved from inline styles */
+
+/* Container controls */
+.project-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Centered filter dropdown in the toolbar */
+.toolbar {
+  position: relative;
+}
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+}
+.filter-dropdown {
+  position: relative;
+}
+.filter-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  color: #0f172a;
+}
+.filter-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06);
+  border-radius: 8px;
+  z-index: 1500;
+}
+.filter-menu .filter-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  color: #0f172a;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.03);
+}
+.filter-menu .filter-option:last-child {
+  border-bottom: none;
+}
+.filter-menu .filter-option:hover {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+@media (max-width: 640px) {
+  .filter-menu {
+    min-width: 160px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+.new-project-wrap {
+  display: flex;
+  align-items: center;
+}
+
+/* New project form */
+#newForm {
+  display: none;
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background: #fff;
+}
+#newForm .header-action-btn {
+  margin-left: 6px;
+}
+
+/* Table scrolling area */
+.table-scroll {
+  overflow: auto;
+  max-width: 100%;
+  padding-bottom: 56px;
+}
+
+/* Modern table styles (moved from inline) */
+.data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  /* Allow menus to overflow the table for dropdowns */
+  overflow: visible;
+  box-shadow: none;
+  border: none;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial;
+}
+
+.data-table thead th {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #111827;
+  font-weight: 700;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.data-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+  vertical-align: middle;
+  font-size: 14px;
+  color: #0f172a;
+  background: transparent;
+}
+
+/* Project table (user-list style) */
+.project-table thead th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.project-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+}
+.project-table .col-name {
+  font-weight: 700;
+}
+.search-box input {
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 8px;
+}
+
+.data-table tbody tr:nth-child(even) td {
+  background: #fbfdff;
+}
+
+/* Sticky first column (Project Name) */
+.data-table .sticky-col {
+  position: sticky;
+  left: 0;
+  background: linear-gradient(180deg, #ffffff, #fbfcfd);
+  z-index: 6;
+  min-width: 260px;
+  padding: 10px 14px;
+  box-shadow: 2px 0 8px rgba(2, 6, 23, 0.04);
+}
+.data-table thead .sticky-col {
+  z-index: 7;
+}
+
+/* Inputs inside the table */
+.data-table input[type="text"],
+.data-table input[type="date"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 8px;
+  background: #ffffff;
+  box-sizing: border-box;
+  font-size: 14px;
+  color: #0f172a;
+}
+.data-table input[type="text"]:focus {
+  outline: none;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.08);
+  border-color: rgba(99, 102, 241, 0.28);
+}
+
+/* Row action button */
+.row-action-btn {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #374151;
+  border-radius: 6px;
+}
+.row-action-btn:hover {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+/* Row action menu */
+.row-action-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 28px;
+  background: #fff;
+  border: 1px solid #eee;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  z-index: 9999;
+  min-width: 160px;
+}
+.row-action-menu .header-action-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 0;
+  background: transparent;
+  color: #0f172a;
+  text-align: left;
+  font-weight: 600;
+  border: none;
+}
+.row-action-menu .header-action-btn:hover {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+/* Action bar at bottom */
+.project-action-bar {
+  position: sticky;
+  bottom: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 0;
+  background: linear-gradient(
+    to top,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0)
+  );
+}
+.project-action-bar .header-action-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.04);
+}
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+  .data-table .sticky-col {
+    min-width: 200px;
+  }
+  .data-table thead th {
+    font-size: 12px;
+  }
+  .data-table tbody td {
+    font-size: 13px;
+  }
+}
+
+/* Small polish for filter buttons */
+.filter-tabs .nav-btn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  color: #111827;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+}
+.filter-tabs .nav-btn:hover {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+/* Top status select */
+.status-select {
+  margin-right: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* Generic button tokens used across admin pages */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 140ms ease, background 120ms ease;
+  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.04);
+}
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), 0 4px 18px rgba(2, 6, 23, 0.06);
+}
+
+/* Primary action button */
+.btn-primary,
+.btn.primary {
+  background: #059669; /* emerald/teal */
+  color: #ffffff;
+  border-color: rgba(5, 150, 105, 0.12);
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.06);
+}
+.btn-primary:hover,
+.btn.primary:hover {
+  background: #047857; /* slightly darker on hover */
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+.btn-primary:active,
+.btn.primary:active {
+  opacity: 0.96;
+}
+.btn-primary:focus,
+.btn.primary:focus {
+  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.1);
+  outline: none;
+}
+
+/* Secondary/ghost button */
+.btn.ghost,
+.btn--ghost {
+  background: transparent;
+  border-color: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+.btn.ghost:hover {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+/* Specific tweaks for the toolbar Add button */
+#addProjectBtn {
+  min-width: 140px;
+  padding: 0.6rem 1rem;
+  font-size: 1rem;
+  border-radius: 12px;
+}
+
+/* Ensure toolbar buttons scale on small screens */
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .toolbar .toolbar-left,
+  .toolbar .toolbar-right {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  #addProjectBtn {
+    min-width: auto;
+    width: 100%;
+  }
+}
+#addProjectBtn {
+  background: #059669;
+  color: #ffffff;
+  border: 1px solid rgba(5, 150, 105, 0.12);
+  box-shadow: 0 4px 10px rgba(2, 6, 23, 0.04);
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  padding: 0.55rem 0.95rem;
+  min-height: 40px;
+  border-radius: 8px;
+}
+#addProjectBtn:hover {
+  background: #047857;
+  box-shadow: 0 6px 14px rgba(2, 6, 23, 0.06);
+}
+#addProjectBtn:active {
+  opacity: 0.96;
+}
+#addProjectBtn:focus {
+  box-shadow: 0 0 0 6px rgba(5, 150, 105, 0.1);
+  outline: none;
+}
+
+/* Add a compact plus icon before the button text using an inline SVG */
+#addProjectBtn::before {
+  content: "";
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14M5 12h14'/></svg>");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+/* Slightly larger on desktop */
+@media (min-width: 900px) {
+  #addProjectBtn {
+    font-size: 1.03rem;
+    padding: 0.72rem 1.2rem;
+  }
+  #addProjectBtn::before {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+  }
+}

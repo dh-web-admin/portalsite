@@ -1,0 +1,7 @@
+Open Command Prompt or PowerShell and run:
+
+mysql -h caboose.proxy.rlwy.net -P 32601 -u root -p railway
+
+
+Password: oCjwiRpjljHroGPDNkxrYqpEJcRScKCw
+

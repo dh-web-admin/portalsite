@@ -3,8 +3,9 @@
 if (session_status() === PHP_SESSION_NONE) { require_once __DIR__ . '/../session_init.php'; }
 require_once __DIR__ . '/url.php';
 
-$name = isset($_SESSION['name']) ? $_SESSION['name'] : 'User';
-$title = 'Employee Dashboard';
+ $name = isset($_SESSION['name']) ? $_SESSION['name'] : 'User';
+ $title = 'Employee Dashboard';
+ $role = 'laborer'; // default role if we can't resolve it from DB
 
 // Determine role to set the title
 if (!empty($_SESSION['email'])) {
@@ -20,8 +21,11 @@ if (!empty($_SESSION['email'])) {
                     $res = $stmt->get_result();
                     if ($res && $res->num_rows > 0) {
                         $row = $res->fetch_assoc();
-                        if (isset($row['role']) && $row['role'] === 'admin') {
-                            $title = 'Admin Dashboard';
+                        if (isset($row['role'])) {
+                            $role = $row['role'];
+                            if ($row['role'] === 'admin') {
+                                $title = 'Admin Dashboard';
+                            }
                         }
                     }
                 }
@@ -36,5 +40,12 @@ if (!empty($_SESSION['email'])) {
     <h1>Welcome, <?php echo htmlspecialchars($name); ?></h1>
     <h2><?php echo htmlspecialchars($title); ?></h2>
   </div>
-    <img src="<?php echo htmlspecialchars(base_url('/assets/images/eportal.svg')); ?>" alt="Portal logo" class="welcome-logo" />
+        <img src="<?php echo htmlspecialchars(base_url('/assets/images/eportal.svg')); ?>" alt="Portal logo" class="welcome-logo" />
+
+        <?php if ($role !== 'admin'): ?>
+            <div class="header-actions" aria-hidden="false">
+                <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard.php')); ?>" class="header-action-btn">Home</a>
+                <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
+            </div>
+        <?php endif; ?>
 </div>
