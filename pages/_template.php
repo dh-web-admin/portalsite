@@ -40,9 +40,7 @@ $stmt->close();
         <div class="main-content">
           <h1>{{TITLE}}</h1>
           <!-- {{TITLE}} content will go here -->
-         <div class="maintenance-wrap">
-           <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
-         </div>
+         <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image" />
         </div>
       </main>
     </div>

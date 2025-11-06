@@ -60,14 +60,7 @@
   background: #5568d3;
 }
 
-.user-actions button.delete-btn {
-  background: #ef4444;
-  color: white;
-}
-
-.user-actions button.delete-btn:hover {
-  background: #dc2626;
-}
+/* Delete button styles removed (delete action provided via edit menu). */
 
 .user-actions button.password-btn {
   background: #f59e0b;

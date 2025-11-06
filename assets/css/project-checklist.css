@@ -413,3 +413,143 @@
     margin-right: 10px;
   }
 }
+
+/* Appended inline styles from pages/project_checklist.php to central CSS to avoid inline <style> blocks
+   These rules are copied verbatim from the page and are safe to keep here; they override earlier tokens
+   where necessary. */
+
+/* Show native scrollbars on the table wrapper (fallback to browser default) */
+.table-wrap {
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.table-wrap::-webkit-scrollbar {
+  height: 12px;
+}
+.table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+/* Hide the proxy scrollbar if present (we rely on native scrollbar now) */
+#tableScrollProxy {
+  display: none !important;
+}
+/* Make table size based on content so horizontal scroll appears when needed */
+.project-table {
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  width: -moz-max-content;
+  width: max-content;
+  min-width: 2200px;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto,
+    "Helvetica Neue", Arial;
+}
+/* Default column sizing: make columns comfortably wide by default using min-width.
+   If a cell's content is larger than the min-width, the column will automatically
+   expand to fit the content (table-layout:auto behavior). */
+.table-container {
+  box-shadow: 0 10px 30px rgba(101, 119, 201, 0.08);
+  border-radius: 12px;
+  border: 1px solid rgba(119, 151, 224, 0.06);
+  overflow: hidden;
+}
+.project-table thead th {
+  position: sticky;
+  top: 0;
+  background: #4b8ad6;
+  padding: 14px 16px;
+  text-align: center;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  white-space: nowrap;
+  font-size: 15px;
+  min-width: 160px;
+}
+.project-table tbody td {
+  padding: 12px 14px;
+  background: #fff;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  white-space: nowrap;
+  font-size: 13px;
+  min-width: 160px;
+  text-align: center;
+}
+/* Make the first column (Project Name) wider by default */
+.project-table thead th:first-child,
+.project-table tbody td:first-child {
+  min-width: 220px;
+}
+/* Minimalistic vertical dividers between columns */
+.project-table thead th:not(:last-child),
+.project-table tbody td:not(:last-child) {
+  border-right: 1px solid #eef2f7; /* subtle vertical line */
+}
+/* Align content vertically for nicer divider appearance */
+.project-table thead th,
+.project-table tbody td {
+  vertical-align: middle;
+}
+/* Slight row shadow to emphasize separation when using border-spacing */
+.project-table tbody tr {
+  box-shadow: 0 1px 0 rgba(2, 6, 23, 0.02);
+}
+
+/* Sticky first column (Project Name) - anchored while other columns scroll */
+.project-table thead th:first-child,
+.project-table tbody td:first-child {
+  position: -webkit-sticky;
+  position: sticky;
+  left: 0;
+  z-index: 30;
+  border-right: 1px solid #e6eef8;
+  text-align: left; /* left-align project name for readability */
+  padding-left: 18px;
+}
+/* Slight shadow on the sticky column to indicate separation */
+.project-table tbody td:first-child {
+  box-shadow: 2px 0 10px rgba(2, 6, 23, 0.04);
+}
+/* Header sticky cell above body sticky cells */
+.project-table thead th:first-child {
+  z-index: 40;
+}
+
+/* Ensure the scroll area shows a bottom scrollbar for horizontal nav.
+   Use scroll to force a visible scrollbar on platforms that hide overlay scrollbars. */
+.table-wrap {
+  overflow-x: scroll;
+  overflow-y: visible;
+  scrollbar-gutter: stable;
+  padding-bottom: 6px;
+}
+/* Allow the table-container to be visible so the horizontal scrollbar isn't clipped by overflow:hidden */
+.table-container {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  border-radius: 10px;
+  overflow: visible;
+  background: #f8fafc;
+}
+/* Project Name styling: bold white text on a matching deep-blue tint for contrast */
+.project-table tbody tr td:first-child {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Removed hover background effect per request (keep rows visually consistent) */
+/* .project-table tbody tr:hover td{background:#f1f5f9} */
+@media (max-width: 900px) {
+  .project-table thead th,
+  .project-table tbody td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+}
