@@ -221,11 +221,6 @@ try {
               Height is fixed to viewport with 50px bottom margin and 50px bottom padding */
         .table-container{box-shadow:0 6px 18px rgba(15,23,42,0.06);border-radius:10px;overflow:auto;background:#f8fafc;position:relative;max-width:100%;height:calc(100vh - var(--admin-header-h, 70px) - 120px);margin-bottom:50px;padding-bottom:50px}
 
-        /* Center dividing line: a subtle vertical rule centered inside the visible table container
-          to visually split the table into two sections. It's pointer-events:none so it never
-          interferes with table interactions. */
-        .table-container::before{ content: ""; position:absolute; top:12px; bottom:12px; left:50%; width:1px; background: rgba(2,6,23,0.06); transform: translateX(-50%); pointer-events:none; z-index:20; border-radius:1px }
-
         /* Continuous header strip: removed in favor of per-cell blue backgrounds.
           Each TH now has its own background:#4b8ad6 so the header color stays
           consistent during horizontal scroll. The ::after overlay is no longer needed. */
