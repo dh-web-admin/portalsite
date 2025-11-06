@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Get Started —Developer Onboarding</title>
+    <link rel="stylesheet" href="doc-styles.css" />
+  </head>
+  <body>
+    <div class="doc-container">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <a href="index.html" class="back-link">← Documentation Hub</a>
+        </div>
+        <div class="toc">
+          <h3>Get Started</h3>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#prerequisites">Prerequisites</a></li>
+            <li><a href="#clone-repo">Clone the repo</a></li>
+            <li><a href="#local-setup">Local setup (XAMPP)</a></li>
+            <li><a href="#database-setup">Database setup</a></li>
+            <li><a href="#config-files">Config files</a></li>
+            <li><a href="#run-local">Run locally</a></li>
+            <li><a href="#railway-setup">Railway: link & deploy</a></li>
+            <li><a href="#workflow">Daily workflow</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+            <li><a href="#checklist">Checklist</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="doc-main">
+        <section id="overview">
+          <h1>Get Started — Developer Onboarding</h1>
+          <p>
+            This guide helps a new developer set up PortalSite locally,
+            including cloning, XAMPP setup, database initialization,
+            configuration, and deployment tips.
+          </p>
+        </section>
+
+        <section id="prerequisites">
+          <h2>Prerequisites</h2>
+          <p>Before you begin, ensure you have the following:</p>
+          <ul>
+            <li>
+              Windows machine (instructions here assume Windows + XAMPP).
+              macOS/Linux users will need equivalent tools.
+            </li>
+            <li>Git installed (check with <code>git --version</code>).</li>
+            <li>XAMPP (Apache + MySQL) installed and running.</li>
+            <li>
+              PHP 8.x (XAMPP bundle includes PHP; confirm with
+              <code>php -v</code>).
+            </li>
+            <li>
+              Optional: Composer (<code>composer --version</code>) if you
+              install any PHP packages locally.
+            </li>
+            <li>A code editor (VS Code, PHPStorm, Sublime, etc.).</li>
+            <li>
+              Access to the GitHub repository (read/write as appropriate) and
+              any deployment accounts (Railway) if required.
+            </li>
+          </ul>
+
+          <p>Quick version checks (PowerShell):</p>
+          <pre><code>git --version
+php -v
+composer --version  # optional</code></pre>
+        </section>
+
+        <section id="clone-repo">
+          <h2>1. Link to the repository & clone</h2>
+          <p>Repository (read &amp; write access required for contributors):</p>
+          <pre><code>https://github.com/dh-web-admin/portalsite</code></pre>
+
+          <h3>Clone over HTTPS (recommended for new devs)</h3>
+          <p>Open PowerShell (run as Administrator if needed) and run:</p>
+          <pre><code>cd C:\xampp\htdocs
+git clone https://github.com/dh-web-admin/portalsite.git
+cd portalsite</code></pre>
+
+          <h3>Clone over SSH (if you've added your SSH key to GitHub)</h3>
+          <pre><code>cd C:\xampp\htdocs
+git clone git@github.com:dh-web-admin/portalsite.git
+cd portalsite</code></pre>
+
+          <h3>Useful Git config you should run once</h3>
+          <pre><code>git config --global user.name "Your Full Name"
+git config --global user.email "you@company.com"
+git config --global core.autocrlf false</code></pre>
+
+          <p>
+            If your organization requires a Personal Access Token (PAT) for
+            HTTPS pushes, create a token on GitHub and use it when prompted for
+            a password.
+          </p>
+        </section>
+
+        <section id="local-setup">
+          <h2>2. Local setup — XAMPP & PHP</h2>
+          <p>
+            We assume Windows + XAMPP. If you use Linux/macOS, adapt commands
+            accordingly.
+          </p>
+
+          <h3>Install XAMPP</h3>
+          <ol>
+            <li>
+              Download XAMPP from
+              <a href="https://www.apachefriends.org/index.html" target="_blank"
+                >apachefriends.org</a
+              >
+              and run the installer.
+            </li>
+            <li>
+              When installing, allow Apache &amp; MySQL services if prompted.
+            </li>
+          </ol>
+
+          <h3>Start services</h3>
+          <ol>
+            <li>
+              Open XAMPP Control Panel and click Start for
+              <strong>Apache</strong> and <strong>MySQL</strong>.
+            </li>
+            <li>
+              Verify by visiting <code>http://localhost</code> (you should see
+              the XAMPP welcome page).
+            </li>
+          </ol>
+
+          <h3>PHP settings (developer-friendly)</h3>
+          <p>
+            Edit <code>php.ini</code> (find path in XAMPP: Apache &gt; Config
+            &gt; PHP (php.ini)) and set:
+          </p>
+          <pre><code>display_errors = On
+error_reporting = E_ALL
+memory_limit = 512M
+upload_max_filesize = 10M
+post_max_size = 12M
+date.timezone = "Your/Timezone"</code></pre>
+          <p>Restart Apache after changes.</p>
+
+          <h3>Enable required PHP extensions</h3>
+          <p>
+            Ensure the following extensions are enabled (uncomment in php.ini if
+            needed): <code>mysqli</code>, <code>mbstring</code>,
+            <code>json</code>, <code>openssl</code>.
+          </p>
+        </section>
+
+        <section id="database-setup">
+          <h2>3. Database setup (detailed)</h2>
+          <p>We recommend using phpMyAdmin for convenience.</p>
+
+          <h3>Create the database (phpMyAdmin)</h3>
+          <ol>
+            <li>Visit <code>http://localhost/phpmyadmin</code>.</li>
+            <li>
+              Click <strong>New</strong> on the left, enter database name:
+              <code>dhdatabase</code>, choose collation
+              <code>utf8mb4_general_ci</code>, and click Create.
+            </li>
+          </ol>
+
+          <h3>Create tables</h3>
+          <p>
+            You can run the SQL below in phpMyAdmin &gt; SQL tab or via CLI.
+          </p>
+          <pre><code>-- users table
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);</code></pre>
+
+          <h3>Create initial admin user (safe steps)</h3>
+          <p>
+            Generate a password hash locally (do NOT store plaintext password):
+          </p>
+          <pre><code>php -r "echo password_hash('Admin123!', PASSWORD_DEFAULT) . PHP_EOL;"</code></pre>
+          <p>Copy the output and insert via SQL (replace &lt;HASH&gt;):</p>
+          <pre><code>INSERT INTO users (name, email, password, role)
+VALUES ('Admin', 'admin@yourcompany.com', '&lt;HASH&gt;', 'admin');</code></pre>
+
+          <h3>Importing a DB dump (optional)</h3>
+          <p>If you have <code>portalsite_backup.sql</code>:</p>
+          <pre><code>cd "C:\xampp\mysql\bin"
+# from PowerShell
+mysql -u root -p dhdatabase &lt; C:\path\to\portalsite_backup.sql</code></pre>
+        </section>
+
+        <section id="config-files">
+          <h2>4. Configuration files (do this before first run)</h2>
+          <p>Copy the example and set local credentials:</p>
+          <pre><code>cd C:\xampp\htdocs\portalsite\config
+copy config.example.php config.php</code></pre>
+
+          <p>Edit <code>config.php</code> and set:</p>
+          <pre><code>$host = 'localhost';
+$user = 'root';
+$password = '';   // default XAMPP root password is blank
+$database = 'dhdatabase';</code></pre>
+
+          <p>
+            Optional: create <code>config/secrets.local.php</code> for sensitive
+            values and add it to <code>.gitignore</code>. This file can store
+            SMTP credentials or API keys locally.
+          </p>
+        </section>
+
+        <section id="run-local">
+          <h2>5. Run and test locally</h2>
+          <ol>
+            <li>Start Apache &amp; MySQL in XAMPP.</li>
+            <li>Open <code>http://localhost/portalsite/</code>.</li>
+            <li>Login as the admin user you created.</li>
+            <li>
+              Developer tip: enable <code>display_errors</code> in PHP only for
+              local dev; turn off in production.
+            </li>
+            <li>
+              Check logs if things fail: XAMPP &gt; Apache &gt; Logs &gt;
+              error.log.
+            </li>
+          </ol>
+        </section>
+
+        <section id="railway-setup">
+          <h2>6. Railway — link &amp; deploy (optional)</h2>
+          <ol>
+            <li>Sign in to Railway and connect your GitHub account.</li>
+            <li>
+              Create New Project → Deploy from GitHub → select
+              <code>dh-web-admin/portalsite</code>.
+            </li>
+            <li>
+              Add a MySQL plugin; copy the credentials and add them under
+              Project &gt; Variables (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME).
+            </li>
+            <li>
+              Add <code>RAILWAY_ENVIRONMENT=production</code> as an env var.
+            </li>
+            <li>
+              Either use <code>config/config.railway.php</code> or update
+              <code>config.php</code> to use getenv() for production.
+            </li>
+            <li>
+              Push to GitHub and watch Railway auto-deploy; check the
+              Deployments &amp; Logs tabs for issues.
+            </li>
+          </ol>
+        </section>
+
+        <section id="workflow">
+          <h2>7. Code workflow & editing</h2>
+          <h3>Make a small change (example)</h3>
+          <ol>
+            <li>
+              Create feature branch:
+              <code>git checkout -b feature/change-login-text</code>
+            </li>
+            <li>
+              Edit the file in your editor, e.g.
+              <code>pages/login/index.php</code> or
+              <code>partials/portalheader.php</code>.
+            </li>
+            <li>Test the change in the browser and fix any issues.</li>
+            <li>
+              Stage &amp; commit:
+              <code
+                >git add path/to/file &amp;&amp; git commit -m "Fix: updated
+                login copy"</code
+              >
+            </li>
+            <li>Push and open a Pull Request on GitHub for review.</li>
+          </ol>
+
+          <h3>Branch naming & commit conventions</h3>
+          <ul>
+            <li>
+              Branch: <code>feature/...</code>, <code>bugfix/...</code>,
+              <code>hotfix/...</code>
+            </li>
+            <li>
+              Commit message: short subject line + optional body; reference
+              ticket if present
+            </li>
+          </ul>
+        </section>
+
+        <section id="troubleshooting">
+          <h2>8. Troubleshooting &amp; tips</h2>
+          <ul>
+            <li>
+              <strong>Apache errors:</strong> check
+              <code>C:\xampp\apache\logs\error.log</code>
+            </li>
+            <li>
+              <strong>DB errors:</strong> verify DB credentials in
+              <code>config/config.php</code> and that MySQL is running
+            </li>
+            <li>
+              <strong>Blank pages:</strong> enable
+              <code>display_errors</code> temporarily to see PHP errors
+            </li>
+            <li>
+              <strong>Assets 404:</strong> confirm relative paths and that
+              <code>assets/</code> exists in project root
+            </li>
+            <li>
+              <strong>Permission issues:</strong> ensure Apache has read access
+              to project files
+            </li>
+          </ul>
+        </section>
+
+        <section id="checklist">
+          <h2>9. Detailed checklist (for interns)</h2>
+          <ol>
+            <li>Clone repo to <code>C:\xampp\htdocs\</code></li>
+            <li>
+              Install and start XAMPP &amp; verify <code>http://localhost</code>
+            </li>
+            <li>Create DB <code>dhdatabase</code> in phpMyAdmin</li>
+            <li>
+              Run the users table SQL and insert admin user with hashed password
+            </li>
+            <li>
+              Copy <code>config.example.php</code> → <code>config.php</code> and
+              update DB credentials
+            </li>
+            <li>
+              Open the site at <code>http://localhost/portalsite/</code> and log
+              in
+            </li>
+            <li>
+              Create a feature branch, make a change, test locally, and open a
+              PR
+            </li>
+          </ol>
+          <p>
+            If everything above passes, you are ready to start editing features.
+          </p>
+        </section>
+
+        <div class="nav-footer">
+          <a href="index.html" class="btn-secondary">← Docs Hub</a>
+          <a href="daily-workflow.html" class="btn-primary">Daily Workflow →</a>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

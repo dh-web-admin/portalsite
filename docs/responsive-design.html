@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"
+    />
+    <title>Responsive Design - PortalSite Documentation</title>
+    <link rel="stylesheet" href="doc-styles.css" />
+  </head>
+  <body>
+    <div class="doc-container">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <a href="index.html" class="back-link">← Documentation Hub</a>
+        </div>
+        <div class="toc">
+          <h3>Table of Contents</h3>
+          <ul>
+            <li><a href="#viewport">Viewport Configuration</a></li>
+            <li><a href="#breakpoints">Responsive Breakpoints</a></li>
+            <li><a href="#mobile-nav">Mobile Navigation</a></li>
+            <li><a href="#images">Responsive Images</a></li>
+            <li><a href="#touch">Touch-Friendly Elements</a></li>
+            <li><a href="#layouts">Flexible Layouts</a></li>
+            <li><a href="#files">Files Modified</a></li>
+            <li><a href="#testing">Testing Checklist</a></li>
+            <li><a href="#browsers">Browser Support</a></li>
+            <li><a href="#future">Future Enhancements</a></li>
+            <li><a href="#performance">Performance Notes</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="content">
+        <header class="doc-header">
+          <h1>📱 Responsive Design</h1>
+          <p class="subtitle">
+            How PortalSite adapts to different viewports and devices
+          </p>
+          <div class="meta">
+            <span class="badge badge-guide">Guide</span>
+            <span>Last updated: November 6, 2025</span>
+          </div>
+        </header>
+
+        <section id="viewport">
+          <h2>Viewport Configuration</h2>
+          <p>
+            All pages include a viewport meta tag to ensure proper scaling on
+            mobile devices:
+          </p>
+          <pre><code>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" /&gt;
+&lt;meta name="theme-color" content="#667eea" /&gt;</code></pre>
+        </section>
+
+        <section id="breakpoints">
+          <h2>Responsive Breakpoints</h2>
+          <p>
+            Design is tuned to several breakpoints to maintain usability across
+            devices.
+          </p>
+
+          <h3>Desktop (&gt; 1024px)</h3>
+          <ul>
+            <li>Full sidebar (240px)</li>
+            <li>3-column dashboard tiles</li>
+            <li>Full header with logo</li>
+          </ul>
+
+          <h3>Tablet (768px - 1024px)</h3>
+          <ul>
+            <li>Reduced sidebar (200px)</li>
+            <li>2-column dashboard tiles</li>
+            <li>Smaller header spacing</li>
+          </ul>
+
+          <h3>Mobile Landscape / Tablet Portrait (600px - 768px)</h3>
+          <ul>
+            <li>Compact sidebar (200px)</li>
+            <li>2-column tiles or stacked layout</li>
+            <li>Smaller fonts and reduced padding</li>
+          </ul>
+
+          <h3>Mobile Portrait (&lt; 600px)</h3>
+          <ul>
+            <li>Sidebar hidden behind hamburger menu</li>
+            <li>Full-width tiles (single column)</li>
+            <li>Touch-optimized buttons (44px minimum)</li>
+            <li>Zero left margin on content</li>
+          </ul>
+
+          <h3>Very Small Mobile (&lt; 380px)</h3>
+          <ul>
+            <li>Further reduced font sizes and minimal padding</li>
+          </ul>
+        </section>
+
+        <section id="mobile-nav">
+          <h2>Mobile Navigation</h2>
+          <p>Behavior for screens under 600px:</p>
+          <ul>
+            <li>
+              Sidebar slides in from left via CSS transform when hamburger is
+              clicked
+            </li>
+            <li>
+              Dark overlay prevents interaction with the page content while menu
+              is open
+            </li>
+            <li>
+              Menu closes on overlay click or when a navigation link is selected
+            </li>
+            <li>Body scroll is locked when menu is open</li>
+          </ul>
+        </section>
+
+        <section id="images">
+          <h2>Responsive Images</h2>
+          <ul>
+            <li>
+              All images use <code>max-width: 100%;</code> to prevent overflow
+            </li>
+            <li>
+              Maintenance images scale down at defined breakpoints (400px →
+              300px → 250px)
+            </li>
+            <li>
+              Consider adding <code>srcset</code> for high-DPI devices in future
+            </li>
+          </ul>
+        </section>
+
+        <section id="touch">
+          <h2>Touch-Friendly Elements</h2>
+          <ul>
+            <li>Touch targets follow minimum 44x44px guideline</li>
+            <li>Form inputs use 16px+ font to avoid iOS zooming</li>
+            <li>
+              Buttons and interactive areas have generous spacing to prevent
+              accidental taps
+            </li>
+          </ul>
+        </section>
+
+        <section id="layouts">
+          <h2>Flexible Layouts</h2>
+          <ul>
+            <li>Dashboard tiles use flexbox with wrapping</li>
+            <li>
+              Content areas use percentage widths and max-width constraints
+            </li>
+            <li>
+              Sidebar and main content margins/padding adjust per breakpoint
+            </li>
+          </ul>
+        </section>
+
+        <section id="files">
+          <h2>Files Modified</h2>
+          <p>
+            Primary CSS and JS files updated to support responsive behavior:
+          </p>
+          <ul>
+            <li>
+              <code>assets/css/admin-layout.css</code> — mobile menu, sidebar
+              behavior, header responsiveness
+            </li>
+            <li>
+              <code>assets/css/base.css</code> — responsive images,
+              touch-friendly sizing, prevent horizontal scroll
+            </li>
+            <li>
+              <code>assets/css/dashboard.css</code> — tile grid responsiveness
+              (3 → 2 → 1)
+            </li>
+            <li>
+              <code>assets/js/mobile-menu.js</code> — handles hamburger toggle,
+              overlay, scroll lock
+            </li>
+            <li>
+              <code>pages/_template.php</code> and page index files — updated
+              viewport meta &amp; mobile script includes
+            </li>
+          </ul>
+        </section>
+
+        <section id="testing">
+          <h2>Testing Checklist</h2>
+          <p>Verify the site on these viewports and behaviors:</p>
+          <ul>
+            <li>Desktop: 1920×1080, 1440×900</li>
+            <li>Laptop: 1366×768, 1280×720</li>
+            <li>Tablet: 1024×768, 768×1024</li>
+            <li>Mobile: 414×896, 375×667, 360×640</li>
+          </ul>
+          <ol>
+            <li>Hamburger menu opens/closes on mobile</li>
+            <li>Overlay closes menu when clicked</li>
+            <li>Navigation links close menu after click</li>
+            <li>Dashboard tiles reflow properly</li>
+            <li>Images scale correctly</li>
+            <li>Forms are usable on mobile</li>
+            <li>No horizontal scrolling at any breakpoint</li>
+            <li>Touch targets are adequate</li>
+          </ol>
+        </section>
+
+        <section id="browsers">
+          <h2>Browser Support</h2>
+          <p>Verified on modern browsers:</p>
+          <ul>
+            <li>Chrome / Edge (latest)</li>
+            <li>Firefox (latest)</li>
+            <li>Safari (iOS 12+)</li>
+            <li>Chrome Android (latest)</li>
+          </ul>
+        </section>
+
+        <section id="future">
+          <h2>Future Enhancements</h2>
+          <ol>
+            <li>Add swipe gesture for closing the menu</li>
+            <li>Implement a service worker for offline support</li>
+            <li>Add touch gestures for tile interactions</li>
+            <li>
+              Use <code>srcset</code> and optimized images for multiple
+              densities
+            </li>
+            <li>Consider CSS Grid for improved layout in modern browsers</li>
+          </ol>
+        </section>
+
+        <section id="performance">
+          <h2>Performance Notes</h2>
+          <ul>
+            <li>Mobile menu JS is ~3KB minified</li>
+            <li>CSS media queries add ~2KB to stylesheet</li>
+            <li>No external dependencies — reduces network requests</li>
+            <li>
+              Consider deferring non-critical JS to improve First Contentful
+              Paint on mobile
+            </li>
+          </ul>
+        </section>
+
+        <div class="nav-footer">
+          <a href="railway-deployment.html" class="btn-secondary"
+            >← Railway Deployment</a
+          >
+          <a href="pages-reorganization.html" class="btn-primary"
+            >Pages Reorganization →</a
+          >
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

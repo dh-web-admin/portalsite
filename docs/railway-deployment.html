@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Railway Deployment Guide - PortalSite Documentation</title>
+    <link rel="stylesheet" href="doc-styles.css" />
+  </head>
+  <body>
+    <div class="doc-container">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <a href="index.html" class="back-link">← Documentation Hub</a>
+        </div>
+        <div class="toc">
+          <h3>Table of Contents</h3>
+          <ul>
+            <li><a href="#what-is-railway">What is Railway?</a></li>
+            <li><a href="#prerequisites">Prerequisites</a></li>
+            <li><a href="#step-by-step">Step-by-step Deployment</a></li>
+            <li><a href="#env-vars">Configure Environment Variables</a></li>
+            <li><a href="#config">Update config.php</a></li>
+            <li><a href="#import-db">Import Database</a></li>
+            <li><a href="#public-url">Generate Public URL</a></li>
+            <li><a href="#testing">Test Deployment</a></li>
+            <li><a href="#auto-deploy">Auto-deploy & railway.json</a></li>
+            <li><a href="#monitoring">Monitoring & Logs</a></li>
+            <li><a href="#security">Security Best Practices</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+            <li><a href="#checklist">Deployment Checklist</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="content">
+        <header class="doc-header">
+          <h1>🚀 Railway.app Deployment Guide</h1>
+          <p class="subtitle">
+            Deploy PortalSite to Railway with MySQL and auto-deploy from GitHub
+          </p>
+          <div class="meta">
+            <span class="badge badge-setup">Deploy</span>
+            <span>Last updated: November 6, 2025</span>
+          </div>
+        </header>
+
+        <section id="what-is-railway">
+          <h2>What is Railway?</h2>
+          <p>
+            Railway.app is a cloud platform that can deploy your application
+            directly from GitHub, provide managed MySQL, and auto-deploy on
+            every push. It's quick to set up and suitable for small-to-medium
+            PHP apps.
+          </p>
+        </section>
+
+        <section id="prerequisites">
+          <h2>Prerequisites</h2>
+          <ul>
+            <li>GitHub repository containing the PortalSite code</li>
+            <li>Railway account (login with GitHub)</li>
+            <li>Database SQL dump (optional, to import existing data)</li>
+          </ul>
+        </section>
+
+        <section id="step-by-step">
+          <h2>Step-by-step Deployment</h2>
+
+          <h3>Step 1: Create Railway Account</h3>
+          <ol>
+            <li>
+              Go to
+              <a href="https://railway.app" target="_blank">railway.app</a>
+            </li>
+            <li>
+              Click "Start a New Project" → "Login with GitHub" and authorize
+              access
+            </li>
+          </ol>
+
+          <h3>Step 2: Create New Project from GitHub</h3>
+          <ol>
+            <li>Click "New Project" → "Deploy from GitHub repo"</li>
+            <li>Choose the repository: <code>dh-web-admin/portalsite</code></li>
+            <li>
+              Railway will detect a PHP project and start building automatically
+              (initial deploy takes ~2–3 minutes)
+            </li>
+          </ol>
+
+          <h3>Step 3: Add MySQL Database</h3>
+          <ol>
+            <li>
+              In your Railway project click "+ New" → "Database" → "Add MySQL"
+            </li>
+            <li>Railway provisions a MySQL instance for you</li>
+          </ol>
+
+          <h3>Step 4: Get Database Credentials</h3>
+          <p>
+            Open the MySQL service > Connect tab and copy the credentials (host,
+            port, user, password, database).
+          </p>
+        </section>
+
+        <section id="env-vars">
+          <h2>Configure Environment Variables</h2>
+          <p>
+            In your portalsite service, open <strong>Variables</strong> and add:
+          </p>
+          <pre><code>DB_HOST    mysql.railway.internal
+DB_USER    root
+DB_PASSWORD [paste railways password]
+DB_NAME    railway
+DB_PORT    3306
+RAILWAY_ENVIRONMENT production</code></pre>
+        </section>
+
+        <section id="config">
+          <h2>Update Your <code>config.php</code></h2>
+          <p>
+            Recommended: copy the Railway-compatible config file shipped as
+            <code>config/config.railway.php</code> to
+            <code>config/config.php</code>.
+          </p>
+
+          <h3>Or use this pattern</h3>
+          <pre><code>&lt;?php
+$isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+if ($isProduction) {
+    $host = getenv('DB_HOST');
+    $user = getenv('DB_USER');
+    $password = getenv('DB_PASSWORD');
+    $database = getenv('DB_NAME');
+} else {
+    $host = 'localhost';
+    $user = 'root';
+    $password = '';
+    $database = 'dhdatabase';
+}
+$conn = new mysqli($host, $user, $password, $database);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+$conn->set_charset("utf8mb4");
+?&gt;</code></pre>
+        </section>
+
+        <section id="import-db">
+          <h2>Import Your Database</h2>
+
+          <h3>Method 1: Railway CLI (Recommended)</h3>
+          <ol>
+            <li>Install Railway CLI (PowerShell):</li>
+            <pre><code>iwr https://railway.app/install.ps1 | iex</code></pre>
+            <li>Login and link project:</li>
+            <pre><code>railway login
+railway link</code></pre>
+            <li>Connect to MySQL and import:</li>
+            <pre><code>railway connect mysql &lt; portalsite_backup.sql</code></pre>
+          </ol>
+
+          <h3>Method 2: Railway Dashboard</h3>
+          <ol>
+            <li>Open MySQL service > Data > Query</li>
+            <li>
+              Run CREATE TABLE / INSERT statements for your users and other
+              tables
+            </li>
+          </ol>
+
+          <h3>SQL Example: users table</h3>
+          <pre><code>CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);</code></pre>
+        </section>
+
+        <section id="public-url">
+          <h2>Generate Public URL</h2>
+          <p>
+            In your portalsite service → Settings → Networking → Generate
+            Domain. Railway will produce a public HTTPS URL like:
+          </p>
+          <pre><code>https://portalsite-production-xxxx.up.railway.app</code></pre>
+        </section>
+
+        <section id="testing">
+          <h2>Test Your Deployment</h2>
+          <ol>
+            <li>Visit your Railway URL and confirm you see the login page</li>
+            <li>Login using the admin user you created</li>
+            <li>
+              Test key features: User list, Add/Edit/Remove user, Dashboard
+              navigation
+            </li>
+          </ol>
+        </section>
+
+        <section id="auto-deploy">
+          <h2>Auto-deploy &amp; railway.json</h2>
+          <p>
+            Railway auto-deploys on GitHub pushes. Optionally add a
+            <code>railway.json</code> file to customize the build/start command:
+          </p>
+          <pre><code>{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": { "builder": "NIXPACKS" },
+  "deploy": {
+    "startCommand": "php -S 0.0.0.0:$PORT -t .",
+    "healthcheckPath": "/",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}</code></pre>
+        </section>
+
+        <section id="monitoring">
+          <h2>Monitoring & Logs</h2>
+          <ul>
+            <li>Deployment status: Project &gt; Deployments</li>
+            <li>Logs: Project &gt; Logs (real-time output)</li>
+            <li>Usage: Project &gt; Usage for CPU / Memory / Network</li>
+          </ul>
+        </section>
+
+        <section id="security">
+          <h2>Security Best Practices</h2>
+          <ul>
+            <li>
+              Enable production session security in
+              <code>config.php</code> (secure, httponly, samesite)
+            </li>
+            <li>
+              Turn off <code>display_errors</code> in production and enable
+              logging
+            </li>
+            <li>Use environment variables for all secrets</li>
+            <li>Use HTTPS (Railway provides SSL automatically)</li>
+            <li>Rotate database passwords if credentials were ever leaked</li>
+          </ul>
+          <pre><code>// Example
+if ($isProduction) {
+  ini_set('session.cookie_secure', 1);
+  ini_set('session.cookie_httponly', 1);
+  ini_set('session.cookie_samesite', 'Strict');
+  ini_set('display_errors', 0);
+  ini_set('log_errors', 1);
+}
+</code></pre>
+        </section>
+
+        <section id="troubleshooting">
+          <h2>Troubleshooting</h2>
+          <div class="situation-card">
+            <h3>Connection failed</h3>
+            <p>
+              Check environment variables, ensure DB_HOST is
+              <code>mysql.railway.internal</code> and the MySQL service is
+              running.
+            </p>
+          </div>
+          <div class="situation-card">
+            <h3>Page not found</h3>
+            <p>
+              Verify all files were pushed to GitHub and the start command in
+              <code>railway.json</code> is correct.
+            </p>
+          </div>
+          <div class="situation-card">
+            <h3>Session not working</h3>
+            <p>
+              Set <code>session_save_path('/tmp')</code> in
+              <code>config.php</code> or configure persistent session storage.
+            </p>
+          </div>
+        </section>
+
+        <section id="checklist">
+          <h2>Deployment Checklist</h2>
+          <ul>
+            <li>Code pushed to GitHub</li>
+            <li>Railway project created &amp; linked</li>
+            <li>MySQL database added</li>
+            <li>Environment variables configured</li>
+            <li><code>config.php</code> updated for production</li>
+            <li>Database imported</li>
+            <li>Admin user created</li>
+            <li>Public URL generated</li>
+            <li>Site tested</li>
+          </ul>
+        </section>
+
+        <div class="nav-footer">
+          <a href="github-setup.html" class="btn-secondary">← GitHub Setup</a>
+          <a href="responsive-design.html" class="btn-primary"
+            >Responsive Design →</a
+          >
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

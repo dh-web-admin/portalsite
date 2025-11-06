@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Workflow Guide - PortalSite</title>
+    <link rel="stylesheet" href="doc-styles.css" />
+  </head>
+  <body>
+    <div class="doc-container">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <a href="index.html" class="back-link">← Documentation Hub</a>
+        </div>
+        <div class="toc">
+          <h3>Table of Contents</h3>
+          <ul>
+            <li><a href="#simple-3-step">Simple 3-Step Process</a></li>
+            <li><a href="#where-to-work">Where to Work</a></li>
+            <li><a href="#complete-workflow">Complete Daily Workflow</a></li>
+            <li><a href="#real-examples">Real Examples</a></li>
+            <li><a href="#understanding-git">Understanding Git Commands</a></li>
+            <li><a href="#when-to-commit">When to Commit & Push</a></li>
+            <li><a href="#common-situations">Common Situations</a></li>
+            <li><a href="#protected-files">Protected Files</a></li>
+            <li><a href="#quick-reference">Quick Reference Card</a></li>
+            <li><a href="#pro-tips">Pro Tips</a></li>
+            <li><a href="#weekly-workflow">Weekly Workflow</a></li>
+            <li><a href="#checklist">Checklist</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="content">
+        <header class="doc-header">
+          <h1>🔄 Daily Workflow Guide</h1>
+          <p class="subtitle">PortalSite Development</p>
+          <div class="meta">
+            <span class="badge badge-essential">Essential</span>
+            <span>Last Updated: November 6, 2025</span>
+          </div>
+        </header>
+
+        <section id="simple-3-step">
+          <h2>Simple 3-Step Process</h2>
+          <p>Every time you work on your project, follow these three steps:</p>
+
+          <div class="step-card">
+            <h3>Step 1: Work Normally ✏️</h3>
+            <ul>
+              <li>Open VS Code</li>
+              <li>Edit your files (PHP, CSS, HTML, etc.)</li>
+              <li>Test in browser: <code>http://localhost/PortalSite</code></li>
+              <li>Make sure everything works</li>
+            </ul>
+          </div>
+
+          <div class="step-card">
+            <h3>Step 2: Save Locally 💾</h3>
+            <ul>
+              <li>Save your files (Ctrl + S)</li>
+            </ul>
+          </div>
+
+          <div class="step-card">
+            <h3>Step 3: Backup to GitHub ☁️</h3>
+            <pre><code># Open Terminal in VS Code (Ctrl + `)
+# Then run these 3 commands:
+
+git add .
+git commit -m "Brief description of what you changed"
+git push</code></pre>
+            <p>
+              <strong>That's it!</strong> Your code is now backed up on GitHub.
+            </p>
+          </div>
+        </section>
+
+        <section id="where-to-work">
+          <h2>📍 Important: Where to Work</h2>
+
+          <div class="info-box success">
+            <h4>Always work here:</h4>
+            <pre><code>C:\xampp\htdocs\PortalSite</code></pre>
+          </div>
+
+          <div class="info-box danger">
+            <h4>Never:</h4>
+            <ul>
+              <li>❌ Don't create a new folder</li>
+              <li>❌ Don't move your files</li>
+              <li>❌ Don't edit on GitHub website</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="complete-workflow">
+          <h2>🔄 Complete Daily Workflow Example</h2>
+
+          <h3>Morning - Starting Work</h3>
+          <ol>
+            <li>Open VS Code</li>
+            <li>
+              Make sure you're in: <code>C:\xampp\htdocs\PortalSite</code>
+            </li>
+            <li>Start XAMPP (Apache + MySQL)</li>
+            <li>Open browser: <code>http://localhost/PortalSite</code></li>
+          </ol>
+
+          <h3>During the Day - Making Changes</h3>
+          <p><strong>Example: You want to change dashboard colors</strong></p>
+          <ol>
+            <li>Open <code>assets/css/dashboard.css</code> in VS Code</li>
+            <li>
+              Change the colors:
+              <pre><code>.tile {
+  background: #4a90e2; /* Changed from #3173d479 */
+}</code></pre>
+            </li>
+            <li>Save file (Ctrl + S)</li>
+            <li>Refresh browser to see changes</li>
+            <li>Looks good? Continue to Step 3...</li>
+          </ol>
+
+          <h3>End of Day (or After Each Feature) - Save to GitHub</h3>
+          <p>Open Terminal in VS Code (Ctrl + `) and type:</p>
+          <pre><code># See what files you changed
+git status
+
+# Add all changes
+git add .
+
+# Save with description
+git commit -m "Updated dashboard tile colors to blue"
+
+# Upload to GitHub
+git push</code></pre>
+          <p><strong>Done!</strong> ✅ Your work is saved to GitHub.</p>
+        </section>
+
+        <section id="real-examples">
+          <h2>📝 Real Examples</h2>
+
+          <div class="example-card">
+            <h3>Example 1: Fixed a Bug</h3>
+            <pre><code># You fixed the login redirect issue in auth/login_register.php
+
+git add auth/login_register.php
+git commit -m "Fix login redirect for non-admin users"
+git push</code></pre>
+          </div>
+
+          <div class="example-card">
+            <h3>Example 2: Added New Feature</h3>
+            <pre><code># You created admin/reports.php and assets/css/reports.css
+
+git add .
+git commit -m "Add reports page with user statistics"
+git push</code></pre>
+          </div>
+
+          <div class="example-card">
+            <h3>Example 3: Multiple Small Changes</h3>
+            <pre><code># You updated several CSS files and fixed typos
+
+git add .
+git commit -m "Update styling and fix typos across admin pages"
+git push</code></pre>
+          </div>
+
+          <div class="example-card">
+            <h3>Example 4: End of Day Save</h3>
+            <pre><code># You worked on various improvements throughout the day
+
+git add .
+git commit -m "Daily work: improved navigation, updated colors, fixed bugs"
+git push</code></pre>
+          </div>
+        </section>
+
+        <section id="understanding-git">
+          <h2>🎓 Understanding the 3 Git Commands</h2>
+
+          <div class="command-card">
+            <h3>Command 1: <code>git add .</code></h3>
+            <p>
+              <strong>What it does:</strong> Prepares all your changed files to
+              be saved
+            </p>
+            <ul>
+              <li>The <code>.</code> means "everything I changed"</li>
+              <li>
+                You can also add specific files:
+                <code>git add dashboard.php</code>
+              </li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>Command 2: <code>git commit -m "message"</code></h3>
+            <p>
+              <strong>What it does:</strong> Saves your changes locally with a
+              description
+            </p>
+            <ul>
+              <li>The message should describe what you did</li>
+              <li>Good: "Add email validation to user registration"</li>
+              <li>Bad: "updates" or "changes"</li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>Command 3: <code>git push</code></h3>
+            <p>
+              <strong>What it does:</strong> Uploads your saved changes to
+              GitHub
+            </p>
+            <ul>
+              <li>Makes your work available in the cloud</li>
+              <li>Creates a backup</li>
+              <li>Others can now see your changes (if they have access)</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="when-to-commit">
+          <h2>⏰ When Should You Commit & Push?</h2>
+
+          <div class="info-box success">
+            <h4>Good Times:</h4>
+            <ul>
+              <li>✅ After completing a feature</li>
+              <li>✅ After fixing a bug</li>
+              <li>✅ Before trying something experimental</li>
+              <li>✅ End of your work session</li>
+              <li>✅ When you have working code you don't want to lose</li>
+            </ul>
+          </div>
+
+          <div class="info-box info">
+            <h4>How Often?</h4>
+            <ul>
+              <li><strong>Minimum:</strong> Once per day (at end of work)</li>
+              <li><strong>Recommended:</strong> After each completed task</li>
+              <li>
+                <strong>Maximum:</strong> No limit! Commit as often as you want
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-box warning">
+            <h4>Don't Wait!</h4>
+            <ul>
+              <li>❌ Don't wait a week before committing</li>
+              <li>❌ Don't commit only when "everything is perfect"</li>
+              <li>✅ Commit working code frequently</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="common-situations">
+          <h2>🔧 Common Situations & Solutions</h2>
+
+          <div class="situation-card">
+            <h3>"I changed files but haven't pushed yet"</h3>
+            <pre><code># That's fine! Just push when ready
+git status      # See what you changed
+git add .
+git commit -m "Description of changes"
+git push</code></pre>
+          </div>
+
+          <div class="situation-card">
+            <h3>"I want to see what I changed before committing"</h3>
+            <pre><code>git status      # List changed files
+git diff        # Show exact changes</code></pre>
+          </div>
+
+          <div class="situation-card">
+            <h3>"I made a mistake and want to undo"</h3>
+            <pre><code># Undo changes to a specific file (before commit)
+git checkout -- filename.php
+
+# Undo ALL local changes (before commit)
+git reset --hard
+
+# Undo last commit (after commit but before push)
+git reset --soft HEAD~1
+
+# Undo after pushing (creates new commit that undoes)
+git revert HEAD
+git push</code></pre>
+          </div>
+
+          <div class="situation-card">
+            <h3>"Did I forget to push something?"</h3>
+            <pre><code>git status
+# If it says "Your branch is ahead of 'origin/main'" - you need to push
+git push</code></pre>
+          </div>
+
+          <div class="situation-card">
+            <h3>"I'm not sure if my code is on GitHub"</h3>
+            <pre><code>git status
+# Should say: "Your branch is up to date with 'origin/main'"
+# Or check: https://github.com/dh-web-admin/portalsite</code></pre>
+          </div>
+        </section>
+
+        <section id="protected-files">
+          <h2>🚫 Files That Won't Be Pushed (Protected)</h2>
+          <p>These files are automatically excluded (in .gitignore):</p>
+          <ul>
+            <li>
+              ❌ <code>config/config.php</code> - Contains database password
+            </li>
+            <li>❌ <code>*.bak</code> - Backup files</li>
+            <li>❌ <code>*.log</code> - Log files</li>
+            <li>❌ <code>*_backup.php</code> - Old backup files</li>
+          </ul>
+          <p>
+            <strong>This is good!</strong> Sensitive files stay on your computer
+            only.
+          </p>
+        </section>
+
+        <section id="quick-reference">
+          <h2>📋 Quick Reference Card</h2>
+          <div class="reference-card">
+            <pre><code>========================================
+DAILY GIT COMMANDS
+========================================
+
+# 1. Check what changed
+git status
+
+# 2. Add all changes
+git add .
+
+# 3. Save with message
+git commit -m "What I did today"
+
+# 4. Upload to GitHub
+git push
+
+========================================
+BONUS COMMANDS
+========================================
+
+# See recent commits
+git log --oneline -5
+
+# See exact changes
+git diff
+
+# Undo local changes
+git checkout -- filename.php
+
+# Pull latest (if working from multiple computers)
+git pull</code></pre>
+          </div>
+        </section>
+
+        <section id="pro-tips">
+          <h2>💡 Pro Tips</h2>
+
+          <div class="tip-card">
+            <h3>Tip 1: Write Good Commit Messages</h3>
+            <div class="comparison">
+              <div class="good">
+                <h4>✅ Good messages explain WHAT and WHY</h4>
+                <pre><code>git commit -m "Add password reset button to user list"
+git commit -m "Fix email validation regex in registration"
+git commit -m "Update dashboard colors to match brand guidelines"</code></pre>
+              </div>
+              <div class="bad">
+                <h4>❌ Bad messages are vague</h4>
+                <pre><code>git commit -m "updates"
+git commit -m "fix"
+git commit -m "changes"</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="tip-card">
+            <h3>Tip 2: Commit Often</h3>
+            <p>Better to have many small commits than one giant commit:</p>
+            <pre><code># Throughout the day:
+git commit -m "Add email field validation"
+git commit -m "Update error messages"
+git commit -m "Fix spacing in registration form"
+git commit -m "Add success notification"
+
+# Push at the end
+git push</code></pre>
+          </div>
+
+          <div class="tip-card">
+            <h3>Tip 3: Test Before You Push</h3>
+            <ul>
+              <li>Always test your code locally first</li>
+              <li>
+                Make sure <code>http://localhost/PortalSite</code> still works
+              </li>
+              <li>Then commit and push</li>
+            </ul>
+          </div>
+
+          <div class="tip-card">
+            <h3>Tip 4: Pull Before You Start (If Using Multiple Computers)</h3>
+            <pre><code># If you worked on another computer yesterday
+git pull
+
+# Now you have the latest code
+# Start working...</code></pre>
+          </div>
+        </section>
+
+        <section id="weekly-workflow">
+          <h2>🎯 Weekly Workflow Summary</h2>
+
+          <div class="workflow-timeline">
+            <div class="timeline-item">
+              <h3>Monday Morning</h3>
+              <pre><code># Start XAMPP
+# Open VS Code
+cd C:\xampp\htdocs\PortalSite
+git pull  # Get any updates (if any)
+# Start coding...</code></pre>
+            </div>
+
+            <div class="timeline-item">
+              <h3>During the Week</h3>
+              <pre><code># After each feature or bug fix:
+git add .
+git commit -m "Description"
+git push</code></pre>
+            </div>
+
+            <div class="timeline-item">
+              <h3>Friday Evening</h3>
+              <pre><code># Make sure everything is pushed
+git status
+# If you see uncommitted changes:
+git add .
+git commit -m "Week's work completed"
+git push</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="checklist">
+          <h2>✅ Checklist Before Closing VS Code</h2>
+          <p>Before ending your work session:</p>
+          <ul class="checklist">
+            <li><input type="checkbox" /> All changes saved (Ctrl + S)</li>
+            <li><input type="checkbox" /> Tested in browser</li>
+            <li>
+              <input type="checkbox" /> Run <code>git status</code> - see what
+              changed
+            </li>
+            <li>
+              <input type="checkbox" /> Run <code>git add .</code> - stage
+              changes
+            </li>
+            <li>
+              <input type="checkbox" /> Run
+              <code>git commit -m "message"</code> - save locally
+            </li>
+            <li>
+              <input type="checkbox" /> Run <code>git push</code> - upload to
+              GitHub
+            </li>
+            <li>
+              <input type="checkbox" /> Verify: <code>git status</code> says "up
+              to date"
+            </li>
+          </ul>
+        </section>
+
+        <section class="remember-section">
+          <h2>🎓 Remember</h2>
+          <ol>
+            <li>
+              <strong>Your work stays in:</strong>
+              <code>C:\xampp\htdocs\PortalSite</code>
+            </li>
+            <li><strong>You edit files</strong> in VS Code</li>
+            <li>
+              <strong>You test on:</strong>
+              <code>http://localhost/PortalSite</code>
+            </li>
+            <li>
+              <strong>You backup with:</strong> <code>git add</code>,
+              <code>git commit</code>, <code>git push</code>
+            </li>
+            <li><strong>GitHub is your</strong> backup, not your workspace</li>
+          </ol>
+        </section>
+
+        <div class="nav-footer">
+          <a href="index.html" class="btn-secondary"
+            >← Back to Documentation Hub</a
+          >
+          <a href="github-setup.html" class="btn-primary"
+            >GitHub Setup Guide →</a
+          >
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

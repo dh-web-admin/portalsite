@@ -9,6 +9,7 @@
   justify-content: flex-start; /* Align items to the left */
   margin: 20px 0;
   gap: 15px;
+  padding: 10px 0; /* Add padding to prevent cutoff */
 }
 
 .tile {
@@ -30,12 +31,15 @@
   justify-content: flex-start;
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 
 .tile:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   background: #8c929c;
+  z-index: 10;
 }
 
 .tile h2 {

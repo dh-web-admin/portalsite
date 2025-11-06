@@ -44,7 +44,7 @@ if (!empty($_SESSION['email'])) {
 
         <?php if ($role !== 'admin'): ?>
             <div class="header-actions" aria-hidden="false">
-                <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard.php')); ?>" class="header-action-btn">Home</a>
+                <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="header-action-btn">Home</a>
                 <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
             </div>
         <?php endif; ?>

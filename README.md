@@ -35,8 +35,8 @@ A comprehensive web-based employee portal built with PHP and MySQL, featuring ro
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/PortalSite.git
-cd PortalSite
+git clone https://github.com/dh-web-admin/portalsite.git
+cd portalsite
 ```
 
 ### 2. Set up the database

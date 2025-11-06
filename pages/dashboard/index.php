@@ -1,14 +1,14 @@
 <?php
-require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../../session_init.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    header("Location: ../auth/login.php");
+    header("Location: ../../auth/login.php");
     exit();
 }
 
 // Include database configuration
-require_once '../config/config.php';
+require_once '../../config/config.php';
 
 // Get user information
 $email = $_SESSION['email'];
@@ -71,23 +71,24 @@ switch ($role) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="theme-color" content="#667eea">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="../assets/css/base.css">
-    <link rel="stylesheet" href="../assets/css/admin-layout.css">
-    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/base.css">
+    <link rel="stylesheet" href="../../assets/css/admin-layout.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body class="admin-page">
     <div class="admin-container">
-    <?php include __DIR__ . '/../partials/portalheader.php'; ?>
+    <?php include __DIR__ . '/../../partials/portalheader.php'; ?>
         <div class="admin-layout">
-            <?php include __DIR__ . '/../partials/sidebar.php'; ?>
+            <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
             <main class="content-area">
                 <div class="main-content">
                     <div class="tiles">
                     <!-- Role-based tiles -->
-                    <?php require_once __DIR__ . '/../partials/url.php'; ?>
+                    <?php require_once __DIR__ . '/../../partials/url.php'; ?>
                     <?php foreach ($allPages as $page => $title): ?>
                         <?php if (!in_array($page, $hiddenPages)): ?>
-                            <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '.php')); ?>" class="tile">
+                            <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/')); ?>" class="tile">
                                 <h2><?php echo htmlspecialchars($title); ?></h2>
                             </a>
                         <?php endif; ?>
@@ -107,8 +108,18 @@ switch ($role) {
                 usersGroup.classList.toggle('open');
             });
         }
+
+        // Toggle dev options sub-nav
+        var devToggle = document.getElementById('devToggle');
+        var devGroup = document.getElementById('devGroup');
+        if (devToggle && devGroup) {
+            devToggle.addEventListener('click', function(){
+                devGroup.classList.toggle('open');
+            });
+        }
     })();
     </script>
-    <script src="../assets/js/mobile-menu.js"></script>
+    <script src="../../assets/js/mobile-menu.js"></script>
+    <script src="../../assets/js/logout-confirm.js"></script>
 </body>
 </html>

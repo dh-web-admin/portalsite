@@ -13,7 +13,7 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $role = $user['role'] ?? 'laborer';
 $stmt->close();
-if ($role !== 'admin') { header('Location: ../pages/dashboard.php'); exit(); }
+if ($role !== 'admin') { header('Location: ../pages/dashboard/'); exit(); }
 
 echo "<h1>Session Debug</h1>";
 echo "<pre>";
@@ -38,6 +38,6 @@ echo "name set: " . (isset($_SESSION['name']) ? 'YES - ' . $_SESSION['name'] : '
 echo "</pre>";
 
 echo '<br><a href="' . htmlspecialchars(base_url('/auth/login.php')) . '">Go to Login</a>';
-echo ' | <a href="' . htmlspecialchars(base_url('/pages/dashboard.php')) . '">Go to Dashboard</a>';
+echo ' | <a href="' . htmlspecialchars(base_url('/pages/dashboard/')) . '">Go to Dashboard</a>';
 echo ' | <a href="' . htmlspecialchars(base_url('/pages/equipments.php')) . '">Go to Equipments</a>';
 ?>

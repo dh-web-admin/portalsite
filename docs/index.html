@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PortalSite Documentation Hub</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 40px 20px;
+        color: #333;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      header {
+        text-align: center;
+        color: white;
+        margin-bottom: 50px;
+      }
+
+      header h1 {
+        font-size: 3rem;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+      }
+
+      .search-bar {
+        max-width: 600px;
+        margin: 0 auto 40px;
+        position: relative;
+      }
+
+      .search-bar input {
+        width: 100%;
+        padding: 15px 20px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 50px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        outline: none;
+      }
+
+      .search-bar input:focus {
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+      }
+
+      .docs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 40px;
+      }
+
+      .doc-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+      }
+
+      .doc-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+      }
+
+      .doc-card-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+      }
+
+      .doc-card h2 {
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+        color: #667eea;
+      }
+
+      .doc-card p {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 15px;
+      }
+
+      .doc-card-meta {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        color: #999;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .badge-essential {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .badge-setup {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .badge-reference {
+        background: #f3e8ff;
+        color: #6b21a8;
+      }
+
+      .badge-guide {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .category-filter {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+      }
+
+      .filter-btn {
+        padding: 10px 25px;
+        border: 2px solid white;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      .filter-btn:hover,
+      .filter-btn.active {
+        background: white;
+        color: #667eea;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      footer {
+        text-align: center;
+        color: white;
+        margin-top: 50px;
+        padding: 20px;
+        opacity: 0.8;
+      }
+
+      @media (max-width: 768px) {
+        header h1 {
+          font-size: 2rem;
+        }
+
+        .docs-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>DarkHorse Employee PortalSite Documentation Hub</h1>
+        <p>Developer Resources & Guides</p>
+        <p style="margin-top: 20px;">
+          <a href="../pages/dashboard/index.php" style="color: white; text-decoration: none; background: rgba(255, 255, 255, 0.2); padding: 10px 25px; border-radius: 25px; border: 2px solid white; display: inline-block; font-weight: 600; transition: all 0.3s ease;">
+            ← Back to Dashboard
+          </a>
+        </p>
+      </header>
+
+      <div class="search-bar">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="🔍 Search documentation..."
+        />
+      </div>
+
+      <div class="category-filter">
+        <button class="filter-btn active" data-filter="all">All Docs</button>
+        <button class="filter-btn" data-filter="essential">Essential</button>
+        <button class="filter-btn" data-filter="setup">Setup</button>
+        <button class="filter-btn" data-filter="reference">Reference</button>
+        <button class="filter-btn" data-filter="guide">Guide</button>
+      </div>
+
+      <div class="docs-grid" id="docsGrid">
+        <!-- Get Started (Onboarding) - ESSENTIAL (FIRST) -->
+        <a href="get-started.html" class="doc-card" data-category="essential">
+          <div class="doc-card-icon">🚀</div>
+          <h2>Get Started <br>(Developer Onboarding)</br></h2>
+          <p>
+            Step-by-step instructions to set up the project locally (XAMPP,
+            database, config), clone the repo, and the basic developer workflow.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-essential">Essential</span>
+            <span>Updated: Nov 6, 2025</span>
+          </div>
+        </a>
+
+        <!-- Daily Workflow - ESSENTIAL -->
+        <a
+          href="daily-workflow.html"
+          class="doc-card"
+          data-category="essential"
+        >
+          <div class="doc-card-icon">🔄</div>
+          <h2>Daily Workflow</h2>
+          <p>
+            Step-by-step guide for daily development tasks, Git commands, and
+            best practices.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-essential">Essential</span>
+            <span>Updated: Nov 6, 2025</span>
+          </div>
+        </a>
+
+        <!-- Setup: GitHub, Railway -->
+        <a href="github-setup.html" class="doc-card" data-category="setup">
+          <div class="doc-card-icon">🐙</div>
+          <h2>GitHub Setup</h2>
+          <p>
+            Initial Git configuration, repository setup, and GitHub integration
+            instructions.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-setup">Setup</span>
+            <span>Initial Setup</span>
+          </div>
+        </a>
+
+        <a
+          href="railway-deployment.html"
+          class="doc-card"
+          data-category="setup"
+        >
+          <div class="doc-card-icon">🚂</div>
+          <h2>Railway Deployment</h2>
+          <p>
+            Deploy PortalSite to Railway.app with database configuration and
+            environment setup.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-setup">Setup</span>
+            <span>Production Deploy</span>
+          </div>
+        </a>
+
+        <!-- Reference: Portal Organization, Pages Reorganization -->
+        <a
+          href="portal-organization.html"
+          class="doc-card"
+          data-category="reference"
+        >
+          <div class="doc-card-icon">🏗️</div>
+          <h2>Portal Organization</h2>
+          <p>
+            Complete file structure, dependencies, and architecture overview of
+            the PortalSite application.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-reference">Reference</span>
+            <span>Updated: Nov 6, 2025</span>
+          </div>
+        </a>
+
+        <a
+          href="pages-reorganization.html"
+          class="doc-card"
+          data-category="reference"
+        >
+          <div class="doc-card-icon">📂</div>
+          <h2>Pages Reorganization</h2>
+          <p>
+            New folder structure for pages, path changes, and migration guide
+            from flat to organized structure.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-reference">Reference</span>
+            <span>Updated: Nov 6, 2025</span>
+          </div>
+        </a>
+
+        <!-- Guide: Responsive Design (kept last) -->
+        <a href="responsive-design.html" class="doc-card" data-category="guide">
+          <div class="doc-card-icon">�</div>
+          <h2>Responsive Design</h2>
+          <p>
+            Mobile-first design principles, breakpoints, and responsive
+            implementation guide.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-guide">Guide</span>
+            <span>Design System</span>
+          </div>
+        </a>
+      </div>
+
+      <footer>
+        <p>🔒 Developer Documentation • For Internal Use Only</p>
+        <p>PortalSite v2.0 • Maintained by dh-web-admin</p>
+      </footer>
+    </div>
+
+    <script>
+      // Search functionality
+      const searchInput = document.getElementById("searchInput");
+      const docCards = document.querySelectorAll(".doc-card");
+
+      searchInput.addEventListener("input", (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+
+        docCards.forEach((card) => {
+          const title = card.querySelector("h2").textContent.toLowerCase();
+          const description = card.querySelector("p").textContent.toLowerCase();
+
+          if (title.includes(searchTerm) || description.includes(searchTerm)) {
+            card.style.display = "block";
+          } else {
+            card.style.display = "none";
+          }
+        });
+      });
+
+      // Category filter
+      const filterBtns = document.querySelectorAll(".filter-btn");
+
+      filterBtns.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          // Update active button
+          filterBtns.forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+
+          const filter = btn.getAttribute("data-filter");
+
+          docCards.forEach((card) => {
+            const category = card.getAttribute("data-category");
+
+            if (filter === "all" || category === filter) {
+              card.style.display = "block";
+            } else {
+              card.style.display = "none";
+            }
+          });
+        });
+      });
+
+      // Add hover effect sound (optional)
+      docCards.forEach((card) => {
+        card.addEventListener("mouseenter", () => {
+          card.style.borderLeft = "4px solid #667eea";
+        });
+
+        card.addEventListener("mouseleave", () => {
+          card.style.borderLeft = "none";
+        });
+      });
+    </script>
+  </body>
+</html>

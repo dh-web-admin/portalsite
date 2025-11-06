@@ -163,6 +163,7 @@ body.admin-page {
   left: 0;
   bottom: 0;
   overflow-y: auto;
+  z-index: 5; /* Ensure sidebar stays below hovered tiles */
 }
 
 .side-nav h3 {
@@ -211,6 +212,12 @@ body.admin-page {
   margin-bottom: 12px;
 }
 
+/* Push dev options to bottom (before logout) */
+#devGroup {
+  margin-top: auto;
+  margin-bottom: 0;
+}
+
 .nav-toggle {
   display: flex;
   justify-content: space-between;
@@ -237,7 +244,7 @@ body.admin-page {
 .logout-btn {
   background: rgba(239, 68, 68, 0.15);
   color: #fff;
-  margin-top: auto; /* push logout to bottom */
+  margin-top: 12px; /* small gap after dev options */
   display: block;
 }
 
@@ -255,6 +262,7 @@ body.admin-page {
   margin-left: 0; /* default: no sidebar reserved space; applied when sidebar exists below */
   height: calc(100vh - var(--admin-header-h));
   overflow-y: auto;
+  overflow-x: visible; /* Allow horizontal overflow for hover effects */
 }
 
 /* When a sidebar is present, push the content over to make room. We use the
@@ -590,5 +598,119 @@ body.admin-page {
 
   .main-content h1 {
     font-size: 20px;
+  }
+}
+
+/*----------------------------------*
+ * Logout Confirmation Modal
+ *---------------------------------*/
+.logout-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9998;
+  backdrop-filter: blur(4px);
+}
+
+.logout-modal-overlay.active {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.logout-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  position: relative;
+}
+
+.logout-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.logout-modal-icon {
+  font-size: 48px;
+}
+
+.logout-modal h2 {
+  color: #1e293b;
+  font-size: 24px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.logout-modal p {
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.logout-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.logout-modal-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.logout-modal-btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.logout-modal-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.logout-modal-btn-confirm {
+  background: #ef4444;
+  color: white;
+}
+
+.logout-modal-btn-confirm:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
   }
 }

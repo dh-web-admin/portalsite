@@ -19,7 +19,7 @@ git add .
 git commit -m "Initial commit: Employee portal with user management"
 
 # Connect to GitHub (replace with your repo URL)
-git remote add origin https://github.com/YOUR-USERNAME/PortalSite.git
+git remote add origin https://github.com/dh-web-admin/portalsite.git
 
 # Rename branch to main
 git branch -M main

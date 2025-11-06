@@ -13,7 +13,7 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $role = $user['role'] ?? 'laborer';
 $stmt->close();
-if ($role !== 'admin') { header('Location: ../pages/dashboard.php'); exit(); }
+if ($role !== 'admin') { header('Location: ../pages/dashboard/'); exit(); }
 
 // Bump a counter to verify persistence
 if (!isset($_SESSION['__test_counter'])) {

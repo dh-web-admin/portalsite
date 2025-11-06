@@ -54,8 +54,18 @@ $stmt->close();
           usersGroup.classList.toggle('open');
         });
       }
+
+      // Toggle dev options sub-nav
+      var devToggle = document.getElementById('devToggle');
+      var devGroup = document.getElementById('devGroup');
+      if (devToggle && devGroup) {
+        devToggle.addEventListener('click', function(){
+          devGroup.classList.toggle('open');
+        });
+      }
     })();
   </script>
   <script src="../assets/js/mobile-menu.js"></script>
+  <script src="../assets/js/logout-confirm.js"></script>
 </body>
 </html>

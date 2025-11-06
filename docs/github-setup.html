@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Setup Guide - PortalSite Documentation</title>
+    <link rel="stylesheet" href="doc-styles.css" />
+  </head>
+  <body>
+    <div class="doc-container">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <a href="index.html" class="back-link">← Documentation Hub</a>
+        </div>
+        <div class="toc">
+          <h3>Table of Contents</h3>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#initial-setup">Initial Setup</a></li>
+            <li><a href="#daily-workflow">Daily Workflow</a></li>
+            <li><a href="#useful-commands">Useful Commands</a></li>
+            <li><a href="#mistakes">If You Make a Mistake</a></li>
+            <li><a href="#authentication">GitHub Authentication</a></li>
+            <li><a href="#common-issues">Common Issues</a></li>
+            <li><a href="#best-practices">Best Practices</a></li>
+            <li><a href="#branches">Branch Strategy</a></li>
+            <li><a href="#deployment">Deployment</a></li>
+            <li><a href="#gitignore">Gitignore Patterns</a></li>
+            <li><a href="#repo-settings">Repository Settings</a></li>
+            <li><a href="#next-steps">Next Steps</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="content">
+        <header class="doc-header">
+          <h1>🔧 GitHub Setup Guide</h1>
+          <p class="subtitle">
+            Git Configuration & Version Control for PortalSite
+          </p>
+          <div class="meta">
+            <span class="badge badge-setup">Setup</span>
+            <span>Version Control • Last Updated: November 6, 2025</span>
+          </div>
+        </header>
+
+        <section id="overview">
+          <h2>Overview</h2>
+          <p>
+            This guide covers Git and GitHub setup for the PortalSite project,
+            including initial configuration, daily workflow commands,
+            authentication options, and best practices for version control.
+          </p>
+        </section>
+
+        <section id="initial-setup">
+          <h2>Initial Setup (One-Time)</h2>
+
+          <div class="step-card">
+            <h3>Step 1: Configure Git</h3>
+            <pre><code># Configure Git with your info
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"</code></pre>
+          </div>
+
+          <div class="step-card">
+            <h3>Step 2: Initialize Repository</h3>
+            <pre><code># Initialize repository
+git init
+
+# Add all files
+git add .</code></pre>
+          </div>
+
+          <div class="step-card">
+            <h3>Step 3: First Commit</h3>
+            <pre><code># First commit
+git commit -m "Initial commit: Employee portal with user management"</code></pre>
+          </div>
+
+          <div class="step-card">
+            <h3>Step 4: Connect to GitHub</h3>
+            <pre><code># Connect to GitHub:
+git remote add origin https://github.com/dh-web-admin/portalsite.git
+
+# Rename branch to main
+git branch -M main
+
+# Push to GitHub
+git push -u origin main</code></pre>
+          </div>
+        </section>
+
+        <section id="daily-workflow">
+          <h2>Daily Workflow</h2>
+
+          <div class="command-card">
+            <h3>Check Status</h3>
+            <pre><code># Check status of files
+git status</code></pre>
+            <p>Shows which files have been modified, added, or deleted.</p>
+          </div>
+
+          <div class="command-card">
+            <h3>Stage Changes</h3>
+            <pre><code># Add changed files
+git add .
+
+# Or add specific files
+git add path/to/file.php</code></pre>
+            <p>Stages files for commit.</p>
+          </div>
+
+          <div class="command-card">
+            <h3>Commit Changes</h3>
+            <pre><code># Commit with message
+git commit -m "Description of what you changed"</code></pre>
+            <p>Records your changes with a descriptive message.</p>
+          </div>
+
+          <div class="command-card">
+            <h3>Push to GitHub</h3>
+            <pre><code># Push to GitHub
+git push</code></pre>
+            <p>Uploads your commits to the remote repository.</p>
+          </div>
+
+          <div class="command-card">
+            <h3>Pull Latest Changes</h3>
+            <pre><code># Pull latest changes
+git pull</code></pre>
+            <p>Downloads and merges changes from the remote repository.</p>
+          </div>
+        </section>
+
+        <section id="useful-commands">
+          <h2>Useful Commands</h2>
+
+          <div class="command-card">
+            <h3>View History</h3>
+            <pre><code># See commit history
+git log
+
+# See compact history
+git log --oneline
+
+# See history with graph
+git log --graph --oneline --all</code></pre>
+          </div>
+
+          <div class="command-card">
+            <h3>View Changes</h3>
+            <pre><code># See what changed (unstaged)
+git diff
+
+# See what changed (staged)
+git diff --staged</code></pre>
+          </div>
+
+          <div class="command-card">
+            <h3>Branch Management</h3>
+            <pre><code># Create new branch
+git checkout -b feature-name
+
+# Switch branches
+git checkout main
+
+# List branches
+git branch
+
+# Delete a branch
+git branch -d feature-name</code></pre>
+          </div>
+
+          <div class="command-card">
+            <h3>Undo Changes</h3>
+            <pre><code># Undo local changes (before commit)
+git checkout -- filename.php
+
+# Unstage file
+git reset HEAD filename.php
+
+# Undo last commit (keep changes)
+git reset --soft HEAD~1</code></pre>
+          </div>
+        </section>
+
+        <section id="mistakes">
+          <h2>If You Make a Mistake</h2>
+
+          <div class="info-box warning">
+            <h4>Revert Last Commit (Safe)</h4>
+            <pre><code># Creates new commit that undoes the last commit
+git revert HEAD
+git push</code></pre>
+            <p>✅ Safe: Preserves history</p>
+          </div>
+
+          <div class="info-box danger">
+            <h4>Reset to Previous Commit (Destructive)</h4>
+            <pre><code># Go back to previous commit (destructive)
+git reset --hard HEAD~1
+git push --force</code></pre>
+            <p>⚠️ Destructive: Rewrites history</p>
+          </div>
+
+          <div class="info-box warning">
+            <h4>Discard All Local Changes</h4>
+            <pre><code># Discard all local changes
+git reset --hard origin/main</code></pre>
+            <p>⚠️ Cannot be undone</p>
+          </div>
+        </section>
+
+        <section id="authentication">
+          <h2>GitHub Authentication</h2>
+
+          <div class="step-card">
+            <h3>Option 1: Personal Access Token (Recommended)</h3>
+            <ol>
+              <li>
+                Go to
+                <strong>GitHub.com → Settings → Developer Settings</strong>
+              </li>
+              <li>
+                Click <strong>Personal Access Tokens → Tokens (classic)</strong>
+              </li>
+              <li>Click <strong>Generate New Token</strong></li>
+              <li>Select scopes: <code>repo</code> (full control)</li>
+              <li>Copy token and save it securely</li>
+              <li>Use token as password when pushing</li>
+            </ol>
+          </div>
+
+          <div class="step-card">
+            <h3>Option 2: GitHub CLI (Easier)</h3>
+            <pre><code># Install GitHub CLI
+winget install GitHub.cli
+
+# Authenticate
+gh auth login
+
+# Follow prompts to authenticate via browser</code></pre>
+          </div>
+
+          <div class="step-card">
+            <h3>Option 3: SSH Keys</h3>
+            <pre><code># Generate SSH key
+ssh-keygen -t ed25519 -C "your.email@example.com"
+
+# Copy public key
+cat ~/.ssh/id_ed25519.pub</code></pre>
+            <p>
+              Add to GitHub:
+              <strong>Settings → SSH and GPG keys → New SSH key</strong>
+            </p>
+          </div>
+        </section>
+
+        <section id="common-issues">
+          <h2>Common Issues & Solutions</h2>
+
+          <div class="situation-card">
+            <h3>❌ Issue: "git is not recognized"</h3>
+            <div class="solution">
+              <strong>Solution:</strong> Restart terminal/VS Code after
+              installing Git
+            </div>
+          </div>
+
+          <div class="situation-card">
+            <h3>❌ Issue: Authentication failed</h3>
+            <div class="solution">
+              <strong>Solution:</strong> Use Personal Access Token instead of
+              password
+            </div>
+          </div>
+
+          <div class="situation-card">
+            <h3>❌ Issue: "fatal: not a git repository"</h3>
+            <div class="solution">
+              <strong>Solution:</strong> Make sure you ran
+              <code>git init</code> first
+            </div>
+          </div>
+
+          <div class="situation-card">
+            <h3>❌ Issue: Conflicts when pulling</h3>
+            <div class="solution">
+              <strong>Solution:</strong>
+              <pre><code>git stash          # Save your changes
+git pull           # Get latest
+git stash pop      # Reapply your changes</code></pre>
+            </div>
+          </div>
+
+          <div class="situation-card">
+            <h3>❌ Issue: Pushed sensitive data (config.php)</h3>
+            <div class="solution">
+              <strong>Solution:</strong>
+              <pre><code># Remove from Git history
+git filter-branch --force --index-filter \
+  "git rm --cached --ignore-unmatch config/config.php" \
+  --prune-empty --tag-name-filter cat -- --all
+
+# Force push
+git push origin --force --all</code></pre>
+              <p class="warning-text">
+                ⚠️ Change your database passwords immediately!
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="best-practices">
+          <h2>Best Practices</h2>
+
+          <h3>Commit Messages</h3>
+          <div class="example-card">
+            <h4>✅ Good Examples</h4>
+            <ul>
+              <li>"Add password reset functionality to user list"</li>
+              <li>"Fix login redirect bug for non-admin users"</li>
+              <li>"Update dashboard tiles to be responsive"</li>
+              <li>"Refactor database connection to use prepared statements"</li>
+            </ul>
+          </div>
+
+          <div class="example-card">
+            <h4>❌ Bad Examples</h4>
+            <ul>
+              <li>"updates"</li>
+              <li>"fixed stuff"</li>
+              <li>"asdf"</li>
+              <li>"changes"</li>
+            </ul>
+          </div>
+
+          <h3>When to Commit</h3>
+          <div class="tip-card">
+            <ul>
+              <li>✅ After completing a feature</li>
+              <li>✅ After fixing a bug</li>
+              <li>✅ Before trying something experimental</li>
+              <li>✅ At the end of the day</li>
+              <li>✅ Before switching to different work</li>
+              <li>❌ Don't commit broken code to main</li>
+              <li>❌ Don't commit commented-out code</li>
+            </ul>
+          </div>
+
+          <h3>What to Commit</h3>
+          <div class="info-box success">
+            <h4>✅ DO Commit</h4>
+            <ul>
+              <li>Source code (.php, .css, .js, .html)</li>
+              <li>Documentation (.md, .html files)</li>
+              <li>Configuration templates (.example files)</li>
+              <li>Database schema files (.sql)</li>
+              <li>Asset files (images, fonts)</li>
+            </ul>
+          </div>
+
+          <div class="info-box danger">
+            <h4>❌ DON'T Commit</h4>
+            <ul>
+              <li>Actual config files with passwords</li>
+              <li>Database files (.db, .sqlite)</li>
+              <li>Log files (.log)</li>
+              <li>Temporary files (.tmp, .bak)</li>
+              <li>IDE settings (unless shared)</li>
+              <li>node_modules/ or vendor/</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="branches">
+          <h2>Branches Strategy</h2>
+
+          <h3>Main Branch</h3>
+          <div class="info-box info">
+            <ul>
+              <li>Production-ready code</li>
+              <li>Always stable</li>
+              <li>Protected from direct commits</li>
+              <li>Only merge tested code</li>
+            </ul>
+          </div>
+
+          <h3>Development Workflow</h3>
+          <div class="workflow-timeline">
+            <div class="timeline-item">
+              <h4>1. Start New Feature</h4>
+              <pre><code>git checkout -b feature/user-notifications</code></pre>
+            </div>
+
+            <div class="timeline-item">
+              <h4>2. Work on Feature</h4>
+              <pre><code>git add .
+git commit -m "Add notification system"</code></pre>
+            </div>
+
+            <div class="timeline-item">
+              <h4>3. Test Feature</h4>
+              <p>Test thoroughly before merging</p>
+            </div>
+
+            <div class="timeline-item">
+              <h4>4. Merge to Main</h4>
+              <pre><code>git checkout main
+git merge feature/user-notifications</code></pre>
+            </div>
+
+            <div class="timeline-item">
+              <h4>5. Push & Cleanup</h4>
+              <pre><code>git push
+git branch -d feature/user-notifications</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section id="deployment">
+          <h2>Deployment with Git</h2>
+
+          <div class="command-card">
+            <h3>Pull to Server</h3>
+            <pre><code># On your production server
+cd /var/www/html/PortalSite
+git pull origin main
+
+# Restart services if needed
+sudo systemctl restart apache2</code></pre>
+          </div>
+
+          <div class="command-card">
+            <h3>Rollback Production</h3>
+            <pre><code># If something breaks in production
+git revert HEAD
+git push
+
+# On server
+git pull origin main</code></pre>
+          </div>
+
+          <div class="tip-card">
+            <h3>💡 Auto-Deployment</h3>
+            <p>
+              Set up GitHub webhooks to automatically deploy when you push to
+              main:
+            </p>
+            <ol>
+              <li>GitHub → Repository → Settings → Webhooks</li>
+              <li>Add webhook with your server URL</li>
+              <li>Configure server to pull on webhook trigger</li>
+            </ol>
+          </div>
+        </section>
+
+        <section id="gitignore">
+          <h2>.gitignore Patterns</h2>
+          <p>Already configured in <code>.gitignore</code>:</p>
+
+          <pre><code># Database credentials
+config/config.php
+
+# Backup files
+*.bak
+
+# Log files
+*.log
+
+# Dependencies
+node_modules/
+vendor/
+
+# Environment variables
+.env
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db</code></pre>
+        </section>
+
+        <section id="repo-settings">
+          <h2>Repository Settings (On GitHub)</h2>
+
+          <div class="step-card">
+            <h3>1. Branch Protection</h3>
+            <p><strong>Settings → Branches → Add rule</strong></p>
+            <ul>
+              <li>Branch name: <code>main</code></li>
+              <li>✅ Require pull request reviews before merging</li>
+              <li>✅ Require status checks to pass</li>
+              <li>✅ Require branches to be up to date</li>
+              <li>✅ Include administrators</li>
+            </ul>
+          </div>
+
+          <div class="step-card">
+            <h3>2. Security</h3>
+            <p><strong>Settings → Security</strong></p>
+            <ul>
+              <li>✅ Enable Dependabot alerts</li>
+              <li>✅ Enable secret scanning</li>
+              <li>✅ Enable push protection</li>
+            </ul>
+          </div>
+
+          <div class="step-card">
+            <h3>3. Issues & Projects</h3>
+            <p><strong>Settings → General</strong></p>
+            <ul>
+              <li>✅ Enable Issues for bug tracking</li>
+              <li>✅ Enable Projects for task management</li>
+              <li>✅ Enable Discussions (optional)</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="next-steps">
+          <h2>Next Steps After Setup</h2>
+
+          <div class="checklist">
+            <label><input type="checkbox" /> Code is on GitHub</label>
+            <label
+              ><input type="checkbox" /> Branch protection rules
+              configured</label
+            >
+            <label
+              ><input type="checkbox" /> Team members added as
+              collaborators</label
+            >
+            <label
+              ><input type="checkbox" /> GitHub Actions configured
+              (CI/CD)</label
+            >
+            <label><input type="checkbox" /> Deployment webhooks set up</label>
+            <label
+              ><input type="checkbox" /> Staging environment configured</label
+            >
+            <label
+              ><input type="checkbox" /> Deployment process documented</label
+            >
+            <label
+              ><input type="checkbox" /> README.md updated with setup
+              instructions</label
+            >
+          </div>
+        </section>
+
+        <section class="remember-section">
+          <h2>📌 Quick Reference</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Task</th>
+                <th>Command</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Check status</td>
+                <td><code>git status</code></td>
+              </tr>
+              <tr>
+                <td>Stage all changes</td>
+                <td><code>git add .</code></td>
+              </tr>
+              <tr>
+                <td>Commit changes</td>
+                <td><code>git commit -m "message"</code></td>
+              </tr>
+              <tr>
+                <td>Push to GitHub</td>
+                <td><code>git push</code></td>
+              </tr>
+              <tr>
+                <td>Pull from GitHub</td>
+                <td><code>git pull</code></td>
+              </tr>
+              <tr>
+                <td>Create branch</td>
+                <td><code>git checkout -b branch-name</code></td>
+              </tr>
+              <tr>
+                <td>Switch branch</td>
+                <td><code>git checkout branch-name</code></td>
+              </tr>
+              <tr>
+                <td>View history</td>
+                <td><code>git log --oneline</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="help-section">
+          <h2>📚 Need Help?</h2>
+          <ul>
+            <li>
+              <strong>GitHub Docs:</strong>
+              <a href="https://docs.github.com" target="_blank"
+                >https://docs.github.com</a
+              >
+            </li>
+            <li>
+              <strong>Git Docs:</strong>
+              <a href="https://git-scm.com/doc" target="_blank"
+                >https://git-scm.com/doc</a
+              >
+            </li>
+            <li>
+              <strong>Git Cheat Sheet:</strong>
+              <a
+                href="https://training.github.com/downloads/github-git-cheat-sheet/"
+                target="_blank"
+                >GitHub Git Cheat Sheet</a
+              >
+            </li>
+          </ul>
+        </section>
+
+        <div class="nav-footer">
+          <a href="index.html" class="btn-secondary"
+            >← Back to Documentation Hub</a
+          >
+          <a href="railway-deployment.html" class="btn-primary"
+            >Railway Deployment →</a
+          >
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

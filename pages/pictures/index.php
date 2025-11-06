@@ -1,15 +1,15 @@
 <?php
-require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../../session_init.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    header('Location: ../auth/login.php');
+    header('Location: ../../auth/login.php');
     exit();
 }
 
 // Include database configuration
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../partials/permissions.php';
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../partials/permissions.php';
 
 // Get user role for sidebar
 $email = $_SESSION['email'];
@@ -22,8 +22,8 @@ $role = $user ? $user['role'] : 'laborer';
 $stmt->close();
 
 // Enforce access control for this page
-if (!can_access($role, 'scheduling')) {
-  header('Location: ../pages/dashboard.php');
+if (!can_access($role, 'pictures')) {
+  header('Location: ../dashboard/');
   exit();
 }
 ?>
@@ -32,19 +32,20 @@ if (!can_access($role, 'scheduling')) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scheduling</title>
-  <link rel="stylesheet" href="../assets/css/base.css" />
-  <link rel="stylesheet" href="../assets/css/admin-layout.css" />
-  <link rel="stylesheet" href="../assets/css/dashboard.css" />
+  <title>Pictures</title>
+  <link rel="stylesheet" href="../../assets/css/base.css" />
+  <link rel="stylesheet" href="../../assets/css/admin-layout.css" />
+  <link rel="stylesheet" href="../../assets/css/dashboard.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body class="admin-page">
   <div class="admin-container">
-    <?php include __DIR__ . '/../partials/portalheader.php'; ?>
+    <?php include __DIR__ . '/../../partials/portalheader.php'; ?>
     <div class="admin-layout">
-      <?php include __DIR__ . '/../partials/sidebar.php'; ?>
+      <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-         <div class="maintenance-wrap">
+ <div class="maintenance-wrap">
            <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
           </div>
         </div>

@@ -14,7 +14,7 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $role = $user['role'] ?? 'laborer';
 $stmt->close();
-if ($role !== 'admin') { header('Location: ../pages/dashboard.php'); exit(); }
+if ($role !== 'admin') { header('Location: ../pages/dashboard/'); exit(); }
 
 $pages = portal_all_pages();
 $results = [];
@@ -71,7 +71,7 @@ code{background:#f3f4f6;padding:2px 4px;border-radius:4px}
     <a href="<?php echo htmlspecialchars(base_url('/debug/health.php')); ?>">App Health</a> ·
     <a href="<?php echo htmlspecialchars(base_url('/debug/debug_session.php')); ?>">Session Debug</a> ·
     <a href="<?php echo htmlspecialchars(base_url('/debug/debug_page_load.php')); ?>">Page Load Debug</a>
-    · <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard.php')); ?>">Back to Dashboard</a>
+    · <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/')); ?>">Back to Dashboard</a>
     · <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>">Logout</a>
  </p>
 <table class="table">

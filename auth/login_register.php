@@ -58,7 +58,7 @@ if(isset($_POST['login'])){
             }
 
             // All users go to the same dashboard
-            header("Location: ../pages/dashboard.php");
+            header("Location: ../pages/dashboard/");
             exit();
         }
     }

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pages Reorganization - PortalSite Documentation</title>
+    <link rel="stylesheet" href="doc-styles.css" />
+  </head>
+  <body>
+    <div class="doc-container">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <a href="index.html" class="back-link">← Documentation Hub</a>
+        </div>
+        <div class="toc">
+          <h3>Table of Contents</h3>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#before-after">Before &amp; After</a></li>
+            <li><a href="#benefits">Benefits</a></li>
+            <li><a href="#path-changes">Path Changes</a></li>
+            <li><a href="#css-structure">CSS Structure</a></li>
+            <li><a href="#migration-checklist">Migration Checklist</a></li>
+            <li><a href="#testing-checklist">Testing Checklist</a></li>
+            <li><a href="#future">Future Possibilities</a></li>
+            <li><a href="#rollback">Rollback Plan</a></li>
+            <li><a href="#notes">Notes</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="content">
+        <header class="doc-header">
+          <h1>📂 Pages Folder Reorganization</h1>
+          <p class="subtitle">
+            Folder-based structure, cleaner URLs, page-scoped assets
+          </p>
+          <div class="meta">
+            <span class="badge badge-reference">Reference</span>
+            <span>Last updated: November 6, 2025</span>
+          </div>
+        </header>
+
+        <section id="overview">
+          <h2>Overview</h2>
+          <p>
+            The <code>pages/</code> directory was reorganized from a flat
+            collection of PHP files into a folder-per-page structure. Each page
+            now lives in its own folder and contains <code>index.php</code> and
+            a local <code>style.css</code> to keep styles scoped and avoid
+            conflicts.
+          </p>
+        </section>
+
+        <section id="before-after">
+          <h2>Before &amp; After</h2>
+          <h3>Before (Old Structure)</h3>
+          <pre><code>pages/
+├── Bid_tracking.php
+├── dashboard.php
+├── employee_information.php
+├── engineering.php
+├── equipments.php
+├── forms.php
+├── for_sale.php
+├── manuals.php
+├── maps.php
+├── pictures.php
+├── project_checklist.php
+├── scheduling.php
+├── videos.php
+└── _template.php</code></pre>
+
+          <h3>After (New Structure)</h3>
+          <pre><code>pages/
+├── Bid_tracking/
+│   ├── index.php
+│   └── style.css
+├── dashboard/
+│   ├── index.php
+│   └── style.css
+<!-- ...other pages follow the same pattern... -->
+└── _template.php</code></pre>
+        </section>
+
+        <section id="benefits">
+          <h2>Benefits</h2>
+          <ul>
+            <li>Better organization: files for a page are co-located</li>
+            <li>Dedicated CSS files reduce cross-page style conflicts</li>
+            <li>
+              Cleaner URLs: <code>/pages/dashboard/</code> instead of
+              <code>/pages/dashboard.php</code>
+            </li>
+            <li>Scales easily for adding page-specific assets or scripts</li>
+          </ul>
+        </section>
+
+        <section id="path-changes">
+          <h2>Path Changes</h2>
+          <p>
+            Important include, link and API path changes when moving files into
+            subfolders.
+          </p>
+
+          <h3>In Page Files (<code>index.php</code>)</h3>
+          <ul>
+            <li>
+              Includes changed from
+              <code>__DIR__ . '/../config/config.php'</code> to
+              <code>__DIR__ . '/../../config/config.php'</code>
+            </li>
+            <li>
+              Portal header include changed from
+              <code>../partials/portalheader.php</code> to
+              <code>../../partials/portalheader.php</code>
+            </li>
+            <li>
+              CSS links changed from <code>../assets/css/base.css</code> to
+              <code>../../assets/css/base.css</code> and add local
+              <code>style.css</code>
+            </li>
+            <li>
+              API fetch calls updated from <code>../api/...</code> to
+              <code>../../api/...</code>
+            </li>
+            <li>
+              Redirects updated from <code>../auth/login.php</code> to
+              <code>../../auth/login.php</code>
+            </li>
+          </ul>
+
+          <h3>Dashboard Links</h3>
+          <p>
+            Dashboard now links to page folders rather than PHP files. Example:
+          </p>
+          <pre><code>&lt;a href="/pages/equipments/"&gt;Equipments&lt;/a&gt;</code></pre>
+
+          <h3>Sidebar Update</h3>
+          <p>In <code>partials/sidebar.php</code>, update:</p>
+          <pre><code>// Old
+href="&lt;?php echo base_url('/pages/dashboard.php'); ?&gt;"
+
+// New
+href="&lt;?php echo base_url('/pages/dashboard/'); ?&gt;"</code></pre>
+        </section>
+
+        <section id="css-structure">
+          <h2>CSS Structure</h2>
+          <p>
+            Each page's <code>style.css</code> is loaded after global CSS so it
+            can override where needed. Typical load order:
+          </p>
+          <pre><code>&lt;link rel="stylesheet" href="../../assets/css/base.css" /&gt;
+&lt;link rel="stylesheet" href="../../assets/css/admin-layout.css" /&gt;
+&lt;link rel="stylesheet" href="../../assets/css/dashboard.css" /&gt;
+&lt;link rel="stylesheet" href="../../assets/css/[page-specific].css" /&gt;
+&lt;link rel="stylesheet" href="style.css" /&gt;</code></pre>
+        </section>
+
+        <section id="migration-checklist">
+          <h2>Migration Checklist</h2>
+          <ul>
+            <li>✅ Create folder for each page</li>
+            <li>✅ Move page PHP to <code>index.php</code></li>
+            <li>✅ Update include paths (../ → ../../)</li>
+            <li>✅ Update dashboard links</li>
+            <li>✅ Create <code>style.css</code> for each page</li>
+            <li>✅ Update admin/auth/debug file references</li>
+            <li>✅ Update documentation to reflect changes</li>
+          </ul>
+        </section>
+
+        <section id="testing-checklist">
+          <h2>Testing Checklist</h2>
+          <ul>
+            <li>Dashboard loads correctly</li>
+            <li>Dashboard tiles link to correct pages</li>
+            <li>Sidebar navigation works</li>
+            <li>Page redirects for unauthenticated users work</li>
+            <li>AJAX API calls function (paths updated)</li>
+            <li>CSS loads and page-specific styles apply</li>
+            <li>Login/logout flow remains functional</li>
+          </ul>
+        </section>
+
+        <section id="future">
+          <h2>Future Possibilities</h2>
+          <ul>
+            <li>Add page-specific JavaScript (e.g., <code>script.js</code>)</li>
+            <li>Add page-specific assets (images, fonts)</li>
+            <li>Add page-level README or docs for complex pages</li>
+          </ul>
+        </section>
+
+        <section id="rollback">
+          <h2>Rollback Plan</h2>
+          <ol>
+            <li>
+              Move <code>index.php</code> files back to the root of
+              <code>pages/</code>
+            </li>
+            <li>
+              Rename them to original filenames (example:
+              <code>dashboard/index.php</code> → <code>dashboard.php</code>)
+            </li>
+            <li>
+              Revert include path changes (<code>../../</code> →
+              <code>../</code>)
+            </li>
+            <li>
+              Update dashboard and sidebar links back to
+              <code>.php</code> targets
+            </li>
+          </ol>
+        </section>
+
+        <section id="notes">
+          <h2>Notes</h2>
+          <ul>
+            <li>
+              The <code>_template.php</code> remains at the root as a scaffold
+            </li>
+            <li>No database or auth logic changes were required</li>
+            <li>This is a structural change only (version 2.0)</li>
+          </ul>
+        </section>
+
+        <div class="nav-footer">
+          <a href="responsive-design.html" class="btn-secondary"
+            >← Responsive Design</a
+          >
+          <a href="portal-organization.html" class="btn-primary"
+            >Portal Organization →</a
+          >
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

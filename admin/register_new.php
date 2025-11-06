@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <main class="content-area">
                 <div class="register-container">
-                    <a href="../pages/dashboard.php" class="back-btn">Back to Dashboard</a>
+                    <a href="../pages/dashboard/" class="back-btn">Back to Dashboard</a>
                     <h1>Register New User</h1>
                     
                     <?php if (isset($error)): ?>

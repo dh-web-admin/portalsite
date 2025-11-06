@@ -22,7 +22,7 @@ if (!isset($role) || $role !== 'admin') {
 ?>
 <aside class="side-nav" role="navigation" aria-label="Control panel">
     <p class="adminnav">Control Panel</p>
-    <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard.php')); ?>" class="nav-btn">Home</a>
+    <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="nav-btn">Home</a>
     <div class="nav-group" id="usersGroup">
         <div class="nav-toggle">
             <button class="nav-btn" id="usersToggle" type="button">Users ▾</button>
@@ -31,6 +31,15 @@ if (!isset($role) || $role !== 'admin') {
             <a href="<?php echo htmlspecialchars(base_url('/admin/register_new.php')); ?>" class="nav-btn">Add User</a>
             <a href="<?php echo htmlspecialchars(base_url('/admin/remove_user.php')); ?>" class="nav-btn">Remove User</a>
             <a href="<?php echo htmlspecialchars(base_url('/admin/user_list.php')); ?>" class="nav-btn">List Users</a>
+        </div>
+    </div>
+    <div class="nav-group" id="devGroup">
+        <div class="nav-toggle">
+            <button class="nav-btn" id="devToggle" type="button">Dev Options ▾</button>
+        </div>
+        <div class="sub-nav">
+            <a href="<?php echo htmlspecialchars(base_url('/debug/index.php')); ?>" class="nav-btn">Debug</a>
+            <a href="<?php echo htmlspecialchars(base_url('/docs/index.html')); ?>" class="nav-btn">Dev Guide</a>
         </div>
     </div>
     <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="nav-btn logout-btn">Logout</a>

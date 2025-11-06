@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portal Organization - PortalSite Documentation</title>
+    <link rel="stylesheet" href="doc-styles.css" />
+  </head>
+  <body>
+    <div class="doc-container">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <a href="index.html" class="back-link">← Documentation Hub</a>
+        </div>
+        <div class="toc">
+          <h3>Table of Contents</h3>
+          <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#project-structure">Project Structure</a></li>
+            <li><a href="#root-level">Root Level Files</a></li>
+            <li><a href="#admin">Admin Pages</a></li>
+            <li><a href="#pages">Application Pages</a></li>
+            <li><a href="#auth">Authentication</a></li>
+            <li><a href="#api">API Endpoints</a></li>
+            <li><a href="#config">Configuration</a></li>
+            <li><a href="#partials">Partials</a></li>
+            <li><a href="#assets">Assets</a></li>
+            <li><a href="#dependencies">Dependencies</a></li>
+            <li><a href="#auth-flow">Auth Flow</a></li>
+            <li><a href="#user-management">User Management</a></li>
+            <li><a href="#security">Security</a></li>
+            <li><a href="#database">Database</a></li>
+            <li><a href="#maintenance">Maintenance</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="content">
+        <header class="doc-header">
+          <h1>🏗️ Portal Organization</h1>
+          <p class="subtitle">Complete File Structure & Architecture</p>
+          <div class="meta">
+            <span class="badge badge-reference">Reference</span>
+            <span>Version 2.0 • Last Updated: November 6, 2025</span>
+          </div>
+        </header>
+
+        <section id="overview">
+          <h2>Overview</h2>
+          <p>
+            The PortalSite project has been organized into a logical folder
+            structure that separates concerns and improves maintainability. This
+            document outlines the complete PHP file organization.
+          </p>
+        </section>
+
+        <section id="project-structure">
+          <h2>Project Structure</h2>
+          <pre><code>PortalSite/
+├── index.php                          # Front controller
+├── session_init.php                   # Centralized session + auto-login
+├── home.html                          # Legacy file
+│
+├── admin/                             # Admin-only pages
+│   ├── user_list.php                  # View users, edit roles, reset passwords
+│   ├── register_new.php               # Add new users
+│   ├── edit_user.php                  # Edit existing user details
+│   └── remove_user.php                # Delete users
+│
+├── pages/                             # Main app pages (folder structure)
+│   ├── dashboard/                     # Dashboard page
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── Bid_tracking/                  # Bid tracking
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── employee_information/          # Employee info
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── engineering/                   # Engineering
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── equipments/                    # Equipment management
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── forms/                         # Forms
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── for_sale/                      # For sale items
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── manuals/                       # Manuals
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── maps/                          # Maps
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── pictures/                      # Pictures
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── project_checklist/             # Project checklist
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── scheduling/                    # Scheduling
+│   │   ├── index.php
+│   │   └── style.css
+│   ├── videos/                        # Videos
+│   │   ├── index.php
+│   │   └── style.css
+│   └── _template.php                  # Base scaffold
+│
+├── auth/                              # Authentication pages
+│   ├── login.php                      # Login form
+│   ├── login_register.php             # Login handler
+│   ├── logout.php                     # Logout confirmation
+│   └── forgot_password.php            # Password recovery
+│
+├── api/                               # API endpoints
+│   ├── update_user.php                # Update user details
+│   ├── update_user_password.php       # Update password
+│   ├── clone_project.php              # Clone project
+│   ├── create_project.php             # Create project
+│   ├── delete_project.php             # Delete project
+│   ├── rename_project.php             # Rename project
+│   ├── update_project_cell.php        # Update single cell
+│   └── update_project_cells.php       # Batch update cells
+│
+├── config/                            # Configuration
+│   ├── config.php                     # Database connection
+│   ├── config.example.php             # Example template
+│   ├── config.railway.php             # Railway config
+│   └── email_config.php               # Email settings
+│
+├── partials/                          # Reusable components
+│   ├── portalheader.php               # Header with logo
+│   ├── sidebar.php                    # Side navigation
+│   ├── url.php                        # base_url helper
+│   └── permissions.php                # Role access helpers
+│
+├── debug/                             # Diagnostics
+│   ├── pages_health.php
+│   ├── debug_session.php
+│   ├── debug_page_load.php
+│   └── health.php
+│
+├── assets/                            # Static assets
+│   ├── css/                           # Stylesheets
+│   │   ├── base.css
+│   │   ├── admin-layout.css
+│   │   ├── dashboard.css
+│   │   ├── login.css
+│   │   └── ...
+│   ├── js/
+│   │   └── mobile-menu.js
+│   └── images/
+│       ├── logo.svg
+│       ├── eportal.svg
+│       └── maintenance.png
+│
+└── docs/                              # Documentation
+    ├── index.html
+    ├── portal-organization.html
+    ├── daily-workflow.html
+    └── ...</code></pre>
+        </section>
+
+        <section id="root-level">
+          <h2>📁 Root Level Files</h2>
+
+          <div class="step-card">
+            <h3>index.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Entry point for the application</li>
+              <li>
+                <strong>Functionality:</strong> Redirects all traffic to
+                <code>/PortalSite/auth/login.php</code>
+              </li>
+              <li><strong>Access:</strong> Public</li>
+              <li><strong>Dependencies:</strong> None</li>
+            </ul>
+          </div>
+
+          <div class="step-card">
+            <h3>session_init.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Centralized session management</li>
+              <li>
+                <strong>Features:</strong>
+                <ul>
+                  <li>Session initialization with security settings</li>
+                  <li>Remember-me token auto-login</li>
+                  <li>Token validation and refresh</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Included by:</strong> All pages requiring authentication
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="admin">
+          <h2>📁 Admin Pages</h2>
+          <p>All files in this directory require:</p>
+          <ul>
+            <li>
+              Active session (<code>$_SESSION['email']</code>,
+              <code>$_SESSION['name']</code>)
+            </li>
+            <li>Admin role verification</li>
+            <li>Include: <code>../config/config.php</code></li>
+            <li>Include: <code>../partials/portalheader.php</code></li>
+            <li>Include: <code>../partials/sidebar.php</code></li>
+          </ul>
+
+          <div class="command-card">
+            <h3>user_list.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> View and manage all users</li>
+              <li>
+                <strong>Features:</strong>
+                <ul>
+                  <li>Searchable user table</li>
+                  <li>Edit user details (inline)</li>
+                  <li>Reset user passwords (popup modal)</li>
+                  <li>Delete users</li>
+                  <li>Password show/hide toggles</li>
+                </ul>
+              </li>
+              <li>
+                <strong>AJAX Calls:</strong>
+                <ul>
+                  <li><code>../api/update_user.php</code> (edit user)</li>
+                  <li>
+                    <code>../api/update_user_password.php</code> (reset
+                    password)
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <strong>CSS:</strong> base.css, admin-layout.css, user-list.css
+              </li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>register_new.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Add new users to the system</li>
+              <li>
+                <strong>Features:</strong>
+                <ul>
+                  <li>User registration form</li>
+                  <li>Password validation with hints</li>
+                  <li>Role selection dropdown</li>
+                  <li>Success/error messages</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Database:</strong> Inserts into <code>users</code> table
+              </li>
+              <li>
+                <strong>Validation:</strong> 8+ chars, 1 number, 1 uppercase, 1
+                special
+              </li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>edit_user.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Edit existing user information</li>
+              <li>
+                <strong>URL Parameter:</strong> <code>?id=&lt;user_id&gt;</code>
+              </li>
+              <li>
+                <strong>Features:</strong> Edit name, change role, email
+                displayed but not editable
+              </li>
+              <li><strong>Back Link:</strong> Returns to user_list.php</li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>remove_user.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Delete users from the system</li>
+              <li>
+                <strong>Features:</strong> User selection dropdown, confirmation
+                required
+              </li>
+              <li><strong>Security:</strong> Prevents self-deletion</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="pages">
+          <h2>📁 Application Pages</h2>
+          <p>
+            All files in this directory are organized into individual folders,
+            each containing:
+          </p>
+          <ul>
+            <li><code>index.php</code> - The main page file</li>
+            <li><code>style.css</code> - Page-specific CSS styles</li>
+          </ul>
+
+          <p>All page files require:</p>
+          <ul>
+            <li>
+              Active session (<code>$_SESSION['email']</code>,
+              <code>$_SESSION['name']</code>)
+            </li>
+            <li>Include: <code>../../config/config.php</code></li>
+            <li>Include: <code>../../partials/portalheader.php</code></li>
+            <li>Include: <code>../../partials/sidebar.php</code></li>
+            <li>
+              May include: <code>../../partials/permissions.php</code> for
+              access control
+            </li>
+          </ul>
+
+          <div class="info-box info">
+            <h4>dashboard/index.php</h4>
+            <ul>
+              <li><strong>Purpose:</strong> Main landing page for all roles</li>
+              <li>
+                <strong>Features:</strong> Role-aware tiles, responsive grid (3
+                → 2 → 1 columns)
+              </li>
+              <li>
+                <strong>Links:</strong> To page folders (e.g.,
+                <code>/pages/equipments/</code>)
+              </li>
+              <li>
+                <strong>CSS:</strong> ../../assets/css/base.css,
+                admin-layout.css, dashboard.css, style.css
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-box info">
+            <h4>Other Pages (equipments/, forms/, etc.)</h4>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Each page in its own folder with
+                index.php and style.css
+              </li>
+              <li>
+                <strong>Access:</strong> Enforced via
+                <code>partials/permissions.php</code>
+              </li>
+              <li>
+                <strong>Assets:</strong> Uses <code>base_url()</code> for robust
+                linking
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="auth">
+          <h2>📁 Authentication Pages</h2>
+
+          <div class="command-card">
+            <h3>login.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> User login interface</li>
+              <li>
+                <strong>Features:</strong> Email/password input, error messages
+              </li>
+              <li>
+                <strong>Form Action:</strong> <code>login_register.php</code>
+              </li>
+              <li><strong>CSS:</strong> base.css, login.css</li>
+              <li><strong>Access:</strong> Public</li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>login_register.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Authentication handler</li>
+              <li>
+                <strong>Functionality:</strong>
+                <ul>
+                  <li>
+                    Verifies email and password using
+                    <code>password_verify()</code>
+                  </li>
+                  <li>Regenerates session ID on login</li>
+                  <li>Sets session variables on success</li>
+                  <li>
+                    Issues secure HttpOnly <code>remember_token</code> cookie
+                    (12 hours)
+                  </li>
+                  <li>Stores token + expiry in DB for auto-login</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Redirects:</strong>
+                <ul>
+                  <li>Success: <code>../pages/dashboard/</code></li>
+                  <li>Failure: Back to <code>login.php</code> with error</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>logout.php</h3>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Explicit logout with confirmation
+              </li>
+              <li>
+                <strong>Functionality:</strong>
+                <ul>
+                  <li>Clears <code>remember_token</code> from DB</li>
+                  <li>Clears cookie, destroys session</li>
+                  <li>Shows confirmation UI</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>forgot_password.php</h3>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Password recovery interface (UI only)
+              </li>
+              <li>
+                <strong>Status:</strong> Frontend only - backend email
+                functionality not implemented
+              </li>
+              <li>
+                <strong>Future:</strong> Needs email sending logic and token
+                generation
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="api">
+          <h2>📁 API Endpoints</h2>
+
+          <div class="example-card">
+            <h3>update_user.php</h3>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Handle user detail updates via AJAX
+              </li>
+              <li><strong>Method:</strong> POST</li>
+              <li>
+                <strong>Input:</strong> JSON (<code>userId</code>,
+                <code>name</code>, <code>role</code>)
+              </li>
+              <li>
+                <strong>Output:</strong> JSON (<code>success</code>,
+                <code>message</code>)
+              </li>
+              <li>
+                <strong>Security:</strong> Session check, admin verification,
+                prepared statements
+              </li>
+            </ul>
+          </div>
+
+          <div class="example-card">
+            <h3>update_user_password.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Handle admin password reset</li>
+              <li>
+                <strong>Input:</strong> JSON (<code>userId</code>,
+                <code>newPassword</code>)
+              </li>
+              <li>
+                <strong>Validation:</strong> 8+ chars, 1 number, 1 uppercase, 1
+                special
+              </li>
+              <li>
+                <strong>Security:</strong> Password hashing with
+                <code>password_hash()</code>
+              </li>
+            </ul>
+          </div>
+
+          <div class="example-card">
+            <h3>Project API Endpoints</h3>
+            <ul>
+              <li>
+                <code>clone_project.php</code> - Duplicate existing project
+              </li>
+              <li><code>create_project.php</code> - Create new project</li>
+              <li><code>delete_project.php</code> - Remove project</li>
+              <li><code>rename_project.php</code> - Change project name</li>
+              <li><code>update_project_cell.php</code> - Update single cell</li>
+              <li>
+                <code>update_project_cells.php</code> - Batch update multiple
+                cells
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="config">
+          <h2>📁 Configuration</h2>
+
+          <div class="info-box warning">
+            <h4>config.php</h4>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Database configuration and connection
+              </li>
+              <li>
+                <strong>Contains:</strong> Database credentials, MySQLi
+                connection object
+              </li>
+              <li>
+                <strong>Usage:</strong> Included by all files needing database
+                access
+              </li>
+              <li>
+                <strong>Security:</strong> Should be in
+                <code>.gitignore</code> (sensitive data)
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-box info">
+            <h4>config.example.php</h4>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Template for local configuration
+              </li>
+              <li>
+                <strong>Usage:</strong> Copy to <code>config.php</code> and fill
+                in credentials
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-box info">
+            <h4>config.railway.php</h4>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Production environment configuration
+              </li>
+              <li>
+                <strong>Usage:</strong> Uses environment variables for Railway
+                deployment
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="partials">
+          <h2>📁 Partials (Reusable Components)</h2>
+
+          <div class="command-card">
+            <h3>portalheader.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Standard header for admin pages</li>
+              <li>
+                <strong>Features:</strong> Welcome message, logged-in user name,
+                portal logo
+              </li>
+              <li>
+                <strong>Assets:</strong>
+                <code>/PortalSite/assets/images/eportal.svg</code>
+              </li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>sidebar.php</h3>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Navigation sidebar for admin pages
+              </li>
+              <li>
+                <strong>Features:</strong> Role-aware menu, logout button pinned
+                to bottom
+              </li>
+              <li>
+                <strong>Links:</strong>
+                <ul>
+                  <li>Dashboard: <code>../pages/dashboard/</code></li>
+                  <li>Users (admin only): Various admin pages</li>
+                  <li>Logout: <code>../auth/logout.php</code></li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>url.php</h3>
+            <ul>
+              <li><strong>Purpose:</strong> Environment-aware URL builder</li>
+              <li>
+                <strong>Function:</strong> <code>base_url($path)</code> returns
+                path rooted at site base
+              </li>
+              <li><strong>Usage:</strong> Prefer for links and asset URLs</li>
+            </ul>
+          </div>
+
+          <div class="command-card">
+            <h3>permissions.php</h3>
+            <ul>
+              <li>
+                <strong>Purpose:</strong> Role-based access control helpers
+              </li>
+              <li>
+                <strong>Functions:</strong>
+                <code>allowed_pages_for_role($role)</code>,
+                <code>can_access($role, $page)</code>
+              </li>
+              <li>
+                <strong>Usage:</strong> Import in pages and guard access as
+                needed
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="assets">
+          <h2>📁 Assets</h2>
+
+          <h3>assets/css/</h3>
+          <p>Organized CSS architecture:</p>
+          <ul>
+            <li>
+              <code>base.css</code> - Global styles, typography, utilities
+            </li>
+            <li>
+              <code>admin-layout.css</code> - Admin page layout, sidebar, header
+            </li>
+            <li><code>dashboard.css</code> - Dashboard specific styles</li>
+            <li><code>login.css</code> - Login page styles</li>
+            <li>
+              <code>project-checklist.css</code> - Project checklist styles
+            </li>
+            <li>And more page-specific CSS files</li>
+          </ul>
+
+          <h3>assets/js/</h3>
+          <ul>
+            <li>
+              <code>mobile-menu.js</code> - Hamburger menu for mobile sidebar
+            </li>
+          </ul>
+
+          <h3>assets/images/</h3>
+          <ul>
+            <li><code>logo.svg</code> - Company logo (login page)</li>
+            <li><code>eportal.svg</code> - Portal header logo</li>
+            <li><code>maintenance.png</code> - Placeholder image</li>
+          </ul>
+        </section>
+
+        <section id="dependencies">
+          <h2>File Dependencies</h2>
+
+          <h3>Database-Dependent Files:</h3>
+          <pre><code>config/config.php
+  ├── admin/user_list.php
+  ├── admin/register_new.php
+  ├── admin/edit_user.php
+  ├── admin/remove_user.php
+  ├── auth/login_register.php
+  ├── api/update_user.php
+  ├── api/update_user_password.php
+  ├── pages/dashboard/
+  └── pages/project_checklist/</code></pre>
+
+          <h3>Session-Dependent Files:</h3>
+          <p>
+            All files in <code>admin/</code>, <code>pages/</code>, and
+            <code>api/</code> directories require active sessions
+          </p>
+
+          <h3>Include Dependencies:</h3>
+          <pre><code>pages/*/index.php
+  ├── includes: ../../config/config.php
+  ├── includes: ../../partials/portalheader.php
+  └── includes: ../../partials/sidebar.php</code></pre>
+        </section>
+
+        <section id="auth-flow">
+          <h2>Authentication Flow</h2>
+
+          <div class="workflow-timeline">
+            <div class="timeline-item">
+              <h3>Step 1: Initial Visit</h3>
+              <p>User visits: <code>http://localhost/PortalSite/</code></p>
+              <p>
+                → <code>index.php</code> redirects to
+                <code>auth/login.php</code>
+              </p>
+            </div>
+
+            <div class="timeline-item">
+              <h3>Step 2: Login</h3>
+              <p>User enters credentials in <code>login.php</code></p>
+              <p>→ Form submits to <code>auth/login_register.php</code></p>
+            </div>
+
+            <div class="timeline-item">
+              <h3>Step 3: Validation</h3>
+              <p><code>login_register.php</code> validates credentials:</p>
+              <ul>
+                <li>On success → <code>pages/dashboard/</code> (all roles)</li>
+                <li>Issues 12-hour remember token (HttpOnly cookie)</li>
+                <li>On failure → back to <code>login.php</code> with error</li>
+              </ul>
+            </div>
+
+            <div class="timeline-item">
+              <h3>Step 4: Navigation</h3>
+              <p>Admin navigates via dashboard tiles or sidebar</p>
+              <p>→ All pages verify session + role</p>
+            </div>
+
+            <div class="timeline-item">
+              <h3>Step 5: Logout</h3>
+              <p>
+                <code>auth/logout.php</code> → clears DB token + cookie →
+                destroys session → confirmation page
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="user-management">
+          <h2>User Management Flow</h2>
+
+          <div class="example-card">
+            <h3>View Users</h3>
+            <p>
+              <code>admin/dashboard/</code> → "User List" tile →
+              <code>admin/user_list.php</code>
+            </p>
+            <ul>
+              <li>Displays all users in table</li>
+              <li>Search functionality (client-side)</li>
+              <li>Action buttons per user</li>
+            </ul>
+          </div>
+
+          <div class="example-card">
+            <h3>Edit User</h3>
+            <p>
+              <code>admin/user_list.php</code> → "Edit" button → AJAX POST to
+              <code>api/update_user.php</code>
+            </p>
+            <ul>
+              <li>Updates database</li>
+              <li>Returns JSON response</li>
+              <li>Updates UI without page reload</li>
+            </ul>
+          </div>
+
+          <div class="example-card">
+            <h3>Reset Password</h3>
+            <p>
+              <code>admin/user_list.php</code> → "Reset Password" button → Popup
+              modal
+            </p>
+            <ul>
+              <li>Admin enters new password</li>
+              <li>AJAX POST to <code>api/update_user_password.php</code></li>
+              <li>Validates password → Updates database with hash</li>
+            </ul>
+          </div>
+
+          <div class="example-card">
+            <h3>Add User</h3>
+            <p>
+              <code>admin/dashboard/</code> → "Add User" tile →
+              <code>admin/register_new.php</code>
+            </p>
+            <ul>
+              <li>Form submission (POST to self)</li>
+              <li>Validates input → Hashes password → Inserts into database</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="security">
+          <h2>Security Features</h2>
+
+          <div class="info-box success">
+            <h4>Authentication:</h4>
+            <ul>
+              <li>✅ Session-based authentication</li>
+              <li>
+                ✅ Password hashing with <code>password_hash()</code> and
+                <code>password_verify()</code>
+              </li>
+              <li>✅ Role-based access control</li>
+              <li>✅ Session checks on all protected pages</li>
+              <li>✅ Remember-me tokens with 12-hour expiry</li>
+            </ul>
+          </div>
+
+          <div class="info-box success">
+            <h4>Database:</h4>
+            <ul>
+              <li>✅ Prepared statements (prevents SQL injection)</li>
+              <li>✅ Parameterized queries</li>
+              <li>✅ MySQLi with <code>bind_param()</code></li>
+            </ul>
+          </div>
+
+          <div class="info-box success">
+            <h4>Input Validation:</h4>
+            <ul>
+              <li>✅ Server-side password validation</li>
+              <li>✅ Email format validation</li>
+              <li>✅ Client-side validation (JavaScript)</li>
+              <li>
+                ✅ HTML special character escaping with
+                <code>htmlspecialchars()</code>
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-box warning">
+            <h4>Password Requirements:</h4>
+            <ul>
+              <li>Minimum 8 characters</li>
+              <li>At least 1 number</li>
+              <li>At least 1 uppercase letter</li>
+              <li>At least 1 special character (!@#$%^&*()_+-=[]{}|;:,.<>?)</li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="database">
+          <h2>Database Schema</h2>
+
+          <h3>users Table:</h3>
+          <pre><code>CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,  -- hashed
+    role VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);</code></pre>
+
+          <h3>Supported Roles:</h3>
+          <ul>
+            <li><code>admin</code> - Full access to all features</li>
+            <li><code>projectmanager</code> - (Future implementation)</li>
+            <li><code>estimator</code> - (Future implementation)</li>
+            <li><code>accounting</code> - (Future implementation)</li>
+            <li><code>superintendent</code> - (Future implementation)</li>
+            <li><code>foreman</code> - (Future implementation)</li>
+            <li><code>mechanic</code> - (Future implementation)</li>
+            <li><code>operator</code> - (Future implementation)</li>
+            <li><code>laborer</code> - (Future implementation)</li>
+          </ul>
+        </section>
+
+        <section id="maintenance">
+          <h2>Maintenance Notes</h2>
+
+          <div class="tip-card">
+            <h3>When Adding a New Page:</h3>
+            <ol>
+              <li>
+                Create folder in <code>pages/</code> directory with page name
+              </li>
+              <li>Create <code>index.php</code> in the folder</li>
+              <li>Create <code>style.css</code> in the folder</li>
+              <li>Copy session/auth checks from existing page file</li>
+              <li>Include: <code>../../config/config.php</code></li>
+              <li>Include: <code>../../partials/portalheader.php</code></li>
+              <li>Include: <code>../../partials/sidebar.php</code></li>
+              <li>Link CSS files (base, admin-layout, dashboard, style)</li>
+              <li>Add tile to <code>dashboard/index.php</code></li>
+              <li>
+                Update role permissions in <code>dashboard/index.php</code>
+              </li>
+            </ol>
+          </div>
+
+          <div class="tip-card">
+            <h3>When Adding a New API Endpoint:</h3>
+            <ol>
+              <li>Create file in <code>api/</code> directory</li>
+              <li>Verify session and admin role at top</li>
+              <li>Include: <code>../config/config.php</code></li>
+              <li>
+                Accept JSON input:
+                <code>json_decode(file_get_contents('php://input'))</code>
+              </li>
+              <li>
+                Return JSON:
+                <code>header('Content-Type: application/json')</code> +
+                <code>echo json_encode()</code>
+              </li>
+              <li>Use prepared statements for all database queries</li>
+            </ol>
+          </div>
+
+          <div class="tip-card">
+            <h3>When Adding a New Role:</h3>
+            <ol>
+              <li>
+                Add role to dropdown in <code>admin/register_new.php</code>
+              </li>
+              <li>Add role to dropdown in <code>admin/edit_user.php</code></li>
+              <li>
+                Update role-based access in
+                <code>pages/dashboard/index.php</code>
+              </li>
+              <li>
+                Update permissions in <code>partials/permissions.php</code>
+              </li>
+            </ol>
+          </div>
+        </section>
+
+        <section class="remember-section">
+          <h2>📌 Key Conventions</h2>
+          <h3>URL and Include Conventions</h3>
+          <ol>
+            <li>
+              <strong>base_url helper:</strong> Use
+              <code>partials/url.php</code> and call
+              <code>base_url('/path')</code> for robust URLs
+            </li>
+            <li>
+              <strong>Relative includes:</strong> Use <code>__DIR__</code> for
+              PHP includes
+              <pre><code>// From pages/*/index.php
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../partials/portalheader.php';</code></pre>
+            </li>
+            <li>
+              <strong>CSS paths:</strong> Use relative paths from page folder
+              <pre><code>&lt;link rel="stylesheet" href="../../assets/css/base.css" /&gt;
+&lt;link rel="stylesheet" href="style.css" /&gt;</code></pre>
+            </li>
+          </ol>
+        </section>
+
+        <div class="nav-footer">
+          <a href="index.html" class="btn-secondary"
+            >← Back to Documentation Hub</a
+          >
+          <a href="pages-reorganization.html" class="btn-primary"
+            >Pages Reorganization →</a
+          >
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

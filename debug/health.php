@@ -12,7 +12,7 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $role = $user['role'] ?? 'laborer';
 $stmt->close();
-if ($role !== 'admin') { header('Location: ../pages/dashboard.php'); exit(); }
+if ($role !== 'admin') { header('Location: ../pages/dashboard/'); exit(); }
 
 http_response_code(200);
 header('Content-Type: text/plain');
