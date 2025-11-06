@@ -224,8 +224,7 @@ try {
         /* Center dividing line: a subtle vertical rule centered inside the visible table container
           to visually split the table into two sections. It's pointer-events:none so it never
           interferes with table interactions. */
-  /* Removed center dividing line to avoid visual split while preserving functionality */
-  .table-container::before{ display: none !important; }
+        .table-container::before{ content: ""; position:absolute; top:12px; bottom:12px; left:50%; width:1px; background: rgba(2,6,23,0.06); transform: translateX(-50%); pointer-events:none; z-index:20; border-radius:1px }
 
         /* Continuous header strip: removed in favor of per-cell blue backgrounds.
           Each TH now has its own background:#4b8ad6 so the header color stays
@@ -1338,12 +1337,25 @@ try {
         // position menu near button
         editMenu.style.display = 'block';
         editMenu.setAttribute('aria-hidden','false');
-        // compute after making visible so offsetWidth is available
+        // compute after making visible so offsetWidth/offsetHeight is available
         var rect = button.getBoundingClientRect();
         var left = rect.right + window.pageXOffset - editMenu.offsetWidth;
         if (left < 8) left = rect.left + window.pageXOffset; // fallback
         editMenu.style.left = left + 'px';
-        editMenu.style.top = (rect.bottom + window.pageYOffset + 6) + 'px';
+        
+        // Check if there's enough space below; if not, position above
+        var menuHeight = editMenu.offsetHeight;
+        var spaceBelow = window.innerHeight - rect.bottom;
+        var spaceAbove = rect.top;
+        
+        if (spaceBelow < menuHeight + 20 && spaceAbove > menuHeight) {
+          // Position above the button
+          editMenu.style.top = (rect.top + window.pageYOffset - menuHeight - 6) + 'px';
+        } else {
+          // Position below the button (default)
+          editMenu.style.top = (rect.bottom + window.pageYOffset + 6) + 'px';
+        }
+        
         input.focus();
         input.select && input.select();
       }
@@ -1509,4 +1521,3 @@ try {
   </script>
 </body>
 </html>
-
