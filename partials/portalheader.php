@@ -45,6 +45,9 @@ if (!empty($_SESSION['email'])) {
         <?php if ($role !== 'admin'): ?>
             <div class="header-actions" aria-hidden="false">
                 <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="header-action-btn">Home</a>
+                <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php')); ?>" class="header-action-btn" title="Account Settings">
+                    <img src="<?php echo htmlspecialchars(base_url('/assets/images/user-icon.svg')); ?>" alt="Account Settings" style="width: 16px; height: 16px;">
+                </a>
                 <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
             </div>
         <?php endif; ?>

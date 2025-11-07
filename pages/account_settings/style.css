@@ -1,0 +1,203 @@
+/* Account Settings page styles */
+
+.main-content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.main-content h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.settings-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  padding: 40px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 20px rgba(2, 6, 23, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.settings-section h2 {
+  margin: 0 0 30px 0;
+  font-size: 24px;
+  color: #1e293b;
+  font-weight: 700;
+  text-align: center;
+}
+
+.password-form {
+  width: 100%;
+  max-width: 500px;
+}
+
+.password-form .form-group {
+  margin-bottom: 24px;
+}
+
+.password-form .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.password-form .form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #0f172a;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.password-form .form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: #334155;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.hint {
+  display: block;
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.password-requirements {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.password-requirements ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.password-requirements li {
+  margin-bottom: 4px;
+}
+
+.password-form .btn {
+  margin-top: 20px;
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
+}
+
+.password-form .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.password-form .btn:active {
+  transform: translateY(0);
+}
+
+.success-message {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #064e3b;
+  padding: 14px 18px;
+  border: 1px solid rgba(6, 78, 59, 0.2);
+  border-radius: 10px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.15);
+}
+
+.error-message {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  padding: 14px 18px;
+  border: 1px solid rgba(153, 27, 27, 0.2);
+  border-radius: 10px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+}
+
+.placeholder-section {
+  text-align: center;
+  padding: 40px;
+}
+
+.placeholder-section h2 {
+  color: #475569;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+.placeholder-section p {
+  color: #94a3b8;
+  font-size: 15px;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .settings-section {
+    padding: 24px 20px;
+  }
+
+  .main-content {
+    padding: 24px 16px;
+  }
+
+  .main-content h1 {
+    font-size: 26px;
+  }
+}

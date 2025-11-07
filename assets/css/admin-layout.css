@@ -9,7 +9,7 @@ body.admin-page {
   background: #ffffff;
   min-height: 100vh;
   padding: 0;
-  --admin-header-h: 120px; /* thinner header to match logo height */
+  --admin-header-h: 100px; /* reduced header height */
 }
 
 .admin-container {
@@ -72,7 +72,7 @@ body.admin-page {
 
 .welcome-logo {
   padding-top: 5px;
-  height: 90px;
+  height: 75px;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
@@ -90,8 +90,7 @@ body.admin-page {
 .header-actions {
   position: absolute;
   right: 15px; /* Close to the right edge, right after the logo */
-  top: 50%; /* vertically centered relative to header */
-  transform: translateY(-50%);
+  bottom: 10px; /* Position at bottom of header */
   z-index: 1003; /* Higher than logo to ensure visibility */
   display: flex;
   flex-direction: row; /* side-by-side */

@@ -23,6 +23,7 @@ if (!isset($role) || $role !== 'admin') {
 <aside class="side-nav" role="navigation" aria-label="Control panel">
     <p class="adminnav">Control Panel</p>
     <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="nav-btn">Home</a>
+    <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php')); ?>" class="nav-btn">Account Settings</a>
     <div class="nav-group" id="usersGroup">
         <div class="nav-toggle">
             <button class="nav-btn" id="usersToggle" type="button">Users ▾</button>
