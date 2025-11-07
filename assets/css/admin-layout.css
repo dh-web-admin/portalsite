@@ -9,7 +9,7 @@ body.admin-page {
   background: #ffffff;
   min-height: 100vh;
   padding: 0;
-  --admin-header-h: 160px; /* increased to allow a larger logo */
+  --admin-header-h: 120px; /* thinner header to match logo height */
 }
 
 .admin-container {
@@ -31,7 +31,7 @@ body.admin-page {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   margin: 0;
   width: 100%;
-  padding: 20px;
+  padding: 10px 20px;
   box-sizing: border-box;
   position: fixed;
   top: 0;
@@ -56,8 +56,8 @@ body.admin-page {
 
 .welcome-section h1 {
   color: white;
-  font-size: 32px;
-  margin-bottom: 6px;
+  font-size: 28px;
+  margin-bottom: 4px;
   /* allow h1 to wrap naturally so it doesn't force the logo off-screen */
   width: auto;
   overflow: visible;
@@ -67,12 +67,12 @@ body.admin-page {
 
 .welcome-section h2 {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .welcome-logo {
-  padding-top: 10px;
-  height: 100px;
+  padding-top: 5px;
+  height: 90px;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
@@ -80,42 +80,49 @@ body.admin-page {
   max-width: 260px;
   box-sizing: content-box;
   position: absolute;
-  right: 24px;
+  right: 200px; /* Moved left to make room for buttons on the right */
   top: 50%;
   transform: translateY(-50%);
   z-index: 1001;
 }
 
-/* Header actions shown for non-admin users (stacked under the logo on the top-right) */
+/* Header actions shown for non-admin users (positioned beside the logo) */
 .header-actions {
   position: absolute;
-  right: 24px;
+  right: 15px; /* Close to the right edge, right after the logo */
   top: 50%; /* vertically centered relative to header */
-  transform: translateY(-10%);
-  margin-top: 40px;
-  z-index: 1002;
+  transform: translateY(-50%);
+  z-index: 1003; /* Higher than logo to ensure visibility */
   display: flex;
   flex-direction: row; /* side-by-side */
   gap: 8px;
-  align-items: center;
+  align-items: center; /* Center buttons vertically */
+  justify-content: center; /* Center buttons horizontally */
 }
 
 .header-action-btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
   color: #111; /* dark text to contrast with whitish background */
   background: rgba(255, 255, 255, 0.95); /* near-white bg */
-  padding: 8px 12px;
+  padding: 8px 16px;
   border-radius: 6px;
   font-weight: 700;
   font-size: 13px;
   border: 1px solid rgba(0, 0, 0, 0.06);
+  line-height: 1.5; /* Consistent line height for same button height */
+  min-height: 38px; /* Ensure consistent height */
 }
 
-.header-action-btn.logout-btn {
-  background: rgba(255, 245, 245, 0.95); /* slightly reddish tint for logout */
-  color: #111;
-  border: 1px solid rgba(239, 68, 68, 0.12);
+/* Override sidebar logout styling for header logout button */
+.header-actions .header-action-btn.logout-btn {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #111 !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  margin-top: 0 !important;
+  display: inline-flex !important;
 }
 
 .header-action-btn:hover {
@@ -258,7 +265,7 @@ body.admin-page {
 
 .content-area {
   flex: 1;
-  padding: 40px;
+  padding: 0;
   margin-left: 0; /* default: no sidebar reserved space; applied when sidebar exists below */
   height: calc(100vh - var(--admin-header-h));
   overflow-y: auto;
@@ -273,6 +280,7 @@ body.admin-page {
 
 .main-content {
   margin-top: 0;
+  padding: 0 20px; /* Add horizontal padding to prevent content from touching edges */
 }
 
 .main-content h1 {

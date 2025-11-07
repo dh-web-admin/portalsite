@@ -304,6 +304,53 @@
   box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), 0 4px 18px rgba(2, 6, 23, 0.06);
 }
 
+/* Success (used for Edit/Save button) */
+.btn-success {
+  background: #2563eb; /* indigo-600 for a crisp primary look */
+  color: #ffffff;
+  border-color: rgba(37, 99, 235, 0.18);
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.12);
+}
+.btn-success:hover {
+  background: #1e40af; /* indigo-800 */
+  box-shadow: 0 8px 22px rgba(2, 6, 23, 0.12);
+}
+.btn-success:focus {
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
+}
+.btn-success:active {
+  opacity: 0.96;
+}
+
+/* Secondary (used for Cancel button) */
+.btn-secondary {
+  background: #f1f5f9; /* slate-100 */
+  color: #0f172a; /* slate-900 */
+  border-color: rgba(15, 23, 42, 0.08);
+  font-weight: 600;
+}
+.btn-secondary:hover {
+  background: #e2e8f0; /* slate-200 */
+}
+.btn-secondary:focus {
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.08);
+}
+
+/* Make Cancel prominent/destructive when active (enabled) */
+.btn-secondary:not(:disabled) {
+  background: #ef4444; /* red-500 */
+  color: #ffffff;
+  border-color: rgba(239, 68, 68, 0.18);
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.12);
+}
+.btn-secondary:not(:disabled):hover {
+  background: #dc2626; /* red-600 */
+}
+.btn-secondary:not(:disabled):focus {
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.18);
+}
+
 /* Primary action button */
 .btn-primary,
 .btn.primary {
@@ -399,6 +446,421 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14M5 12h14'/></svg>");
   background-size: contain;
   background-repeat: no-repeat;
+}
+
+/* ------------------------------------------------------------------
+   Restored advanced table styles (moved from inline styles in index.php)
+   These rules bring back the sticky header, sticky first column,
+   boxed cells with spacing, and the scrollable table container.
+-------------------------------------------------------------------*/
+
+/* Constrain page scroll to the table container for this page */
+html,
+body {
+  overflow: hidden !important;
+  height: 100vh;
+}
+.admin-container {
+  height: 100vh;
+  overflow: hidden;
+}
+.admin-layout {
+  height: calc(100vh - var(--admin-header-h, 70px));
+  overflow: hidden;
+}
+.content-area {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Wrapper around the table area */
+.table-wrap {
+  padding-bottom: 6px;
+}
+#tableScrollProxy {
+  display: none !important;
+}
+
+/* Project table appearance */
+.project-table {
+  border-collapse: separate;
+  border-spacing: 8px 14px; /* gap between cells and rows */
+  width: -moz-max-content;
+  width: max-content;
+  min-width: 2200px;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial;
+  table-layout: auto;
+}
+
+/* Scroll container around the table */
+.table-container {
+  box-shadow: 0 10px 30px rgba(101, 119, 201, 0.08);
+  border-radius: 12px;
+  border: 3px solid #64748b;
+  border-bottom: 8px solid #64748b;
+  overflow: auto;
+  max-width: 100%;
+  height: calc(100vh - var(--admin-header-h, 70px) - 120px);
+  margin-bottom: 50px;
+  padding-bottom: 50px;
+  position: relative;
+}
+.table-container {
+  overflow-x: scroll !important;
+  overflow-y: scroll !important;
+}
+.table-container::-webkit-scrollbar-horizontal {
+  display: none;
+}
+.table-container::-webkit-scrollbar {
+  height: 0px;
+  width: 14px;
+}
+.table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+.table-container::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 8px;
+}
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Header cells: sticky and bold */
+.project-table thead th {
+  position: sticky;
+  top: 0;
+  background: #475569;
+  padding: 18px 16px;
+  text-align: center;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial;
+  font-weight: 700;
+  border: none;
+  color: #ffffff;
+  white-space: nowrap;
+  font-size: 12px;
+  min-width: 160px;
+  width: 160px;
+  max-width: none;
+  z-index: 20;
+}
+
+/* Body cells: boxed card look */
+.project-table tbody td {
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid rgba(2, 6, 23, 0.06);
+  color: #334155;
+  white-space: nowrap;
+  font-size: 11px;
+  min-width: 160px;
+  width: 160px;
+  max-width: none;
+  text-align: center;
+  border-radius: 8px;
+}
+
+/* Highlight for empty/unedited cells */
+.project-table td.empty-cell,
+.project-table td[data-empty="1"] {
+  background: #fff7cc !important; /* soft yellow */
+  color: #0b0b00 !important;
+}
+
+/* Wider first column (Project Name) */
+.project-table thead th:first-child,
+.project-table tbody td:first-child {
+  min-width: 220px;
+  width: 220px;
+  max-width: none;
+}
+
+/* Subtle vertical dividers between columns */
+.project-table thead th:not(:last-child),
+.project-table tbody td:not(:last-child) {
+  border-right: 1px solid #eef2f7;
+}
+
+/* Vertical alignment */
+.project-table thead th,
+.project-table tbody td {
+  vertical-align: middle;
+}
+
+/* Sticky first column (header + body) */
+.project-table thead th:first-child,
+.project-table tbody td:first-child {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 30;
+  border-right: 1px solid #e6eef8;
+  text-align: left;
+  padding-left: 18px;
+  box-shadow: 2px 0 10px rgba(2, 6, 23, 0.04);
+}
+.project-table thead th:first-child {
+  z-index: 50 !important;
+  background: #475569 !important;
+}
+
+/* Project name cell color coding */
+.project-table tbody td.project-name {
+  background: #3f78bd !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  font-size: 11px;
+  position: sticky !important;
+  left: 0 !important;
+}
+.project-actions {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: 6px;
+}
+.project-actions .icon-btn {
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.project-actions .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.project-actions .icon-btn:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.18);
+}
+.project-table tbody td.project-name.status-ongoing {
+  background: #3f78bd !important;
+}
+.project-table tbody td.project-name.status-cancelled {
+  background: #8b4545 !important;
+}
+.project-table tbody td.project-name.status-completed {
+  background: #2f9a55 !important;
+}
+.project-table td.project-name .project-title {
+  color: #ffffff !important;
+  display: inline-block;
+  max-width: calc(100% - 56px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-table tbody td.empty-project {
+  background: transparent !important;
+  color: #64748b;
+  font-weight: 400;
+  position: sticky !important;
+  left: 0 !important;
+}
+
+/* Hide Status column when data-has-status=1 */
+.project-table[data-has-status="1"] thead th:nth-child(2),
+.project-table[data-has-status="1"] tbody td[data-col="Status"] {
+  display: none;
+}
+
+/* Edit menu, filters, and editing helpers */
+.filter-dropdown {
+  position: relative;
+}
+.filter-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 11000;
+  display: none;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(2, 6, 23, 0.12);
+  border: 1px solid rgba(2, 6, 23, 0.06);
+  min-width: 180px;
+  padding: 6px 6px;
+}
+.filter-option {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #0f172a;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.filter-option:hover {
+  background: #f1f5f9;
+}
+
+.edit-menu {
+  position: absolute;
+  z-index: 11010;
+  display: none;
+  min-width: 220px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.12);
+  border: 1px solid rgba(2, 6, 23, 0.06);
+  padding: 8px;
+}
+.edit-menu .row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.edit-menu input[name="edit_name"] {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.edit-menu .btn {
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.edit-menu .actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.edit-menu .danger {
+  background: #fff;
+  color: #c91f37;
+  border: 1px solid rgba(201, 31, 55, 0.08);
+}
+.edit-menu .muted {
+  background: #f8fafc;
+  color: #0b3d91;
+  border: 1px solid rgba(11, 61, 145, 0.06);
+}
+
+.project-table td.editable {
+  background: transparent;
+  cursor: text;
+  min-width: 120px;
+}
+.project-table td.editable:focus {
+  outline: 2px solid rgba(75, 138, 214, 0.22);
+  background: #fbfdff;
+}
+.project-table td.saving {
+  opacity: 0.65;
+}
+.project-table td.save-error {
+  outline: 2px solid rgba(225, 29, 72, 0.9);
+}
+
+/* Top horizontal scrollbar synced with table container */
+#topScrollbar {
+  overflow-x: scroll;
+  overflow-y: hidden;
+  height: 20px;
+  margin-bottom: 8px;
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+#topScrollbar > div {
+  height: 1px;
+}
+#topScrollbar::-webkit-scrollbar {
+  height: 14px;
+}
+#topScrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+#topScrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 8px;
+}
+#topScrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Toast / feedback */
+.main-content {
+  position: relative;
+}
+#unsavedChangesModal .btn {
+  min-height: 36px;
+}
+#statusToast {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1200;
+  min-width: 200px;
+  max-width: 340px;
+  display: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+  color: #064e3b;
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid rgba(2, 6, 23, 0.06);
+  background: #e6f5ec;
+  align-items: center;
+  justify-content: space-between;
+}
+#statusToast.success {
+  background: #e6f5ec;
+  color: #064e3b;
+  border-color: rgba(6, 78, 59, 0.08);
+}
+#statusToast.error {
+  background: #feecea;
+  color: #6b1212;
+  border-color: rgba(201, 31, 55, 0.08);
+}
+#statusToast button {
+  background: transparent;
+  border: 1px solid rgba(2, 6, 23, 0.06);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+#statusToast button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.row-flash {
+  transition: background-color 0.35s ease, opacity 0.35s ease;
+}
+.row-flash.success {
+  background: rgba(47, 154, 85, 0.12);
+}
+.row-flash.error {
+  background: rgba(201, 31, 55, 0.08);
+}
+.fade-out {
+  opacity: 0;
+  transform: translateY(-6px);
+  height: 0;
+  padding: 0;
+  margin: 0;
+  transition: opacity 0.28s ease, transform 0.28s ease, height 0.28s ease,
+    padding 0.28s ease, margin 0.28s ease;
+}
+
+@media (max-width: 900px) {
+  .project-table thead th,
+  .project-table tbody td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
 }
 
 /* Slightly larger on desktop */

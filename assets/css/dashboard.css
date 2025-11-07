@@ -7,9 +7,9 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start; /* Align items to the left */
-  margin: 20px 0;
+  margin: 20px 10px 10px;
   gap: 15px;
-  padding: 10px 0; /* Add padding to prevent cutoff */
+  padding: 10px 20px; /* Add horizontal padding to prevent cutoff at edges */
 }
 
 .tile {

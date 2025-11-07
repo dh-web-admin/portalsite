@@ -7,8 +7,15 @@ if (preg_match('~/(health(?:\.php)?)$~i', $uri)) {
 	exit;
 }
 
-// Default: redirect to login page using a relative path
-// Works on both local (http://localhost/PortalSite/) and production (domain root)
+// Bootstrap session and route based on auth state
+require_once __DIR__ . '/session_init.php';
+
+// If already logged in, go straight to dashboard; otherwise show login
+if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
+    header('Location: pages/dashboard/');
+    exit;
+}
+
 header('Location: auth/login.php');
 exit;
 ?>

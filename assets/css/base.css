@@ -15,6 +15,11 @@ body {
   min-height: 100vh;
 }
 
+/* Global unsaved modal button consistency (reuses existing btn classes if present) */
+#globalUnsavedModal .btn {
+  min-height: 38px;
+}
+
 /*----------------------------------*
  * Utility / Message styles
  *---------------------------------*/

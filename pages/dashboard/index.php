@@ -120,6 +120,5 @@ switch ($role) {
     })();
     </script>
     <script src="../../assets/js/mobile-menu.js"></script>
-    <script src="../../assets/js/logout-confirm.js"></script>
 </body>
 </html>

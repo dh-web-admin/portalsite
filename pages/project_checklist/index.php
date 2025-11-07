@@ -52,7 +52,7 @@ try {
       <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
       <main class="content-area" style="padding-top:0;">
         <div class="main-content">
-          <div class="toolbar" style="display:flex;align-items:center;margin-bottom:16px;gap:12px;position:sticky;top:0;z-index:100;background:#ffffff;padding:40px 16px 12px 16px;box-shadow:0 2px 8px rgba(2,6,23,0.04);">
+          <div class="toolbar" style="display:flex;align-items:center;margin-bottom:0px;gap:12px;position:sticky;top:0;z-index:100;background:#ffffff;padding:10px;box-shadow:0 2px 8px rgba(2,6,23,0.04);">
             <div class="toolbar-left" style="flex:0 0 auto;">
               <button id="addProjectBtn" class="btn btn-primary">New Project</button>
             </div>
@@ -73,280 +73,9 @@ try {
           </div>
 
           <!-- Table area placed below the toolbar -->
-          <div class="table-area" style="width:100%;padding:0 16px;">
+          <div class="table-area" style="width:100%;margin:0;padding:0;">
             <div class="table-wrap" style="width:100%;padding:8px 0;">
-              <style>
-                /* Disable default browser scroll - all scrolling happens in the table container */
-                html, body { overflow: hidden !important; height: 100vh; }
-                .admin-container { height: 100vh; overflow: hidden; }
-                .admin-layout { height: calc(100vh - var(--admin-header-h, 70px)); overflow: hidden; }
-                .content-area { height: 100%; overflow: hidden; }
-                
-                /* The table-wrap is just a non-scrolling container now */
-                .table-wrap { padding-bottom:6px; }
-                /* Hide the proxy scrollbar if present (we rely on native scrollbar now) */
-                #tableScrollProxy { display: none !important; }
-                /* Make table size based on content so horizontal scroll appears when needed */
-           /* Make cells visually distinct by giving each a subtle box (separate cells by spacing).
-             Increase the vertical gap between rows so the per-cell border is visible. */
-           .project-table{border-collapse:separate;border-spacing:8px 14px;width: -moz-max-content; width: max-content; min-width:2200px;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;table-layout:auto}
-           /* All columns have same min-width; will expand automatically if content is larger */
-                /* Header: professional boxed style with stronger contrast 
-                   This is the scrolling container - MUST have overflow for sticky to work
-                   Height calculated to fit viewport: 100vh - header - toolbar - margins */
-                .table-container { 
-                  box-shadow: 0 10px 30px rgba(101, 119, 201, 0.08); 
-                  border-radius:12px; 
-                  border: 3px solid #64748b;
-                  border-bottom: 8px solid #64748b;
-                  overflow: auto;
-                  max-width: 100%;
-                  height: calc(100vh - var(--admin-header-h, 70px) - 120px);
-                  margin-bottom: 50px;
-                  padding-bottom: 50px;
-                  position: relative;
-                }
-                /* Force scrollbars to always be visible */
-                .table-container {
-                  overflow-x: scroll !important;
-                  overflow-y: scroll !important;
-                }
-                /* Hide the bottom horizontal scrollbar - we only use the top one */
-                .table-container::-webkit-scrollbar-horizontal {
-                  display: none;
-                }
-                /* Scrollbar styling for the table container (vertical only) */
-                .table-container::-webkit-scrollbar{ height:0px; width:14px; }
-                .table-container::-webkit-scrollbar-track{background:#f1f5f9; border-radius:8px;}
-                .table-container::-webkit-scrollbar-thumb{background:#94a3b8; border-radius:8px;}
-                .table-container::-webkit-scrollbar-thumb:hover{background:#64748b;}
-                /* Use a smooth, professional header color for better aesthetics */
-           /* Header appearance: ALL header cells sticky at top when scrolling vertically.
-              Each TH gets a consistent solid background color. */
-           .project-table thead th{
-             position: sticky;
-             top: 0;
-             background:#475569;
-             padding:18px 16px;
-             text-align:center;
-             font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-             font-weight:700;
-             border:none;
-             color:#ffffff;
-             white-space:nowrap;
-             font-size:12px;
-             min-width:160px;
-             width:160px;
-             max-width:none;
-             z-index:20;
-           }
-           /* Body cells: give each cell a distinct card-like border and rounded corners.
-             Keep a white background so the centered dividing line remains visible. */
-           .project-table tbody td{padding:12px 14px;background:#ffffff;border:1px solid rgba(2,6,23,0.06);color:#334155;white-space:nowrap;font-size:11px;min-width:160px;width:160px;max-width:none;text-align:center;border-radius:8px}
-           /* Make the first column (Project Name) wider by default */
-           .project-table thead th:first-child, .project-table tbody td:first-child { min-width: 220px; width: 220px; max-width: none }
-                /* Minimalistic vertical dividers between columns */
-                .project-table thead th:not(:last-child),
-                .project-table tbody td:not(:last-child) {
-                  border-right: 1px solid #eef2f7; /* subtle vertical line */
-                }
-                /* Align content vertically for nicer divider appearance */
-                .project-table thead th,
-                .project-table tbody td {
-                  vertical-align: middle;
-                }
-                /* Slight row shadow removed in favor of per-cell borders (visual separation done via
-                   border-spacing + per-cell border). Keep the TR lightweight. */
-                .project-table tbody tr { }
-
-                /* Sticky first column (Project Name) - stays fixed when scrolling horizontally.
-                   Works for both header and body cells in the first column. */
-                .project-table thead th:first-child,
-                .project-table tbody td:first-child {
-                  position: sticky !important;
-                  left: 0 !important;
-                  z-index: 30;
-                  border-right: 1px solid #e6eef8;
-                  text-align: left;
-                  padding-left: 18px;
-                  box-shadow: 2px 0 10px rgba(2,6,23,0.04);
-                }
-                
-                /* First header cell needs highest z-index (it's both sticky top AND sticky left) */
-                .project-table thead th:first-child { 
-                  z-index: 50 !important;
-                  background:#475569 !important;
-                }
-                /* Apply background only to project-name cells that actually have content */
-                .project-table tbody td.project-name {
-                  background: #3f78bd !important; /* slightly darker blue for better contrast */
-                  color: #ffffff !important; /* strong readable text for project names */
-                  font-weight: 700;
-                  font-size: 11px;
-                  position: sticky !important;
-                  left: 0 !important;
-                }
-                
-                /* Status-based color coding for project names */
-                .project-table tbody td.project-name.status-ongoing {
-                  background: #3f78bd !important; /* Blue - same as default */
-                }
-                .project-table tbody td.project-name.status-cancelled {
-                  background: #8b4545 !important; /* Reddish-Brown */
-                }
-                .project-table tbody td.project-name.status-completed {
-                  background: #2f9a55 !important; /* Green */
-                }
-                
-                /* Ensure project title text remains visible and doesn't get overridden by
-                   more general td rules. Use a focused selector and ellipsis for overflow. */
-                .project-table td.project-name .project-title {
-                  color: #ffffff !important;
-                  display: inline-block;
-                  max-width: calc(100% - 56px);
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                }
-                /* Empty placeholder cells in the first column should remain transparent */
-                .project-table tbody td.empty-project { 
-                  background: transparent !important; 
-                  color: #64748b; 
-                  font-weight: 400;
-                  position: sticky !important;
-                  left: 0 !important;
-                }
-
-           /* The table-container is the scrolling element - has overflow:scroll for both directions
-              Height is fixed to viewport with 50px bottom margin and 50px bottom padding */
-        .table-container{box-shadow:0 6px 18px rgba(15,23,42,0.06);border-radius:10px;overflow:auto;background:#f8fafc;position:relative;max-width:100%;height:calc(100vh - var(--admin-header-h, 70px) - 120px);margin-bottom:50px;padding-bottom:50px}
-
-        /* Continuous header strip: removed in favor of per-cell blue backgrounds.
-          Each TH now has its own background:#4b8ad6 so the header color stays
-          consistent during horizontal scroll. The ::after overlay is no longer needed. */
-        .table-container{ --header-height: 56px; }
-        /* .table-container::after removed - no longer needed */
-                /* Project Name styling: bold white text on a matching deep-blue tint for contrast */
-                .project-table tbody tr td:first-child{font-weight:700;color:#ffffff}
-
-                /* Align action icons to the right inside the project-name cell 
-                   CRITICAL: Keep display as table-cell (default) for sticky to work! */
-                .project-table td.project-name{ 
-                  display: table-cell !important; /* MUST be table-cell for sticky to work */
-                  position: sticky !important;
-                  left: 0 !important;
-                  background: #3f78bd !important;
-                  vertical-align: middle;
-                }
-                /* Inner wrapper for flex layout without breaking sticky */
-                .project-table td.project-name > div {
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  padding-right: 12px;
-                }
-                .project-title{ flex: 1 1 auto; }
-                .project-actions{ margin-left:auto; display:inline-flex; gap:6px; align-items:center }
-                .project-actions .icon-btn{ background:transparent; border:0; padding:4px; display:inline-flex; align-items:center; justify-content:center; color: #fff; cursor: pointer }
-                /* Delete (danger) icon removed — delete handled via the edit menu now */
-                .project-actions .icon-btn svg{ display:block }
-                .project-actions .icon-btn:focus{ outline:2px solid rgba(255,255,255,0.18); border-radius:6px }
-                /* Filter dropdown styling - ensure it sits above the table and is fully visible */
-                .filter-dropdown{ position: relative }
-                .filter-menu{ position:absolute; right:0; top:calc(100% + 8px); z-index:11000; display:none; background:#ffffff; border-radius:8px; box-shadow:0 8px 30px rgba(2,6,23,0.12); border:1px solid rgba(2,6,23,0.06); min-width:180px; padding:6px 6px; }
-                .filter-option{ padding:8px 10px; font-size:13px; color:#0f172a; cursor:pointer; border-radius:6px }
-                .filter-option:hover{ background:#f1f5f9 }
-
-                /* Inline edit menu for project actions (rename / delete / mark status) */
-                .edit-menu{ position:absolute; z-index:11010; display:none; min-width:220px; background:#fff; border-radius:8px; box-shadow:0 10px 30px rgba(2,6,23,0.12); border:1px solid rgba(2,6,23,0.06); padding:8px; }
-                .edit-menu .row{ display:flex; gap:8px; align-items:center; margin-bottom:8px }
-                .edit-menu input[name="edit_name"]{ flex:1; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px }
-                .edit-menu .btn{ padding:6px 8px; border-radius:6px; font-size:13px }
-                .edit-menu .actions{ display:flex; gap:8px; justify-content:flex-end }
-                .edit-menu .danger{ background:#fff; color:#c91f37; border:1px solid rgba(201,31,55,0.08) }
-                .edit-menu .muted{ background:#f8fafc; color:#0b3d91; border:1px solid rgba(11,61,145,0.06) }
-
-                /* Editable cells styling */
-                .project-table td.editable{background:transparent;cursor:text;min-width:120px}
-                .project-table td.editable:focus{outline:2px solid rgba(75,138,214,0.22);background:#fbfdff}
-                .project-table td.saving{opacity:0.65}
-                .project-table td.save-error{outline:2px solid rgba(225,29,72,0.9)}
-
-           /* Top horizontal scrollbar - synced with table container */
-           #topScrollbar { 
-             overflow-x: scroll; 
-             overflow-y: hidden; 
-             height: 20px; 
-             margin-bottom: 8px;
-             background: #f1f5f9;
-             border-radius: 8px;
-           }
-           #topScrollbar > div { 
-             height: 1px; 
-             /* Width will be set dynamically by JS to match table width */
-           }
-           #topScrollbar::-webkit-scrollbar { height: 14px; }
-           #topScrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
-           #topScrollbar::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 8px; }
-           #topScrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
-           /* Toast notification for status updates (minimal, no gradient)
-             Positioned inside the main content area (top-right). */
-           .main-content { position: relative; }
-                /* Toast is hidden by default; JS sets inline style to 'flex' when showing. */
-                #statusToast{ position: absolute; top: 12px; right: 12px; z-index:1200; min-width:200px; max-width:340px; display:none; padding:8px 12px; border-radius:6px; box-shadow:0 6px 18px rgba(2,6,23,0.06); color:#064e3b; font-weight:600; font-size:13px; border:1px solid rgba(2,6,23,0.06); background:#e6f5ec; align-items:center; justify-content:space-between }
-                #statusToast.success{ background:#e6f5ec; color:#064e3b; border-color: rgba(6,78,59,0.08); }
-                #statusToast.error{ background:#feecea; color:#6b1212; border-color: rgba(201,31,55,0.08); }
-                #statusToast button{ background:transparent; border:1px solid rgba(2,6,23,0.06); padding:6px 8px; border-radius:6px; font-weight:600; font-size:12px; cursor:pointer }
-                #statusToast button:disabled{ opacity:0.5; cursor:default }
-
-                /* Row highlight / fade animations */
-                .row-flash{ transition: background-color .35s ease, opacity .35s ease; }
-                .row-flash.success { background: rgba(47,154,85,0.12); }
-                .row-flash.error { background: rgba(201,31,55,0.08); }
-                .fade-out { opacity: 0; transform: translateY(-6px); height:0; padding:0; margin:0; transition: opacity .28s ease, transform .28s ease, height .28s ease, padding .28s ease, margin .28s ease; }
-                /* Empty cell highlight (yellow) — shows when a data cell has no value */
-                .project-table td.empty-cell { background: #fff7cc; color: #0b0b00; }
-                /* Hide the Status column by default for cleaner view while keeping
-                   the column present in the DOM and usable by filters and APIs.
-                   When the Projects table has a Status column (data-has-status="1")
-                   we hide the header (2nd column) and any cells with data-col="Status".
-                   This keeps the column available for programmatic updates and
-                   server-side filtering but removes it from the default table view.
-                */
-                .project-table[data-has-status="1"] thead th:nth-child(2),
-                .project-table[data-has-status="1"] tbody td[data-col="Status"] {
-                  display: none;
-                }
-
-                /* Edit/Cancel button polish */
-                #toggleEditBtn, #cancelChangesBtn {
-                  border-radius:10px;
-                  padding:8px 12px;
-                  font-weight:600;
-                  font-size:13px;
-                  line-height:1;
-                  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
-                  transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
-                  border: none;
-                  display: inline-block;
-                }
-                /* Primary save: green gradient with white text */
-                #toggleEditBtn{ background: linear-gradient(180deg,#43b26f 0%,#2f9a55 100%); color:#ffffff }
-                #toggleEditBtn:not([disabled]):hover{ transform:translateY(-2px); box-shadow:0 10px 26px rgba(47,154,85,0.12) }
-                #toggleEditBtn[disabled]{ opacity:0.6; filter:grayscale(10%); cursor:default }
-
-                /* Secondary cancel: subtle light outline */
-                #cancelChangesBtn{ background: #f8fafc; color:#0b3d91; border:1px solid rgba(11,61,145,0.08) }
-                #cancelChangesBtn:not([disabled]):hover{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(11,61,145,0.04) }
-                #cancelChangesBtn[disabled]{ opacity:0.6; filter:grayscale(10%); cursor:default }
-
-                /* Removed hover background effect per request (keep rows visually consistent) */
-                /* .project-table tbody tr:hover td{background:#f1f5f9} */
-                @media (max-width:900px){
-                  .project-table thead th,.project-table tbody td{padding:10px 8px;font-size:12px}
-                }
-              </style>
+              <!-- Inline styles removed; consolidated into external project-checklist.css -->
 
               <!-- Top horizontal scrollbar synced with table -->
               <div id="topScrollbar"><div></div></div>
@@ -573,10 +302,12 @@ try {
     <button id="statusToastUndo" class="btn" style="display:none;margin-left:8px;padding:6px 8px;border-radius:6px;font-size:12px">Undo</button>
   </div>
 
+  <!-- Page-specific unsaved modal removed: using global modal from unsaved-guard.js -->
+
   <script>
     (function(){
     // Project actions: clone, rename, delete
-    (function(){
+    (function(){s
       var table = document.querySelector('.project-table');
       if (!table) return;
 
@@ -783,6 +514,8 @@ try {
   var cancelBtn = document.getElementById('cancelChangesBtn');
   var editBtn = document.getElementById('toggleEditBtn');
   if (!table || !cancelBtn || !editBtn) return;
+      // Track unsaved navigation intent
+  // (Global UnsavedGuard handles navigation intercept; this page only supplies save logic)
 
       // Track pending changes in a map: key = projectId + '|' + column
       var pending = {};
@@ -841,6 +574,8 @@ try {
           if (editingEnabled) {
             // refresh baseline original value when entering edit mode
             td.dataset.original = td.textContent.trim();
+            // register with global unsaved guard
+            if (window.UnsavedGuard) { window.UnsavedGuard.registerElement(td); }
           } else {
             // when disabling, undo any pending changes to avoid accidental commits
             var key = td.closest('tr') && td.closest('tr').dataset.projectId ? (td.closest('tr').dataset.projectId + '|' + (td.dataset.col || '')) : null;
@@ -974,6 +709,11 @@ try {
         });
         pending = {};
         updateControlsVisibility();
+        // Exit edit mode on cancel for a clean state
+        setEditing(false);
+        // Sync global unsaved guard snapshot so no false positives
+        try { if (window.UnsavedGuard) window.UnsavedGuard.syncSnapshot(); } catch(_){}
+        // If user cancelled after initiating navigation, allow navigation now
       });
 
       // Toggle edit / Save behavior on the primary toggle button.
@@ -1066,6 +806,30 @@ try {
       // Initialize controls disabled state (buttons are visible but inactive by default)
       setEditing(false);
       setControlsEnabled(false);
+
+      // Supply save handler for global UnsavedGuard
+      window.addEventListener('unsaved:save', function(e){
+        // If not in edit mode, just resolve immediately
+        var resolver = e.detail && e.detail.resolve ? e.detail.resolve : function(){};
+        var keys = Object.keys(pending);
+        if (!editingEnabled || keys.length === 0){ resolver(); return; }
+        // Simulate clicking save logic (without changing button label prematurely)
+        var payload = { changes: keys.map(function(k){ var it = pending[k]; return { project_id: it.project_id, column: it.column, value: it.value }; }) };
+        fetch('../../api/update_project_cells.php', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload)
+        }).then(function(r){ return r.json(); })
+          .then(function(json){
+            if (json && json.success){
+              keys.forEach(function(k){ var it = pending[k]; if (it && it.td){ it.td.classList.remove('dirty','save-error'); it.td.dataset.original = it.value; if ((it.value||'').trim()===''){ it.td.classList.add('empty-cell'); } else { it.td.classList.remove('empty-cell'); } } });
+              pending = {}; updateControlsVisibility(); setEditing(false);
+              try { if (window.showStatusToast) window.showStatusToast('Changes saved','success'); } catch(e){}
+            } else {
+              keys.forEach(function(k){ var it = pending[k]; if (it && it.td) it.td.classList.add('save-error'); });
+            }
+          })
+          .catch(function(err){ console.error('UnsavedGuard batch save error', err); keys.forEach(function(k){ var it = pending[k]; if (it && it.td) it.td.classList.add('save-error'); }); })
+          .finally(function(){ resolver(); });
+      });
     })();
   </script>
   <script>

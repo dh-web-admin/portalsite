@@ -1,10 +1,19 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
+
+// If user is already authenticated, skip login page
+if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
+    header('Location: ../pages/dashboard/');
+    exit();
+}
+
+// Only capture error + active form, do NOT wipe entire session (was causing logout-on-new-window)
 $errors = [
   'login' => $_SESSION['login_error'] ?? ''
 ]; 
 $active_form = $_SESSION['active_form'] ?? 'login';
-session_unset();
+// Clear transient error flags without destroying auth session data
+unset($_SESSION['login_error'], $_SESSION['active_form']);
 function showError($error){
   return !empty($error) ? "<p class='error-message'>$error</p>" : '';   
 }

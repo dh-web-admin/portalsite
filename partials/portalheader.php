@@ -49,3 +49,8 @@ if (!empty($_SESSION['email'])) {
             </div>
         <?php endif; ?>
 </div>
+
+<!-- Global unsaved changes guard script (handles any elements marked with data-track-unsaved) -->
+<script src="<?php echo htmlspecialchars(base_url('/assets/js/unsaved-guard.js')); ?>" defer></script>
+<!-- Global logout confirmation (ensures consistent prompt on all pages) -->
+<script src="<?php echo htmlspecialchars(base_url('/assets/js/logout-confirm.js')); ?>" defer></script>
