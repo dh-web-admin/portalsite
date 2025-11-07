@@ -100,6 +100,22 @@
   transform: translateY(0);
 }
 
+/* Disabled state for add-user buttons (global for register pages) */
+.add-user-btn:disabled {
+  background-color: #9ca3af; /* grey */
+  border-color: #9ca3af;
+  opacity: 0.55;
+  cursor: pointer; /* keep same cursor style as enabled */
+}
+
+/* Alternate class-based disabled styling (fallback) */
+.add-user-btn.btn-disabled {
+  background-color: #9ca3af;
+  border-color: #9ca3af;
+  opacity: 0.55;
+  pointer-events: none; /* prevent clicks if script missed disabled */
+}
+
 /* Password strength indicator */
 .password-strength {
   margin-top: 8px;

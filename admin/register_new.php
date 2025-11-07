@@ -134,12 +134,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
 
                         <div class="form-group" style="position:relative;">
-                            <label for="password">Password:</label>
-                            <input type="password" id="password" name="password" required style="padding-right:40px;">
-                            <button type="button" id="togglePassword" aria-label="Show password" title="Show password" style="position:absolute; right:8px; top:34px; background:none; border:none; cursor:pointer; padding:4px; font-weight:600;">
-                                <span id="toggleIcon">Show</span>
-                            </button>
-                            <small class="hint">At least 8 chars, 1 number, 1 uppercase, 1 special character</small>
+                            <label>Password:</label>
+                            <input type="hidden" id="passwordHidden" name="password" />
+                            <button type="button" id="generatePasswordBtn" class="add-user-btn" style="margin-bottom:6px;">Auto Generate Password</button>
+                            <div id="passwordGeneratedMsg" style="display:none;color:#059669;font-weight:600;font-size:13px;margin-bottom:8px;">Password generated</div>
+                            <div id="generatedPasswordWrap" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; padding:12px 14px; border-radius:8px; font-family:monospace; font-size:15px; position:relative;">
+                                <span id="generatedPassword" style="word-break:break-all;"></span>
+                                <button type="button" id="copyPasswordBtn" style="position:absolute; top:8px; right:8px; background:#ffffff; border:1px solid #cbd5e1; padding:4px 8px; font-size:12px; border-radius:6px; cursor:pointer;">Copy</button>
+                            </div>
+                            <small class="hint">Password will be generated: ≥8 chars, includes uppercase, number, and special character</small>
                         </div>
 
                         <div class="form-group">
@@ -177,7 +180,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Client-side validation and password toggle keep working below
         var form = document.getElementById('registerForm');
         var email = document.getElementById('email');
-        var password = document.getElementById('password');
+    var passwordHidden = document.getElementById('passwordHidden');
+    var generateBtn = document.getElementById('generatePasswordBtn');
+    var generatedWrap = document.getElementById('generatedPasswordWrap');
+    var generatedSpan = document.getElementById('generatedPassword');
+    var copyBtn = document.getElementById('copyPasswordBtn');
+    var generatedMsg = document.getElementById('passwordGeneratedMsg');
+    var isGenerating = false; // guard against rapid double-clicks
         var successMsg = document.getElementById('successMsg');
 
         if (successMsg) {
@@ -188,14 +197,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         form.addEventListener('submit', function(e){
             var errors = [];
             var emailVal = email.value.trim();
-            var pwdVal = password.value;
+            var pwdVal = passwordHidden.value;
 
             if (!/^[A-Za-z0-9._%+-]+@darkhorsespreader\.com$/i.test(emailVal)) {
                 errors.push('Email must be a valid @darkhorsespreader.com address.');
             }
 
-            if (pwdVal.length < 8 || !/[0-9]/.test(pwdVal) || !/[A-Z]/.test(pwdVal) || !/[!@#$%^&*()_+\-=[\]{};:\'"\\|,.<>\/\?]/.test(pwdVal)) {
-                errors.push('Password must be at least 8 characters and include at least one number, one uppercase letter, and one special character.');
+            if (!pwdVal) {
+                errors.push('Please generate a password before registering.');
+            } else if (pwdVal.length < 8 || !/[0-9]/.test(pwdVal) || !/[A-Z]/.test(pwdVal) || !/[!@#$%^&*()_+\-=[\]{};:'"\\|,.<>\/\?]/.test(pwdVal)) {
+                errors.push('Generated password does not meet requirements. Please regenerate.');
             }
 
             if (errors.length) {
@@ -210,21 +221,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
 
-        var toggle = document.getElementById('togglePassword');
-        var toggleIcon = document.getElementById('toggleIcon');
-        toggle.addEventListener('click', function(){
-            if (password.type === 'password') {
-                password.type = 'text';
-                toggleIcon.textContent = 'Hide';
-                toggle.setAttribute('aria-label','Hide password');
-                toggle.title = 'Hide password';
-            } else {
-                password.type = 'password';
-                toggleIcon.textContent = 'Show';
-                toggle.setAttribute('aria-label','Show password');
-                toggle.title = 'Show password';
+        function generatePassword() {
+            const length = 12; // stronger default length
+            const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const lower = 'abcdefghijklmnopqrstuvwxyz';
+            const nums = '0123456789';
+            const specials = '!@#$%^&*()_+-={}[]|:;<>,.?/';
+            const all = upper + lower + nums + specials;
+            let pwd = '';
+            // Ensure at least one of each required set
+            pwd += upper[Math.floor(Math.random()*upper.length)];
+            pwd += nums[Math.floor(Math.random()*nums.length)];
+            pwd += specials[Math.floor(Math.random()*specials.length)];
+            // Fill remaining
+            for (let i = pwd.length; i < length; i++) {
+                pwd += all[Math.floor(Math.random()*all.length)];
             }
-            password.focus();
+            // Shuffle characters
+            pwd = pwd.split('').sort(()=>Math.random()-0.5).join('');
+            return pwd;
+        }
+
+        generateBtn.addEventListener('click', function(){
+            if (isGenerating) return;
+            isGenerating = true;
+            const newPwd = generatePassword();
+            passwordHidden.value = newPwd;
+            generatedSpan.textContent = newPwd;
+            generatedWrap.style.display = 'block';
+            // Disable button (keep original label) and show confirmation text
+            generateBtn.disabled = true; // CSS :disabled handles styling globally
+            generateBtn.setAttribute('disabled', 'disabled'); // ensure attribute present in DOM
+            generateBtn.classList.add('btn-disabled'); // extra class as safety for styling
+            if (generatedMsg) generatedMsg.style.display = 'block';
+        });
+
+        copyBtn.addEventListener('click', function(){
+            const text = generatedSpan.textContent;
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(function(){
+                copyBtn.textContent = 'Copied';
+                setTimeout(()=>{ copyBtn.textContent = 'Copy'; }, 1800);
+            }).catch(function(){
+                copyBtn.textContent = 'Failed';
+                setTimeout(()=>{ copyBtn.textContent = 'Copy'; }, 1800);
+            });
         });
     })();
     </script>
