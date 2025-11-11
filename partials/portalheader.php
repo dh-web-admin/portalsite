@@ -25,6 +25,8 @@ if (!empty($_SESSION['email'])) {
                             $role = $row['role'];
                             if ($row['role'] === 'admin') {
                                 $title = 'Admin Dashboard';
+                            } elseif ($row['role'] === 'developer') {
+                                $title = 'Developer Preview Dashboard';
                             }
                         }
                     }
@@ -35,22 +37,22 @@ if (!empty($_SESSION['email'])) {
     }
 }
 ?>
-<div class="welcome-section">
-  <div class="welcome-left">
-    <h1>Welcome, <?php echo htmlspecialchars($name); ?></h1>
-    <h2><?php echo htmlspecialchars($title); ?></h2>
-  </div>
-        <img src="<?php echo htmlspecialchars(base_url('/assets/images/eportal.svg')); ?>" alt="Portal logo" class="welcome-logo" />
 
-        <?php if ($role !== 'admin'): ?>
-            <div class="header-actions" aria-hidden="false">
-                <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="header-action-btn">Home</a>
-                <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php')); ?>" class="header-action-btn" title="Account Settings">
-                    <img src="<?php echo htmlspecialchars(base_url('/assets/images/user-icon.svg')); ?>" alt="Account Settings" style="width: 16px; height: 16px;">
-                </a>
-                <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
-            </div>
-        <?php endif; ?>
+<div class="welcome-section">
+    <div class="welcome-left">
+        <h1>Welcome, <?php echo htmlspecialchars($name); ?></h1>
+        <h2><?php echo htmlspecialchars($title); ?></h2>
+    </div>
+    <img src="<?php echo htmlspecialchars(base_url('/assets/images/eportal.svg')); ?>" alt="Portal logo" class="welcome-logo" />
+    <?php if ($role !== 'admin'): ?>
+        <div class="header-actions" aria-hidden="false">
+            <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="header-action-btn">Home</a>
+            <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php')); ?>" class="header-action-btn" title="Account Settings">
+                <img src="<?php echo htmlspecialchars(base_url('/assets/images/user-icon.svg')); ?>" alt="Account Settings" style="width: 16px; height: 16px;">
+            </a>
+            <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Global unsaved changes guard script (handles any elements marked with data-track-unsaved) -->

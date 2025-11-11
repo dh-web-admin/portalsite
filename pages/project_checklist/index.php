@@ -307,7 +307,7 @@ try {
   <script>
     (function(){
     // Project actions: clone, rename, delete
-    (function(){s
+    (function(){
       var table = document.querySelector('.project-table');
       if (!table) return;
 

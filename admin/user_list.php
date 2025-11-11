@@ -75,18 +75,6 @@ if ($result) {
                                 <td class="col-email"><?php echo htmlspecialchars($u['email']); ?></td>
                                 <td class="col-role">
                                     <span class="view-role"><?php echo htmlspecialchars($u['role']); ?></span>
-                                    <div class="role-edit-wrap" style="display:none;">
-                                        <select class="edit-val edit-role">
-                                        <?php
-                                        $roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer'];
-                                        foreach ($roles as $r) {
-                                            $sel = ($r === $u['role']) ? 'selected' : '';
-                                            echo "<option value=\"".htmlspecialchars($r)."\" $sel>".htmlspecialchars($r)."</option>";
-                                        }
-                                        ?>
-                                        </select>
-                                        <button type="button" class="role-caret" title="Open roles" aria-label="Open roles">▾</button>
-                                    </div>
                                 </td>
                                 <td>
                                     <div class="user-actions">
@@ -96,8 +84,6 @@ if ($result) {
                                         </form>
                                         <button class="nav-btn btn-edit" style="padding:6px 10px; min-width:60px;">Edit Role</button>
                                         <button class="nav-btn btn-reset-pass" style="padding:6px 10px; width:auto; color:black;">Reset Password</button>
-                                        <button class="nav-btn btn-save" style="padding:6px 10px; display:none;">Apply</button>
-                                        <button class="nav-btn btn-cancel" style="padding:6px 10px; display:none;">Cancel</button>
                                     </div>
                                 </td>
                             </tr>
@@ -133,23 +119,7 @@ if ($result) {
             });
         }
 
-        // Inline edit handlers
-        function showEdit(row) {
-            var viewRole = row.querySelector('.view-role'); if (viewRole) viewRole.style.display = 'none';
-            var editRole = row.querySelector('.edit-role'); if (editRole) editRole.style.display = 'inline-block';
-            row.querySelector('.btn-edit').style.display='none';
-            row.querySelector('.btn-save').style.display='inline-block';
-            row.querySelector('.btn-cancel').style.display='inline-block';
-        }
-
-        function hideEdit(row) {
-            var viewRole = row.querySelector('.view-role'); if (viewRole) viewRole.style.display = '';
-            var editRole = row.querySelector('.edit-role'); if (editRole) editRole.style.display = 'none';
-            var save = row.querySelector('.btn-save'); if (save) save.style.display='none';
-            var cancel = row.querySelector('.btn-cancel'); if (cancel) cancel.style.display='none';
-            var edit = row.querySelector('.btn-edit'); if (edit) edit.style.display='inline-block';
-        }
-
+        // Toast notification helper
         function toasts(message, isError) {
             var t = document.createElement('div');
             t.textContent = message;
@@ -167,8 +137,6 @@ if ($result) {
         var openPopup = null; // current popup row element
         table.querySelectorAll('tbody tr').forEach(function(row){
             var btnEdit = row.querySelector('.btn-edit');
-            var btnSave = row.querySelector('.btn-save');
-            var btnCancel = row.querySelector('.btn-cancel');
             var btnResetPass = row.querySelector('.btn-reset-pass');
 
             // Create popup HTML fragment for role editing
@@ -179,7 +147,7 @@ if ($result) {
                 tpl.innerHTML = '<td colspan="5" style="padding:12px 10px;"><div style="display:flex; align-items:center; gap:12px;">' +
                     '<select class="popup-role-select">' + (function(){
                         var opts = '';
-                        var roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer'];
+                        var roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
                         roles.forEach(function(r){
                             opts += '<option value="'+r+'">'+r+'</option>';
                         });
@@ -245,8 +213,15 @@ if ($result) {
                             if (json.success) {
                                 var roleView = row.querySelector('.view-role'); if (roleView) roleView.textContent = newRole;
                                 popup.remove(); openPopup = null; toasts('Role updated');
-                            } else { toasts(json.error || 'Update failed', true); }
-                        }).catch(function(e){ console.error(e); toasts('Update failed', true); });
+                                // Refresh the page to show updated data
+                                setTimeout(function(){ window.location.reload(); }, 1000);
+                            } else { 
+                                toasts(json.error || 'Update failed', true); 
+                            }
+                        }).catch(function(e){ 
+                            console.error('Fetch error:', e); 
+                            toasts('Update failed', true); 
+                        });
                 });
             });
 
@@ -349,46 +324,24 @@ if ($result) {
                 });
             });
 
-            if (btnCancel) btnCancel.addEventListener('click', function(){
-                // reset role select to original
-                var roleSel = row.querySelector('.edit-role');
-                var roleView = row.querySelector('.view-role');
-                if (roleSel && roleView) roleSel.value = roleView.textContent.trim();
-                hideEdit(row);
-            });
-
-            if (btnPass) btnPass.addEventListener('click', function(){
-                var passIn = row.querySelector('.edit-password');
-                if (passIn) passIn.style.display = (passIn.style.display === 'none' || passIn.style.display === '') ? 'inline-block' : 'none';
-            });
-
-            if (btnSave) btnSave.addEventListener('click', function(){
-                var id = row.getAttribute('data-user-id');
-                var role = row.querySelector('.edit-role').value;
-
-                var form = new FormData();
-                form.append('id', id);
-                form.append('role', role);
-
-                fetch('../api/update_user.php', { method: 'POST', body: form, credentials: 'same-origin' })
-                    .then(function(res){ return res.json(); })
-                    .then(function(json){
-                        if (json.success) {
-                            // update UI role
-                            var roleView = row.querySelector('.view-role');
-                            if (roleView) roleView.textContent = role;
-                            hideEdit(row);
-                            toasts('Role updated');
-                        } else {
-                            toasts(json.error || 'Save failed', true);
-                        }
-                    }).catch(function(err){
-                        toasts('Save failed', true);
-                        console.error(err);
-                    });
-            });
         });
     })();
+    </script>
+    
+    <!-- Disable unsaved guard on this page to prevent errors -->
+    <script>
+    if (window.UnsavedGuard) {
+        window.UnsavedGuard.forceAllowNextNavigation();
+        // Override to make it a no-op
+        window.UnsavedGuard = {
+            init: function(){},
+            hasChanges: function(){ return false; },
+            markClean: function(){},
+            forceAllowNextNavigation: function(){},
+            registerElement: function(){},
+            syncSnapshot: function(){}
+        };
+    }
     </script>
 </body>
 </html>

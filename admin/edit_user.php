@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $role = $_POST['role'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer'];
+    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
     if (!in_array($role, $allowed_roles, true)) {
         $error = 'Invalid role';
     }
@@ -117,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label>Role</label>
                         <select name="role" required>
-                            <?php foreach (['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer'] as $r):
+                            <?php foreach (['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'] as $r):
                                 $sel = ($user['role'] === $r) ? 'selected' : '';
                                 echo "<option value=\"$r\" $sel>$r</option>";
                             endforeach; ?>

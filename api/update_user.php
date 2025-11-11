@@ -35,7 +35,7 @@ if ($row['role'] !== 'admin') {
 $stmt->close();
 
 $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-$name = trim($_POST['name'] ?? '');
+$name = isset($_POST['name']) ? trim($_POST['name']) : null;
 $role = $_POST['role'] ?? '';
 $password = $_POST['password'] ?? '';
 
@@ -45,7 +45,7 @@ if ($id <= 0) {
     exit();
 }
 
-$allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer'];
+$allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
 if (!in_array($role, $allowed_roles, true)) {
     http_response_code(400);
     echo json_encode(['success'=>false,'error'=>'Invalid role']);
@@ -59,8 +59,8 @@ $params = [];
 $types = '';
 $sets = [];
 
-// Only update name if provided (non-empty)
-if ($name !== '') {
+// Only update name if provided (non-empty and not null)
+if ($name !== null && $name !== '') {
     $sets[] = 'name = ?';
     $types .= 's';
     $params[] = $name;
@@ -83,16 +83,25 @@ if ($password !== '') {
     $params[] = $hashed;
 }
 
+// Ensure we have something to update
+if (empty($sets)) {
+    http_response_code(400);
+    echo json_encode(['success'=>false,'error'=>'No fields to update']);
+    exit();
+}
+
 $types .= 'i';
 $params[] = $id;
 
 $sql = "UPDATE users SET " . implode(', ', $sets) . " WHERE id = ?";
 $update = $conn->prepare($sql);
+
 // bind params dynamically
 $update->bind_param($types, ...$params);
 
 if ($update->execute()) {
-    echo json_encode(['success'=>true,'message'=>'User updated']);
+    $affected = $update->affected_rows;
+    echo json_encode(['success'=>true,'message'=>'User updated','affected_rows'=>$affected]);
 } else {
     http_response_code(500);
     echo json_encode(['success'=>false,'error'=>'Update failed: '.$conn->error]);

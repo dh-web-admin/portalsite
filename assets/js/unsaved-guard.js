@@ -13,7 +13,7 @@
   var initialized = false;
 
   function readValue(el) {
-    if (!el) return "";
+    if (!el || typeof el.matches !== "function") return "";
     if (el.matches("[contenteditable]")) return (el.textContent || "").trim();
     return (el.value || "").trim();
   }
@@ -80,14 +80,24 @@
   function bindInputs() {
     document.addEventListener("input", function (e) {
       var el = e.target;
-      if (!el.matches(trackedSelectors)) return;
+      if (
+        !el ||
+        typeof el.matches !== "function" ||
+        !el.matches(trackedSelectors)
+      )
+        return;
       checkDirty(el);
     });
     document.addEventListener(
       "blur",
       function (e) {
         var el = e.target;
-        if (!el.matches(trackedSelectors)) return;
+        if (
+          !el ||
+          typeof el.matches !== "function" ||
+          !el.matches(trackedSelectors)
+        )
+          return;
         checkDirty(el);
       },
       true
@@ -147,6 +157,7 @@
   function discardChanges() {
     // Reset values to original
     dirtyElements.forEach(function (el) {
+      if (!el || typeof el.matches !== "function") return;
       var orig = originalValues.get(el) || "";
       if (el.matches("[contenteditable]")) el.textContent = orig;
       else el.value = orig;

@@ -40,63 +40,30 @@ body.admin-page {
   height: var(--admin-header-h);
   z-index: 1000;
   display: flex;
-  flex-direction: row; /* text left, logo right */
+  flex-direction: row;
   align-items: center;
-  justify-content: flex-start; /* let left content flow; logo will be absolutely anchored */
-  padding-right: 340px; /* reserve space for logo + header actions on wide screens */
-}
-
-.welcome-left {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex: 1 1 auto; /* allow left area to take available space but remain shrinkable */
-  min-width: 0; /* allow children to truncate instead of forcing overflow */
-}
-
-.welcome-section h1 {
-  color: white;
-  font-size: 28px;
-  margin-bottom: 4px;
-  /* allow h1 to wrap naturally so it doesn't force the logo off-screen */
-  width: auto;
-  overflow: visible;
-  text-overflow: unset;
-  white-space: normal;
-}
-
-.welcome-section h2 {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 20px;
+  justify-content: space-between; /* Space between left content and right elements */
+  gap: 20px;
 }
 
 .welcome-logo {
-  padding-top: 5px;
-  height: 75px;
+  height: 70px;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
   flex-shrink: 0;
-  max-width: 260px;
-  box-sizing: content-box;
-  position: absolute;
-  right: 200px; /* Moved left to make room for buttons on the right */
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1001;
+  margin-left: auto; /* Push logo to the right side of flex container */
+  margin-right: 20px;
 }
 
-/* Header actions shown for non-admin users (positioned beside the logo) */
+/* Header actions shown for non-admin users (positioned to the right of logo, horizontal layout) */
 .header-actions {
-  position: absolute;
-  right: 15px; /* Close to the right edge, right after the logo */
-  bottom: 10px; /* Position at bottom of header */
-  z-index: 1003; /* Higher than logo to ensure visibility */
   display: flex;
-  flex-direction: row; /* side-by-side */
-  gap: 8px;
-  align-items: center; /* Center buttons vertically */
-  justify-content: center; /* Center buttons horizontally */
+  flex-direction: row; /* Horizontal layout */
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .header-action-btn {
@@ -104,28 +71,37 @@ body.admin-page {
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: #111; /* dark text to contrast with whitish background */
-  background: rgba(255, 255, 255, 0.95); /* near-white bg */
+  color: #ffffff; /* White text for better contrast on gradient */
+  background: rgba(255, 255, 255, 0.15); /* Semi-transparent white */
   padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 700;
+  border-radius: 8px;
+  font-weight: 600;
   font-size: 13px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  line-height: 1.5; /* Consistent line height for same button height */
-  min-height: 38px; /* Ensure consistent height */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  line-height: 1.4;
+  min-height: 36px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.header-action-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
 }
 
 /* Override sidebar logout styling for header logout button */
 .header-actions .header-action-btn.logout-btn {
-  background: rgba(255, 255, 255, 0.95) !important;
-  color: #111 !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background: rgba(239, 68, 68, 0.9) !important; /* Red background for logout */
+  color: #ffffff !important;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
   margin-top: 0 !important;
   display: inline-flex !important;
 }
 
-.header-action-btn:hover {
-  filter: brightness(0.96);
+.header-actions .header-action-btn.logout-btn:hover {
+  background: rgba(220, 38, 38, 1) !important;
+  border-color: rgba(220, 38, 38, 0.5) !important;
 }
 
 /* if the header content becomes very long, ensure the logo still sits inside the header
@@ -133,6 +109,7 @@ body.admin-page {
 .welcome-left h1,
 .welcome-left h2 {
   margin: 0;
+  color: white;
 }
 
 @media (max-width: 600px) {
@@ -344,11 +321,11 @@ body.admin-page {
 /* Tablet (portrait) and smaller laptops */
 @media (max-width: 1024px) {
   :root {
-    --admin-header-h: 140px;
+    --admin-header-h: 100px;
   }
 
   body.admin-page {
-    --admin-header-h: 140px;
+    --admin-header-h: 100px;
   }
 
   .welcome-section h1 {
@@ -360,7 +337,7 @@ body.admin-page {
   }
 
   .welcome-logo {
-    height: 80px;
+    height: 65px;
   }
 
   .content-area {
@@ -369,11 +346,6 @@ body.admin-page {
 
   .admin-layout > .side-nav + .content-area {
     margin-left: 240px;
-  }
-
-  /* Slightly reduce reserved header right padding at tablet sizes */
-  .welcome-section {
-    padding-right: 300px;
   }
 }
 
@@ -394,6 +366,7 @@ body.admin-page {
     padding: 15px;
     height: auto;
     min-height: 120px;
+    gap: 10px;
   }
 
   .welcome-left {
@@ -412,39 +385,15 @@ body.admin-page {
 
   .welcome-logo {
     height: 60px;
-    padding-top: 5px;
+    margin-left: 0;
+    margin-right: 0;
   }
 
-  /* On small screens the logo should stack underneath the welcome text
-     instead of being absolutely positioned to the right. Undo the absolute
-     anchoring we use for large viewports and let the flex column layout stack.
-     This prevents clipping and ensures the header remains responsive. */
-  .welcome-logo {
-    position: static !important;
-    right: auto !important;
-    top: auto !important;
-    transform: none !important;
-    margin-top: 10px;
-    padding-right: 0 !important;
-    max-width: 90% !important;
-    height: auto;
-  }
-
-  /* Make header actions flow in normal document flow on small screens */
+  /* On small screens keep header actions horizontal but centered below other content */
   .header-actions {
-    position: static !important;
-    right: auto !important;
-    top: auto !important;
-    transform: none !important;
-    margin-top: 8px;
     flex-direction: row;
-    gap: 10px;
-    align-items: center;
-  }
-
-  /* Reduce the large right padding we reserve for the anchored logo on desktop */
-  .welcome-section {
-    padding-right: 16px;
+    gap: 8px;
+    justify-content: center;
   }
 
   /* Mobile Navigation - Collapsible Sidebar */
@@ -477,14 +426,13 @@ body.admin-page {
 
 /* Extra adjustments for very large screens */
 @media (min-width: 1400px) {
-  .welcome-section {
-    padding-right: 380px;
-  }
   .welcome-logo {
-    max-width: 320px;
+    height: 75px;
   }
-  .header-actions {
-    right: 36px;
+
+  .header-action-btn {
+    font-size: 14px;
+    padding: 9px 18px;
   }
 }
 

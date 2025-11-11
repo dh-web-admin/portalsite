@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Check role is one of allowed values
-    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer'];
+    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
     if (empty($error) && !in_array($role, $allowed_roles, true)) {
         $error = "Invalid role selected.";
     }
@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <select id="role" name="role" required>
                                 <option value="" disabled selected>Select role</option>
                                 <?php
-                                    $roles = ['admin'=>'Admin','projectmanager'=>'Project Manager','estimator'=>'Estimator','accounting'=>'Accounting','superintendent'=>'Superintendent','foreman'=>'Foreman','mechanic'=>'Mechanic','operator'=>'Operator','laborer'=>'Laborer'];
+                                    $roles = ['admin'=>'Admin','projectmanager'=>'Project Manager','estimator'=>'Estimator','accounting'=>'Accounting','superintendent'=>'Superintendent','foreman'=>'Foreman','mechanic'=>'Mechanic','operator'=>'Operator','laborer'=>'Laborer','developer'=>'Developer'];
                                     $selectedRole = $old['role'] ?? '';
                                     foreach ($roles as $k => $label) {
                                         $sel = ($k === $selectedRole) ? 'selected' : '';
