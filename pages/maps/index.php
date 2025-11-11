@@ -62,6 +62,12 @@ if (!can_access($role, 'maps')) {
               Supplier Details
             </div>
             
+            <!-- Supplier Count -->
+            <div id="supplierCount" style="display:flex; align-items:center; padding:6px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#667eea; color:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:11px; font-weight:600; white-space:nowrap;">
+              <span id="supplierCountNumber">0</span>
+              <span style="margin-left:4px;">Suppliers</span>
+            </div>
+            
             <!-- Filters Bar -->
             <div id="filtersBar" style="display:flex; align-items:center; gap:8px; padding:6px; border:1px solid #e2e8f0; border-radius:6px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
               <span style="font-size:11px; color:#64748b; font-weight:600;">Filter:</span>
@@ -238,14 +244,10 @@ if (!can_access($role, 'maps')) {
           crossorigin=""></script>
   <script>
     (function(){
-      // Initialize Leaflet map with US bounds restriction
+      // Initialize Leaflet map - unrestricted worldwide view
       var map = L.map('map', {
-        maxBounds: [
-          [24.396308, -125.0],  // Southwest corner (bottom-left)
-          [49.384358, -66.93457] // Northeast corner (top-right)
-        ],
-        maxBoundsViscosity: 1.0, // Prevent dragging outside bounds
-        minZoom: 4
+        minZoom: 2,
+        maxZoom: 19
       }).setView([39.8283, -98.5795], 5); // Center of USA, zoom 5
       
       // Add OpenStreetMap tile layer
@@ -528,7 +530,8 @@ if (!can_access($role, 'maps')) {
         }
         
         // Use Nominatim (OpenStreetMap) geocoding API
-        var geocodeUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(fullAddress) + '&countrycodes=us&limit=1';
+        // Include both US and Canada (CA) since we have suppliers in both countries
+        var geocodeUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(fullAddress) + '&countrycodes=us,ca&limit=1';
         
         fetch(geocodeUrl, {
           headers: {
@@ -601,9 +604,20 @@ if (!can_access($role, 'maps')) {
         .then(function(response) { return response.json(); })
         .then(function(data) {
           if (data.success && data.suppliers && data.suppliers.length > 0) {
-            // Add marker for each supplier
+            var suppliersNeedingGeocode = [];
+            var suppliersWithCoords = [];
+            
+            // Separate suppliers with and without coordinates
             data.suppliers.forEach(function(supplier) {
-              // Create popup content with supplier details
+              if (supplier.latitude && supplier.longitude) {
+                suppliersWithCoords.push(supplier);
+              } else {
+                suppliersNeedingGeocode.push(supplier);
+              }
+            });
+            
+            // Plot suppliers with cached coordinates immediately (all at once!)
+            suppliersWithCoords.forEach(function(supplier) {
               var popupContent = '<div style="font-size:13px;line-height:1.4;">' +
                 '<strong style="font-size:15px;display:block;margin-bottom:6px;">' + (supplier.name || 'Unknown') + '</strong>';
               
@@ -619,15 +633,43 @@ if (!can_access($role, 'maps')) {
               
               popupContent += '</div>';
               
-              // Geocode address and plot marker
-              geocodeAndPlotMarker(supplier, popupContent);
+              // Plot immediately using cached coordinates
+              plotMarker(supplier, popupContent, parseFloat(supplier.latitude), parseFloat(supplier.longitude));
             });
             
-            // Auto-center after geocoding finishes
+            // Geocode remaining suppliers with rate limiting (if any)
+            if (suppliersNeedingGeocode.length > 0) {
+              console.log('Geocoding ' + suppliersNeedingGeocode.length + ' suppliers without cached coordinates...');
+              var delay = 0;
+              suppliersNeedingGeocode.forEach(function(supplier) {
+                var popupContent = '<div style="font-size:13px;line-height:1.4;">' +
+                  '<strong style="font-size:15px;display:block;margin-bottom:6px;">' + (supplier.name || 'Unknown') + '</strong>';
+                
+                if (supplier.material) popupContent += '<div><strong>Material:</strong> ' + supplier.material + '</div>';
+                if (supplier.location_type) popupContent += '<div><strong>Type:</strong> ' + supplier.location_type + '</div>';
+                if (supplier.address) popupContent += '<div><strong>Street Address:</strong> ' + supplier.address + '</div>';
+                if (supplier.city) popupContent += '<div><strong>City:</strong> ' + supplier.city + '</div>';
+                if (supplier.state) popupContent += '<div><strong>State:</strong> ' + supplier.state + '</div>';
+                if (supplier.sales_contact) popupContent += '<div><strong>Contact:</strong> ' + supplier.sales_contact + '</div>';
+                if (supplier.contact_number) popupContent += '<div><strong>Phone:</strong> ' + supplier.contact_number + '</div>';
+                if (supplier.email) popupContent += '<div><strong>Email:</strong> <a href="mailto:' + supplier.email + '">' + supplier.email + '</a></div>';
+                if (supplier.notes) popupContent += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplier.notes + '</em></div>';
+                
+                popupContent += '</div>';
+                
+                setTimeout(function() {
+                  geocodeAndPlotMarker(supplier, popupContent);
+                }, delay);
+                delay += 1100;
+              });
+            }
+            
+            // Auto-fit map immediately if we have cached coordinates, or wait for geocoding
+            var waitTime = suppliersWithCoords.length > 0 ? 500 : (suppliersNeedingGeocode.length * 1100) + 2000;
             setTimeout(function() {
-              applyFilters(true); // apply filters and optionally refit
+              applyFilters(true);
               updateSupplierDropdown();
-            }, 2000);
+            }, waitTime);
           } else {
             // No suppliers found - set default US center view
             map.setView([39.8283, -98.5795], 5);
@@ -1156,6 +1198,29 @@ if (!can_access($role, 'maps')) {
         return true;
       }
 
+      function updateSupplierCount() {
+        var filters = getActiveFilters();
+        var hasFilters = filters.name || filters.material || filters.city || filters.state;
+        var visibleCount = 0;
+        
+        currentMarkers.forEach(function(marker) {
+          if (marker.supplierData && markerMatchesFilters(marker.supplierData, filters)) {
+            visibleCount++;
+          }
+        });
+        
+        var countElement = document.getElementById('supplierCountNumber');
+        if (countElement) {
+          if (hasFilters && visibleCount < currentMarkers.length) {
+            // Show filtered count vs total
+            countElement.textContent = visibleCount + ' of ' + currentMarkers.length;
+          } else {
+            // Show total count
+            countElement.textContent = currentMarkers.length;
+          }
+        }
+      }
+
       function applyFilters(refit) {
         var filters = getActiveFilters();
         var visibleMarkers = [];
@@ -1169,6 +1234,8 @@ if (!can_access($role, 'maps')) {
         });
         // Update supplier dropdown list in search
         filterSupplierList();
+        // Update supplier count display
+        updateSupplierCount();
         if (refit && visibleMarkers.length > 0) {
           fitMapToVisibleMarkers(visibleMarkers);
         }
@@ -1207,6 +1274,34 @@ if (!can_access($role, 'maps')) {
 
       // Apply filters when suppliers load initially
       applyFilters(false);
+
+      // Background geocoding: Check for suppliers missing coordinates and geocode them
+      function checkAndGeocodeSuppliers() {
+        fetch('../../api/geocode_missing_suppliers.php', {
+          method: 'GET',
+          credentials: 'same-origin'
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          if (data.success && data.geocoded > 0) {
+            console.log('✓ Background geocoding: ' + data.geocoded + ' supplier(s) geocoded');
+            
+            // If we're currently viewing a service with suppliers, reload to show updated markers
+            if (currentService && currentMarkers.length > 0) {
+              // Wait a moment then reload the current service to show newly geocoded markers
+              setTimeout(function() {
+                loadSuppliers(currentService);
+              }, 1000);
+            }
+          }
+        })
+        .catch(function(error) {
+          console.log('Background geocoding check completed');
+        });
+      }
+
+      // Run geocoding check on page load (after 2 seconds to not interfere with initial load)
+      setTimeout(checkAndGeocodeSuppliers, 2000);
     })();
   </script>
 </body>

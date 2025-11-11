@@ -20,7 +20,7 @@ if ($service === '') {
 }
 
 // Fetch suppliers filtered by service
-$stmt = $conn->prepare('SELECT id, name, material, sales_contact, contact_number, email, address, city, state, location_type, notes, service FROM suppliers WHERE service = ? ORDER BY name ASC');
+$stmt = $conn->prepare('SELECT id, name, material, sales_contact, contact_number, email, address, city, state, location_type, notes, service, latitude, longitude FROM suppliers WHERE service = ? ORDER BY name ASC');
 if (!$stmt) {
   http_response_code(500);
   echo json_encode(['success' => false, 'message' => 'Database error']);
