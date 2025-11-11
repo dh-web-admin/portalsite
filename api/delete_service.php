@@ -39,18 +39,34 @@ if ($tableCheck->num_rows === 0) {
   exit;
 }
 
-// Optional: also remove related suppliers if desired (currently not deleting suppliers)
+// First, delete all suppliers associated with this service
+$delSuppliers = $conn->prepare('DELETE FROM suppliers WHERE service = ?');
+if (!$delSuppliers) {
+  http_response_code(500);
+  echo json_encode(['success' => false, 'message' => 'Database error deleting suppliers']);
+  exit;
+}
+$delSuppliers->bind_param('s', $serviceName);
+$delSuppliers->execute();
+$suppliersDeleted = $delSuppliers->affected_rows;
+$delSuppliers->close();
+
+// Then, delete the service itself
 $del = $conn->prepare('DELETE FROM services WHERE name = ? LIMIT 1');
 if (!$del) {
   http_response_code(500);
-  echo json_encode(['success' => false, 'message' => 'Database error']);
+  echo json_encode(['success' => false, 'message' => 'Database error deleting service']);
   exit;
 }
 $del->bind_param('s', $serviceName);
 $del->execute();
 
 if ($del->affected_rows > 0) {
-  echo json_encode(['success' => true, 'message' => 'Service deleted', 'service_name' => $serviceName]);
+  $message = 'Service deleted';
+  if ($suppliersDeleted > 0) {
+    $message .= ' and ' . $suppliersDeleted . ' associated supplier(s) removed';
+  }
+  echo json_encode(['success' => true, 'message' => $message, 'service_name' => $serviceName, 'suppliers_deleted' => $suppliersDeleted]);
 } else {
   echo json_encode(['success' => false, 'message' => 'Service not found']);
 }
