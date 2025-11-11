@@ -15,8 +15,11 @@ $query = "SELECT role FROM users WHERE email='$email'";
 $result = $conn->query($query);
 $user = $result->fetch_assoc();
 
-// Verify user is admin
-if ($user['role'] !== 'admin') {
+// Verify user is admin or developer previewing as admin
+$actualRole = $user['role'];
+if ($actualRole === 'developer' && isset($_GET['preview_role']) && $_GET['preview_role'] === 'admin') {
+    // Developer previewing as admin - allow access
+} elseif ($actualRole !== 'admin') {
     header("Location: ../auth/login.php");
     exit();
 }
@@ -104,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="admin-page">
     <div class="admin-container">
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
+    <?php include __DIR__ . '/../partials/dev_notch.php'; ?>
 
         <div class="admin-layout">
             <?php include __DIR__ . '/../partials/sidebar.php'; ?>

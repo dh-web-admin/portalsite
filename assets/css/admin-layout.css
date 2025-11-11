@@ -104,6 +104,11 @@ body.admin-page {
   border-color: rgba(220, 38, 38, 0.5) !important;
 }
 
+.welcome-left {
+  text-align: left;
+  flex-shrink: 1;
+}
+
 /* if the header content becomes very long, ensure the logo still sits inside the header
    by giving the left side permission to wrap and shrink as needed */
 .welcome-left h1,
@@ -134,11 +139,14 @@ body.admin-page {
 
 .side-nav {
   width: 240px;
-  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+  background: rgba(45, 64, 130, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: white;
   padding: 24px 16px;
   padding-top: 0%;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 2px 0 20px rgba(45, 64, 130, 0.3);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -146,7 +154,7 @@ body.admin-page {
   left: 0;
   bottom: 0;
   overflow-y: auto;
-  z-index: 5; /* Ensure sidebar stays below hovered tiles */
+  z-index: 5;
 }
 
 .side-nav h3 {
@@ -162,32 +170,38 @@ body.admin-page {
   padding: 12px 14px;
   margin-bottom: 10px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.08);
   color: white;
   text-decoration: none;
   font-weight: 600;
   cursor: pointer;
   border: none;
   font-size: 14px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .nav-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateX(2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .adminnav {
-  background-color: #ffffff; /* white background */
-  color: #b91c1c; /* red text */
-  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #667eea;
+  padding: 14px 16px;
   font-weight: 700;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   display: block;
-  width: calc(
-    100% + 32px
-  ); /* extend to the side-nav edges (compensate for side-nav padding) */
+  width: calc(100% + 32px);
   margin-left: -16px;
   box-sizing: border-box;
   text-align: left;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Nav group / dropdown for side navigation */
@@ -219,8 +233,16 @@ body.admin-page {
 
 .sub-nav .nav-btn {
   padding-left: 20px;
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
   margin-bottom: 8px;
+  font-size: 13px;
+  opacity: 0.95;
+  box-shadow: none;
+}
+
+.sub-nav .nav-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  opacity: 1;
 }
 
 /* Logout button styling (distinct, but consistent) */

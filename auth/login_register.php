@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once '../config/config.php';
+require_once __DIR__ . '/../partials/url.php';
 
 if(isset($_POST['login'])){
     $email = trim($_POST['email']);  
@@ -27,6 +28,7 @@ if(isset($_POST['login'])){
 
             $_SESSION['name'] = $user['name'];
             $_SESSION['email'] = $user['email'];
+            $_SESSION['role'] = $user['role'] ?? null;
             
             // Issue Remember Me token unconditionally to persist login across browser restarts
             // Generate secure random token
@@ -57,8 +59,12 @@ if(isset($_POST['login'])){
                 @session_write_close();
             }
 
-            // All users go to the same dashboard
-            header("Location: ../pages/dashboard/");
+            // Redirect developers to Dev Dashboard, others to main dashboard, using base_url for environment compatibility
+            if (isset($_SESSION['role']) && $_SESSION['role'] === 'developer') {
+                header('Location: ' . base_url('/dev/index.php'));
+            } else {
+                header('Location: ' . base_url('/pages/dashboard/'));
+            }
             exit();
         }
     }
@@ -75,7 +81,7 @@ if(isset($_POST['login'])){
     if (function_exists('session_write_close')) {
         @session_write_close();
     }
-    header("Location: login.php");
+    header('Location: ' . base_url('/auth/login.php'));
     exit();
 }
 ?>

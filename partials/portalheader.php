@@ -22,10 +22,18 @@ if (!empty($_SESSION['email'])) {
                     if ($res && $res->num_rows > 0) {
                         $row = $res->fetch_assoc();
                         if (isset($row['role'])) {
-                            $role = $row['role'];
-                            if ($row['role'] === 'admin') {
+                            $actualRole = $row['role'];
+                            
+                            // Check if developer is previewing as another role
+                            if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
+                                $role = $_GET['preview_role'];
+                            } else {
+                                $role = $actualRole;
+                            }
+                            
+                            if ($role === 'admin') {
                                 $title = 'Admin Dashboard';
-                            } elseif ($row['role'] === 'developer') {
+                            } elseif ($actualRole === 'developer' && !isset($_GET['preview_role'])) {
                                 $title = 'Developer Preview Dashboard';
                             }
                         }
@@ -36,6 +44,12 @@ if (!empty($_SESSION['email'])) {
         }
     }
 }
+
+// Preserve preview mode in URLs
+$previewParam = '';
+if (isset($_GET['preview_role'])) {
+    $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
+}
 ?>
 
 <div class="welcome-section">
@@ -44,18 +58,22 @@ if (!empty($_SESSION['email'])) {
         <h2><?php echo htmlspecialchars($title); ?></h2>
     </div>
     <img src="<?php echo htmlspecialchars(base_url('/assets/images/eportal.svg')); ?>" alt="Portal logo" class="welcome-logo" />
-    <?php if ($role !== 'admin'): ?>
-        <div class="header-actions" aria-hidden="false">
-            <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="header-action-btn">Home</a>
-            <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php')); ?>" class="header-action-btn" title="Account Settings">
-                <img src="<?php echo htmlspecialchars(base_url('/assets/images/user-icon.svg')); ?>" alt="Account Settings" style="width: 16px; height: 16px;">
-            </a>
-            <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
-        </div>
-    <?php endif; ?>
+    <div class="header-actions" aria-hidden="false">
+        <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php') . $previewParam); ?>" class="header-action-btn">Home</a>
+        <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php') . $previewParam); ?>" class="header-action-btn" title="Account Settings">
+            <img src="<?php echo htmlspecialchars(base_url('/assets/images/user-icon.svg')); ?>" alt="Account Settings" style="width: 16px; height: 16px;">
+        </a>
+        <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
+    </div>
 </div>
 
 <!-- Global unsaved changes guard script (handles any elements marked with data-track-unsaved) -->
 <script src="<?php echo htmlspecialchars(base_url('/assets/js/unsaved-guard.js')); ?>" defer></script>
 <!-- Global logout confirmation (ensures consistent prompt on all pages) -->
 <script src="<?php echo htmlspecialchars(base_url('/assets/js/logout-confirm.js')); ?>" defer></script>
+
+<?php
+// Always attempt to include developer notch from header so it's present across pages
+// It will self-check actual developer role and render conditionally.
+include __DIR__ . '/dev_notch.php';
+?>

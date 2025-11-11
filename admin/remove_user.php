@@ -19,7 +19,11 @@ if (!$res || $res->num_rows === 0) {
     exit();
 }
 $row = $res->fetch_assoc();
-if ($row['role'] !== 'admin') {
+$actualRole = $row['role'];
+// Allow admin or developer previewing as admin
+if ($actualRole === 'developer' && isset($_GET['preview_role']) && $_GET['preview_role'] === 'admin') {
+    // Developer previewing as admin - allow access
+} elseif ($actualRole !== 'admin') {
     header('Location: ../auth/login.php');
     exit();
 }

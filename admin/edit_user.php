@@ -14,7 +14,14 @@ $stmt->execute();
 $res = $stmt->get_result();
 if (!$res || $res->num_rows === 0) { header('Location: index.php'); exit(); }
 $row = $res->fetch_assoc();
-if ($row['role'] !== 'admin') { header('Location: index.php'); exit(); }
+$actualRole = $row['role'];
+// Allow admin or developer previewing as admin
+if ($actualRole === 'developer' && isset($_GET['preview_role']) && $_GET['preview_role'] === 'admin') {
+    // Developer previewing as admin - allow access
+} elseif ($actualRole !== 'admin') { 
+    header('Location: index.php'); 
+    exit(); 
+}
 $stmt->close();
 
 // Get target user id from GET

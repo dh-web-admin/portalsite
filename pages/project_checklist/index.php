@@ -17,7 +17,15 @@ $stmt->bind_param('s', $email);
 $stmt->execute();
 $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
-$role = $user ? $user['role'] : 'laborer';
+$actualRole = $user ? $user['role'] : 'laborer';
+
+// Check if developer is previewing as another role
+if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
+    $role = $_GET['preview_role'];
+} else {
+    $role = $actualRole;
+}
+
 $stmt->close();
 
 // Detect whether Projects table has a Status column (avoid fatal if not)
@@ -47,14 +55,22 @@ try {
 </head>
 <body class="admin-page">
   <div class="admin-container">
-    <?php include __DIR__ . '/../../partials/portalheader.php'; ?>
+  <?php include __DIR__ . '/../../partials/portalheader.php'; ?>
     <div class="admin-layout">
       <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
       <main class="content-area" style="padding-top:0;">
         <div class="main-content">
-          <div class="toolbar" style="display:flex;align-items:center;margin-bottom:0px;gap:12px;position:sticky;top:0;z-index:100;background:#ffffff;padding:10px;box-shadow:0 2px 8px rgba(2,6,23,0.04);">
-            <div class="toolbar-left" style="flex:0 0 auto;">
+            <div class="toolbar" style="display:flex;align-items:center;margin-bottom:0px;gap:12px;position:sticky;top:0;z-index:100;background:#ffffff;padding:10px;box-shadow:0 2px 8px rgba(2,6,23,0.04);">
+            <div class="toolbar-left" style="flex:0 0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
               <button id="addProjectBtn" class="btn btn-primary">New Project</button>
+              <div id="projectSummaryTab" class="project-summary-tab" aria-live="polite">
+                <div class="summary-header-line">Project: <span id="summaryProjectName" class="project-name-text">—</span></div>
+                <div class="summary-divider" role="presentation"></div>
+                <div class="summary-stats-line"><span id="summaryCounts">0/0</span> remaining | <span id="summaryPct">0%</span> completed</div>
+                <div class="summary-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Completion progress">
+                  <span id="summaryBar"></span>
+                </div>
+              </div>
             </div>
             <!-- Centered controls (Save/Cancel + Filter inside a controlled centered area) -->
             <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;">
@@ -222,7 +238,7 @@ try {
                           }
                           
                           // Minimal action icons: clone (copy), rename (pencil), delete (trash)
-                          $actions = "<span class=\"project-actions\">" .
+                          $actions = "<span class=\"project-actions\" style=\"margin-left:auto\">" .
                                      "<button class=\"icon-btn clone-btn\" data-project-id=\"{$pid}\" title=\"Clone project\">" .
                                     "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M16 1H4a2 2 0 0 0-2 2v12\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><rect x=\"8\" y=\"7\" width=\"13\" height=\"13\" rx=\"2\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>" .
                                      "</button>" .
@@ -311,6 +327,107 @@ try {
       var table = document.querySelector('.project-table');
       if (!table) return;
 
+      // Floating project summary logic
+      var summary = document.getElementById('projectSummaryTab');
+  var summaryCounts = document.getElementById('summaryCounts');
+  var summaryPct = document.getElementById('summaryPct');
+  var summaryProjectName = document.getElementById('summaryProjectName');
+  var summaryBar = document.getElementById('summaryBar');
+  // no close button by design — summary remains visible when a selection exists
+
+      var hasStatusAttr = table && table.getAttribute('data-has-status') === '1';
+
+      function computeProjectStats(tr){
+        // Count total checklist items for this row (all columns except first)
+        var cells = Array.prototype.slice.call(tr.querySelectorAll('td'));
+        // Remove first sticky project-name cell
+        if (cells.length > 0) cells.shift();
+        // Exclude hidden/non-checklist columns (e.g., Status is hidden via CSS when present)
+        cells = cells.filter(function(td){
+          var col = td.getAttribute('data-col');
+          if (hasStatusAttr && col === 'Status') return false;
+          return true;
+        });
+        var total = cells.length;
+        var remaining = 0;
+        cells.forEach(function(td){
+          var val = (td.textContent || '').trim();
+          if (val === '') remaining += 1;
+        });
+        var completed = total - remaining;
+        var pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        return { remaining: remaining, total: total, pct: pct };
+      }
+
+      function showSummaryForRow(tr){
+        if (!summary || !tr) return;
+        var stats = computeProjectStats(tr);
+        if (summaryCounts) summaryCounts.textContent = stats.remaining + '/' + stats.total;
+        if (summaryPct) {
+          summaryPct.textContent = stats.pct + '%';
+        }
+        if (summaryBar) {
+          summaryBar.style.width = stats.pct + '%';
+          summaryBar.parentElement && summaryBar.parentElement.setAttribute('aria-valuenow', stats.pct);
+        }
+        // Extract project name
+        var nameEl = tr.querySelector('.project-title');
+        var projectName = nameEl ? nameEl.textContent.trim() : '—';
+        if (summaryProjectName) summaryProjectName.textContent = projectName || '—';
+        // Row selection highlight
+        table.querySelectorAll('tbody tr.is-selected').forEach(function(r){ r.classList.remove('is-selected'); });
+        tr.classList.add('is-selected');
+        // Persist selection across reloads
+        if (tr.dataset && tr.dataset.projectId) {
+          try { sessionStorage.setItem('pc_selected_project_id', tr.dataset.projectId); } catch(_){}
+        }
+        summary.style.display = 'block';
+      }
+
+      // Expose a small API so other scripts can refresh the summary live while typing
+      try {
+        window.ProjectSummary = {
+          showForRow: showSummaryForRow,
+          refreshForRow: function(tr){
+            var selected = tr || (table && table.querySelector('tbody tr.is-selected'));
+            if (!selected || !summary) return;
+            var stats = computeProjectStats(selected);
+            if (summaryCounts) summaryCounts.textContent = stats.remaining + '/' + stats.total;
+            if (summaryPct) summaryPct.textContent = stats.pct + '%';
+            if (summaryBar) {
+              summaryBar.style.width = stats.pct + '%';
+              summaryBar.parentElement && summaryBar.parentElement.setAttribute('aria-valuenow', stats.pct);
+            }
+            var nameEl = selected.querySelector('.project-title');
+            var projectName = nameEl ? nameEl.textContent.trim() : '—';
+            if (summaryProjectName) summaryProjectName.textContent = projectName || '—';
+            summary.style.display = 'block';
+          }
+        };
+      } catch(e) { /* noop */ }
+
+      // Clicking a row opens floating summary
+      table.addEventListener('click', function(e){
+        var tr = e.target.closest('tr');
+        if (!tr) return;
+        // Avoid triggering when clicking action buttons
+        if (e.target.closest('.project-actions')) return;
+        showSummaryForRow(tr);
+      });
+
+      // On load, restore a previously selected project if available
+      (function restoreSelection(){
+        var storedId = null;
+        try { storedId = sessionStorage.getItem('pc_selected_project_id'); } catch(_){}
+        if (!storedId) return;
+        var tr = table.querySelector('tbody tr[data-project-id="' + storedId + '"]');
+        if (tr) {
+          showSummaryForRow(tr);
+        } else {
+          try { sessionStorage.removeItem('pc_selected_project_id'); } catch(_){}
+        }
+      })();
+
       // clone
       table.addEventListener('click', function(e){
         var btn = e.target.closest('.clone-btn');
@@ -379,6 +496,8 @@ try {
             if (json && json.success) {
               // show toast (if helper available) then reload so new row appears
               try { if (window && typeof window.showStatusToast === 'function') window.showStatusToast('Project created', 'success'); } catch(e){}
+              // Clear any unsaved-change state before reloading to avoid false leave-confirm prompts
+              try { if (window.UnsavedGuard) window.UnsavedGuard.markClean(); } catch(_){ }
               setTimeout(function(){ window.location.reload(); }, 900);
             } else {
               alert((json && json.message) ? json.message : 'Failed to create project');
@@ -520,6 +639,15 @@ try {
       // Track pending changes in a map: key = projectId + '|' + column
       var pending = {};
       var editingEnabled = false;
+      var refreshTimer = null; // debounce timer for summary refresh during typing
+
+      function refreshSummaryIfNeeded(targetCell){
+        if (!window.ProjectSummary) return;
+        var selected = table.querySelector('tbody tr.is-selected');
+        if (!selected) return;
+        if (targetCell && !selected.contains(targetCell)) return; // only refresh when editing selected row
+        try { window.ProjectSummary.refreshForRow(selected); } catch(_){}
+      }
 
       // Initialize original values for each editable cell
       table.querySelectorAll('td.editable').forEach(function(td){
@@ -536,6 +664,9 @@ try {
         if (!td || !td.classList) return;
         if (!td.classList.contains('editable')) return;
         if ((td.textContent || '').trim() === '') td.classList.add('empty-cell'); else td.classList.remove('empty-cell');
+        // Debounced live summary refresh while typing in the selected row
+        if (refreshTimer) clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(function(){ refreshSummaryIfNeeded(td); }, 150);
       });
 
       function setControlsEnabled(enabled){
@@ -693,6 +824,8 @@ try {
           td.classList.add('dirty');
         }
         updateControlsVisibility();
+        // Immediate refresh on blur (ensures counts stable even if user leaves cell quickly)
+        refreshSummaryIfNeeded(td);
       });
 
       // Cancel: revert all pending changes
@@ -791,6 +924,11 @@ try {
               // After saving, lock editing off to avoid accidental further edits
               setEditing(false);
               try { if (window && typeof window.showStatusToast === 'function') window.showStatusToast('Changes saved', 'success'); } catch(e){}
+              // Reset global unsaved guard snapshot to prevent stray prompts
+              try { if (window.UnsavedGuard) window.UnsavedGuard.markClean(); } catch(_){ }
+              // Refresh summary if selected row was part of saved changes
+              var selected = table.querySelector('tbody tr.is-selected');
+              if (selected) refreshSummaryIfNeeded(selected);
           } else {
             alert((json && json.message) ? json.message : 'Failed to save changes');
             // mark all as error

@@ -1,10 +1,32 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/url.php';
 
 // If user is already authenticated, skip login page
 if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
-    header('Location: ../pages/dashboard/');
-    exit();
+  // Ensure role is available in session; fetch if missing
+  if (!isset($_SESSION['role'])) {
+    $email = $_SESSION['email'];
+    if (isset($conn)) {
+      if ($stmt = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1")) {
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result && $row = $result->fetch_assoc()) {
+          $_SESSION['role'] = $row['role'];
+        }
+        $stmt->close();
+      }
+    }
+  }
+
+  if (isset($_SESSION['role']) && $_SESSION['role'] === 'developer') {
+    header('Location: ' . base_url('/dev/index.php'));
+  } else {
+    header('Location: ' . base_url('/pages/dashboard/'));
+  }
+  exit();
 }
 
 // Only capture error + active form, do NOT wipe entire session (was causing logout-on-new-window)

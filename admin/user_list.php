@@ -19,9 +19,16 @@ if (!$res || $res->num_rows === 0) {
     exit();
 }
 $row = $res->fetch_assoc();
-if ($row['role'] !== 'admin') {
+$actualRole = $row['role'];
+
+// Check if developer is previewing as admin
+if ($actualRole === 'developer' && isset($_GET['preview_role']) && $_GET['preview_role'] === 'admin') {
+    $role = 'admin';
+} elseif ($actualRole !== 'admin') {
     header('Location: ../auth/login.php');
     exit();
+} else {
+    $role = 'admin';
 }
 $stmt->close();
 
@@ -46,6 +53,7 @@ if ($result) {
 <body class="admin-page">
     <div class="admin-container">
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
+    <?php include __DIR__ . '/../partials/dev_notch.php'; ?>
 
         <div class="admin-layout">
             <?php include __DIR__ . '/../partials/sidebar.php'; ?>

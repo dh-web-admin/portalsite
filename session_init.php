@@ -36,7 +36,7 @@ if (session_status() === PHP_SESSION_NONE) {
         $token = $_COOKIE['remember_token'];
         
         // Verify token from database
-        $stmt = $conn->prepare("SELECT email, name FROM users WHERE remember_token = ? AND remember_token_expires > NOW()");
+        $stmt = $conn->prepare("SELECT email, name, role FROM users WHERE remember_token = ? AND remember_token_expires > NOW()");
         $stmt->bind_param("s", $token);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -45,6 +45,7 @@ if (session_status() === PHP_SESSION_NONE) {
             $user = $result->fetch_assoc();
             $_SESSION['email'] = $user['email'];
             $_SESSION['name'] = $user['name'];
+            $_SESSION['role'] = $user['role'] ?? null;
             
             // Regenerate token for security
             $newToken = bin2hex(random_bytes(32));

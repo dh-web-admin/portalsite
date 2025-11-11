@@ -18,7 +18,12 @@ $stmt->bind_param('s', $email);
 $stmt->execute();
 $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
-$role = $user ? $user['role'] : 'laborer';
+$actualRole = $user ? $user['role'] : 'laborer';
+if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
+  $role = $_GET['preview_role'];
+} else {
+  $role = $actualRole;
+}
 $stmt->close();
 
 // Enforce access control for this page

@@ -17,7 +17,20 @@ $result = $conn->query($query);
 $user = $result->fetch_assoc();
 
 // Store role for access control
-$role = $user['role'] ?? 'laborer';
+$actualRole = $user['role'] ?? 'laborer';
+
+// Check if developer is previewing as another role
+if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
+    $previewRole = $_GET['preview_role'];
+    $allowedRoles = ['admin', 'projectmanager', 'estimator', 'accounting', 'superintendent', 'foreman', 'mechanic', 'operator', 'laborer', 'developer'];
+    if (in_array($previewRole, $allowedRoles)) {
+        $role = $previewRole;
+    } else {
+        $role = $actualRole;
+    }
+} else {
+    $role = $actualRole;
+}
 
 // Define page access by role
 $allPages = [
@@ -79,16 +92,24 @@ switch ($role) {
 <body class="admin-page">
     <div class="admin-container">
     <?php include __DIR__ . '/../../partials/portalheader.php'; ?>
+        
         <div class="admin-layout">
             <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
             <main class="content-area">
                 <div class="main-content">
                     <div class="tiles">
                     <!-- Role-based tiles -->
-                    <?php require_once __DIR__ . '/../../partials/url.php'; ?>
+                    <?php 
+                    require_once __DIR__ . '/../../partials/url.php';
+                    // Preserve preview mode in tile URLs
+                    $previewParam = '';
+                    if (isset($_GET['preview_role'])) {
+                        $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
+                    }
+                    ?>
                     <?php foreach ($allPages as $page => $title): ?>
                         <?php if (!in_array($page, $hiddenPages)): ?>
-                            <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/')); ?>" class="tile">
+                            <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/') . $previewParam); ?>" class="tile">
                                 <h2><?php echo htmlspecialchars($title); ?></h2>
                             </a>
                         <?php endif; ?>
@@ -117,6 +138,8 @@ switch ($role) {
                 devGroup.classList.toggle('open');
             });
         }
+        
+        // Developer Preview handled globally via dev_notch partial
     })();
     </script>
     <script src="../../assets/js/mobile-menu.js"></script>

@@ -17,7 +17,15 @@ $stmt->bind_param('s', $email);
 $stmt->execute();
 $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
-$role = $user ? $user['role'] : 'laborer';
+$actualRole = $user ? $user['role'] : 'laborer';
+
+// Check if developer is previewing as another role
+if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
+    $role = $_GET['preview_role'];
+} else {
+    $role = $actualRole;
+}
+
 $stmt->close();
 ?>
 <!DOCTYPE html>
@@ -34,7 +42,7 @@ $stmt->close();
 </head>
 <body class="admin-page">
     <div class="admin-container">
-        <?php include __DIR__ . '/../../partials/portalheader.php'; ?>
+    <?php include __DIR__ . '/../../partials/portalheader.php'; ?>
         <div class="admin-layout">
             <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
             <main class="content-area">

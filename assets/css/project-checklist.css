@@ -620,7 +620,7 @@ body {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  margin-left: 6px;
+  margin-left: 0;
 }
 .project-actions .icon-btn {
   background: transparent;
@@ -655,6 +655,12 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.project-table td.project-name > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .project-table tbody td.empty-project {
   background: transparent !important;
@@ -853,6 +859,152 @@ body {
   margin: 0;
   transition: opacity 0.28s ease, transform 0.28s ease, height 0.28s ease,
     padding 0.28s ease, margin 0.28s ease;
+}
+
+/* Floating project summary tab */
+.project-summary-tab {
+  display: none;
+  position: relative; /* inline within toolbar beside the Add Project button */
+  top: auto;
+  right: auto;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  color: #0f172a;
+  border: 1px solid #cbd5e1; /* boxed boundary with clearer contrast */
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(2, 6, 23, 0.06);
+  min-width: 260px;
+  max-width: 520px;
+  animation: psTabIn 0.28s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  white-space: normal;
+}
+.project-summary-tab .summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.project-summary-tab .summary-header-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+.project-summary-tab .summary-divider {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(2, 6, 23, 0.06),
+    rgba(2, 6, 23, 0.16),
+    rgba(2, 6, 23, 0.06)
+  );
+  border-radius: 1px;
+}
+.project-summary-tab .summary-header-line::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 2v6h6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+.project-summary-tab .summary-header-line .project-name-text {
+  font-weight: 800;
+  color: #1e40af; /* indigo-800 accent for name */
+  background: #eff6ff; /* light blue pill */
+  border: 1px solid #bfdbfe;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+.project-summary-tab .summary-stats-line {
+  font-size: 12.5px;
+  color: #334155;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.project-summary-tab .summary-stats-line #summaryCounts {
+  font-weight: 800;
+  color: #0f172a;
+}
+.project-summary-tab .summary-stats-line #summaryPct {
+  font-weight: 800;
+  color: #16a34a;
+}
+.project-summary-tab .summary-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.project-summary-tab .summary-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #eff6ff; /* light blue */
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+.project-summary-tab .counts {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+.project-summary-tab .pct {
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #16a34a; /* green */
+}
+.project-summary-tab .close-summary {
+  display: none;
+}
+.project-summary-tab .summary-progress {
+  margin-top: 4px;
+  height: 8px;
+  width: 100%;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+.project-summary-tab .summary-progress > span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+/* Selected row highlight when summary is open */
+.project-table tr.is-selected .project-name {
+  outline: 2px solid rgba(59, 130, 246, 0.7);
+  outline-offset: -2px;
+}
+@keyframes psTabIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 820px) {
+  .project-summary-tab {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
 }
 
 @media (max-width: 900px) {

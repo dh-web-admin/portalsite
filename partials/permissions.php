@@ -22,6 +22,9 @@ function portal_all_pages(): array {
 function allowed_pages_for_role(string $role): array {
     $all = portal_all_pages();
     switch ($role) {
+        case 'developer':
+            // Developers have full access in Employee Portal (dev tooling/God mode)
+            return $all;
         case 'admin':
         case 'projectmanager':
         case 'estimator':
