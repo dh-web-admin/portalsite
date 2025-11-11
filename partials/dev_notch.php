@@ -24,7 +24,7 @@ if ($devEmail && isset($conn)) {
         <!-- Developer Preview Notch -->
     <link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/pages/dashboard/style.css')); ?>">
         <div class="dev-notch">
-            <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="notch-btn" style="text-decoration: none;">Back to Dashboard</a>
+            <a href="<?php echo htmlspecialchars(base_url('/dev/index.php')); ?>" class="notch-btn" style="text-decoration: none;">Back to Dashboard</a>
             <button class="notch-btn" id="previewAsBtn"><?php echo isset($_GET['preview_role']) ? 'Exit Preview' : 'Preview as'; ?></button>
         </div>
         
@@ -82,8 +82,8 @@ if ($devEmail && isset($conn)) {
                         showToast('Exited ' + roleName + ' preview');
                         
                         setTimeout(function() {
-                            // Exit preview: always land on base dashboard (no preview param)
-                            window.location.href = '<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>';
+                            // Exit preview: always land on dev landing page
+                            window.location.href = '<?php echo htmlspecialchars(base_url('/dev/index.php')); ?>';
                         }, 400);
                     } else {
                         roleDropdown.classList.toggle('active');

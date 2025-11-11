@@ -3,5 +3,143 @@
 /* This file contains page-specific styles for maps */
 /* Base styles, admin layout, and dashboard styles are inherited from parent CSS files */
 
-/* Add any maps specific overrides or additional styles here */
+/* Full height layout for maps page */
+.admin-page .admin-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
+.admin-page .admin-layout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.admin-page .content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.admin-page .main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Map Selection Ribbon */
+.map-ribbon {
+  display: flex;
+  gap: 0;
+  padding: 0;
+  background: #3a4556;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  margin-bottom: 20px;
+  margin-left: -20px;
+  margin-right: -20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.map-ribbon::-webkit-scrollbar {
+  height: 4px;
+}
+
+.map-ribbon::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.map-ribbon::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.map-ribbon::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.map-ribbon-btn {
+  flex: 0 0 auto;
+  padding: 12px 32px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.map-ribbon-btn:last-child {
+  border-right: none;
+}
+
+.map-ribbon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.map-ribbon-btn.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  box-shadow: inset 0 -3px 0 0 rgba(102, 126, 234, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.map-ribbon-btn.active:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Custom Marker Icon Styles */
+.custom-marker-icon {
+  background: none;
+  border: none;
+}
+
+.custom-marker-icon svg {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+}
+
+.custom-marker-icon:hover svg {
+  transform: scale(1.1);
+}
+
+/* Autocomplete Dropdown Styles */
+.autocomplete-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.autocomplete-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
