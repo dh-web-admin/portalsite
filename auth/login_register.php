@@ -29,6 +29,10 @@ if(isset($_POST['login'])){
             $_SESSION['name'] = $user['name'];
             $_SESSION['email'] = $user['email'];
             $_SESSION['role'] = $user['role'] ?? null;
+            // Ensure user_id is available in session for API authorization checks
+            if (isset($user['id'])) {
+                $_SESSION['user_id'] = intval($user['id']);
+            }
             
             // Issue Remember Me token unconditionally to persist login across browser restarts
             // Generate secure random token
