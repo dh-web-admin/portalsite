@@ -42,9 +42,6 @@ if (!can_access($role, 'maps')) {
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin="" />
-  <!-- MarkerCluster CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 </head>
 <body class="admin-page">
   <div class="admin-container">
@@ -66,15 +63,9 @@ if (!can_access($role, 'maps')) {
             </div>
             
             <!-- Supplier Count -->
-            <div style="position:relative;">
-              <div id="supplierCount" style="display:flex; align-items:center; padding:6px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#667eea; color:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:11px; font-weight:600; white-space:nowrap; cursor:pointer;">
-                <span id="supplierCountNumber">0</span>
-                <span style="margin-left:4px;">Suppliers</span>
-              </div>
-              <div id="supplierCountList" style="display:none; position:absolute; right:0; top:calc(100% + 6px); width:360px; max-height:360px; overflow:auto; background:#fff; border:1px solid #e2e8f0; border-radius:6px; box-shadow:0 8px 24px rgba(2,6,23,0.12); z-index:1200; padding:8px; font-size:13px;">
-                <!-- populated dynamically -->
-                <div style="color:#64748b; font-size:12px;">Loading...</div>
-              </div>
+            <div id="supplierCount" style="display:flex; align-items:center; padding:6px 12px; border:1px solid #e2e8f0; border-radius:6px; background:#667eea; color:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:11px; font-weight:600; white-space:nowrap;">
+              <span id="supplierCountNumber">0</span>
+              <span style="margin-left:4px;">Suppliers</span>
             </div>
             
             <!-- Filters Bar -->
@@ -139,16 +130,6 @@ if (!can_access($role, 'maps')) {
           <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Address</label>
           <input type="text" name="address" autocomplete="off" class="autocomplete-input" data-field="address" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
           <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Latitude *</label>
-            <input type="text" name="latitude" required placeholder="e.g. 41.0998" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
-          </div>
-          <div>
-            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Longitude *</label>
-            <input type="text" name="longitude" required placeholder="e.g. -80.6495" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
-          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
@@ -248,8 +229,6 @@ if (!can_access($role, 'maps')) {
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
           crossorigin=""></script>
-  <!-- MarkerCluster JS -->
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script>
     (function(){
       // Initialize Leaflet map - unrestricted worldwide view
@@ -263,16 +242,6 @@ if (!can_access($role, 'maps')) {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19
       }).addTo(map);
-
-      // Initialize marker clustering with chunked loading for performance
-      try {
-        markerCluster = L.markerClusterGroup({ chunkedLoading: true });
-        map.addLayer(markerCluster);
-      } catch (e) {
-        // If markercluster isn't available, fall back to direct map markers
-        console.warn('MarkerCluster initialization failed, falling back to regular markers', e);
-        markerCluster = null;
-      }
       
       // Reset supplier details box when clicking on empty space
       map.on('click', function(e) {
@@ -281,12 +250,6 @@ if (!can_access($role, 'maps')) {
       
       // Store current markers
       var currentMarkers = [];
-      // MarkerCluster group (initialized after tile layer)
-      var markerCluster = null;
-      // Cache of suppliers returned from API (includes those without coords)
-      var suppliersCache = [];
-      // Cache for generated marker icons by color to avoid recreating identical SVGs
-      var iconCache = {};
       var currentService = null;
       
       // Function to reset supplier details box to default
@@ -364,31 +327,62 @@ if (!can_access($role, 'maps')) {
       
       // Function to create a custom colored marker icon
       function createColoredIcon(color) {
-        // Reuse icons for the same color to reduce DOM/SVG creation overhead
-        if (iconCache[color]) return iconCache[color];
         // Create SVG marker with the specified color
         var svgIcon = '<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">' +
           '<path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 8.5 12.5 28.5 12.5 28.5S25 21 25 12.5C25 5.6 19.4 0 12.5 0z" ' +
           'fill="' + color + '" stroke="#fff" stroke-width="1.5"/>' +
           '<circle cx="12.5" cy="12.5" r="5" fill="#fff" opacity="0.9"/>' +
           '</svg>';
-
-        var icon = L.divIcon({
+        
+        return L.divIcon({
           className: 'custom-marker-icon',
           html: svgIcon,
           iconSize: [25, 41],
           iconAnchor: [12.5, 41],
           popupAnchor: [0, -41]
         });
-        iconCache[color] = icon;
-        return icon;
       }
       
-      // Geocoding disabled: placeholder function
-      // Suppliers without latitude/longitude will not be geocoded automatically.
+      // Function to geocode address and plot marker
       function geocodeAndPlotMarker(supplier, popupContent) {
-        console.warn('Geocoding disabled by configuration. Supplier', supplier && supplier.id, 'will not be geocoded.');
-        return;
+        // Build address string from supplier data
+        var addressParts = [];
+        if (supplier.address) addressParts.push(supplier.address);
+        if (supplier.city) addressParts.push(supplier.city);
+        if (supplier.state) addressParts.push(supplier.state);
+        
+        var fullAddress = addressParts.join(', ');
+        
+        if (!fullAddress) {
+            // No address available, skip plotting this marker
+            console.warn('No address for supplier: ' + supplier.name);
+          return;
+        }
+        
+        // Use Nominatim (OpenStreetMap) geocoding API
+        // Include both US and Canada (CA) since we have suppliers in both countries
+        var geocodeUrl = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(fullAddress) + '&countrycodes=us,ca&limit=1';
+        
+        fetch(geocodeUrl, {
+          headers: {
+            'User-Agent': 'PortalSite/1.0' // Required by Nominatim
+          }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          if (data && data.length > 0) {
+            var lat = parseFloat(data[0].lat);
+            var lng = parseFloat(data[0].lon);
+            plotMarker(supplier, popupContent, lat, lng);
+          } else {
+              // Geocoding failed, skip this marker
+            console.warn('Geocoding failed for: ' + fullAddress);
+          }
+        })
+        .catch(function(error) {
+          console.error('Geocoding error:', error);
+            // Skip this marker on error
+        });
       }
       
       // Function to plot marker on map
@@ -397,13 +391,7 @@ if (!can_access($role, 'maps')) {
         var markerColor = getColorForSupplier(supplier.name);
         var customIcon = createColoredIcon(markerColor);
         
-        var marker = L.marker([lat, lng], { icon: customIcon });
-        // Add marker to cluster group when available, otherwise add directly to map
-        if (markerCluster) {
-          markerCluster.addLayer(marker);
-        } else {
-          marker.addTo(map);
-        }
+        var marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
         marker.bindPopup(popupContent);
         
         // Store supplier data on marker
@@ -426,15 +414,11 @@ if (!can_access($role, 'maps')) {
         currentMarkers.push(marker);
       }
       
-      // Function to clear all markers from map / cluster
+      // Function to clear all markers from map
       function clearMarkers() {
-        if (markerCluster) {
-          markerCluster.clearLayers();
-        } else {
-          currentMarkers.forEach(function(marker) {
-            map.removeLayer(marker);
-          });
-        }
+        currentMarkers.forEach(function(marker) {
+          map.removeLayer(marker);
+        });
         currentMarkers = [];
       }
       
@@ -449,14 +433,7 @@ if (!can_access($role, 'maps')) {
         })
         .then(function(response) { return response.json(); })
         .then(function(data) {
-          if (data.success && data.suppliers) {
-            // Keep a cache of suppliers (so UI lists can show suppliers before geocoding completes)
-            suppliersCache = data.suppliers;
-            if (data.suppliers.length === 0) {
-              // No suppliers for this service
-              updateSupplierCount();
-              return map.setView([39.8283, -98.5795], 5);
-            }
+          if (data.success && data.suppliers && data.suppliers.length > 0) {
             var suppliersNeedingGeocode = [];
             var suppliersWithCoords = [];
             
@@ -469,16 +446,35 @@ if (!can_access($role, 'maps')) {
               }
             });
             
-            // Plot suppliers with cached coordinates using batching to avoid UI freeze
-            var batchSize = 50; // number of markers to add per tick
-            var idx = 0;
-            function addNextBatch() {
-              var end = Math.min(idx + batchSize, suppliersWithCoords.length);
-              for (var i = idx; i < end; i++) {
-                var supplier = suppliersWithCoords[i];
+            // Plot suppliers with cached coordinates immediately (all at once!)
+            suppliersWithCoords.forEach(function(supplier) {
+              var popupContent = '<div style="font-size:13px;line-height:1.4;">' +
+                '<strong style="font-size:15px;display:block;margin-bottom:6px;">' + (supplier.name || 'Unknown') + '</strong>';
+              
+              if (supplier.material) popupContent += '<div><strong>Material:</strong> ' + supplier.material + '</div>';
+              if (supplier.location_type) popupContent += '<div><strong>Type:</strong> ' + supplier.location_type + '</div>';
+              if (supplier.address) popupContent += '<div><strong>Street Address:</strong> ' + supplier.address + '</div>';
+              if (supplier.city) popupContent += '<div><strong>City:</strong> ' + supplier.city + '</div>';
+              if (supplier.state) popupContent += '<div><strong>State:</strong> ' + supplier.state + '</div>';
+              if (supplier.sales_contact) popupContent += '<div><strong>Contact:</strong> ' + supplier.sales_contact + '</div>';
+              if (supplier.contact_number) popupContent += '<div><strong>Phone:</strong> ' + supplier.contact_number + '</div>';
+              if (supplier.email) popupContent += '<div><strong>Email:</strong> <a href="mailto:' + supplier.email + '">' + supplier.email + '</a></div>';
+              if (supplier.notes) popupContent += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplier.notes + '</em></div>';
+              
+              popupContent += '</div>';
+              
+              // Plot immediately using cached coordinates
+              plotMarker(supplier, popupContent, parseFloat(supplier.latitude), parseFloat(supplier.longitude));
+            });
+            
+            // Geocode remaining suppliers with rate limiting (if any)
+            if (suppliersNeedingGeocode.length > 0) {
+              console.log('Geocoding ' + suppliersNeedingGeocode.length + ' suppliers without cached coordinates...');
+              var delay = 0;
+              suppliersNeedingGeocode.forEach(function(supplier) {
                 var popupContent = '<div style="font-size:13px;line-height:1.4;">' +
                   '<strong style="font-size:15px;display:block;margin-bottom:6px;">' + (supplier.name || 'Unknown') + '</strong>';
-
+                
                 if (supplier.material) popupContent += '<div><strong>Material:</strong> ' + supplier.material + '</div>';
                 if (supplier.location_type) popupContent += '<div><strong>Type:</strong> ' + supplier.location_type + '</div>';
                 if (supplier.address) popupContent += '<div><strong>Street Address:</strong> ' + supplier.address + '</div>';
@@ -488,28 +484,22 @@ if (!can_access($role, 'maps')) {
                 if (supplier.contact_number) popupContent += '<div><strong>Phone:</strong> ' + supplier.contact_number + '</div>';
                 if (supplier.email) popupContent += '<div><strong>Email:</strong> <a href="mailto:' + supplier.email + '">' + supplier.email + '</a></div>';
                 if (supplier.notes) popupContent += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplier.notes + '</em></div>';
-
+                
                 popupContent += '</div>';
-                plotMarker(supplier, popupContent, parseFloat(supplier.latitude), parseFloat(supplier.longitude));
-              }
-              idx = end;
-              if (idx < suppliersWithCoords.length) {
-                // Schedule next batch on next tick to keep UI responsive
-                setTimeout(addNextBatch, 10);
-              } else {
-                // All markers added; continue with filters and UI updates
-                applyFilters(true);
-                updateSupplierDropdown();
-              }
-            }
-            addNextBatch();
-            
-            // Geocoding is disabled: skip suppliers without cached coordinates.
-            if (suppliersNeedingGeocode.length > 0) {
-              // Geocoding disabled; skipping suppliers without cached coordinates.
+                
+                setTimeout(function() {
+                  geocodeAndPlotMarker(supplier, popupContent);
+                }, delay);
+                delay += 1100;
+              });
             }
             
-            // applyFilters and updateSupplierDropdown are called after batch plotting completes
+            // Auto-fit map immediately if we have cached coordinates, or wait for geocoding
+            var waitTime = suppliersWithCoords.length > 0 ? 500 : (suppliersNeedingGeocode.length * 1100) + 2000;
+            setTimeout(function() {
+              applyFilters(true);
+              updateSupplierDropdown();
+            }, waitTime);
           } else {
             // No suppliers found - set default US center view
             map.setView([39.8283, -98.5795], 5);
@@ -720,15 +710,6 @@ if (!can_access($role, 'maps')) {
             submitBtn.textContent = 'Adding...';
           }
 
-          // Validate latitude and longitude are present and numeric
-          var latVal = (addSupplierForm.querySelector('[name="latitude"]')?.value || '').trim();
-          var lngVal = (addSupplierForm.querySelector('[name="longitude"]')?.value || '').trim();
-          if (!latVal || !lngVal || isNaN(Number(latVal)) || isNaN(Number(lngVal))) {
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Supplier'; }
-            alert('Please provide valid numeric Latitude and Longitude values.');
-            return;
-          }
-
           fetch('../../api/add_supplier.php', {
             method: 'POST',
             body: formData,
@@ -741,62 +722,7 @@ if (!can_access($role, 'maps')) {
               addSupplierModal.style.display = 'none';
               addSupplierForm.reset();
               // Reload suppliers for current service
-              // Reload suppliers from server to refresh authoritative list
               loadSuppliers(currentService);
-
-              // Also optimistically add and plot the new supplier client-side so it appears immediately
-              try {
-                var newId = data.supplier_id;
-                if (newId) {
-                  // Build supplier object from form inputs
-                  var form = addSupplierForm;
-                  var supplierObj = {
-                    id: newId,
-                    name: form.querySelector('[name="name"]').value || '',
-                    material: form.querySelector('[name="material"]').value || '',
-                    sales_contact: form.querySelector('[name="sales_contact"]').value || '',
-                    contact_number: form.querySelector('[name="contact_number"]').value || '',
-                    email: form.querySelector('[name="email"]').value || '',
-                    address: form.querySelector('[name="address"]').value || '',
-                    city: form.querySelector('[name="city"]').value || '',
-                    state: form.querySelector('[name="state"]').value || '',
-                    location_type: form.querySelector('[name="location_type"]').value || '',
-                    notes: form.querySelector('[name="notes"]').value || '',
-                    latitude: form.querySelector('[name="latitude"]').value || '',
-                    longitude: form.querySelector('[name="longitude"]').value || '',
-                    service: currentService
-                  };
-
-                  // Insert into suppliersCache so UI shows it immediately
-                  suppliersCache = suppliersCache || [];
-                  suppliersCache.unshift(supplierObj);
-                  updateSupplierCount();
-                  populateSupplierCountList();
-
-                  // If supplier has coordinates (unlikely), plot immediately; otherwise geocode and plot now
-                  var popupContent = '<div style="font-size:13px;line-height:1.4;">' +
-                    '<strong style="font-size:15px;display:block;margin-bottom:6px;">' + (supplierObj.name || 'Unknown') + '</strong>' +
-                    (supplierObj.material?('<div><strong>Material:</strong> ' + supplierObj.material + '</div>'):'') +
-                    (supplierObj.location_type?('<div><strong>Type:</strong> ' + supplierObj.location_type + '</div>'):'') +
-                    (supplierObj.address?('<div><strong>Street Address:</strong> ' + supplierObj.address + '</div>'):'') +
-                    (supplierObj.city?('<div><strong>City:</strong> ' + supplierObj.city + '</div>'):'') +
-                    (supplierObj.state?('<div><strong>State:</strong> ' + supplierObj.state + '</div>'):'') +
-                    (supplierObj.sales_contact?('<div><strong>Contact:</strong> ' + supplierObj.sales_contact + '</div>'):'') +
-                    (supplierObj.contact_number?('<div><strong>Phone:</strong> ' + supplierObj.contact_number + '</div>'):'') +
-                    (supplierObj.email?('<div><strong>Email:</strong> <a href="mailto:' + supplierObj.email + '">' + supplierObj.email + '</a></div>'):'') +
-                    (supplierObj.notes?('<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplierObj.notes + '</em></div>'):'') +
-                    '</div>';
-
-                  if (supplierObj.latitude && supplierObj.longitude) {
-                    plotMarker(supplierObj, popupContent, parseFloat(supplierObj.latitude), parseFloat(supplierObj.longitude));
-                  } else if (supplierObj.address || supplierObj.city || supplierObj.state) {
-                    // Geocode immediately and plot (bypass rate limiter used for bulk geocoding)
-                    geocodeAndPlotMarker(supplierObj, popupContent);
-                  }
-                }
-              } catch (e) {
-                console.error('Optimistic add/plot failed', e);
-              }
             } else {
               alert(data.message || 'Failed to add supplier');
             }
@@ -1105,183 +1031,35 @@ if (!can_access($role, 'maps')) {
       function updateSupplierCount() {
         var filters = getActiveFilters();
         var hasFilters = filters.name || filters.material || filters.city || filters.state;
-        var visibleSuppliers = 0;
-
-        // Use suppliersCache (includes suppliers without coords) for counts
-        (suppliersCache || []).forEach(function(supplier) {
-          if (supplier && markerMatchesFilters(supplier, filters)) visibleSuppliers++;
+        var visibleCount = 0;
+        
+        currentMarkers.forEach(function(marker) {
+          if (marker.supplierData && markerMatchesFilters(marker.supplierData, filters)) {
+            visibleCount++;
+          }
         });
-
-        var total = (suppliersCache || []).length;
+        
         var countElement = document.getElementById('supplierCountNumber');
         if (countElement) {
-          if (hasFilters && visibleSuppliers < total) {
-            countElement.textContent = visibleSuppliers + ' of ' + total;
+          if (hasFilters && visibleCount < currentMarkers.length) {
+            // Show filtered count vs total
+            countElement.textContent = visibleCount + ' of ' + currentMarkers.length;
           } else {
-            countElement.textContent = total;
+            // Show total count
+            countElement.textContent = currentMarkers.length;
           }
         }
       }
-
-      // Toggle and populate supplier count dropdown
-      function toggleSupplierCountList() {
-        var list = document.getElementById('supplierCountList');
-        if (!list) return;
-        if (list.style.display === 'block') {
-          list.style.display = 'none';
-        } else {
-          populateSupplierCountList();
-          list.style.display = 'block';
-        }
-      }
-
-      function populateSupplierCountList() {
-        var list = document.getElementById('supplierCountList');
-        if (!list) return;
-        list.innerHTML = '';
-
-        var filters = getActiveFilters();
-        var visibleSuppliers = (suppliersCache || []).filter(function(supplier) {
-          return supplier && markerMatchesFilters(supplier, filters);
-        });
-
-        if (visibleSuppliers.length === 0) {
-          list.innerHTML = '<div style="padding:10px; color:#64748b;">No suppliers to show</div>';
-          return;
-        }
-
-        visibleSuppliers.forEach(function(supplier) {
-          var entry = document.createElement('div');
-          entry.style.cssText = 'padding:8px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center; gap:12px;';
-
-          var left = document.createElement('div');
-          left.style.cssText = 'flex:1; font-size:13px; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
-          // Build concise inline details: Name (bold) — Material • City, State — Address (trimmed)
-          var name = (supplier.name || 'Unknown');
-          var parts = [];
-          if (supplier.material) parts.push(supplier.material);
-          if (supplier.city) parts.push(supplier.city);
-          if (supplier.state) parts.push(supplier.state);
-          var meta = parts.join(' • ');
-          var address = supplier.address ? (' — ' + supplier.address) : '';
-          left.innerHTML = '<span style="font-weight:600; color:#059669; margin-right:8px;">' + name + '</span>' +
-                           '<span style="color:#64748b;">' + (meta || '') + '</span>' +
-                           '<span style="color:#475569; margin-left:8px; font-size:12px;">' + (address || '') + '</span>';
-
-          var right = document.createElement('div');
-          right.style.cssText = 'flex:0 0 auto;';
-          var btn = document.createElement('button');
-          btn.textContent = 'Find in map';
-          btn.className = 'btn';
-          btn.style.cssText = 'padding:6px 8px; font-size:12px; white-space:nowrap;';
-          btn.addEventListener('click', function(e){
-            e.stopPropagation();
-            findSupplierOnMap(supplier.id);
-            var listEl = document.getElementById('supplierCountList'); if (listEl) listEl.style.display='none';
-          });
-
-          right.appendChild(btn);
-
-          entry.appendChild(left);
-          entry.appendChild(right);
-          list.appendChild(entry);
-        });
-      }
-
-      // Pan to supplier marker and open popup. If marker not yet plotted, attempt to plot or geocode.
-      function findSupplierOnMap(supplierId) {
-        var id = parseInt(supplierId, 10);
-        var found = false;
-        currentMarkers.forEach(function(marker) {
-          if (marker.supplierData && marker.supplierData.id == id) {
-            found = true;
-            map.setView(marker.getLatLng(), Math.max(map.getZoom(), 10));
-            marker.openPopup();
-            showSupplierDetails(marker.supplierData);
-          }
-        });
-
-        if (found) return;
-
-        // Not plotted yet - try to find supplier in cache
-        var supplier = (suppliersCache || []).find(function(s) { return s && parseInt(s.id,10) === id; });
-        if (!supplier) return;
-
-        var popupContent = '<div style="font-size:13px;line-height:1.4;">' +
-          '<strong style="font-size:15px;display:block;margin-bottom:6px;">' + (supplier.name || 'Unknown') + '</strong>' +
-          (supplier.material?('<div><strong>Material:</strong> ' + supplier.material + '</div>'):'') +
-          (supplier.location_type?('<div><strong>Type:</strong> ' + supplier.location_type + '</div>'):'') +
-          (supplier.address?('<div><strong>Street Address:</strong> ' + supplier.address + '</div>'):'') +
-          (supplier.city?('<div><strong>City:</strong> ' + supplier.city + '</div>'):'') +
-          (supplier.state?('<div><strong>State:</strong> ' + supplier.state + '</div>'):'') +
-          (supplier.sales_contact?('<div><strong>Contact:</strong> ' + supplier.sales_contact + '</div>'):'') +
-          (supplier.contact_number?('<div><strong>Phone:</strong> ' + supplier.contact_number + '</div>'):'') +
-          (supplier.email?('<div><strong>Email:</strong> <a href="mailto:' + supplier.email + '">' + supplier.email + '</a></div>'):'') +
-          (supplier.notes?('<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplier.notes + '</em></div>'):'') +
-          '</div>';
-
-        if (supplier.latitude && supplier.longitude) {
-          plotMarker(supplier, popupContent, parseFloat(supplier.latitude), parseFloat(supplier.longitude));
-          // open the marker shortly after plotting
-          setTimeout(function(){
-            currentMarkers.forEach(function(marker) {
-              if (marker.supplierData && marker.supplierData.id == id) {
-                map.setView(marker.getLatLng(), Math.max(map.getZoom(), 10));
-                marker.openPopup();
-                showSupplierDetails(marker.supplierData);
-              }
-            });
-          }, 250);
-        } else {
-          // No coordinates available — geocoding disabled.
-          alert('No coordinates available for this supplier. Please edit the supplier and add latitude/longitude to enable map plotting.');
-          showSupplierDetails(supplier);
-        }
-      }
-
-      // Close supplier count list when clicking outside
-      document.addEventListener('click', function(e) {
-        var list = document.getElementById('supplierCountList');
-        var count = document.getElementById('supplierCount');
-        if (!list || !count) return;
-        if (list.style.display === 'block') {
-          if (!list.contains(e.target) && !count.contains(e.target)) {
-            list.style.display = 'none';
-          }
-        }
-      });
-
-      // Attach click handler in JS (avoid inline onclick and reference errors)
-      var supplierCountEl = document.getElementById('supplierCount');
-      if (supplierCountEl) {
-        supplierCountEl.addEventListener('click', function(e){
-          e.stopPropagation();
-          toggleSupplierCountList();
-        });
-      }
-
-      // Expose some helpers for debugging in console
-      window.findSupplierOnMap = findSupplierOnMap;
-      window.getCurrentMarkers = function(){ return currentMarkers; };
-      window.getSuppliersCache = function(){ return suppliersCache; };
 
       function applyFilters(refit) {
         var filters = getActiveFilters();
         var visibleMarkers = [];
         currentMarkers.forEach(function(marker) {
           if (marker.supplierData && markerMatchesFilters(marker.supplierData, filters)) {
-            if (markerCluster) {
-              if (!markerCluster.hasLayer(marker)) markerCluster.addLayer(marker);
-            } else {
-              if (!map.hasLayer(marker)) map.addLayer(marker);
-            }
+            if (!map.hasLayer(marker)) map.addLayer(marker);
             visibleMarkers.push(marker);
           } else {
-            if (markerCluster) {
-              if (markerCluster.hasLayer(marker)) markerCluster.removeLayer(marker);
-            } else {
-              if (map.hasLayer(marker)) map.removeLayer(marker);
-            }
+            if (map.hasLayer(marker)) map.removeLayer(marker);
           }
         });
         // Update supplier count display
@@ -1325,7 +1103,33 @@ if (!can_access($role, 'maps')) {
       // Apply filters when suppliers load initially
       applyFilters(false);
 
-      // Background geocoding removed: geocoding is disabled on this installation.
+      // Background geocoding: Check for suppliers missing coordinates and geocode them
+      function checkAndGeocodeSuppliers() {
+        fetch('../../api/geocode_missing_suppliers.php', {
+          method: 'GET',
+          credentials: 'same-origin'
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          if (data.success && data.geocoded > 0) {
+            console.log('✓ Background geocoding: ' + data.geocoded + ' supplier(s) geocoded');
+            
+            // If we're currently viewing a service with suppliers, reload to show updated markers
+            if (currentService && currentMarkers.length > 0) {
+              // Wait a moment then reload the current service to show newly geocoded markers
+              setTimeout(function() {
+                loadSuppliers(currentService);
+              }, 1000);
+            }
+          }
+        })
+        .catch(function(error) {
+          console.log('Background geocoding check completed');
+        });
+      }
+
+      // Run geocoding check on page load (after 2 seconds to not interfere with initial load)
+      setTimeout(checkAndGeocodeSuppliers, 2000);
     })();
   </script>
 </body>

@@ -23,6 +23,9 @@ $state = isset($_POST['state']) ? trim($_POST['state']) : '';
 $location_type = isset($_POST['location_type']) ? trim($_POST['location_type']) : '';
 $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
 $service = isset($_POST['service']) ? trim($_POST['service']) : '';
+$latitude = isset($_POST['latitude']) ? trim($_POST['latitude']) : '';
+$longitude = isset($_POST['longitude']) ? trim($_POST['longitude']) : '';
+// ...existing code...
 
 // Validate required fields
 if ($name === '' || $service === '') {
@@ -31,8 +34,25 @@ if ($name === '' || $service === '') {
   exit;
 }
 
+// Require latitude and longitude (manual entry)
+if ($latitude === '' || $longitude === '') {
+  http_response_code(400);
+  echo json_encode(['success' => false, 'message' => 'Latitude and longitude are required']);
+  exit;
+}
+
+if (!is_numeric($latitude) || !is_numeric($longitude)) {
+  http_response_code(400);
+  echo json_encode(['success' => false, 'message' => 'Latitude and longitude must be numeric']);
+  exit;
+}
+
+$latVal = floatval($latitude);
+$lngVal = floatval($longitude);
+
 // Insert supplier
-$stmt = $conn->prepare('INSERT INTO suppliers (name, material, sales_contact, contact_number, email, address, city, state, location_type, notes, service) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+// Include latitude and longitude in the insert
+$stmt = $conn->prepare('INSERT INTO suppliers (name, material, sales_contact, contact_number, email, address, city, state, location_type, notes, service, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
 if (!$stmt) {
   http_response_code(500);
@@ -40,7 +60,7 @@ if (!$stmt) {
   exit;
 }
 
-$stmt->bind_param('sssssssssss', $name, $material, $sales_contact, $contact_number, $email, $address, $city, $state, $location_type, $notes, $service);
+$stmt->bind_param('sssssssssssdd', $name, $material, $sales_contact, $contact_number, $email, $address, $city, $state, $location_type, $notes, $service, $latVal, $lngVal);
 
 if ($stmt->execute()) {
   echo json_encode(['success' => true, 'message' => 'Supplier added successfully', 'supplier_id' => $stmt->insert_id]);
