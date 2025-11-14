@@ -23,39 +23,39 @@ if (!function_exists('mysqli_connect') || !class_exists('mysqli')) {
 // Include config and validate connection
 require_once __DIR__ . '/../config/config.php';
 
-// // ----- Access control -----
-// // Allow if current user is logged in and is an admin
-// $allow = false;
-// if (isset($_SESSION['email'])) {
-//     $check = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1");
-//     if ($check) {
-//         $check->bind_param('s', $_SESSION['email']);
-//         $check->execute();
-//         $r = $check->get_result();
-//         $u = $r ? $r->fetch_assoc() : null;
-//         if ($u && isset($u['role']) && in_array($u['role'], ['admin','developer'])) $allow = true;
-//         $check->close();
-//     }
-// }
+// ----- Access control -----
+// Allow if current user is logged in and is an admin
+$allow = false;
+if (isset($_SESSION['email'])) {
+    $check = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1");
+    if ($check) {
+        $check->bind_param('s', $_SESSION['email']);
+        $check->execute();
+        $r = $check->get_result();
+        $u = $r ? $r->fetch_assoc() : null;
+        if ($u && isset($u['role']) && in_array($u['role'], ['admin','developer'])) $allow = true;
+        $check->close();
+    }
+}
 
-// // If not logged-in admin, allow only from localhost + matching secret token
-// if (!$allow) {
-//     $remote = $_SERVER['REMOTE_ADDR'] ?? '';
-//     $isLocal = in_array($remote, ['127.0.0.1','::1','localhost'], true);
-//     $secret = getenv('CREATE_ADMIN_SECRET') ?: null;
-//     $provided = $_GET['token'] ?? $_POST['token'] ?? $_SERVER['HTTP_X_CREATE_ADMIN_TOKEN'] ?? null;
+// If not logged-in admin, allow only from localhost + matching secret token
+if (!$allow) {
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+    $isLocal = in_array($remote, ['127.0.0.1','::1','localhost'], true);
+    $secret = getenv('CREATE_ADMIN_SECRET') ?: null;
+    $provided = $_GET['token'] ?? $_POST['token'] ?? $_SERVER['HTTP_X_CREATE_ADMIN_TOKEN'] ?? null;
 
-//     if ($isLocal && $secret && $provided && hash_equals((string)$secret, (string)$provided)) {
-//         $allow = true;
-//     } else {
-//         echo "Unauthorized: create_admin is restricted.\n";
-//         echo "Requirements: either be logged in as an admin, or run from localhost with a valid token.\n";
-//         if (!$isLocal) echo "Note: your IP ($remote) is not localhost.\n";
-//         if (!$secret) echo "Note: server has no CREATE_ADMIN_SECRET configured — set an env var to enable localhost+token access.\n";
-//         exit;
-//     }
-// }
-// // ----- end access control -----
+    if ($isLocal && $secret && $provided && hash_equals((string)$secret, (string)$provided)) {
+        $allow = true;
+    } else {
+        echo "Unauthorized: create_admin is restricted.\n";
+        echo "Requirements: either be logged in as an admin, or run from localhost with a valid token.\n";
+        if (!$isLocal) echo "Note: your IP ($remote) is not localhost.\n";
+        if (!$secret) echo "Note: server has no CREATE_ADMIN_SECRET configured — set an env var to enable localhost+token access.\n";
+        exit;
+    }
+}
+// ----- end access control -----
 
 if (!isset($conn) || !($conn instanceof mysqli)) {
     http_response_code(500);
