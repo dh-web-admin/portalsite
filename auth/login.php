@@ -63,7 +63,10 @@ function isActiveForm($formName, $activeForm){
         <label for="email">Email:</label>
         <input type="text" id="email" name="email" required />
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required />
+        <div class="password-field">
+          <input type="password" id="password" name="password" required />
+          <button type="button" id="togglePassword" class="pw-toggle" aria-pressed="false" aria-controls="password" aria-label="Show password" title="Show password">Show</button>
+        </div>
         <div style="display: flex; align-items: center; gap: 8px; margin: 10px 0;">
           <input type="checkbox" id="remember_me" name="remember_me" value="1" style="width: auto; margin: 0;" />
           <label for="remember_me" style="margin: 0; font-size: 14px; cursor: pointer;">Keep me Logged in</label>
@@ -76,5 +79,27 @@ function isActiveForm($formName, $activeForm){
         </div>
       </form>
     </div>
+    <script>
+      (function(){
+        var pwd = document.getElementById('password');
+        var btn = document.getElementById('togglePassword');
+        if (!pwd || !btn) return;
+        // Toggle handler
+        btn.addEventListener('click', function(){
+          try {
+            var isHidden = pwd.type === 'password';
+            pwd.type = isHidden ? 'text' : 'password';
+            // update pressed state and accessible label/title
+            btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+            btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+            btn.title = isHidden ? 'Hide password' : 'Show password';
+            // update visible button text inside the input
+            btn.textContent = isHidden ? 'Hide' : 'Show';
+          } catch (e) { console.error(e); }
+        });
+        // Allow toggling via Space/Enter when button focused
+        btn.addEventListener('keydown', function(ev){ if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); btn.click(); } });
+      })();
+    </script>
   </body>
 </html>

@@ -255,6 +255,18 @@
           </div>
         </a>
 
+        <!-- Recent Maps/UI changes -->
+        <a href="changes.html" class="doc-card" data-category="reference">
+          <h2>Maps & UI Changes (Nov 14, 2025)</h2>
+          <p>
+            Changelog and verification steps for recent Maps page improvements: combined coordinates input, parsing fallbacks, updated supplier details layout, and actions bar placement.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-reference">Reference</span>
+            <span>Updated: Nov 14, 2025</span>
+          </div>
+        </a>
+
         <!-- Guide: Responsive Design (kept last) -->
         <a href="responsive-design.html" class="doc-card" data-category="guide">
           <h2>Responsive Design</h2>

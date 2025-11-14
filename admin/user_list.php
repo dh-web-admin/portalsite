@@ -155,7 +155,7 @@ if ($result) {
                 tpl.innerHTML = '<td colspan="5" style="padding:12px 10px;"><div style="display:flex; align-items:center; gap:12px;">' +
                     '<select class="popup-role-select">' + (function(){
                         var opts = '';
-                        var roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
+                        var roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer','data_entry'];
                         roles.forEach(function(r){
                             opts += '<option value="'+r+'">'+r+'</option>';
                         });
@@ -174,21 +174,30 @@ if ($result) {
                 var tpl = document.createElement('tr');
                 tpl.className = 'password-popup-row';
                 tpl.innerHTML = '<td colspan="5" style="padding:12px 10px; background:#f8f9fa;">' +
-                    '<div style="display:flex; flex-direction:column; gap:10px; max-width:400px;">' +
-                    '<strong>Reset Password</strong>' +
-                    '<div style="position:relative;">' +
-                    '<input type="password" class="popup-new-password" placeholder="New password" style="padding:8px; padding-right:70px; border:1px solid #ddd; border-radius:4px; width:100%; box-sizing:border-box;">' +
-                    '<button type="button" class="toggle-new-password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; padding:4px 8px; font-size:12px; font-weight:600; color:#667eea;">Show</button>' +
-                    '</div>' +
-                    '<small style="color:#666; font-size:12px; margin-top:-5px;">At least 8 chars, 1 number, 1 uppercase, 1 special character</small>' +
-                    '<div style="position:relative;">' +
-                    '<input type="password" class="popup-confirm-password" placeholder="Confirm password" style="padding:8px; padding-right:70px; border:1px solid #ddd; border-radius:4px; width:100%; box-sizing:border-box;">' +
-                    '<button type="button" class="toggle-confirm-password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; padding:4px 8px; font-size:12px; font-weight:600; color:#667eea;">Show</button>' +
-                    '</div>' +
-                    '<div style="display:flex; gap:12px; margin-top:5px;">' +
-                    '<button class="popup-save-password" style="flex:1; padding:10px; background:#4caf50; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s;">Save</button>' +
-                    '<button class="popup-cancel-password" style="flex:1; padding:10px; background:#f44336; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s;">Cancel</button>' +
-                    '</div></div></td>';
+                                        '<div style="display:flex; flex-direction:column; gap:10px; max-width:520px;">' +
+                                        '<strong>Reset Password</strong>' +
+                                        '<div style="display:flex; gap:8px; align-items:center;">' +
+                                        '<div style="flex:1; position:relative;">' +
+                                        '<input type="password" class="popup-new-password" placeholder="New password" style="padding:8px; padding-right:100px; border:1px solid #ddd; border-radius:4px; width:100%; box-sizing:border-box;">' +
+                                        '<button type="button" class="toggle-new-password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; padding:4px 8px; font-size:12px; font-weight:600; color:#667eea;">Show</button>' +
+                                        '</div>' +
+                                        '<div style="display:flex; gap:8px;">' +
+                                            '<button type="button" class="btn-generate-password" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer;">Generate</button>' +
+                                            '<button type="button" class="btn-copy-password" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer;">Copy</button>' +
+                                        '</div>' +
+                                        '</div>' +
+                                        '<small style="color:#666; font-size:12px; margin-top:-5px;">At least 8 chars, 1 number, 1 uppercase, 1 special character</small>' +
+                                        '<div style="display:flex; gap:8px; align-items:center;">' +
+                                        '<div style="flex:1; position:relative;">' +
+                                        '<input type="password" class="popup-confirm-password" placeholder="Confirm password" style="padding:8px; padding-right:100px; border:1px solid #ddd; border-radius:4px; width:100%; box-sizing:border-box;">' +
+                                        '<button type="button" class="toggle-confirm-password" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; padding:4px 8px; font-size:12px; font-weight:600; color:#667eea;">Show</button>' +
+                                        '</div>' +
+                                        '<div style="width:120px; text-align:right; color:#6b7280; font-size:12px;">&nbsp;</div>' +
+                                        '</div>' +
+                                        '<div style="display:flex; gap:12px; margin-top:5px;">' +
+                                        '<button class="popup-save-password" style="flex:1; padding:10px; background:#4caf50; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s;">Save</button>' +
+                                        '<button class="popup-cancel-password" style="flex:1; padding:10px; background:#f44336; color:white; border:none; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s;">Cancel</button>' +
+                                        '</div></div></td>';
                 return tpl;
             };
 
@@ -219,10 +228,12 @@ if ($result) {
                         .then(function(res){ return res.json(); })
                         .then(function(json){
                             if (json.success) {
-                                var roleView = row.querySelector('.view-role'); if (roleView) roleView.textContent = newRole;
+                                var roleView = row.querySelector('.view-role');
+                                var savedRole = (json.role && typeof json.role === 'string') ? json.role : newRole;
+                                if (roleView) roleView.textContent = savedRole;
                                 popup.remove(); openPopup = null; toasts('Role updated');
                                 // Refresh the page to show updated data
-                                setTimeout(function(){ window.location.reload(); }, 1000);
+                                setTimeout(function(){ window.location.reload(); }, 900);
                             } else { 
                                 toasts(json.error || 'Update failed', true); 
                             }
@@ -244,6 +255,8 @@ if ($result) {
                 
                 var newPassInput = popup.querySelector('.popup-new-password');
                 var confirmPassInput = popup.querySelector('.popup-confirm-password');
+                var genBtn = popup.querySelector('.btn-generate-password');
+                var copyBtn = popup.querySelector('.btn-copy-password');
                 var saveBtn = popup.querySelector('.popup-save-password');
                 var cancelBtn = popup.querySelector('.popup-cancel-password');
                 var toggleNewBtn = popup.querySelector('.toggle-new-password');
@@ -272,6 +285,64 @@ if ($result) {
                         toggleConfirmBtn.textContent = 'Show';
                     }
                 });
+
+                // Password generator helper
+                function generatePassword(length) {
+                    length = length || 12;
+                    var upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                    var lower = 'abcdefghijklmnopqrstuvwxyz';
+                    var numbers = '0123456789';
+                    // Use a safe subset of special characters
+                    var specials = '!@#$%^&*()';
+                    // Ensure at least one of each required class
+                    var all = upper + lower + numbers + specials;
+                    var pwd = '';
+                    // pick one required from each
+                    pwd += upper.charAt(Math.floor(Math.random()*upper.length));
+                    pwd += numbers.charAt(Math.floor(Math.random()*numbers.length));
+                    pwd += specials.charAt(Math.floor(Math.random()*specials.length));
+                    // fill the rest
+                    for (var i = 3; i < length; i++) pwd += all.charAt(Math.floor(Math.random()*all.length));
+                    // shuffle
+                    pwd = pwd.split('').sort(function(){return 0.5 - Math.random();}).join('');
+                    return pwd;
+                }
+
+                // Wire generate button
+                if (genBtn) genBtn.addEventListener('click', function(){
+                    var p = generatePassword(12);
+                    newPassInput.value = p;
+                    confirmPassInput.value = p;
+                    // Show the generated password in plaintext by default
+                    try { newPassInput.type = 'text'; confirmPassInput.type = 'text'; if (toggleNewBtn) toggleNewBtn.textContent = 'Hide'; if (toggleConfirmBtn) toggleConfirmBtn.textContent = 'Hide'; } catch(e) { /* ignore */ }
+                });
+
+                // Wire copy button (inline confirmation)
+                if (copyBtn) copyBtn.addEventListener('click', function(){
+                    var val = newPassInput.value || '';
+                    if (!val) { toasts('No generated password to copy', true); return; }
+                    var doCopy = function(text){
+                        if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+                        return new Promise(function(resolve, reject){ try { var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); resolve(); } catch(e){ reject(e); } });
+                    };
+                    doCopy(val).then(function(){
+                        // Inline confirmation element
+                        var conf = document.createElement('span');
+                        conf.className = 'copy-confirm';
+                        conf.textContent = 'Copied!';
+                        conf.style.marginLeft = '8px';
+                        conf.style.color = '#10b981';
+                        conf.style.fontSize = '13px';
+                        conf.style.fontWeight = '600';
+                        copyBtn.parentNode.appendChild(conf);
+                        setTimeout(function(){ try{ conf.remove(); } catch(e){} }, 1600);
+                    }).catch(function(){
+                        toasts('Copy failed', true);
+                    });
+                });
+
+                // Auto-generate on open (also show it)
+                if (genBtn) { genBtn.click(); }
                 
                 cancelBtn.addEventListener('click', function(){ 
                     popup.remove(); 

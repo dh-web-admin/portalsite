@@ -3,13 +3,15 @@
  * Used by: admin/dashboard.php
  *---------------------------------*/
 
+/* Layout container for dashboard tiles */
 .tiles {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start; /* Align items to the left */
-  margin: 20px 10px 10px;
-  gap: 15px;
-  padding: 10px 20px; /* Add horizontal padding to prevent cutoff at edges */
+  justify-content: center;
+  gap: 28px; /* visible gap between tiles */
+  margin: 20px auto;
+  padding: 10px 20px; /* horizontal padding to prevent cutoff at edges */
+  max-width: 1260px; /* center column to hold three tiles per row nicely */
 }
 
 .tile {
@@ -19,7 +21,9 @@
   padding: 35px;
   margin: 0;
   text-align: left;
-  width: calc(33.333% - 10px);
+  /* Use a flex-basis calculation so three tiles fit inside the centered max-width container
+     while preserving the gap. This keeps tile size consistent and centered. */
+  flex: 0 0 calc((100% - 56px) / 3);
   min-height: 180px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.3s ease;
@@ -33,13 +37,6 @@
   cursor: pointer;
   position: relative;
   z-index: 1;
-}
-
-.tile:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  background: #8c929c;
-  z-index: 10;
 }
 
 .tile h2 {
@@ -58,13 +55,20 @@
 }
 
 @media (max-width: 1024px) {
+  .tiles {
+    max-width: 960px;
+  }
   .tile {
-    width: calc(50% - 10px);
+    flex: 0 0 calc((100% - 28px) / 2);
   }
 }
 
 @media (max-width: 600px) {
+  .tiles {
+    max-width: 100%;
+    padding: 10px;
+  }
   .tile {
-    width: 100%;
+    flex: 0 0 100%;
   }
 }

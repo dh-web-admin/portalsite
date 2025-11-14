@@ -22,7 +22,7 @@ $actualRole = $user['role'] ?? 'laborer';
 // Check if developer is previewing as another role
 if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
     $previewRole = $_GET['preview_role'];
-    $allowedRoles = ['admin', 'projectmanager', 'estimator', 'accounting', 'superintendent', 'foreman', 'mechanic', 'operator', 'laborer', 'developer'];
+    $allowedRoles = ['admin', 'projectmanager', 'estimator', 'accounting', 'superintendent', 'foreman', 'mechanic', 'operator', 'laborer', 'developer', 'data_entry'];
     if (in_array($previewRole, $allowedRoles)) {
         $role = $previewRole;
     } else {
@@ -45,6 +45,7 @@ $allPages = [
     'forms' => 'Forms',
     'manuals' => 'Manuals',
     'videos' => 'Videos',
+    'coordinate_entry' => 'Coordinate Entry',
     'maps' => 'Maps'
 ];
 
@@ -64,6 +65,16 @@ switch ($role) {
     case 'laborer':
         // Only show these 3 pages
         $allowedPages = ['employee_information', 'manuals', 'videos'];
+        $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
+        break;
+    case 'guest':
+        // Guests only see the Coordinate Entry tile
+        $allowedPages = ['coordinate_entry'];
+        $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
+        break;
+    case 'data_entry':
+        // Data-entry users also only see the Coordinate Entry tile
+        $allowedPages = ['coordinate_entry'];
         $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
         break;
     case 'admin':
@@ -108,11 +119,23 @@ switch ($role) {
                     }
                     ?>
                     <?php foreach ($allPages as $page => $title): ?>
-                        <?php if (!in_array($page, $hiddenPages)): ?>
-                            <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/') . $previewParam); ?>" class="tile">
-                                <h2><?php echo htmlspecialchars($title); ?></h2>
-                            </a>
-                        <?php endif; ?>
+                        <?php
+                            // Skip pages hidden by role rules
+                            if (in_array($page, $hiddenPages)) {
+                                continue;
+                            }
+
+                            // Coordinate entry should only be visible to admins, developers and project managers
+                            if ($page === 'coordinate_entry') {
+                                $allowedForCoords = ['admin', 'developer', 'projectmanager', 'data_entry'];
+                                if (!in_array($role, $allowedForCoords)) {
+                                    continue;
+                                }
+                            }
+                        ?>
+                        <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/') . $previewParam); ?>" class="tile">
+                            <h2><?php echo htmlspecialchars($title); ?></h2>
+                        </a>
                     <?php endforeach; ?>
                 </div>
                 </div>

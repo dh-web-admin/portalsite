@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Recent Changes — Maps & UI Updates</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding: 28px;
+        color: #0f172a;
+        background: #fff;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 6px;
+      }
+      p {
+        color: #334155;
+        margin-top: 0;
+      }
+      pre {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 12px;
+        overflow: auto;
+      }
+      ul {
+        color: #334155;
+      }
+      .meta {
+        margin: 12px 0;
+        color: #64748b;
+        font-size: 13px;
+      }
+      .section {
+        margin-top: 18px;
+      }
+      a.button {
+        display: inline-block;
+        padding: 8px 12px;
+        background: #1d4ed8;
+        color: #fff;
+        border-radius: 8px;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Recent Changes: Maps UI & Add Supplier Improvements</h1>
+      <div class="meta">Author: dh-web-admin • Date: Nov 14, 2025</div>
+      <p>
+        Summary of code and UI changes made to the Maps page and supporting
+        files. These edits were implemented to improve supplier coordinate
+        entry, supplier details presentation, and action placement.
+      </p>
+
+      <div class="section">
+        <h2>Files Changed</h2>
+        <ul>
+          <li>
+            <strong>pages/maps/index.php</strong> — Primary changes: combined
+            coordinates input, parsing fallbacks, hidden latitude/longitude
+            fields, capture-phase parsing, new
+            <code>resetSupplierDetails()</code>, stacked details/actions UI, CSS
+            polish, and relocation of action buttons into
+            <code>#supplierActionsBar</code>.
+          </li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Key Functional Changes</h2>
+        <ul>
+          <li>
+            Combined Coordinates input in "Add Supplier" modal: user may now
+            enter "lat, lng" in one field (e.g. <code>41.0998, -80.6495</code>).
+          </li>
+          <li>
+            Hidden fields <code>latitude</code> and <code>longitude</code> are
+            populated on submit via a capture-phase listener and multiple
+            parsing fallbacks.
+          </li>
+          <li>
+            Robust parsing: uses existing <code>parseCoords()</code> helper (if
+            present) and a numeric regex fallback; normalizes NBSPs and stray
+            characters.
+          </li>
+          <li>
+            Added <code>resetSupplierDetails()</code> to reliably clear the
+            details box and the actions bar.
+          </li>
+          <li>
+            Moved action buttons (Edit / Directions / Delete) out of marker
+            popups into a dedicated <code>#supplierActionsBar</code> placed
+            directly below the supplier details box. The bar now matches the
+            details box width and aligns left.
+          </li>
+          <li>
+            Directions link: builds a Google Maps directions URL preferring
+            lat/lng and falling back to the address when coords are not
+            available.
+          </li>
+          <li>
+            Styling polish: introduced CSS classes
+            <code>.supplier-details-container</code>,
+            <code>.supplier-details-stack</code>, and adjusted
+            <code>.supplier-actions-bar</code> for consistent UI.
+          </li>
+          <li>
+            Removed duplicate/malformed JS block that previously prevented map
+            initialization.
+          </li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Why this was done</h2>
+        <p>
+          External contributors often have coordinates available as a single
+          "lat, lng" string. The goal was to accept that input, convert it to
+          numeric lat/lng that the server expects, and make supplier actions
+          more discoverable and consistent by moving them into a single,
+          accessible bar.
+        </p>
+      </div>
+
+      <div class="section">
+        <h2>How to verify</h2>
+        <ol>
+          <li>Open the Maps page: <code>/pages/maps/</code>.</li>
+          <li>Select a service from the ribbon.</li>
+          <li>
+            Click a marker — the supplier details should appear in the details
+            box and action buttons (Edit / Directions / Delete) should appear
+            directly beneath, left-aligned, matching the details box width.
+          </li>
+          <li>
+            Open "+ Add Supplier" and enter coordinates in combined format:
+            <code>41.0998, -80.6495</code>. Submit — the hidden
+            <code>latitude</code>/<code>longitude</code> fields should be
+            populated and the supplier added.
+          </li>
+          <li>
+            Click on empty map space — the details box and actions bar should
+            clear.
+          </li>
+        </ol>
+      </div>
+
+      <div class="section">
+        <h2>Technical notes & next steps</h2>
+        <ul>
+          <li>
+            The server-side endpoint <code>api/add_supplier.php</code> remains
+            authoritative and still requires numeric lat/lng; client-side
+            parsing is best-effort to populate those fields.
+          </li>
+          <li>
+            If you see parsing failures in-browser, open developer console and
+            look for <code>console.debug</code> messages from the Add Supplier
+            flow; copy them into an issue so parsing can be adjusted for edge
+            cases.
+          </li>
+          <li>
+            Planned follow-ups: make action buttons responsive (icon-only on
+            narrow screens), optionally close open marker popups when resetting
+            details, and add a small unit test or QA checklist.
+          </li>
+        </ul>
+      </div>
+
+      <div class="section">
+        <h2>Patch / Diff</h2>
+        <p>
+          The main edits were applied directly to
+          <code>pages/maps/index.php</code>. Use Git to view the exact patch if
+          required:
+        </p>
+        <pre>
+git diff --name-only | grep "pages/maps/index.php" || git log -p -1 -- pages/maps/index.php</pre
+        >
+      </div>
+
+      <p style="margin-top: 18px">
+        Questions or want me to add responsive icon-only buttons?
+        <a class="button" href="get-started.html">Back to Dev Dashboard</a>
+      </p>
+    </div>
+  </body>
+</html>

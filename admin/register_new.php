@@ -57,10 +57,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Check role is one of allowed values
-    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
+    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer','data_entry'];
     if (empty($error) && !in_array($role, $allowed_roles, true)) {
         $error = "Invalid role selected.";
     }
+
+        // Verify the requested role exists in the DB ENUM to avoid silent truncation
+        if (empty($error)) {
+            $colRes = $conn->query("SHOW COLUMNS FROM users LIKE 'role'");
+            if ($colRes) {
+                $col = $colRes->fetch_assoc();
+                if (isset($col['Type']) && preg_match("/^enum\\((.*)\\)$/i", $col['Type'], $m)) {
+                    preg_match_all("/'([^']*)'/", $m[1], $matches);
+                    $enum_vals = $matches[1] ?? [];
+                    if (!in_array($role, $enum_vals, true)) {
+                        $error = "Selected role is not supported by the database. Please run the migration to add this role.";
+                    }
+                } else {
+                    $error = "Unable to verify role support in database.";
+                }
+            } else {
+                $error = "Unable to read database schema to verify role support.";
+            }
+        }
 
     if (empty($error)) {
         // Check if email already exists (use prepared statement)
@@ -154,7 +173,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <select id="role" name="role" required>
                                 <option value="" disabled selected>Select role</option>
                                 <?php
-                                    $roles = ['admin'=>'Admin','projectmanager'=>'Project Manager','estimator'=>'Estimator','accounting'=>'Accounting','superintendent'=>'Superintendent','foreman'=>'Foreman','mechanic'=>'Mechanic','operator'=>'Operator','laborer'=>'Laborer','developer'=>'Developer'];
+                                    $roles = ['admin'=>'Admin','projectmanager'=>'Project Manager','estimator'=>'Estimator','accounting'=>'Accounting','superintendent'=>'Superintendent','foreman'=>'Foreman','mechanic'=>'Mechanic','operator'=>'Operator','laborer'=>'Laborer','developer'=>'Developer','data_entry'=>'Data Entry'];
                                     $selectedRole = $old['role'] ?? '';
                                     foreach ($roles as $k => $label) {
                                         $sel = ($k === $selectedRole) ? 'selected' : '';

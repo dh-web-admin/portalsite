@@ -22,7 +22,7 @@ if (!isset($_SESSION['email'])) {
     // Check if developer is previewing as another role
     if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
         $previewRole = $_GET['preview_role'];
-        $allowedRoles = ['admin', 'projectmanager', 'estimator', 'accounting', 'superintendent', 'foreman', 'mechanic', 'operator', 'laborer'];
+        $allowedRoles = ['admin', 'projectmanager', 'estimator', 'accounting', 'superintendent', 'foreman', 'mechanic', 'operator', 'laborer', 'data_entry'];
         
         if (in_array($previewRole, $allowedRoles)) {
             $role = $previewRole;

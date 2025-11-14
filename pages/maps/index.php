@@ -38,6 +38,44 @@ if (!can_access($role, 'maps')) {
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
   <link rel="stylesheet" href="../../assets/css/project-checklist.css" />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Supplier details polished styles */
+    .supplier-details-container {
+      width: 560px;
+      min-height: 56px;
+      padding: 22px 14px 14px 14px;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #334155;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.08);
+      border: 1px solid #e2e8f0;
+      font-size: 13px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      position: relative;
+      line-height: 1.2;
+    }
+    .supplier-details-left { flex: 1; }
+    .supplier-grid { display:grid; grid-template-columns: 110px 1fr 110px 1fr; column-gap:10px; row-gap:6px; }
+    .supplier-name { grid-column: 1 / 3; font-weight:700; color:#059669; font-size:14px; }
+    .supplier-contact { grid-column: 3 / 5; text-align:right; font-size:12px; color:#475569; }
+    .supplier-label { font-weight:600; color:#64748b; text-align:right; }
+    .supplier-notes { margin-top:8px; font-size:12px; color:#64748b; border-top:1px solid #f1f5f9; padding-top:8px; font-style:italic; }
+    /* Actions bar under ribbon */
+    .supplier-details-stack { display:flex; flex-direction:column; align-items:flex-start; gap:8px; width:560px; }
+    /* Actions bar should match the details box width and align left */
+    .supplier-actions-bar { display:flex; justify-content:flex-start; gap:8px; padding:8px 0; width:100%; }
+    /* Keep old class available but make it inert (we now render actions in the bar) */
+    .supplier-buttons { display:flex; }
+    .supplier-buttons > * { display:inline-flex !important; align-items:center !important; justify-content:center !important; white-space:nowrap !important; }
+    .btn-small { padding:6px 10px; border-radius:6px; font-size:12px; color:#fff; border:none; cursor:pointer; box-shadow:0 2px 6px rgba(2,6,23,0.08); display:inline-flex !important; }
+    .btn-edit { background:#667eea; }
+    .btn-directions { background:#06b6d4; text-decoration:none; display:inline-block; text-align:center; }
+    .btn-delete { background:#ef4444; }
+    .supplier-details-placeholder { color:#94a3b8; font-size:13px; padding:6px 0; }
+    .supplier-details-container a { color: #059669; }
+  </style>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -57,12 +95,15 @@ if (!can_access($role, 'maps')) {
           <div class="map-ribbon" id="mapRibbon">
             <!-- Buttons will be dynamically loaded -->
           </div>
-          
           <!-- Add Supplier Button, Details Box, Filters, and Supplier Dropdown -->
           <div style="margin-bottom: 12px; margin-top: 12px; display: flex; gap: 14px; align-items: flex-start; flex-shrink: 0;">
             <button id="addSupplierBtn" class="btn btn-primary">+ Add Supplier</button>
-            <div id="supplierDetailsBox" style="width: 560px; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; color: #94a3b8; min-height: 32px; display: flex; align-items: center; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-              Supplier Details
+            <div class="supplier-details-stack">
+              <div id="supplierDetailsBox" class="supplier-details-container">
+                <div class="supplier-details-placeholder">Supplier Details</div>
+              </div>
+              <div id="supplierActionsBar" class="supplier-actions-bar" style="display:flex; justify-content:flex-start; gap:8px; padding:8px 0; width:100%;">
+              </div>
             </div>
             
             <!-- Supplier Count -->
@@ -140,15 +181,13 @@ if (!can_access($role, 'maps')) {
           <input type="text" name="address" autocomplete="off" class="autocomplete-input" data-field="address" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
           <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <div>
-            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Latitude *</label>
-            <input type="text" name="latitude" required placeholder="e.g. 41.0998" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
-          </div>
-          <div>
-            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Longitude *</label>
-            <input type="text" name="longitude" required placeholder="e.g. -80.6495" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
-          </div>
+        <div>
+          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Coordinates * <span style="font-weight:400;font-size:12px;color:#94a3b8">(format: lat, lng)</span></label>
+          <input type="text" id="addSupplierCoordinates" placeholder="e.g. 41.0998, -80.6495" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+          <div id="addSupplierCoordError" class="coord-error" aria-live="polite" style="display:none;margin-top:6px;color:#ef4444;font-size:12px;"></div>
+          <!-- Hidden fields populated from combined coordinates before submit -->
+          <input type="hidden" name="latitude" id="addSupplierLatitude" />
+          <input type="hidden" name="longitude" id="addSupplierLongitude" />
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
@@ -289,56 +328,92 @@ if (!can_access($role, 'maps')) {
       var iconCache = {};
       var currentService = null;
       
-      // Function to reset supplier details box to default
-      function resetSupplierDetails() {
-        var detailsBox = document.getElementById('supplierDetailsBox');
-        if (!detailsBox) return;
-        detailsBox.innerHTML = 'Supplier Details';
-        detailsBox.style.color = '#94a3b8';
-      }
-      
-      // Function to show supplier details in the box
       function showSupplierDetails(supplier) {
         var detailsBox = document.getElementById('supplierDetailsBox');
         if (!detailsBox) return;
-        
-        // Compact two-column grid layout
-        var html = '<div style="display:flex; width:100%; gap:10px;">';
-        html += '<div style="flex:1;">';
-        html += '<div style="display:grid; grid-template-columns: 110px 1fr 110px 1fr; column-gap:8px; row-gap:3px; font-size:11px; color:#334155;">';
-        // Row 1
-        html += '<div style="grid-column:1 / 3; font-weight:600; color:#059669; font-size:12px;">' + (supplier.name || 'Unknown') + '</div>';
-        html += '<div style="grid-column:3 / 5; text-align:right; font-size:11px;">' + (supplier.sales_contact || '') + '</div>';
-        // Row 2
-        html += '<div style="font-weight:500; color:#64748b; text-align:right;">Material:</div><div>' + (supplier.material || '') + '</div>';
-        html += '<div style="font-weight:500; color:#64748b; text-align:right;">Type:</div><div>' + (supplier.location_type || '') + '</div>';
-        // Row 3 (address spans two columns)
-        html += '<div style="font-weight:500; color:#64748b; text-align:right;">Address:</div><div style="grid-column:2 / 5;">' + (supplier.address || '') + '</div>';
-        // Row 4 city/state
-        html += '<div style="font-weight:500; color:#64748b; text-align:right;">City:</div><div>' + (supplier.city || '') + '</div>';
-        html += '<div style="font-weight:500; color:#64748b; text-align:right;">State:</div><div>' + (supplier.state || '') + '</div>';
-        // Row 5 phone/email
-        html += '<div style="font-weight:500; color:#64748b; text-align:right;">Phone:</div><div>' + (supplier.contact_number || '') + '</div>';
-        html += '<div style="font-weight:500; color:#64748b; text-align:right;">Email:</div><div><a href="mailto:' + (supplier.email || '') + '" style="color:#059669; text-decoration:none;">' + (supplier.email || '') + '</a></div>';
-        html += '</div>';
-        // Notes
-        if (supplier.notes) {
-          html += '<div style="margin-top:4px; font-size:10px; font-style:italic; color:#64748b; border-top:1px solid #e2e8f0; padding-top:4px;">' + supplier.notes + '</div>';
-        }
-        html += '</div>';
-        // Buttons column
-        html += '<div style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">';
-        html += '<button onclick="editSupplier(' + supplier.id + ')" style="padding:3px 10px; background:#667eea; color:#fff; border:none; border-radius:3px; font-size:10px; font-weight:500; cursor:pointer;">Edit</button>';
-        html += '<button onclick="deleteSupplier(' + supplier.id + ', \'' + (supplier.name || 'this supplier').replace(/'/g, "\\'") + '\')" style="padding:3px 10px; background:#ef4444; color:#fff; border:none; border-radius:3px; font-size:10px; font-weight:500; cursor:pointer;">Delete</button>';
-        html += '</div>';
-        html += '</div>';
-        
-        detailsBox.innerHTML = html;
-        
-        // Populate dropdown with current suppliers
-        updateSupplierDropdown(supplier.id);
+
+        // Build a cleaner, class-based HTML for the details box
+        var html = '';
+        html += '<div class="supplier-details-left">';
+        html += '<div class="supplier-grid">';
+        html += '<div class="supplier-name">' + (supplier.name || 'Unknown') + '</div>';
+        html += '<div class="supplier-contact">' + (supplier.sales_contact || '') + '</div>';
+        html += '<div class="supplier-label">Material:</div><div>' + (supplier.material || '') + '</div>';
+        html += '<div class="supplier-label">Type:</div><div>' + (supplier.location_type || '') + '</div>';
+        html += '<div class="supplier-label">Address:</div><div style="grid-column:2 / 5;">' + (supplier.address || '') + '</div>';
+        html += '<div class="supplier-label">City:</div><div>' + (supplier.city || '') + '</div>';
+        html += '<div class="supplier-label">State:</div><div>' + (supplier.state || '') + '</div>';
+        html += '<div class="supplier-label">Phone:</div><div>' + (supplier.contact_number || '') + '</div>';
+        html += '<div class="supplier-label">Email:</div><div><a href="mailto:' + (supplier.email || '') + '">' + (supplier.email || '') + '</a></div>';
+          html += '</div>'; // supplier-grid
+          if (supplier.notes) {
+            html += '<div class="supplier-notes">' + supplier.notes + '</div>';
+          }
+          html += '</div>'; // supplier-details-left
+
+          detailsBox.innerHTML = html;
+
+          // Render action buttons into the separate actions bar under the ribbon
+          try {
+            var actionsBar = document.getElementById('supplierActionsBar');
+            if (actionsBar) {
+              var actionsHtml = '';
+              actionsHtml += '<button id="supplierActionEdit" class="btn-small btn-edit">Edit</button>';
+
+              // Build directions URL (prefer coords)
+              var directionsUrl = '';
+              try {
+                if (supplier.latitude && supplier.longitude) {
+                  directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(String(supplier.latitude) + ',' + String(supplier.longitude)) + '&travelmode=driving';
+                } else {
+                  var addrParts = [];
+                  if (supplier.address) addrParts.push(supplier.address);
+                  if (supplier.city) addrParts.push(supplier.city);
+                  if (supplier.state) addrParts.push(supplier.state);
+                  if (addrParts.length) directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(addrParts.join(', ')) + '&travelmode=driving';
+                }
+              } catch (e) { directionsUrl = ''; }
+
+              if (directionsUrl) {
+                actionsHtml += '<a id="supplierActionDirections" href="' + directionsUrl + '" target="_blank" rel="noopener" class="btn-small btn-directions">Directions</a>';
+              }
+
+              actionsHtml += '<button id="supplierActionDelete" class="btn-small btn-delete">Delete</button>';
+              actionsBar.innerHTML = actionsHtml;
+
+              // Attach handlers
+              var editBtn = document.getElementById('supplierActionEdit');
+              if (editBtn) editBtn.addEventListener('click', function(e){ e.preventDefault(); editSupplier(supplier.id); });
+              var delBtn = document.getElementById('supplierActionDelete');
+              if (delBtn) delBtn.addEventListener('click', function(e){ e.preventDefault(); deleteSupplier(supplier.id, supplier.name || ''); });
+            }
+          } catch (ex) {
+            console.error('Failed to render actions bar:', ex);
+          }
+
+          updateSupplierDropdown(supplier.id);
       }
-      
+
+      // Reset the supplier details UI and clear the actions bar
+      function resetSupplierDetails() {
+        try {
+          var detailsBox = document.getElementById('supplierDetailsBox');
+          if (detailsBox) {
+            detailsBox.innerHTML = '<div class="supplier-details-placeholder">Supplier Details</div>';
+          }
+
+          var actionsBar = document.getElementById('supplierActionsBar');
+          if (actionsBar) {
+            actionsBar.innerHTML = '';
+          }
+
+          // Clear any edit state
+          try { currentEditSupplier = null; } catch (e) { /* ignore if not defined yet */ }
+        } catch (e) {
+          console.error('resetSupplierDetails error', e);
+        }
+      }
+
       // Supplier search removed: keep a safe no-op update function so other code can call it
       function updateSupplierDropdown(currentSupplierId) {
         // no-op: search bar and dropdown were removed intentionally
@@ -397,6 +472,9 @@ if (!can_access($role, 'maps')) {
         var markerColor = getColorForSupplier(supplier.name);
         var customIcon = createColoredIcon(markerColor);
         
+        // Note: action buttons are intentionally only shown in the supplier details box,
+        // not in the marker popup. Keep popupContent focused on supplier info.
+
         var marker = L.marker([lat, lng], { icon: customIcon });
         // Add marker to cluster group when available, otherwise add directly to map
         if (markerCluster) {
@@ -701,6 +779,49 @@ if (!can_access($role, 'maps')) {
         });
       }
 
+      // Parse combined coordinates for Add Supplier before submit (capture phase)
+      if (addSupplierForm) {
+        addSupplierForm.addEventListener('submit', function(e) {
+          // run early (capture-phase listener added later in file will ensure this runs before bubble listeners)
+          var coordsInput = document.getElementById('addSupplierCoordinates');
+          var latHidden = document.getElementById('addSupplierLatitude');
+          var lngHidden = document.getElementById('addSupplierLongitude');
+          var err = document.getElementById('addSupplierCoordError');
+          if (!coordsInput || !latHidden || !lngHidden) return;
+
+          var val = coordsInput.value.trim();
+          // Clear prior error
+          if (err) { err.textContent = ''; err.style.display = 'none'; }
+
+          if (!val) {
+            // API requires lat/lng — prevent submit and show error
+            if (err) { err.textContent = 'Please provide coordinates as "lat, lng"'; err.style.display = 'block'; }
+            e.preventDefault();
+            return;
+          }
+
+          // Use parseCoords (defined later in this file) to interpret the combined value
+          var parsed = null;
+          try { parsed = parseCoords(val); } catch (ex) { parsed = null; }
+          // Fallback: try to extract two numeric values from the string (robust against NBSP, extra chars)
+          if (!parsed || isNaN(Number(parsed.lat)) || isNaN(Number(parsed.lng))) {
+            var m = (val || '').replace(/\u00A0/g, ' ').match(/-?\d+(?:\.\d+)?/g);
+            if (m && m.length >= 2) {
+              parsed = { lat: parseFloat(m[0]), lng: parseFloat(m[1]) };
+            }
+          }
+          if (!parsed || isNaN(Number(parsed.lat)) || isNaN(Number(parsed.lng))) {
+            if (err) { err.textContent = 'Invalid coordinates — enter as "lat, lng"'; err.style.display = 'block'; }
+            e.preventDefault();
+            return;
+          }
+
+          // Populate hidden fields so existing submit logic sends numeric lat/lng
+          latHidden.value = String(parsed.lat);
+          lngHidden.value = String(parsed.lng);
+        }, true); // capture = true to run before other submit listeners
+      }
+
       // Submit handler
       if (addSupplierForm) {
         addSupplierForm.addEventListener('submit', function(e) {
@@ -714,18 +835,76 @@ if (!can_access($role, 'maps')) {
           var formData = new FormData(addSupplierForm);
           formData.append('service', currentService);
 
+          // Fallback: if hidden latitude/longitude are empty, try parsing from combined coordinates input
+          var latHiddenEl = addSupplierForm.querySelector('[name="latitude"]');
+          var lngHiddenEl = addSupplierForm.querySelector('[name="longitude"]');
+          var coordsInputEl = document.getElementById('addSupplierCoordinates');
+          var coordErrEl = document.getElementById('addSupplierCoordError');
+          if (coordErrEl) { coordErrEl.textContent = ''; coordErrEl.style.display = 'none'; }
+          try {
+            var latValNow = latHiddenEl ? (latHiddenEl.value || '').trim() : '';
+            var lngValNow = lngHiddenEl ? (lngHiddenEl.value || '').trim() : '';
+            if ((!latValNow || !lngValNow) && coordsInputEl) {
+              var parsedFallback = null;
+              try { parsedFallback = parseCoords((coordsInputEl.value || '').trim()); } catch (ex) { parsedFallback = null; }
+              if ((!parsedFallback || isNaN(Number(parsedFallback.lat)) || isNaN(Number(parsedFallback.lng))) && coordsInputEl) {
+                var raw = (coordsInputEl.value || '').replace(/\u00A0/g, ' ');
+                var m = raw.match(/-?\d+(?:\.\d+)?/g);
+                if (m && m.length >= 2) {
+                  parsedFallback = { lat: parseFloat(m[0]), lng: parseFloat(m[1]) };
+                }
+              }
+              if (parsedFallback && !isNaN(Number(parsedFallback.lat)) && !isNaN(Number(parsedFallback.lng))) {
+                if (latHiddenEl) latHiddenEl.value = String(parsedFallback.lat);
+                if (lngHiddenEl) lngHiddenEl.value = String(parsedFallback.lng);
+                // Update formData with new values as well
+                formData.set('latitude', String(parsedFallback.lat));
+                formData.set('longitude', String(parsedFallback.lng));
+              } else {
+                console.debug('Add Supplier: failed to parse coords fallback, input="' + (coordsInputEl ? coordsInputEl.value : '') + '", parsed=', parsedFallback);
+              }
+            }
+          } catch (e) {
+            console.error('Coordinate fallback parse error', e);
+          }
+
           var submitBtn = addSupplierForm.querySelector('button[type="submit"]');
           if (submitBtn) {
             submitBtn.disabled = true;
             submitBtn.textContent = 'Adding...';
           }
 
-          // Validate latitude and longitude are present and numeric
-          var latVal = (addSupplierForm.querySelector('[name="latitude"]')?.value || '').trim();
-          var lngVal = (addSupplierForm.querySelector('[name="longitude"]')?.value || '').trim();
+          // Determine latitude and longitude: prefer hidden fields, fallback to parsing the combined coords input
+          var latHiddenEl = addSupplierForm.querySelector('[name="latitude"]');
+          var lngHiddenEl = addSupplierForm.querySelector('[name="longitude"]');
+          var coordsInputEl = document.getElementById('addSupplierCoordinates');
+          var coordErrEl = document.getElementById('addSupplierCoordError');
+          if (coordErrEl) { coordErrEl.textContent = ''; coordErrEl.style.display = 'none'; }
+
+          var latVal = latHiddenEl ? (latHiddenEl.value || '').trim() : '';
+          var lngVal = lngHiddenEl ? (lngHiddenEl.value || '').trim() : '';
+
+          if ((!latVal || !lngVal) && coordsInputEl) {
+            var parsedCoords = null;
+            try { parsedCoords = parseCoords((coordsInputEl.value || '').trim()); } catch (ex) { parsedCoords = null; }
+            if (parsedCoords && !isNaN(Number(parsedCoords.lat)) && !isNaN(Number(parsedCoords.lng))) {
+              latVal = String(parsedCoords.lat);
+              lngVal = String(parsedCoords.lng);
+              if (latHiddenEl) latHiddenEl.value = latVal;
+              if (lngHiddenEl) lngHiddenEl.value = lngVal;
+              formData.set('latitude', latVal);
+              formData.set('longitude', lngVal);
+            }
+          }
+
           if (!latVal || !lngVal || isNaN(Number(latVal)) || isNaN(Number(lngVal))) {
             if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Add Supplier'; }
-            alert('Please provide valid numeric Latitude and Longitude values.');
+            if (coordErrEl) {
+              coordErrEl.textContent = 'Please provide valid numeric Latitude and Longitude values.';
+              coordErrEl.style.display = 'block';
+            } else {
+              alert('Please provide valid numeric Latitude and Longitude values.');
+            }
             return;
           }
 

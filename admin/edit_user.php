@@ -48,10 +48,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $role = $_POST['role'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
+    $allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer','data_entry'];
     if (!in_array($role, $allowed_roles, true)) {
         $error = 'Invalid role';
     }
+
+        // Verify role exists in DB ENUM to avoid silent empty role writes
+        if (empty($error)) {
+            $colRes = $conn->query("SHOW COLUMNS FROM users LIKE 'role'");
+            if ($colRes) {
+                $col = $colRes->fetch_assoc();
+                if (isset($col['Type']) && preg_match("/^enum\\((.*)\\)$/i", $col['Type'], $m)) {
+                    preg_match_all("/'([^']*)'/", $m[1], $matches);
+                    $enum_vals = $matches[1] ?? [];
+                    if (!in_array($role, $enum_vals, true)) {
+                        $error = 'Selected role is not supported by the database. Please run the migration to add this role.';
+                    }
+                } else {
+                    $error = 'Unable to verify role support in database.';
+                }
+            } else {
+                $error = 'Unable to read database schema to verify role support.';
+            }
+        }
 
     if (empty($error)) {
         if ($password !== '') {
@@ -81,6 +100,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = $stmt->get_result();
     $user = $res->fetch_assoc();
     $stmt->close();
+
+        // If we attempted to update and the role persisted differently, surface that to admin
+        if (!empty($message) && isset($role) && $user) {
+            if ($user['role'] !== $role) {
+                $message .= ' (role saved as: ' . htmlspecialchars($user['role']) . ')';
+            }
+        }
 }
 
 ?>
@@ -124,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label>Role</label>
                         <select name="role" required>
-                            <?php foreach (['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'] as $r):
+                            <?php foreach (['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer','data_entry'] as $r):
                                 $sel = ($user['role'] === $r) ? 'selected' : '';
                                 echo "<option value=\"$r\" $sel>$r</option>";
                             endforeach; ?>

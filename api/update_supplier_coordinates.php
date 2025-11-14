@@ -20,8 +20,8 @@ if (!isset($_SESSION['user_id']) && isset($_SESSION['email']) && isset($conn)) {
   }
 }
 
-// Only admins or developers may update coordinates
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'developer'])) {
+// Only admins, developers, or data_entry users may update coordinates
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'developer', 'data_entry'])) {
   echo json_encode(['success' => false, 'message' => 'Unauthorized']);
   exit;
 }

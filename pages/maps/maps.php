@@ -87,6 +87,8 @@ if (!can_access($role, 'maps')) {
       .loading { color: var(--muted); }
       .addr-text { color: #0f172a; display:inline-block; max-width:420px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
       .coord-input { padding:6px 8px; border-radius:6px; border:1px solid var(--border); background:#fff; }
+      .coord-input.invalid { border-color: var(--danger); box-shadow: 0 0 0 4px rgba(197,48,48,0.06); }
+      .coord-error { color: var(--danger); font-size: 12px; margin-top:6px; display:none; }
       .coord-input:disabled { background:#f8fafc; color: #465769; }
       .copy-btn{ background: var(--pill); border:1px solid #d7e9ff; color: var(--accent-2); }
       .svc-btn.copy-btn{ padding:6px 8px; font-weight:600; }
@@ -99,6 +101,24 @@ if (!can_access($role, 'maps')) {
         .addr-text{ max-width:200px; }
         .coord-input{ width: 100px; }
       }
+      /* Geocode stats pill */
+      .geocode-stats{
+        display:inline-block;
+        background: linear-gradient(180deg, rgba(11,111,178,0.06), rgba(11,111,178,0.03));
+        color: var(--accent-2);
+        font-weight: 700;
+        padding: 8px 14px;
+        border-radius: 14px;
+        font-size: 15px;
+        border: 1px solid rgba(11,111,178,0.14);
+        box-shadow: 0 8px 20px rgba(12,44,88,0.06);
+        margin-bottom: 12px;
+        transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s;
+      }
+      .geocode-stats.pulse{
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 14px 34px rgba(12,44,88,0.12);
+      }
     </style>
   </head>
   <body>
@@ -107,12 +127,14 @@ if (!can_access($role, 'maps')) {
       Select a service to list all suppliers (full table view)
     </div>
 
+    <div id="geocodeStats" class="geocode-stats" aria-live="polite">Geocoded: 0 of 0</div>
+
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
       <div class="ribbon" id="servicesRibbon">
         <div class="loading">Loading services…</div>
       </div>
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-        <button id="saveAllBtn" class="svc-btn" <?php if(!in_array($role, ['admin','developer'])) echo 'disabled title="Admin or developer required to save"'; ?>>Save Changes</button>
+        <button id="saveAllBtn" class="svc-btn" <?php if(!in_array($role, ['admin','developer','data_entry'])) echo 'disabled title="Admin, developer, or data_entry required to save"'; ?>>Save Changes</button>
         <button id="refreshBtn" class="svc-btn" title="Refresh now">Refresh</button>
       </div>
     </div>
@@ -152,7 +174,7 @@ if (!can_access($role, 'maps')) {
         var servicesTimer = null;
         var suppliersTimer = null;
         // Whether current user can edit supplier coordinates (admins/developers)
-        var userCanEdit = <?php echo (in_array($role, ['admin','developer']) ? 'true' : 'false'); ?>;
+        var userCanEdit = <?php echo (in_array($role, ['admin','developer','data_entry']) ? 'true' : 'false'); ?>;
 
         // Columns to display in the suppliers table (requested subset)
         var columns = [
@@ -161,8 +183,7 @@ if (!can_access($role, 'maps')) {
           "city",
           "state",
           "copy",
-          "latitude",
-          "longitude"
+          "coordinates"
         ];
 
         function renderHeader() {
@@ -273,6 +294,8 @@ if (!can_access($role, 'maps')) {
                 return;
               }
               var suppliers = data.suppliers || [];
+              // update geocode stats for this service
+              try { updateGeocodeStats(suppliers); } catch(e) { console.error(e); }
               tableMeta.textContent = suppliers.length + " supplier" + (suppliers.length === 1 ? "" : "s") + ' for "' + service + '".';
                 if (suppliers.length === 0) {
                 tableBody.innerHTML = '<tr><td colspan="' + (columns.length + 1) + '">No suppliers for this service.</td></tr>';
@@ -327,17 +350,20 @@ if (!can_access($role, 'maps')) {
                       }
                     });
                     td.appendChild(btn);
-                  } else if (col === 'latitude' || col === 'longitude') {
+                  } else if (col === 'coordinates') {
                     var input = document.createElement('input');
                     input.type = 'text';
-                    input.value = String(val);
-                    input.className = 'coord-input ' + (col === 'latitude' ? 'lat-input' : 'lng-input');
-                    input.style.width = '110px';
-                    // Ensure inputs are editable
+                    // build combined coords if both lat & lng exist
+                    var latValTmp = (sup.latitude !== null && typeof sup.latitude !== 'undefined') ? String(sup.latitude).trim() : '';
+                    var lngValTmp = (sup.longitude !== null && typeof sup.longitude !== 'undefined') ? String(sup.longitude).trim() : '';
+                    input.value = (latValTmp !== '' && lngValTmp !== '') ? (latValTmp + ', ' + lngValTmp) : '';
+                    input.className = 'coord-input coords-input';
+                    input.style.width = '240px';
+                    input.placeholder = 'lat, lng';
                     input.readOnly = false;
                     input.disabled = false;
-                    input.style.pointerEvents = 'auto';
                     td.appendChild(input);
+                    var err = document.createElement('div'); err.className = 'coord-error'; err.setAttribute('aria-live','polite'); td.appendChild(err);
                   } else {
                     td.textContent = String(val);
                   }
@@ -352,60 +378,59 @@ if (!can_access($role, 'maps')) {
                 perSave.textContent = 'Save';
                 perSave.dataset.state = 'save';
                 perSave.style.minWidth = '68px';
-                if (!userCanEdit) { perSave.disabled = true; perSave.title = 'Admin or developer required to save'; }
+                if (!userCanEdit) { perSave.disabled = true; perSave.title = 'Admin, developer, or data_entry required to save'; }
                 perSave.addEventListener('click', function(){
                   var row = this.closest('tr');
                   var sid = row.getAttribute('data-id');
-                  var latInput = row.querySelector('.lat-input');
-                  var lngInput = row.querySelector('.lng-input');
-                  var latVal = latInput ? latInput.value.trim() : '';
-                  var lngVal = lngInput ? lngInput.value.trim() : '';
+                  var coordsInput = row.querySelector('.coords-input');
+                  var coordsVal = coordsInput ? coordsInput.value.trim() : '';
 
                   // If currently in 'edit' state, switch to editable mode
                   if (perSave.dataset.state === 'edit') {
-                    if (latInput) { latInput.disabled = false; latInput.readOnly = false; }
-                    if (lngInput) { lngInput.disabled = false; lngInput.readOnly = false; }
+                    if (coordsInput) { coordsInput.disabled = false; coordsInput.readOnly = false; }
                     perSave.dataset.state = 'save';
                     perSave.textContent = 'Save';
                     return;
                   }
 
-                  if (!sid) { alert('Missing supplier id'); return; }
-                  if (latVal === '' || lngVal === '') { alert('Please enter both latitude and longitude before saving this row'); return; }
-                  if (isNaN(Number(latVal)) || isNaN(Number(lngVal))) { alert('Please enter valid numeric latitude and longitude'); return; }
+                  if (!sid) { showToast('Missing supplier id', false); return; }
+                  // clear prior field error for this input
+                  clearFieldError(coordsInput);
+                  if (!coordsVal) { setFieldError(coordsInput, 'Enter coordinates as "lat, lng" (e.g. 41.02, -80.74)'); return; }
+                  var parsed = parseCoords(coordsVal);
+                  if (!parsed) { setFieldError(coordsInput, 'Invalid coordinates — enter as "lat, lng"'); return; }
+                  var latVal = String(parsed.lat);
+                  var lngVal = String(parsed.lng);
                   perSave.disabled = true; var old = perSave.textContent; perSave.textContent = 'Saving...';
                   var form = new FormData(); form.append('id', sid); form.append('latitude', latVal); form.append('longitude', lngVal);
                   fetch('../../api/update_supplier_coordinates.php', { method: 'POST', body: form, credentials: 'same-origin' })
                     .then(function(r){ return r.json(); })
                     .then(function(resp){
                       if (resp && resp.success) {
-                        // lock inputs and switch to Edit state
-                        if (latInput) { latInput.disabled = true; latInput.readOnly = true; }
-                        if (lngInput) { lngInput.disabled = true; lngInput.readOnly = true; }
+                        // lock coords input and switch to Edit state
+                        if (coordsInput) { coordsInput.disabled = true; coordsInput.readOnly = true; }
+                        clearFieldError(coordsInput);
                         perSave.dataset.state = 'edit';
                         perSave.textContent = 'Edit';
                         perSave.disabled = false;
                         showToast('Saved', true);
                       } else {
-                        alert((resp && resp.message) || 'Failed to save'); perSave.disabled = false; perSave.textContent = old;
+                        showToast((resp && resp.message) || 'Failed to save', false); perSave.disabled = false; perSave.textContent = old;
                       }
                     })
                     .catch(function(err){ console.error(err); alert('Failed to save'); perSave.disabled = false; perSave.textContent = old; });
                 });
-                // Determine initial state: if supplier already has latitude and longitude, render inputs as read-only and show Edit
+                // Determine initial state: if supplier already has latitude and longitude, render coords input as read-only and show Edit
                 try {
                   var initialLat = (sup.latitude !== null && typeof sup.latitude !== 'undefined') ? String(sup.latitude).trim() : '';
                   var initialLng = (sup.longitude !== null && typeof sup.longitude !== 'undefined') ? String(sup.longitude).trim() : '';
-                  var latInputEl = tr.querySelector('.lat-input');
-                  var lngInputEl = tr.querySelector('.lng-input');
+                  var coordsInputEl = tr.querySelector('.coords-input');
                   if (initialLat !== '' && initialLng !== '') {
-                    if (latInputEl) { latInputEl.disabled = true; latInputEl.readOnly = true; }
-                    if (lngInputEl) { lngInputEl.disabled = true; lngInputEl.readOnly = true; }
+                    if (coordsInputEl) { coordsInputEl.disabled = true; coordsInputEl.readOnly = true; }
                     perSave.dataset.state = 'edit';
                     perSave.textContent = 'Edit';
                   } else {
-                    if (latInputEl) { latInputEl.disabled = false; latInputEl.readOnly = false; }
-                    if (lngInputEl) { lngInputEl.disabled = false; lngInputEl.readOnly = false; }
+                    if (coordsInputEl) { coordsInputEl.disabled = false; coordsInputEl.readOnly = false; }
                     perSave.dataset.state = 'save';
                     perSave.textContent = 'Save';
                   }
@@ -416,6 +441,8 @@ if (!can_access($role, 'maps')) {
                 frag.appendChild(tr);
               });
               tableBody.appendChild(frag);
+              // update geocode stats again after rendering
+              try { updateGeocodeStats(suppliers); } catch(e) { console.error(e); }
               updateLastUpdated();
             })
             .catch(function (err) {
@@ -436,25 +463,37 @@ if (!can_access($role, 'maps')) {
 
         // wire save-all button
         var saveAllBtn = document.getElementById('saveAllBtn');
-        if (saveAllBtn) {
-          if (!userCanEdit) { saveAllBtn.disabled = true; saveAllBtn.title = 'Admin or developer required to save'; }
+          if (saveAllBtn) {
+          if (!userCanEdit) { saveAllBtn.disabled = true; saveAllBtn.title = 'Admin, developer, or data_entry required to save'; }
             saveAllBtn.addEventListener('click', function(){
             if (!activeService) { alert('No service selected'); return; }
             var rows = Array.from(tableBody.querySelectorAll('tr[data-id]'));
             if (rows.length === 0) { alert('No suppliers to save'); return; }
-            // Only include rows where at least one coord field is non-empty (user intends to save)
+            // Only include rows where the coords field is non-empty (user intends to save)
+            // Clear any prior inline validation UI
+            clearAllFieldErrors();
             var candidates = rows.map(function(row){
               var id = row.getAttribute('data-id');
-              var lat = row.querySelector('.lat-input') ? row.querySelector('.lat-input').value.trim() : '';
-              var lng = row.querySelector('.lng-input') ? row.querySelector('.lng-input').value.trim() : '';
+              var coords = row.querySelector('.coords-input') ? row.querySelector('.coords-input').value.trim() : '';
+              var lat = '';
+              var lng = '';
+              if (coords) {
+                var p = parseCoords(coords);
+                if (p) { lat = String(p.lat); lng = String(p.lng); }
+              }
               return { id: id, latitude: lat, longitude: lng, row: row };
             }).filter(function(u){ return u.id && (u.latitude !== '' || u.longitude !== ''); });
 
-            if (candidates.length === 0) { alert('No changed coordinates to save. Edit latitude and longitude for rows you want to update.'); return; }
+            if (candidates.length === 0) { showToast('No changed coordinates to save. Edit coordinates for rows you want to update.', false); return; }
 
             // Validate candidates: require both lat and lng to be present and numeric
             var invalid = candidates.find(function(u){ return u.latitude === '' || u.longitude === '' || isNaN(Number(u.latitude)) || isNaN(Number(u.longitude)); });
-            if (invalid) { alert('Please ensure selected rows have both numeric latitude and longitude before saving.'); return; }
+            if (invalid) {
+              var inp = invalid.row.querySelector('.coords-input');
+              setFieldError(inp, 'Please provide numeric latitude and longitude (lat, lng)');
+              showToast('Please correct highlighted rows before saving.', false);
+              return;
+            }
 
             (async function(){
               saveAllBtn.disabled = true; var oldText = saveAllBtn.textContent; saveAllBtn.textContent = 'Saving...';
@@ -494,6 +533,75 @@ if (!can_access($role, 'maps')) {
             setTimeout(function(){ t.style.opacity = '1'; }, 20);
             setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.style.display='none'; t.setAttribute('aria-hidden','true'); },300); }, 2500);
           }catch(e){ console.error(e); }
+        }
+
+        // Field-level inline validation helpers
+        function setFieldError(input, msg) {
+          try {
+            if (!input) return;
+            input.classList.add('invalid');
+            var err = input.closest('td') ? input.closest('td').querySelector('.coord-error') : null;
+            if (err) { err.textContent = msg || ''; err.style.display = 'block'; }
+            input.focus();
+          } catch (e) { console.error(e); }
+        }
+
+        function clearFieldError(input) {
+          try {
+            if (!input) return;
+            input.classList.remove('invalid');
+            var err = input.closest('td') ? input.closest('td').querySelector('.coord-error') : null;
+            if (err) { err.textContent = ''; err.style.display = 'none'; }
+          } catch (e) { console.error(e); }
+        }
+
+        function clearAllFieldErrors() {
+          try {
+            Array.from(document.querySelectorAll('.coord-error')).forEach(function(e){ e.textContent=''; e.style.display='none'; });
+            Array.from(document.querySelectorAll('.coords-input.invalid')).forEach(function(i){ i.classList.remove('invalid'); });
+          } catch (e) { console.error(e); }
+        }
+
+        // Update geocode statistics display (geocoded vs total)
+        function updateGeocodeStats(suppliers) {
+          var el = document.getElementById('geocodeStats');
+          if (!el) return;
+          if (!Array.isArray(suppliers)) {
+            el.textContent = 'Geocoded: 0 of 0';
+            return;
+          }
+          var total = suppliers.length;
+          var geocoded = suppliers.filter(function(s){
+            var lat = (s.latitude !== null && typeof s.latitude !== 'undefined') ? String(s.latitude).trim() : '';
+            var lng = (s.longitude !== null && typeof s.longitude !== 'undefined') ? String(s.longitude).trim() : '';
+            return lat !== '' && lng !== '' && !isNaN(Number(lat)) && !isNaN(Number(lng));
+          }).length;
+          el.textContent = 'Geocoded: ' + geocoded + ' of ' + total;
+          // pulse animation to draw attention when counts update
+          try {
+            el.classList.remove('pulse');
+            // force reflow
+            void el.offsetWidth;
+            el.classList.add('pulse');
+            setTimeout(function(){ el.classList.remove('pulse'); }, 700);
+          } catch(e) { /* ignore */ }
+        }
+
+        // Parse a combined coordinate string like "41.0230, -80.7498" (allow variations)
+        function parseCoords(input) {
+          if (!input || typeof input !== 'string') return null;
+          // remove enclosing parentheses and trim
+          var s = input.trim().replace(/^\(+|\)+$/g, '').trim();
+          // split by comma
+          var parts = s.split(',');
+          if (parts.length < 2) return null;
+          var a = parts[0].trim();
+          var b = parts[1].trim();
+          // Accept if numeric
+          var lat = Number(a);
+          var lng = Number(b);
+          if (isNaN(lat) || isNaN(lng)) return null;
+          return { lat: lat, lng: lng };
         }
 
         // start periodic polling

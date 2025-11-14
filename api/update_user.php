@@ -45,10 +45,37 @@ if ($id <= 0) {
     exit();
 }
 
-$allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer'];
+$allowed_roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer','data_entry'];
 if (!in_array($role, $allowed_roles, true)) {
     http_response_code(400);
     echo json_encode(['success'=>false,'error'=>'Invalid role']);
+    exit();
+}
+
+// Verify the requested role exists in the database ENUM to avoid MySQL silently storing an empty string
+$colRes = $conn->query("SHOW COLUMNS FROM users LIKE 'role'");
+if ($colRes) {
+    $col = $colRes->fetch_assoc();
+    if (isset($col['Type']) && preg_match("/^enum\\((.*)\\)$/i", $col['Type'], $m)) {
+        preg_match_all("/'([^']*)'/", $m[1], $matches);
+        $enum_vals = $matches[1] ?? [];
+        if (!in_array($role, $enum_vals, true)) {
+            http_response_code(400);
+            echo json_encode(['success'=>false,'error'=>"Role '{$role}' is not supported by the database. Run the migration to add this role."]);
+            $conn->close();
+            exit();
+        }
+    } else {
+        // Could not parse ENUM definition; fail safe
+        http_response_code(500);
+        echo json_encode(['success'=>false,'error'=>'Unable to verify role type in database.']);
+        $conn->close();
+        exit();
+    }
+} else {
+    http_response_code(500);
+    echo json_encode(['success'=>false,'error'=>'Unable to read database schema for role column.']);
+    $conn->close();
     exit();
 }
 
@@ -101,7 +128,19 @@ $update->bind_param($types, ...$params);
 
 if ($update->execute()) {
     $affected = $update->affected_rows;
-    echo json_encode(['success'=>true,'message'=>'User updated','affected_rows'=>$affected]);
+    // Fetch the current role from the DB to ensure we return what is actually stored
+    $fetch = $conn->prepare("SELECT role FROM users WHERE id = ? LIMIT 1");
+    $fetch->bind_param('i', $id);
+    $fetch->execute();
+    $res2 = $fetch->get_result();
+    $dbRole = null;
+    if ($res2 && $res2->num_rows) {
+        $row2 = $res2->fetch_assoc();
+        $dbRole = $row2['role'];
+    }
+    $fetch->close();
+
+    echo json_encode(['success'=>true,'message'=>'User updated','affected_rows'=>$affected,'role'=> $dbRole]);
 } else {
     http_response_code(500);
     echo json_encode(['success'=>false,'error'=>'Update failed: '.$conn->error]);

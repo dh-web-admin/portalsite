@@ -25,6 +25,12 @@ function allowed_pages_for_role(string $role): array {
         case 'developer':
             // Developers have full access in Employee Portal (dev tooling/God mode)
             return $all;
+        case 'guest':
+            // Guest users only need access to maps for coordinate entry
+            return ['maps'];
+        case 'data_entry':
+            // Data-entry users (external contributors) only have access to maps for coordinate entry
+            return ['maps'];
         case 'admin':
         case 'projectmanager':
         case 'estimator':

@@ -46,6 +46,7 @@ if ($devEmail && isset($conn)) {
             <button class="role-option" data-role="mechanic">Mechanic</button>
             <button class="role-option" data-role="operator">Operator</button>
             <button class="role-option" data-role="laborer">Laborer</button>
+            <button class="role-option" data-role="data_entry">Data Entry</button>
         </div>
         
         <!-- Toast Notification -->
@@ -82,8 +83,8 @@ if ($devEmail && isset($conn)) {
                         showToast('Exited ' + roleName + ' preview');
                         
                         setTimeout(function() {
-                            // Exit preview: always land on dev landing page
-                            window.location.href = '<?php echo htmlspecialchars(base_url('/dev/index.php')); ?>';
+                            // Exit preview: return to the main portal landing (dashboard) without preview param
+                            window.location.href = '<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>';
                         }, 400);
                     } else {
                         roleDropdown.classList.toggle('active');

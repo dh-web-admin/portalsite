@@ -4,35 +4,46 @@
  *---------------------------------*/
 
 body {
-  background: linear-gradient(180deg, #ffffff 0%, #e61c1c 50%, #cecf7b 100%);
+  /* Subtle, professional background: soft cool gradient with a gentle radial highlight */
+  background-image: radial-gradient(
+      circle at 15% 20%,
+      rgba(102, 126, 234, 0.06),
+      transparent 8%
+    ),
+    linear-gradient(180deg, #f6f9fc 0%, #eef4fb 45%, #f8fbff 100%);
+  color: #1f2937;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 20px;
-  position: relative;
 }
 
-body::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(220, 38, 38, 0.3) 0%,
-    rgba(107, 114, 128, 0.3) 100%
-  );
-  backdrop-filter: blur(100px);
-  z-index: 0;
+/* Password field layout: keep input and toggle inline, toggle to the right of the input */
+.password-field {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
 }
-
-body > * {
-  position: relative;
-  z-index: 1;
+.password-field input {
+  flex: 1;
+  padding-right: 16px;
+}
+.password-field .pw-toggle {
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+}
+.password-field .pw-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.06);
+  border-radius: 6px;
 }
 
 .login-container {
@@ -78,6 +89,8 @@ body > * {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
+
+/* Password field wrapper and toggle */
 
 .login-form button {
   padding: 14px;

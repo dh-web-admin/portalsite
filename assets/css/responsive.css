@@ -1,0 +1,141 @@
+/* Conservative, non-invasive responsive helpers
+   Purpose: improve layout on small screens with minimal overrides
+   - Avoids changing functional styles, focuses on fluid sizing, wrapping, and modal behavior.
+   - Loaded late so it can fix small layout issues without broad overrides.
+*/
+
+html,
+body {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* Make media elements scale within their containers */
+img,
+svg,
+video,
+iframe,
+canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Form controls should not overflow their containers */
+input,
+textarea,
+select,
+button {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Make buttons wrap and keep reasonable sizes */
+.btn,
+.btn-small,
+button {
+  white-space: normal !important;
+}
+
+/* Ensure main content areas can shrink on small screens */
+.admin-layout,
+.content-area,
+.main-content,
+.layout-shell {
+  min-width: 0; /* allows flex children to shrink properly */
+}
+
+/* Make long inline code and text wrap to avoid horizontal scroll */
+pre,
+code,
+.monospace,
+.doc-card p {
+  word-break: break-word;
+}
+
+/* Modals: keep max width within viewport */
+[id$="Modal"] {
+  max-width: 95vw !important;
+  margin: 0 auto !important;
+}
+
+/* Supplier details stack guard */
+.supplier-details-stack {
+  width: 100% !important;
+  max-width: 560px; /* preserves designed width on larger screens */
+}
+.supplier-details-container {
+  box-sizing: border-box;
+  width: 100%;
+}
+.supplier-actions-bar {
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+/* Small-screen adjustments */
+@media (max-width: 900px) {
+  /* Make the ribbon and filters wrap */
+  .map-ribbon,
+  #filtersBar,
+  .supplier-details-stack {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  /* Ensure the Add Supplier row stacks vertically if space is tight */
+  .supplier-details-stack,
+  .map-ribbon + .supplier-details-stack,
+  .map-ribbon + .supplier-details-stack > * {
+    width: 100% !important;
+  }
+
+  /* Make header welcome section shrink nicely */
+  .welcome-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .welcome-left {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+  .welcome-logo {
+    flex: 0 0 48px;
+    width: 48px;
+    height: auto;
+  }
+
+  /* Stack top bar actions vertically on very small screens */
+  .top-bar .actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Make supplier count dropdown full width when opened on small screens */
+  #supplierCountList {
+    right: auto !important;
+    left: 0 !important;
+    width: calc(100vw - 40px) !important;
+    max-width: 480px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Tighten modal paddings for small phones */
+  [id$="Modal"] {
+    padding: 12px !important;
+  }
+  .btn,
+  .btn-small {
+    padding: 8px 10px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* Minimal helper classes (safe to use) */
+.responsive-hidden-sm {
+  display: none !important;
+}
+
+/* End of responsive helpers */

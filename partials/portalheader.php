@@ -72,6 +72,9 @@ if (isset($_GET['preview_role'])) {
 <!-- Global logout confirmation (ensures consistent prompt on all pages) -->
 <script src="<?php echo htmlspecialchars(base_url('/assets/js/logout-confirm.js')); ?>" defer></script>
 
+<!-- Responsive helper stylesheet (loaded late; conservative rules only) -->
+<link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/assets/css/responsive.css')); ?>" />
+
 <?php
 // Always attempt to include developer notch from header so it's present across pages
 // It will self-check actual developer role and render conditionally.

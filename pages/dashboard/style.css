@@ -239,3 +239,37 @@
     padding: 10px 20px;
   }
 }
+
+/* Strong overrides to ensure dashboard tiles layout is consistent and centered
+   This file is loaded after the main dashboard CSS so we use it to enforce
+   the final visual layout (gap, centered column, three tiles per row). */
+.tiles {
+  max-width: 1260px !important;
+  margin: 20px auto !important;
+  justify-content: center !important;
+  gap: 28px !important;
+  padding: 10px 20px !important;
+}
+.tile {
+  /* Force a 3-column layout inside the centered max-width column */
+  flex: 0 0 calc((100% - 56px) / 3) !important;
+  min-height: 180px !important;
+  padding: 35px !important;
+}
+@media (max-width: 1024px) {
+  .tiles {
+    max-width: 960px !important;
+  }
+  .tile {
+    flex: 0 0 calc((100% - 28px) / 2) !important;
+  }
+}
+@media (max-width: 600px) {
+  .tiles {
+    max-width: 100% !important;
+    padding: 10px !important;
+  }
+  .tile {
+    flex: 0 0 100% !important;
+  }
+}
