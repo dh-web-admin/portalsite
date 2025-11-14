@@ -1,6 +1,6 @@
 <?php
 // Shared Portal header
-if (session_status() === PHP_SESSION_NONE) { require_once __DIR__ . '/../session_init.php'; }
+if (session_status() === PHP_SESSION_NONE) { require_once __DIR__ . '/../config/session_init.php'; }
 require_once __DIR__ . '/url.php';
 
  $name = isset($_SESSION['name']) ? $_SESSION['name'] : 'User';

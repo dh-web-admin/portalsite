@@ -32,7 +32,7 @@ if (session_status() === PHP_SESSION_NONE) {
     
     // Check for remember me cookie and auto-login
     if (!isset($_SESSION['email']) && isset($_COOKIE['remember_token'])) {
-        require_once __DIR__ . '/config/config.php';
+        require_once __DIR__ . '/config.php';
         $token = $_COOKIE['remember_token'];
         
         // Verify token from database
