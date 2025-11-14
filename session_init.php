@@ -19,7 +19,7 @@ if (session_status() === PHP_SESSION_NONE) {
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
     @session_set_cookie_params([
-        'lifetime' => 43200, // 12 hours to persist across browser restarts
+        'lifetime' => 2592000, // 30 days to persist across browser restarts
         'path' => '/',
         'domain' => '',
         'secure' => $isHttps,
@@ -32,7 +32,7 @@ if (session_status() === PHP_SESSION_NONE) {
     
     // Check for remember me cookie and auto-login
     if (!isset($_SESSION['email']) && isset($_COOKIE['remember_token'])) {
-        require_once __DIR__ . '/config.php';
+        require_once __DIR__ . '/config/config.php';
         $token = $_COOKIE['remember_token'];
         
         // Verify token from database
@@ -53,7 +53,7 @@ if (session_status() === PHP_SESSION_NONE) {
             
             // Regenerate token for security
             $newToken = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', time() + 43200); // 12 hours
+            $expires = date('Y-m-d H:i:s', time() + 2592000); // 30 days
             
             $updateStmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
             $updateStmt->bind_param("sss", $newToken, $expires, $user['email']);
@@ -62,7 +62,7 @@ if (session_status() === PHP_SESSION_NONE) {
             
             // Update cookie with new token
             setcookie('remember_token', $newToken, [
-                'expires' => time() + 43200,
+                'expires' => time() + 2592000,
                 'path' => '/',
                 'domain' => '',
                 'secure' => $isHttps,

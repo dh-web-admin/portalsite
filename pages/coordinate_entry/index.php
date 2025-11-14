@@ -1,7 +1,7 @@
 <?php
 // Coordinate Entry redirect with portal header (includes developer notch)
 // Shows the portal header/dev notch briefly before client-side redirecting to maps.php
-require_once __DIR__ . '/../../config/session_init.php';
+require_once __DIR__ . '/../../session_init.php';
 
 // Preserve developer preview param if present
 $preview = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : '';

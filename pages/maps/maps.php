@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../config/session_init.php';
+require_once __DIR__ . '/../../session_init.php';
 
 // Require login
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {

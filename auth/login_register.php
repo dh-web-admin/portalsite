@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../config/session_init.php';
+require_once __DIR__ . '/../session_init.php';
 require_once '../config/config.php';
 require_once __DIR__ . '/../partials/url.php';
 
