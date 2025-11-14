@@ -97,7 +97,9 @@ if (!can_access($role, 'maps')) {
           </div>
            <!-- Add Supplier Button, Details Box, Filters, and Supplier Dropdown -->
           <div style="margin-bottom: 12px; margin-top: 12px; display: flex; gap: 14px; align-items: flex-start; flex-shrink: 0;">
+            <?php if ($role === 'admin'): ?>
             <button id="addSupplierBtn" class="btn btn-primary">+ Add Supplier</button>
+            <?php endif; ?>
             <div class="supplier-details-stack">
               <div id="supplierDetailsBox" class="supplier-details-container">
                 <div class="supplier-details-placeholder">Supplier Details</div>

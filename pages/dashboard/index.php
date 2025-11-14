@@ -73,8 +73,8 @@ switch ($role) {
         $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
         break;
     case 'data_entry':
-        // Data-entry users also only see the Coordinate Entry tile
-        $allowedPages = ['coordinate_entry'];
+        // Data-entry users only see maps and coordinate entry
+        $allowedPages = ['maps', 'coordinate_entry'];
         $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
         break;
     case 'admin':

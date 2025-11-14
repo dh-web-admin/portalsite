@@ -37,7 +37,7 @@ if(isset($_POST['login'])){
             // Issue Remember Me token unconditionally to persist login across browser restarts
             // Generate secure random token
             $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', time() + 43200); // 12 hours
+            $expires = date('Y-m-d H:i:s', time() + 2592000); // 30 days
             
             // Store token in database
             $stmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
@@ -50,7 +50,7 @@ if(isset($_POST['login'])){
                 || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
             
             setcookie('remember_token', $token, [
-                'expires' => time() + 43200, // 12 hours
+                'expires' => time() + 2592000, // 30 days
                 'path' => '/',
                 'domain' => '',
                 'secure' => $isHttps,
