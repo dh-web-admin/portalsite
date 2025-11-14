@@ -33,7 +33,7 @@ if (isset($_SESSION['email'])) {
         $check->execute();
         $r = $check->get_result();
         $u = $r ? $r->fetch_assoc() : null;
-        if ($u && isset($u['role']) && $u['role'] === 'admin') $allow = true;
+        if ($u && isset($u['role']) && in_array($u['role'], ['admin','developer'])) $allow = true;
         $check->close();
     }
 }

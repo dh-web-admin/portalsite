@@ -95,7 +95,7 @@ if (!can_access($role, 'maps')) {
           <div class="map-ribbon" id="mapRibbon">
             <!-- Buttons will be dynamically loaded -->
           </div>
-          <!-- Add Supplier Button, Details Box, Filters, and Supplier Dropdown -->
+           <!-- Add Supplier Button, Details Box, Filters, and Supplier Dropdown -->
           <div style="margin-bottom: 12px; margin-top: 12px; display: flex; gap: 14px; align-items: flex-start; flex-shrink: 0;">
             <button id="addSupplierBtn" class="btn btn-primary">+ Add Supplier</button>
             <div class="supplier-details-stack">
@@ -127,7 +127,7 @@ if (!can_access($role, 'maps')) {
               <input id="filterState" type="text" placeholder="State" style="width:80px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#334155;" />
               <button id="clearFiltersBtn" class="btn" title="Clear filters" style="padding:5px 8px; font-size:11px;">Clear</button>
             </div>
-            <!-- Search removed: supplier search bar and dropdown intentionally omitted -->
+
           </div>
           
           <!-- Map Container -->
@@ -296,6 +296,43 @@ if (!can_access($role, 'maps')) {
         minZoom: 2,
         maxZoom: 19
       }).setView([39.8283, -98.5795], 5); // Center of USA, zoom 5
+
+      // Locate Me button logic
+      var locateBtn = document.getElementById('locateMeBtn');
+      var locateMarker = null;
+      if (locateBtn) {
+        locateBtn.addEventListener('click', function() {
+          if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser.');
+            return;
+          }
+          locateBtn.disabled = true;
+          locateBtn.textContent = 'Locating...';
+          navigator.geolocation.getCurrentPosition(function(pos) {
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+            map.setView([lat, lng], 14);
+            // Remove previous marker
+            if (locateMarker) { map.removeLayer(locateMarker); }
+            locateMarker = L.marker([lat, lng], {
+              icon: L.divIcon({
+                className: 'custom-marker-icon',
+                html: '<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 8.5 12.5 28.5 12.5 28.5S25 21 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#06b6d4" stroke="#fff" stroke-width="1.5"/><circle cx="12.5" cy="12.5" r="5" fill="#fff" opacity="0.9"/></svg>',
+                iconSize: [25, 41],
+                iconAnchor: [12.5, 41],
+                popupAnchor: [0, -41]
+              })
+            }).addTo(map);
+            locateMarker.bindPopup('<b>You are here</b>').openPopup();
+            locateBtn.disabled = false;
+            locateBtn.textContent = 'Locate Me';
+          }, function(err) {
+            alert('Unable to retrieve your location.');
+            locateBtn.disabled = false;
+            locateBtn.textContent = 'Locate Me';
+          });
+        });
+      }
       
       // Add OpenStreetMap tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -603,7 +640,7 @@ if (!can_access($role, 'maps')) {
       function loadRibbon() {
         var ribbon = document.getElementById('mapRibbon');
         if (!ribbon) return;
-        
+
         fetch('../../api/get_services.php', {
           method: 'GET',
           credentials: 'same-origin'
@@ -611,52 +648,49 @@ if (!can_access($role, 'maps')) {
         .then(function(response) { return response.json(); })
         .then(function(data) {
           if (data.success && data.services) {
-            ribbon.innerHTML = '';
-            
-            // Use services from database, or empty if none exist
+            // Only clear ribbon if no services exist
             var services = data.services || [];
-            
             if (services.length === 0) {
-              // Show a message when no services exist
               ribbon.innerHTML = '<div style="padding:10px; color:#64748b; font-size:13px; font-style:italic;">No services available. Add one using the sidebar.</div>';
               return;
             }
-            
+
+            // Remove only buttons that do not match the current services list
+            var existingBtns = Array.from(ribbon.querySelectorAll('.map-ribbon-btn'));
+            var existingNames = existingBtns.map(function(btn){ return btn.getAttribute('data-map'); });
+
             services.forEach(function(serviceName, index) {
-              var btn = document.createElement('button');
-              btn.className = 'map-ribbon-btn';
-              btn.setAttribute('data-map', serviceName);
-              btn.textContent = serviceName.charAt(0).toUpperCase() + serviceName.slice(1).replace(/-/g, ' ');
-              
-              // First button is active by default
-              if (index === 0) {
-                btn.classList.add('active');
+              if (!existingNames.includes(serviceName)) {
+                var btn = document.createElement('button');
+                btn.className = 'map-ribbon-btn';
+                btn.setAttribute('data-map', serviceName);
+                btn.textContent = serviceName.charAt(0).toUpperCase() + serviceName.slice(1).replace(/-/g, ' ');
+
+                // First button is active by default if none are active
+                if (index === 0 && !ribbon.querySelector('.map-ribbon-btn.active')) {
+                  btn.classList.add('active');
+                }
+
+                btn.addEventListener('click', function(){
+                  var selectedService = this.getAttribute('data-map');
+                  ribbon.querySelectorAll('.map-ribbon-btn').forEach(function(b){ b.classList.remove('active'); });
+                  this.classList.add('active');
+                  loadSuppliers(selectedService);
+                });
+
+                ribbon.appendChild(btn);
               }
-              
-              // Wire click handler
-              btn.addEventListener('click', function(){
-                var selectedService = this.getAttribute('data-map');
-                
-                // Update active state
-                ribbon.querySelectorAll('.map-ribbon-btn').forEach(function(b){ b.classList.remove('active'); });
-                this.classList.add('active');
-                
-                // Load suppliers for selected service
-                loadSuppliers(selectedService);
-              });
-              
-              ribbon.appendChild(btn);
             });
-            
-            // Load first service by default
-            if (services.length > 0) {
+
+            // Load first service by default if none are active
+            if (services.length > 0 && !ribbon.querySelector('.map-ribbon-btn.active')) {
+              ribbon.querySelector('.map-ribbon-btn').classList.add('active');
               loadSuppliers(services[0]);
             }
           }
         })
         .catch(function(error) {
           console.error('Error loading services:', error);
-          // Show error message instead of fallback
           ribbon.innerHTML = '<div style="padding:10px; color:#ef4444; font-size:13px;">Error loading services. Please refresh the page.</div>';
         });
       }
