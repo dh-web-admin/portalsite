@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../session_init.php';
 
 // Require login
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    header('Location: ../../auth/login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 
@@ -22,7 +22,7 @@ $role = $user ? $user['role'] : 'laborer';
 $stmt->close();
 
 if (!can_access($role, 'maps')) {
-  header('Location: ../dashboard/');
+  header('Location: /pages/dashboard/');
   exit();
 }
 ?>

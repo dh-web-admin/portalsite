@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../session_init.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    header('Location: ../../auth/login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 
@@ -28,7 +28,7 @@ $stmt->close();
 
 // Enforce access control for this page
 if (!can_access($role, 'manuals')) {
-  header('Location: ../dashboard/');
+  header('Location: /pages/dashboard/');
   exit();
 }
 ?>
