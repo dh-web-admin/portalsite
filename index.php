@@ -12,7 +12,10 @@ require_once __DIR__ . '/session_init.php';
 
 // If already logged in, go straight to dashboard; otherwise show login
 if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
-	header('Location: /PortalSite/pages/dashboard/');
+	// Detect environment and set dashboard path
+	$isProduction = (strpos($_SERVER['HTTP_HOST'], 'darkhorsespreader.com') !== false || getenv('RAILWAY_ENVIRONMENT'));
+	$dashboardPath = $isProduction ? '/pages/dashboard/' : '/PortalSite/pages/dashboard/';
+	header('Location: ' . $dashboardPath);
     exit;
 }
 
