@@ -16,9 +16,11 @@ if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
 	$isProduction = (strpos($_SERVER['HTTP_HOST'], 'darkhorsespreader.com') !== false || getenv('RAILWAY_ENVIRONMENT'));
 	$dashboardPath = $isProduction ? '/pages/dashboard/' : '/PortalSite/pages/dashboard/';
 	header('Location: ' . $dashboardPath);
-    exit;
+	exit;
+} else {
+	$isProduction = (strpos($_SERVER['HTTP_HOST'], 'darkhorsespreader.com') !== false || getenv('RAILWAY_ENVIRONMENT'));
+	$loginPath = $isProduction ? '/auth/login.php' : '/PortalSite/auth/login.php';
+	header('Location: ' . $loginPath);
+	exit;
 }
-
-header('Location: /auth/login.php');
-exit;
 ?>
