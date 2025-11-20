@@ -12,7 +12,7 @@ require_once __DIR__ . '/session_init.php';
 
 // If already logged in, go straight to dashboard; otherwise show login
 if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
-	header('Location: /pages/dashboard/');
+	header('Location: /PortalSite/pages/dashboard/');
     exit;
 }
 
