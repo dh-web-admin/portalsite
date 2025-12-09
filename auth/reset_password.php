@@ -4,325 +4,206 @@ require_once __DIR__ . '/../config/config.php';
 
 $message = '';
 $message_type = '';
-$reset_email = '';
-$code_sent = false;
-$code_verified = false;
-$action = $_POST['action'] ?? '';
+$step = 'email'; // default step
 
-// If already verified, show password entry on this page (single-page flow)
-if (isset($_SESSION['reset_authenticated']) && $_SESSION['reset_authenticated']) {
-    $reset_email = $_SESSION['reset_email'] ?? '';
-    $code_verified = true;
-    $code_sent = false;
+// If we previously sent a code
+if (isset($_SESSION['reset_email'])) {
+    $reset_email = $_SESSION['reset_email'];
+} else {
+    $reset_email = '';
 }
 
-// Action: Reset password (single-page handler)
-if ($action === 'reset_password') {
-    // Ensure the user verified the code in this session
-    if (!isset($_SESSION['reset_authenticated']) || !isset($_SESSION['reset_email'])) {
-        $message = 'Unauthorized action. Please request a reset code first.';
-        $message_type = 'error';
-    } else {
-        $reset_email = $_SESSION['reset_email'];
-        $password = $_POST['password'] ?? '';
-        $password_confirm = $_POST['password_confirm'] ?? '';
-
-        if (empty($password) || empty($password_confirm)) {
-            $message = 'Please fill in all fields.';
-            $message_type = 'error';
-            $code_verified = true;
-        } else if ($password !== $password_confirm) {
-            $message = 'Passwords do not match.';
-            $message_type = 'error';
-            $code_verified = true;
-        } else if (strlen($password) < 8) {
-            $message = 'Password must be at least 8 characters long.';
-            $message_type = 'error';
-            $code_verified = true;
-        } else if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
-            $message = 'Password must contain uppercase, lowercase, and numbers.';
-            $message_type = 'error';
-            $code_verified = true;
-        } else {
-            // Hash password and update users table
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
-            $update_stmt->bind_param('ss', $hashed_password, $reset_email);
-            $update_stmt->execute();
-            $update_stmt->close();
-
-            // Delete from password_resets
-            $del_stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
-            $del_stmt->bind_param('s', $reset_email);
-            $del_stmt->execute();
-            $del_stmt->close();
-
-            // Clear session flags
-            unset($_SESSION['reset_authenticated']);
-            unset($_SESSION['reset_email']);
-
-            // Redirect to login with success message
-            $_SESSION['reset_success'] = 'Password reset successfully. Please log in with your new password.';
-            session_write_close();
-            header('Location: login.php');
-            exit();
-        }
-    }
+// Determine current progress
+if (isset($_SESSION['reset_code_verified']) && $_SESSION['reset_code_verified'] === true) {
+    $step = 'new_password';
+} elseif (isset($_SESSION['reset_email_sent']) && $_SESSION['reset_email_sent'] === true) {
+    $step = 'verify_code';
 }
 
-// Retrieve from session if already sent
-if (isset($_SESSION['reset_email_sent'])) {
-    $reset_email = $_SESSION['reset_email_sent'];
-    $code_sent = true;
-}
+// ----------------------
+// STEP 1: SEND CODE
+// ----------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
+    $reset_email = trim($_POST['email']);
 
-// Action: Send/Resend code
-if ($action === 'send_code') {
-    $reset_email = trim($_POST['email'] ?? '');
-    
     if (empty($reset_email)) {
-        $message = 'Please enter your email address.';
-        $message_type = 'error';
+        $message = "Please enter your email.";
+        $message_type = "error";
     } else {
         // Check if email exists
-        $check_stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
-        $check_stmt->bind_param('s', $reset_email);
-        $check_stmt->execute();
-        $check_result = $check_stmt->get_result();
-        $user_exists = $check_result->num_rows > 0;
-        $check_stmt->close();
-
-        if (!$user_exists) {
-            $message = 'No account found for that email.';
-            $message_type = 'error';
-        } else {
-            // Generate 6-digit code
-            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $expires_at = time() + (15 * 60); // 15 minutes
-
-            // Store code in password_resets table
-            $insert_stmt = $conn->prepare("REPLACE INTO password_resets (email, code, expires_at) VALUES (?, ?, ?)");
-            $insert_stmt->bind_param('ssi', $reset_email, $code, $expires_at);
-            $insert_stmt->execute();
-            $insert_stmt->close();
-
-            // Send email via Mailjet
-            require_once __DIR__ . '/mailjet_helper.php';
-            $result = sendResetCode($reset_email, $code);
-            
-            if (is_array($result) && isset($result['success']) && !$result['success']) {
-                $message = 'Email send failed: ' . $result['error'];
-                $message_type = 'error';
-            } else {
-                // Persist that we sent the code so the form shows the code input
-                $_SESSION['reset_email_sent'] = $reset_email;
-                // Ensure session data is written before response continues
-                session_write_close();
-
-                $code_sent = true;
-                $message = 'Reset code sent to ' . htmlspecialchars($reset_email) . '. Check your email and enter the code below.';
-                $message_type = 'success';
-            }
-        }
-    }
-}
-
-// Action: Verify code
-if ($action === 'verify_code') {
-    $reset_email = trim($_POST['email'] ?? '');
-    $code = trim($_POST['code'] ?? '');
-
-    if (empty($reset_email) || empty($code)) {
-        $message = 'Please enter both email and code.';
-        $message_type = 'error';
-    } else {
-        // Debug: log verify attempts to help diagnose intermittent failures
-        $logEntry = [];
-        $logEntry[] = date('c');
-        $logEntry[] = session_id();
-        $logEntry[] = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        $logEntry[] = 'verify_attempt';
-        $logEntry[] = $reset_email;
-        $logEntry[] = $code;
-        $preLog = implode(" | ", $logEntry) . "\n";
-        @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $preLog, FILE_APPEND | LOCK_EX);
-        // Also mirror to PHP error log (visible in Railway logs)
-        @error_log(trim($preLog));
-
-        // Retrieve code from password_resets table
-        $stmt = $conn->prepare("SELECT code, expires_at FROM password_resets WHERE email = ? LIMIT 1");
-        $stmt->bind_param('s', $reset_email);
+        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        $stmt->bind_param("s", $reset_email);
         $stmt->execute();
         $result = $stmt->get_result();
         $stmt->close();
 
         if ($result->num_rows === 0) {
-            $message = 'No reset request found for this email.';
-            $message_type = 'error';
-            $code_sent = true;
+            $message = "No account found with this email.";
+            $message_type = "error";
         } else {
-            $reset_data = $result->fetch_assoc();
-            $stored_code = $reset_data['code'];
-            $expires_at = $reset_data['expires_at'];
+            // Create code
+            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $expires_at = time() + (15 * 60);
 
-            if (time() > $expires_at) {
-                $message = 'This reset code has expired. Please request a new one.';
-                $message_type = 'error';
+            // Store in table
+            $stmt = $conn->prepare("REPLACE INTO password_resets (email, code, expires_at) VALUES (?, ?, ?)");
+            $stmt->bind_param("ssi", $reset_email, $code, $expires_at);
+            $stmt->execute();
+            $stmt->close();
 
-                $del_stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
-                $del_stmt->bind_param('s', $reset_email);
-                $del_stmt->execute();
-                $del_stmt->close();
+            // send email
+            require_once __DIR__ . "/mailjet_helper.php";
+            sendResetCode($reset_email, $code);
 
-                $code_sent = true;
-                $expLog = date('c') . " | session:" . session_id() . " | expired for " . $reset_email . "\n";
-                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $expLog, FILE_APPEND | LOCK_EX);
-                @error_log(trim($expLog));
-            } else if ($code !== $stored_code) {
-                $message = 'Invalid reset code. Please try again.';
-                $message_type = 'error';
-                $code_sent = true;
-                $invLog = date('c') . " | session:" . session_id() . " | invalid code submitted for " . $reset_email . " (submitted:" . $code . ", stored:" . $stored_code . ")\n";
-                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $invLog, FILE_APPEND | LOCK_EX);
-                @error_log(trim($invLog));
+            $_SESSION['reset_email_sent'] = true;
+            $_SESSION['reset_email'] = $reset_email;
+
+            $step = 'verify_code';
+            $message = "A reset code has been sent to your email.";
+            $message_type = "success";
+        }
+    }
+}
+
+// ----------------------
+// STEP 2: VERIFY CODE
+// ----------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code') {
+    $code = trim($_POST['code']);
+    $reset_email = $_SESSION['reset_email'] ?? '';
+
+    if (empty($reset_email) || empty($code)) {
+        $message = "Please enter the code.";
+        $message_type = "error";
+        $step = "verify_code";
+    } else {
+        $stmt = $conn->prepare("SELECT code, expires_at FROM password_resets WHERE email = ? LIMIT 1");
+        $stmt->bind_param("s", $reset_email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
+
+        if ($result->num_rows === 0) {
+            $message = "No reset request found for that email.";
+            $message_type = "error";
+            $step = "verify_code";
+        } else {
+            $data = $result->fetch_assoc();
+
+            if (time() > $data['expires_at']) {
+                $message = "The reset code has expired.";
+                $message_type = "error";
+                $step = "email";
+                session_destroy();
+            } elseif ($code !== $data['code']) {
+                $message = "Invalid code. Please try again.";
+                $message_type = "error";
+                $step = "verify_code";
             } else {
-                // Mark the session as authenticated for the reset flow
-                $_SESSION['reset_email'] = $reset_email;
-                $_SESSION['reset_authenticated'] = true;
-
-                // Remove the temporary "email_sent" flag so the old form doesn't show
-                unset($_SESSION['reset_email_sent']);
-
-                // Flush session to storage to ensure the next request sees these flags
-                session_write_close();
-
-                // Log verification OK
-                $okLog = date('c') . " | session:" . session_id() . " | verified OK for " . $reset_email . "\n";
-                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $okLog, FILE_APPEND | LOCK_EX);
-                @error_log(trim($okLog));
-
-                // Render password entry on this page instead of redirecting
-                $code_verified = true;
-                $code_sent = false;
+                // SUCCESS → show new password fields
+                $_SESSION['reset_code_verified'] = true;
+                $step = "new_password";
+                $message = "Code verified! Please enter a new password.";
+                $message_type = "success";
             }
         }
     }
 }
+
+// ----------------------
+// STEP 3: SET NEW PASSWORD
+// ----------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password') {
+    $new_pass = trim($_POST['new_password']);
+    $confirm_pass = trim($_POST['confirm_password']);
+    $reset_email = $_SESSION['reset_email'] ?? '';
+
+    if (empty($new_pass) || empty($confirm_pass)) {
+        $message = "Please fill both fields.";
+        $message_type = "error";
+        $step = "new_password";
+    } elseif ($new_pass !== $confirm_pass) {
+        $message = "Passwords do not match.";
+        $message_type = "error";
+        $step = "new_password";
+    } else {
+        // Update password
+        $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
+
+        $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+        $stmt->bind_param("ss", $hashed, $reset_email);
+        $stmt->execute();
+        $stmt->close();
+
+        // Cleanup
+        $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+        $stmt->bind_param("s", $reset_email);
+        $stmt->execute();
+        $stmt->close();
+
+        session_destroy();
+
+        $message = "Your password has been reset successfully!";
+        $message_type = "success";
+        $step = "done";
+    }
+}
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Password</title>
     <link rel="stylesheet" href="password_reset.css">
-    <style>
-        .hidden { display: none; }
-    </style>
 </head>
-<body style="background-color: #f5f5f5;">
-    <div class="password-reset-container">
-        <h1>Reset Password</h1>
-        <p class="subtitle">Enter your email to get started.</p>
+<body>
 
-        <?php if ($message): ?>
-            <div class="alert alert-<?php echo htmlspecialchars($message_type); ?>">
-                <?php echo htmlspecialchars($message); ?>
-            </div>
-        <?php endif; ?>
+<div class="password-reset-container">
+    <h1>Password Reset</h1>
 
-        <form method="POST" class="password-reset-form">
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
-                    required 
-                    value="<?php echo htmlspecialchars($reset_email); ?>"
-                >
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" name="action" value="send_code" class="btn-primary">
-                    <?php echo $code_sent ? 'Resend Code' : 'Send Reset Code'; ?>
-                </button>
-            </div>
-
-            <div id="code-section" class="<?php echo !$code_sent ? 'hidden' : ''; ?>">
-                <div class="form-group">
-                    <label for="code">Reset Code (6 digits)</label>
-                    <input 
-                        type="text" 
-                        id="code" 
-                        name="code" 
-                        maxlength="6"
-                    >
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" name="action" value="verify_code" class="btn-primary">
-                        Verify Code
-                    </button>
-                </div>
-            </div>
-
-            <div id="password-section" class="<?php echo !$code_verified ? 'hidden' : ''; ?>">
-                <div class="form-group">
-                    <label for="password">New Password</label>
-                    <input 
-                        type="password"
-                        id="password"
-                        name="password"
-                        required
-                        autocomplete="new-password"
-                        minlength="8"
-                    >
-                    <small style="color: #666; margin-top: 0.25rem; line-height: 1.4;">
-                        At least 8 characters, with uppercase, lowercase, and numbers.
-                    </small>
-                </div>
-
-                <div class="form-group">
-                    <label for="password_confirm">Confirm Password</label>
-                    <input 
-                        type="password"
-                        id="password_confirm"
-                        name="password_confirm"
-                        required
-                        autocomplete="new-password"
-                        minlength="8"
-                    >
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" name="action" value="reset_password" class="btn-primary">Reset Password</button>
-                </div>
-            </div>
-        </form>
-
-        <div class="form-link">
-            <a href="login.php">Back to Login</a>
+    <?php if ($message): ?>
+        <div class="alert alert-<?php echo $message_type; ?>">
+            <?php echo htmlspecialchars($message); ?>
         </div>
-    </div>
+    <?php endif; ?>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const codeSent = <?php echo $code_sent ? 'true' : 'false'; ?>;
-            const codeSection = document.getElementById('code-section');
-            const passwordSection = document.getElementById('password-section');
-            const codeVerified = <?php echo $code_verified ? 'true' : 'false'; ?>;
+    <!-- STEP 1: ENTER EMAIL -->
+    <?php if ($step === 'email'): ?>
+        <form method="POST">
+            <label>Email:</label>
+            <input type="email" name="email" required>
 
-            if (codeSent) {
-                codeSection.classList.remove('hidden');
-            }
-            if (codeVerified) {
-                // show password section and hide code section
-                if (passwordSection) passwordSection.classList.remove('hidden');
-                if (codeSection) codeSection.classList.add('hidden');
-            }
-        });
-    </script>
+            <button type="submit" name="action" value="send_code">Send Code</button>
+        </form>
+    <?php endif; ?>
+
+    <!-- STEP 2: ENTER CODE -->
+    <?php if ($step === 'verify_code'): ?>
+        <form method="POST">
+            <label>Enter 6-digit Code:</label>
+            <input type="text" name="code" maxlength="6" required>
+
+            <button type="submit" name="action" value="verify_code">Verify Code</button>
+        </form>
+    <?php endif; ?>
+
+    <!-- STEP 3: NEW PASSWORD -->
+    <?php if ($step === 'new_password'): ?>
+        <form method="POST">
+            <label>New Password:</label>
+            <input type="password" name="new_password" required>
+
+            <label>Confirm Password:</label>
+            <input type="password" name="confirm_password" required>
+
+            <button type="submit" name="action" value="set_password">Reset Password</button>
+        </form>
+    <?php endif; ?>
+
+    <?php if ($step === 'done'): ?>
+        <a href="login.php" class="btn-primary">Go to Login</a>
+    <?php endif; ?>
+
+</div>
+
 </body>
 </html>
