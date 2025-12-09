@@ -10,9 +10,17 @@ function sendResetCode($email, $code) {
     $api_key = getenv('MAILJET_API_KEY');
     $api_secret = getenv('MAILJET_API_SECRET');
 
+    // Lightweight file logger for troubleshooting Mailjet delivery issues
+    $logFile = __DIR__ . '/../debug/password_reset_mail.log';
+    $log = function ($message) use ($logFile) {
+        $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+        // Suppress errors if the file system is read-only; best-effort logging only
+        @file_put_contents($logFile, $line, FILE_APPEND);
+    };
+
     // Fallback if env vars not set (for local testing; use caution)
     if (!$api_key || !$api_secret) {
-        error_log('Mailjet credentials not configured. Email: ' . $email . ', Code: ' . $code);
+        $log('Mailjet credentials not configured. Email: ' . $email . ', Code: ' . $code);
         return false; // Fail gracefully in dev/test
     }
 
@@ -58,13 +66,14 @@ function sendResetCode($email, $code) {
     ]);
 
     $response = curl_exec($ch);
+    $curl_error = curl_error($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
     if ($http_code === 200) {
         return true;
     } else {
-        error_log('Mailjet API error. Code: ' . $http_code . ', Response: ' . $response);
+        $log('Mailjet API error. Code: ' . $http_code . ', CurlError: ' . $curl_error . ', Response: ' . $response . ', Email: ' . $email);
         return false;
     }
 }
