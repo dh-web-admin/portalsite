@@ -9,12 +9,6 @@ $code_sent = false;
 $code_verified = false;
 $action = $_POST['action'] ?? '';
 
-// Check if already authenticated from previous code verification
-if (isset($_SESSION['reset_authenticated']) && $_SESSION['reset_authenticated']) {
-    $code_verified = true;
-    $reset_email = $_SESSION['reset_email'] ?? '';
-}
-
 // Retrieve from session if already sent
 if (isset($_SESSION['reset_email_sent'])) {
     $reset_email = $_SESSION['reset_email_sent'];
@@ -59,11 +53,10 @@ if ($action === 'send_code') {
                 $message = 'Email send failed: ' . $result['error'];
                 $message_type = 'error';
             } else {
+                // FIX: removed broken session restart
                 $_SESSION['reset_email_sent'] = $reset_email;
-                session_write_close();
-                session_start(); // Ensure session is written and restarted
+
                 $code_sent = true;
-                $reset_email = $reset_email; // Keep email for form
                 $message = 'Reset code sent to ' . htmlspecialchars($reset_email) . '. Check your email and enter the code below.';
                 $message_type = 'success';
             }
@@ -96,27 +89,27 @@ if ($action === 'verify_code') {
             $stored_code = $reset_data['code'];
             $expires_at = $reset_data['expires_at'];
 
-            // Check expiry
             if (time() > $expires_at) {
                 $message = 'This reset code has expired. Please request a new one.';
                 $message_type = 'error';
-                $code_sent = true;
-                // Delete expired code
+
                 $del_stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
                 $del_stmt->bind_param('s', $reset_email);
                 $del_stmt->execute();
                 $del_stmt->close();
+
+                $code_sent = true;
             } else if ($code !== $stored_code) {
                 $message = 'Invalid reset code. Please try again.';
                 $message_type = 'error';
                 $code_sent = true;
             } else {
-                // Code is valid! Set session flags
+                // FIX: This was failing because session restart deleted these values.
                 $_SESSION['reset_email'] = $reset_email;
                 $_SESSION['reset_authenticated'] = true;
+
                 unset($_SESSION['reset_email_sent']);
-                session_write_close();
-                session_start(); // Ensure session is persisted
+
                 $code_verified = true;
                 $message = 'Code verified! Now set your new password.';
                 $message_type = 'success';
@@ -127,7 +120,8 @@ if ($action === 'verify_code') {
 
 // Action: Reset password (final step)
 if ($action === 'reset_password') {
-    // Check if authenticated
+
+    // FIX: Ensure session still contains auth data
     if (!isset($_SESSION['reset_authenticated']) || !isset($_SESSION['reset_email'])) {
         header('Location: reset_password.php');
         exit();
@@ -150,7 +144,6 @@ if ($action === 'reset_password') {
         $message = 'Password must contain uppercase, lowercase, and numbers.';
         $message_type = 'error';
     } else {
-        // Hash password
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
         // Update users table
@@ -159,18 +152,17 @@ if ($action === 'reset_password') {
         $update_stmt->execute();
         $update_stmt->close();
 
-        // Delete from password_resets
+        // Clean reset record
         $del_stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
         $del_stmt->bind_param('s', $reset_email);
         $del_stmt->execute();
         $del_stmt->close();
 
-        // Clear session flags
+        // Clear session values
         unset($_SESSION['reset_authenticated']);
         unset($_SESSION['reset_email']);
         unset($_SESSION['reset_email_sent']);
 
-        // Show success message and redirect after 2 seconds
         $message = 'Password reset successfully! Redirecting to login...';
         $message_type = 'success';
         ?>
@@ -180,8 +172,6 @@ if ($action === 'reset_password') {
             }, 2000);
         </script>
         <?php
-        // Stop execution but display the success message
-        ob_end_flush();
     }
 }
 ?>
@@ -209,7 +199,7 @@ if ($action === 'reset_password') {
 
         <form method="POST" class="password-reset-form">
             <?php if (!isset($_SESSION['reset_authenticated']) || !$_SESSION['reset_authenticated']): ?>
-                <!-- Step 1 & 2: Email + Code Entry -->
+
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input 
@@ -217,18 +207,16 @@ if ($action === 'reset_password') {
                         id="email" 
                         name="email" 
                         required 
-                        autocomplete="email"
                         value="<?php echo htmlspecialchars($reset_email); ?>"
                     >
                 </div>
 
-                <div class="form-actions" id="step1-buttons">
+                <div class="form-actions">
                     <button type="submit" name="action" value="send_code" class="btn-primary">
                         <?php echo $code_sent ? 'Resend Code' : 'Send Reset Code'; ?>
                     </button>
                 </div>
 
-                <!-- Code input (hidden until code sent) -->
                 <div id="code-section" class="<?php echo !$code_sent ? 'hidden' : ''; ?>">
                     <div class="form-group">
                         <label for="code">Reset Code (6 digits)</label>
@@ -236,12 +224,8 @@ if ($action === 'reset_password') {
                             type="text" 
                             id="code" 
                             name="code" 
-                            inputmode="numeric"
                             maxlength="6"
-                            placeholder="000000"
-                            value="<?php echo htmlspecialchars($_POST['code'] ?? ''); ?>"
                         >
-                        <small style="color: #666; margin-top: 0.25rem;">Check your email for the code.</small>
                     </div>
 
                     <div class="form-actions">
@@ -250,33 +234,17 @@ if ($action === 'reset_password') {
                         </button>
                     </div>
                 </div>
+
             <?php else: ?>
-                <!-- Step 3: Password Reset (after code verified) -->
+
                 <div class="form-group">
                     <label for="password">New Password</label>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        required 
-                        autocomplete="new-password"
-                        minlength="8"
-                    >
-                    <small style="color: #666; margin-top: 0.25rem; line-height: 1.4;">
-                        At least 8 characters, with uppercase, lowercase, and numbers.
-                    </small>
+                    <input type="password" name="password" id="password" required minlength="8">
                 </div>
 
                 <div class="form-group">
                     <label for="password_confirm">Confirm Password</label>
-                    <input 
-                        type="password" 
-                        id="password_confirm" 
-                        name="password_confirm" 
-                        required 
-                        autocomplete="new-password"
-                        minlength="8"
-                    >
+                    <input type="password" name="password_confirm" id="password_confirm" required minlength="8">
                 </div>
 
                 <div class="form-actions">
@@ -284,6 +252,7 @@ if ($action === 'reset_password') {
                         Reset Password
                     </button>
                 </div>
+
             <?php endif; ?>
         </form>
 
@@ -296,23 +265,10 @@ if ($action === 'reset_password') {
         document.addEventListener('DOMContentLoaded', function() {
             const codeSent = <?php echo $code_sent ? 'true' : 'false'; ?>;
             const codeSection = document.getElementById('code-section');
-            
-            // Show code section if already sent
+
             if (codeSent) {
                 codeSection.classList.remove('hidden');
             }
-            
-            // Listen for form submission with send_code action
-            const form = document.querySelector('.password-reset-form');
-            form.addEventListener('submit', function(e) {
-                // Check if this is a send_code submission
-                if (e.submitter && e.submitter.value === 'send_code') {
-                    // Show code section after successful send (will be visible after page reloads via PHP)
-                    setTimeout(function() {
-                        codeSection.classList.remove('hidden');
-                    }, 100);
-                }
-            });
         });
     </script>
 </body>
