@@ -25,8 +25,9 @@ function sendResetCode($email, $code) {
         return ['success' => false, 'error' => $msg];
     }
 
-    $from_email = "noreply@darkhorsespreader.com";
-    $from_name = "Dark Horse Spreader";
+    // Allow overriding sender via env vars; fall back to Gmail provided
+    $from_email = getenv('MAILJET_FROM_EMAIL') ?: 'darkhorsesoilstabilization@gmail.com';
+    $from_name  = getenv('MAILJET_FROM_NAME') ?: 'Dark Horse Spreader';
 
     $payload = [
         'Messages' => [[
