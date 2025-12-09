@@ -11,7 +11,9 @@ $action = $_POST['action'] ?? '';
 
 // If already verified, send user to the password entry page
 if (isset($_SESSION['reset_authenticated']) && $_SESSION['reset_authenticated']) {
-    header('Location: reset_password_new.php');
+    // make redirect absolute to avoid relative path issues and ensure session is saved
+    session_write_close();
+    header('Location: /auth/reset_password_new.php');
     exit();
 }
 
@@ -59,8 +61,10 @@ if ($action === 'send_code') {
                 $message = 'Email send failed: ' . $result['error'];
                 $message_type = 'error';
             } else {
-                // FIX: removed broken session restart
+                // Persist that we sent the code so the form shows the code input
                 $_SESSION['reset_email_sent'] = $reset_email;
+                // Ensure session data is written before response continues
+                session_write_close();
 
                 $code_sent = true;
                 $message = 'Reset code sent to ' . htmlspecialchars($reset_email) . '. Check your email and enter the code below.';
@@ -110,14 +114,18 @@ if ($action === 'verify_code') {
                 $message_type = 'error';
                 $code_sent = true;
             } else {
-                // FIX: This was failing because session restart deleted these values.
+                // Mark the session as authenticated for the reset flow
                 $_SESSION['reset_email'] = $reset_email;
                 $_SESSION['reset_authenticated'] = true;
 
+                // Remove the temporary "email_sent" flag so the old form doesn't show
                 unset($_SESSION['reset_email_sent']);
 
-                // Redirect to password entry page
-                header('Location: reset_password_new.php');
+                // Flush session to storage to ensure the next request sees these flags
+                session_write_close();
+
+                // Redirect to the dedicated password entry page (absolute path)
+                header('Location: /auth/reset_password_new.php');
                 exit();
             }
         }
