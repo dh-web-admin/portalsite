@@ -54,6 +54,8 @@ if ($action === 'send_code') {
                 $message_type = 'error';
             } else {
                 $_SESSION['reset_email_sent'] = $reset_email;
+                session_write_close();
+                session_start(); // Ensure session is written and restarted
                 $code_sent = true;
                 $reset_email = $reset_email; // Keep email for form
                 $message = 'Reset code sent to ' . htmlspecialchars($reset_email) . '. Check your email and enter the code below.';

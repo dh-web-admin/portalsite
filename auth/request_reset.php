@@ -5,64 +5,101 @@ require_once __DIR__ . '/mailjet_helper.php';
 
 $message = '';
 $message_type = '';
+$show_code_field = false;   // Controls visibility of the code input
+$entered_email = '';
+$entered_code = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    
-    if (empty($email)) {
-        $message = 'Please enter your email address.';
-        $message_type = 'error';
-    } else {
-        // Explicit diagnostic flow: tell exactly what happened.
-        $check_stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
-        $check_stmt->bind_param('s', $email);
-        $check_stmt->execute();
-        $check_result = $check_stmt->get_result();
-        $user_exists = $check_result->num_rows > 0;
-        $check_stmt->close();
 
-        if (!$user_exists) {
-            $message = 'No account found for that email.';
+    // Which button was clicked?
+    $action = $_POST['action'] ?? '';
+    $entered_email = trim($_POST['email'] ?? '');
+    $entered_code = trim($_POST['reset_code'] ?? '');
+
+    // -------------------------------------------
+    // ACTION 1: SEND OR RESEND RESET CODE
+    // -------------------------------------------
+    if ($action === 'send_code') {
+
+        if (empty($entered_email)) {
+            $message = 'Please enter your email address.';
             $message_type = 'error';
         } else {
-            // Generate 6-digit code
-            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $expires_at = time() + (15 * 60); // 15 minutes
+            // Check user existence
+            $check_stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+            $check_stmt->bind_param('s', $entered_email);
+            $check_stmt->execute();
+            $result = $check_stmt->get_result();
+            $check_stmt->close();
 
-            $send_error = null;
-            $db_error = null;
-
-            // Store code in password_resets table (REPLACE INTO to overwrite old codes)
-            $insert_stmt = $conn->prepare("REPLACE INTO password_resets (email, code, expires_at) VALUES (?, ?, ?)");
-            if ($insert_stmt) {
-                $insert_stmt->bind_param('ssi', $email, $code, $expires_at);
-                if (!$insert_stmt->execute()) {
-                    $db_error = $insert_stmt->error;
-                }
-                $insert_stmt->close();
-            } else {
-                $db_error = $conn->error;
-            }
-
-            if (!$db_error) {
-                $result = sendResetCode($email, $code);
-                if (is_array($result) && isset($result['success']) && !$result['success']) {
-                    $send_error = $result['error'] ?? 'Unknown Mailjet error';
-                }
-            }
-
-            if ($db_error) {
-                $message = 'Could not save reset code: ' . $db_error;
-                $message_type = 'error';
-            } elseif ($send_error) {
-                $message = 'Password reset email failed: ' . $send_error;
+            if ($result->num_rows === 0) {
+                $message = 'No account found for that email.';
                 $message_type = 'error';
             } else {
-                $message = 'Reset code sent to ' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . ' successfully.';
-                $message_type = 'success';
+                // Generate code
+                $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                $expires_at = time() + (15 * 60);
+
+                // Save or replace
+                $stmt = $conn->prepare("REPLACE INTO password_resets (email, code, expires_at) VALUES (?, ?, ?)");
+                $stmt->bind_param('ssi', $entered_email, $code, $expires_at);
+                $stmt->execute();
+                $stmt->close();
+
+                // Send email
+                $result = sendResetCode($entered_email, $code);
+
+                if (!$result['success']) {
+                    $message = "Failed to send reset code: " . $result['error'];
+                    $message_type = 'error';
+                } else {
+                    $message = "A reset code has been sent to $entered_email.";
+                    $message_type = 'success';
+                    $show_code_field = true;
+                }
             }
         }
     }
+
+    // -------------------------------------------
+    // ACTION 2: VERIFY CODE
+    // -------------------------------------------
+    if ($action === 'verify_code') {
+
+        if (empty($entered_email) || empty($entered_code)) {
+            $message = "Please enter your email and reset code.";
+            $message_type = "error";
+            $show_code_field = true;
+        } else {
+            $stmt = $conn->prepare("SELECT code, expires_at FROM password_resets WHERE email = ? LIMIT 1");
+            $stmt->bind_param('s', $entered_email);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $stmt->close();
+
+            if ($res->num_rows === 0) {
+                $message = "No reset request found. Please request a new code.";
+                $message_type = "error";
+            } else {
+                $row = $res->fetch_assoc();
+
+                if ($row['expires_at'] < time()) {
+                    $message = "Your reset code has expired. Please resend a new code.";
+                    $message_type = "error";
+                    $show_code_field = true;
+                } elseif ($row['code'] != $entered_code) {
+                    $message = "Invalid reset code. Please try again.";
+                    $message_type = "error";
+                    $show_code_field = true;
+                } else {
+                    // Code verified → redirect to reset password form
+                    header("Location: reset_password.php?email=" . urlencode($entered_email));
+                    exit;
+                }
+            }
+        }
+    }
+
 }
 ?>
 <!DOCTYPE html>
@@ -85,6 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST" class="password-reset-form">
+
+            <!-- EMAIL FIELD -->
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input 
@@ -92,13 +131,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     id="email" 
                     name="email" 
                     required 
-                    autocomplete="email"
-                    value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                    value="<?php echo htmlspecialchars($entered_email); ?>"
                 >
             </div>
 
+            <!-- RESET CODE FIELD (shown after sending code) -->
+            <?php if ($show_code_field): ?>
+            <div class="form-group">
+                <label for="reset_code">Enter Reset Code</label>
+                <input 
+                    type="text" 
+                    id="reset_code" 
+                    name="reset_code" 
+                    maxlength="6"
+                    value="<?php echo htmlspecialchars($entered_code); ?>"
+                >
+            </div>
+            <?php endif; ?>
+
             <div class="form-actions">
-                <button type="submit" class="btn-primary">Send Reset Code</button>
+                <!-- The send/resend button -->
+                <button 
+                    type="submit" 
+                    name="action" 
+                    value="send_code" 
+                    class="btn-primary"
+                >
+                    <?php echo $show_code_field ? 'Resend Code' : 'Send Reset Code'; ?>
+                </button>
+
+                <!-- Verify button appears only when code field is shown -->
+                <?php if ($show_code_field): ?>
+                    <button 
+                        type="submit" 
+                        name="action" 
+                        value="verify_code" 
+                        class="btn-secondary"
+                        style="margin-left: 10px;"
+                    >
+                        Verify Code
+                    </button>
+                <?php endif; ?>
             </div>
         </form>
 
