@@ -24,34 +24,26 @@ if (!function_exists('mysqli_connect') || !class_exists('mysqli')) {
 require_once __DIR__ . '/../config/config.php';
 
 // ----- Access control -----
-// Allow if current user is logged in and is an admin
+// Allow from localhost OR with a valid token
 $allow = false;
-if (isset($_SESSION['email'])) {
-    $check = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1");
-    if ($check) {
-        $check->bind_param('s', $_SESSION['email']);
-        $check->execute();
-        $r = $check->get_result();
-        $u = $r ? $r->fetch_assoc() : null;
-        if ($u && isset($u['role']) && in_array($u['role'], ['admin','developer'])) $allow = true;
-        $check->close();
-    }
-}
+$remote = $_SERVER['REMOTE_ADDR'] ?? '';
+$isLocal = in_array($remote, ['127.0.0.1','::1','localhost'], true);
 
-// If not logged-in admin, allow only from localhost + matching secret token
-if (!$allow) {
-    $remote = $_SERVER['REMOTE_ADDR'] ?? '';
-    $isLocal = in_array($remote, ['127.0.0.1','::1','localhost'], true);
+// Allow localhost access
+if ($isLocal) {
+    $allow = true;
+} else {
+    // Allow if valid token is provided
     $secret = getenv('CREATE_ADMIN_SECRET') ?: null;
     $provided = $_GET['token'] ?? $_POST['token'] ?? $_SERVER['HTTP_X_CREATE_ADMIN_TOKEN'] ?? null;
 
-    if ($isLocal && $secret && $provided && hash_equals((string)$secret, (string)$provided)) {
+    if ($secret && $provided && hash_equals((string)$secret, (string)$provided)) {
         $allow = true;
     } else {
         echo "Unauthorized: create_admin is restricted.\n";
-        echo "Requirements: either be logged in as an admin, or run from localhost with a valid token.\n";
+        echo "Requirements: run from localhost or provide a valid token.\n";
         if (!$isLocal) echo "Note: your IP ($remote) is not localhost.\n";
-        if (!$secret) echo "Note: server has no CREATE_ADMIN_SECRET configured — set an env var to enable localhost+token access.\n";
+        if (!$secret) echo "Note: server has no CREATE_ADMIN_SECRET configured — set an env var to enable token-based access.\n";
         exit;
     }
 }
