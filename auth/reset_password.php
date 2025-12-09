@@ -9,6 +9,12 @@ $code_sent = false;
 $code_verified = false;
 $action = $_POST['action'] ?? '';
 
+// Check if already authenticated from previous code verification
+if (isset($_SESSION['reset_authenticated']) && $_SESSION['reset_authenticated']) {
+    $code_verified = true;
+    $reset_email = $_SESSION['reset_email'] ?? '';
+}
+
 // Retrieve from session if already sent
 if (isset($_SESSION['reset_email_sent'])) {
     $reset_email = $_SESSION['reset_email_sent'];
@@ -109,6 +115,8 @@ if ($action === 'verify_code') {
                 $_SESSION['reset_email'] = $reset_email;
                 $_SESSION['reset_authenticated'] = true;
                 unset($_SESSION['reset_email_sent']);
+                session_write_close();
+                session_start(); // Ensure session is persisted
                 $code_verified = true;
                 $message = 'Code verified! Now set your new password.';
                 $message_type = 'success';
