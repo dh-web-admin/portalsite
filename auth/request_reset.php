@@ -26,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $expires_at = time() + (15 * 60); // 15 minutes
 
+        $send_error = null;
+
         if ($user_exists) {
             // Store code in password_resets table (REPLACE INTO to overwrite old codes)
             $insert_stmt = $conn->prepare("REPLACE INTO password_resets (email, code, expires_at) VALUES (?, ?, ?)");
@@ -34,12 +36,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insert_stmt->close();
 
             // Send email via Mailjet
-            sendResetCode($email, $code);
+            $result = sendResetCode($email, $code);
+            if (is_array($result) && isset($result['success']) && !$result['success']) {
+                $send_error = $result['error'] ?? 'Unknown Mailjet error';
+            }
         }
 
-        // Always show same message (whether email exists or not)
-        $message = 'If an account exists with that email, you will receive a password reset code shortly.';
-        $message_type = 'success';
+        // If email send failed for an existing user, surface the error (temporary diagnostic)
+        if ($send_error && $user_exists) {
+            $message = 'Password reset email failed: ' . $send_error;
+            $message_type = 'error';
+        } else {
+            // Always show same message (whether email exists or not)
+            $message = 'If an account exists with that email, you will receive a password reset code shortly.';
+            $message_type = 'success';
+        }
     }
 }
 ?>

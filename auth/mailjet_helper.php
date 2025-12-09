@@ -20,8 +20,9 @@ function sendResetCode($email, $code) {
 
     // Fallback if env vars not set (for local testing; use caution)
     if (!$api_key || !$api_secret) {
-        $log('Mailjet credentials not configured. Email: ' . $email . ', Code: ' . $code);
-        return false; // Fail gracefully in dev/test
+        $msg = 'Mailjet credentials not configured.';
+        $log($msg . ' Email: ' . $email . ', Code: ' . $code);
+        return ['success' => false, 'error' => $msg];
     }
 
     $from_email = "noreply@darkhorsespreader.com";
@@ -71,11 +72,12 @@ function sendResetCode($email, $code) {
     curl_close($ch);
 
     if ($http_code === 200) {
-        return true;
-    } else {
-        $log('Mailjet API error. Code: ' . $http_code . ', CurlError: ' . $curl_error . ', Response: ' . $response . ', Email: ' . $email);
-        return false;
+        return ['success' => true, 'error' => ''];
     }
+
+    $msg = 'Mailjet API error. Code: ' . $http_code . ', CurlError: ' . $curl_error . ', Response: ' . $response;
+    $log($msg . ', Email: ' . $email);
+    return ['success' => false, 'error' => $msg];
 }
 
 ?>
