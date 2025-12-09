@@ -160,11 +160,20 @@ if ($action === 'reset_password') {
         // Clear session flags
         unset($_SESSION['reset_authenticated']);
         unset($_SESSION['reset_email']);
+        unset($_SESSION['reset_email_sent']);
 
-        // Redirect to login with success message
-        $_SESSION['reset_success'] = 'Password reset successfully. Please log in with your new password.';
-        header('Location: login.php');
-        exit();
+        // Show success message and redirect after 2 seconds
+        $message = 'Password reset successfully! Redirecting to login...';
+        $message_type = 'success';
+        ?>
+        <script>
+            setTimeout(function() {
+                window.location.href = 'login.php';
+            }, 2000);
+        </script>
+        <?php
+        // Stop execution but display the success message
+        ob_end_flush();
     }
 }
 ?>
