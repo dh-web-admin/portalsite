@@ -50,7 +50,7 @@ function sendResetCode($email, $code) {
     curl_setopt($ch, CURLOPT_URL, 'https://api.mailjet.com/v3.1/send');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-    curl_setopt($ch, CURLAUTH_BASIC, $api_key . ':' . $api_secret);
+    curl_setopt($ch, CURLOPT_USERPWD, $api_key . ':' . $api_secret);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
