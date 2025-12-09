@@ -105,12 +105,13 @@ if ($action === 'verify_code') {
                 $message_type = 'error';
                 $code_sent = true;
             } else {
-                // Code is valid! Set session and redirect to password reset
+                // Code is valid! Set session flags
                 $_SESSION['reset_email'] = $reset_email;
                 $_SESSION['reset_authenticated'] = true;
                 unset($_SESSION['reset_email_sent']);
-                header('Location: reset_password_new.php');
-                exit();
+                $code_verified = true;
+                $message = 'Code verified! Now set your new password.';
+                $message_type = 'success';
             }
         }
     }
@@ -190,48 +191,83 @@ if ($action === 'reset_password') {
         <?php endif; ?>
 
         <form method="POST" class="password-reset-form">
-            <!-- Step 1: Email input (always visible) -->
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
-                    required 
-                    autocomplete="email"
-                    value="<?php echo htmlspecialchars($reset_email); ?>"
-                >
-            </div>
-
-            <!-- Step 1 Button: Send/Resend Code -->
-            <div class="form-actions" id="step1-buttons">
-                <button type="submit" name="action" value="send_code" class="btn-primary">
-                    <?php echo $code_sent ? 'Resend Code' : 'Send Reset Code'; ?>
-                </button>
-            </div>
-
-            <!-- Step 2: Code input (hidden until code sent) -->
-            <div id="code-section" class="<?php echo !$code_sent ? 'hidden' : ''; ?>">
+            <?php if (!isset($_SESSION['reset_authenticated']) || !$_SESSION['reset_authenticated']): ?>
+                <!-- Step 1 & 2: Email + Code Entry -->
                 <div class="form-group">
-                    <label for="code">Reset Code (6 digits)</label>
+                    <label for="email">Email Address</label>
                     <input 
-                        type="text" 
-                        id="code" 
-                        name="code" 
-                        inputmode="numeric"
-                        maxlength="6"
-                        placeholder="000000"
-                        value="<?php echo htmlspecialchars($_POST['code'] ?? ''); ?>"
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        required 
+                        autocomplete="email"
+                        value="<?php echo htmlspecialchars($reset_email); ?>"
                     >
-                    <small style="color: #666; margin-top: 0.25rem;">Check your email for the code.</small>
+                </div>
+
+                <div class="form-actions" id="step1-buttons">
+                    <button type="submit" name="action" value="send_code" class="btn-primary">
+                        <?php echo $code_sent ? 'Resend Code' : 'Send Reset Code'; ?>
+                    </button>
+                </div>
+
+                <!-- Code input (hidden until code sent) -->
+                <div id="code-section" class="<?php echo !$code_sent ? 'hidden' : ''; ?>">
+                    <div class="form-group">
+                        <label for="code">Reset Code (6 digits)</label>
+                        <input 
+                            type="text" 
+                            id="code" 
+                            name="code" 
+                            inputmode="numeric"
+                            maxlength="6"
+                            placeholder="000000"
+                            value="<?php echo htmlspecialchars($_POST['code'] ?? ''); ?>"
+                        >
+                        <small style="color: #666; margin-top: 0.25rem;">Check your email for the code.</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" name="action" value="verify_code" class="btn-primary">
+                            Verify Code
+                        </button>
+                    </div>
+                </div>
+            <?php else: ?>
+                <!-- Step 3: Password Reset (after code verified) -->
+                <div class="form-group">
+                    <label for="password">New Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        autocomplete="new-password"
+                        minlength="8"
+                    >
+                    <small style="color: #666; margin-top: 0.25rem; line-height: 1.4;">
+                        At least 8 characters, with uppercase, lowercase, and numbers.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password_confirm">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        id="password_confirm" 
+                        name="password_confirm" 
+                        required 
+                        autocomplete="new-password"
+                        minlength="8"
+                    >
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" name="action" value="verify_code" class="btn-primary">
-                        Verify Code
+                    <button type="submit" name="action" value="reset_password" class="btn-primary">
+                        Reset Password
                     </button>
                 </div>
-            </div>
+            <?php endif; ?>
         </form>
 
         <div class="form-link">
