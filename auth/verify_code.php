@@ -39,7 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $del_stmt->execute();
                 $del_stmt->close();
             } else if ($code !== $stored_code) {
-                $message = 'Invalid reset code. Please try again.';
+                // Debug: log mismatch
+                error_log("Code mismatch for $email: submitted='$code' (len=" . strlen($code) . "), stored='$stored_code' (len=" . strlen($stored_code) . ")");
+                $message = 'Invalid reset code. Please try again. (Submitted: ' . htmlspecialchars($code) . ', Expected: ' . htmlspecialchars($stored_code) . ')';
                 $message_type = 'error';
             } else {
                 // Code is valid! Set session and redirect to reset password page
