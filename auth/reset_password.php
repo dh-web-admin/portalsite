@@ -9,12 +9,66 @@ $code_sent = false;
 $code_verified = false;
 $action = $_POST['action'] ?? '';
 
-// If already verified, send user to the password entry page
+// If already verified, show password entry on this page (single-page flow)
 if (isset($_SESSION['reset_authenticated']) && $_SESSION['reset_authenticated']) {
-    // make redirect absolute to avoid relative path issues and ensure session is saved
-    session_write_close();
-    header('Location: /auth/reset_password_new.php');
-    exit();
+    $reset_email = $_SESSION['reset_email'] ?? '';
+    $code_verified = true;
+    $code_sent = false;
+}
+
+// Action: Reset password (single-page handler)
+if ($action === 'reset_password') {
+    // Ensure the user verified the code in this session
+    if (!isset($_SESSION['reset_authenticated']) || !isset($_SESSION['reset_email'])) {
+        $message = 'Unauthorized action. Please request a reset code first.';
+        $message_type = 'error';
+    } else {
+        $reset_email = $_SESSION['reset_email'];
+        $password = $_POST['password'] ?? '';
+        $password_confirm = $_POST['password_confirm'] ?? '';
+
+        if (empty($password) || empty($password_confirm)) {
+            $message = 'Please fill in all fields.';
+            $message_type = 'error';
+            $code_verified = true;
+        } else if ($password !== $password_confirm) {
+            $message = 'Passwords do not match.';
+            $message_type = 'error';
+            $code_verified = true;
+        } else if (strlen($password) < 8) {
+            $message = 'Password must be at least 8 characters long.';
+            $message_type = 'error';
+            $code_verified = true;
+        } else if (!preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            $message = 'Password must contain uppercase, lowercase, and numbers.';
+            $message_type = 'error';
+            $code_verified = true;
+        } else {
+            // Hash password and update users table
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+            $update_stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+            $update_stmt->bind_param('ss', $hashed_password, $reset_email);
+            $update_stmt->execute();
+            $update_stmt->close();
+
+            // Delete from password_resets
+            $del_stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+            $del_stmt->bind_param('s', $reset_email);
+            $del_stmt->execute();
+            $del_stmt->close();
+
+            // Clear session flags
+            unset($_SESSION['reset_authenticated']);
+            unset($_SESSION['reset_email']);
+
+            // Redirect to login with success message
+            $_SESSION['reset_success'] = 'Password reset successfully. Please log in with your new password.';
+            session_write_close();
+            header('Location: login.php');
+            exit();
+        }
+    }
 }
 
 // Retrieve from session if already sent
@@ -93,6 +147,8 @@ if ($action === 'verify_code') {
         $logEntry[] = $code;
         $preLog = implode(" | ", $logEntry) . "\n";
         @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $preLog, FILE_APPEND | LOCK_EX);
+        // Also mirror to PHP error log (visible in Railway logs)
+        @error_log(trim($preLog));
 
         // Retrieve code from password_resets table
         $stmt = $conn->prepare("SELECT code, expires_at FROM password_resets WHERE email = ? LIMIT 1");
@@ -120,12 +176,16 @@ if ($action === 'verify_code') {
                 $del_stmt->close();
 
                 $code_sent = true;
-                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', date('c') . " | session:" . session_id() . " | expired for " . $reset_email . "\n", FILE_APPEND | LOCK_EX);
+                $expLog = date('c') . " | session:" . session_id() . " | expired for " . $reset_email . "\n";
+                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $expLog, FILE_APPEND | LOCK_EX);
+                @error_log(trim($expLog));
             } else if ($code !== $stored_code) {
                 $message = 'Invalid reset code. Please try again.';
                 $message_type = 'error';
                 $code_sent = true;
-                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', date('c') . " | session:" . session_id() . " | invalid code submitted for " . $reset_email . " (submitted:" . $code . ", stored:" . $stored_code . ")\n", FILE_APPEND | LOCK_EX);
+                $invLog = date('c') . " | session:" . session_id() . " | invalid code submitted for " . $reset_email . " (submitted:" . $code . ", stored:" . $stored_code . ")\n";
+                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $invLog, FILE_APPEND | LOCK_EX);
+                @error_log(trim($invLog));
             } else {
                 // Mark the session as authenticated for the reset flow
                 $_SESSION['reset_email'] = $reset_email;
@@ -137,10 +197,14 @@ if ($action === 'verify_code') {
                 // Flush session to storage to ensure the next request sees these flags
                 session_write_close();
 
-                // Redirect to the dedicated password entry page (absolute path)
-                header('Location: /auth/reset_password_new.php');
-                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', date('c') . " | session:" . session_id() . " | verified OK for " . $reset_email . "\n", FILE_APPEND | LOCK_EX);
-                exit();
+                // Log verification OK
+                $okLog = date('c') . " | session:" . session_id() . " | verified OK for " . $reset_email . "\n";
+                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $okLog, FILE_APPEND | LOCK_EX);
+                @error_log(trim($okLog));
+
+                // Render password entry on this page instead of redirecting
+                $code_verified = true;
+                $code_sent = false;
             }
         }
     }
@@ -203,6 +267,39 @@ if ($action === 'verify_code') {
                     </button>
                 </div>
             </div>
+
+            <div id="password-section" class="<?php echo !$code_verified ? 'hidden' : ''; ?>">
+                <div class="form-group">
+                    <label for="password">New Password</label>
+                    <input 
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        autocomplete="new-password"
+                        minlength="8"
+                    >
+                    <small style="color: #666; margin-top: 0.25rem; line-height: 1.4;">
+                        At least 8 characters, with uppercase, lowercase, and numbers.
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password_confirm">Confirm Password</label>
+                    <input 
+                        type="password"
+                        id="password_confirm"
+                        name="password_confirm"
+                        required
+                        autocomplete="new-password"
+                        minlength="8"
+                    >
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" name="action" value="reset_password" class="btn-primary">Reset Password</button>
+                </div>
+            </div>
         </form>
 
         <div class="form-link">
@@ -214,9 +311,16 @@ if ($action === 'verify_code') {
         document.addEventListener('DOMContentLoaded', function() {
             const codeSent = <?php echo $code_sent ? 'true' : 'false'; ?>;
             const codeSection = document.getElementById('code-section');
+            const passwordSection = document.getElementById('password-section');
+            const codeVerified = <?php echo $code_verified ? 'true' : 'false'; ?>;
 
             if (codeSent) {
                 codeSection.classList.remove('hidden');
+            }
+            if (codeVerified) {
+                // show password section and hide code section
+                if (passwordSection) passwordSection.classList.remove('hidden');
+                if (codeSection) codeSection.classList.add('hidden');
             }
         });
     </script>
