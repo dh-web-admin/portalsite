@@ -3,6 +3,12 @@
 // Shows the last 200 lines from debug/password_reset_mail.log
 
 $logFile = __DIR__ . '/password_reset_mail.log';
+
+// Ensure the log file exists so the viewer doesn't fail on first load
+if (!file_exists($logFile)) {
+  // Best-effort touch; ignore failures if FS is read-only
+  @file_put_contents($logFile, "", FILE_APPEND);
+}
 $maxLines = 200;
 
 function tailLines($file, $lines)
