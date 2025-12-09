@@ -237,22 +237,26 @@ if ($action === 'reset_password') {
     </div>
 
     <script>
-        // Show code section on page load if code was already sent
         document.addEventListener('DOMContentLoaded', function() {
             const codeSent = <?php echo $code_sent ? 'true' : 'false'; ?>;
             const codeSection = document.getElementById('code-section');
+            
+            // Show code section if already sent
             if (codeSent) {
                 codeSection.classList.remove('hidden');
             }
-        });
-
-        // Show code section when form is submitted with send_code action
-        document.querySelector('.password-reset-form').addEventListener('submit', function(e) {
-            const action = e.submitter?.value;
-            if (action === 'send_code') {
-                // Prevent default to show code section immediately
-                // Actually, we'll let the form submit naturally and the PHP will handle it
-            }
+            
+            // Listen for form submission with send_code action
+            const form = document.querySelector('.password-reset-form');
+            form.addEventListener('submit', function(e) {
+                // Check if this is a send_code submission
+                if (e.submitter && e.submitter.value === 'send_code') {
+                    // Show code section after successful send (will be visible after page reloads via PHP)
+                    setTimeout(function() {
+                        codeSection.classList.remove('hidden');
+                    }, 100);
+                }
+            });
         });
     </script>
 </body>
