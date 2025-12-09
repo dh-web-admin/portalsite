@@ -83,6 +83,17 @@ if ($action === 'verify_code') {
         $message = 'Please enter both email and code.';
         $message_type = 'error';
     } else {
+        // Debug: log verify attempts to help diagnose intermittent failures
+        $logEntry = [];
+        $logEntry[] = date('c');
+        $logEntry[] = session_id();
+        $logEntry[] = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $logEntry[] = 'verify_attempt';
+        $logEntry[] = $reset_email;
+        $logEntry[] = $code;
+        $preLog = implode(" | ", $logEntry) . "\n";
+        @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', $preLog, FILE_APPEND | LOCK_EX);
+
         // Retrieve code from password_resets table
         $stmt = $conn->prepare("SELECT code, expires_at FROM password_resets WHERE email = ? LIMIT 1");
         $stmt->bind_param('s', $reset_email);
@@ -109,10 +120,12 @@ if ($action === 'verify_code') {
                 $del_stmt->close();
 
                 $code_sent = true;
+                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', date('c') . " | session:" . session_id() . " | expired for " . $reset_email . "\n", FILE_APPEND | LOCK_EX);
             } else if ($code !== $stored_code) {
                 $message = 'Invalid reset code. Please try again.';
                 $message_type = 'error';
                 $code_sent = true;
+                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', date('c') . " | session:" . session_id() . " | invalid code submitted for " . $reset_email . " (submitted:" . $code . ", stored:" . $stored_code . ")\n", FILE_APPEND | LOCK_EX);
             } else {
                 // Mark the session as authenticated for the reset flow
                 $_SESSION['reset_email'] = $reset_email;
@@ -126,6 +139,7 @@ if ($action === 'verify_code') {
 
                 // Redirect to the dedicated password entry page (absolute path)
                 header('Location: /auth/reset_password_new.php');
+                @file_put_contents(__DIR__ . '/../debug/password_reset_verify.log', date('c') . " | session:" . session_id() . " | verified OK for " . $reset_email . "\n", FILE_APPEND | LOCK_EX);
                 exit();
             }
         }
