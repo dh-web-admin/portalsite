@@ -74,7 +74,7 @@ function isActiveForm($formName, $activeForm){
         <button type="submit" name="login">Login</button>
         <div style="margin-top: 15px; text-align: center; padding: 10px; background-color: #f0f4f8; border-radius: 6px;">
           <p style="margin: 0; color: #555; font-size: 14px;">
-            Can't login? <strong>Contact your administrator</strong> for password reset.
+            Can't login? <a href="request_reset.php" style="color: #4a5fcf; text-decoration: none; font-weight: 600;">Reset your password</a> or contact your administrator.
           </p>
         </div>
       </form>
