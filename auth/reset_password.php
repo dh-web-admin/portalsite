@@ -188,17 +188,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         @file_put_contents(__DIR__ . '/../debug/password_reset_update.log', $log, FILE_APPEND | LOCK_EX);
         error_log($log);
 
-        // Cleanup
-        $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
-        $stmt->bind_param("s", $reset_email);
-        $stmt->execute();
-        $stmt->close();
+        // If update failed or matched zero rows, show exact diagnostic message on the page
+        if (!$execOk || $affected === 0) {
+            $message = 'Failed to update password. execOk=' . ($execOk ? '1' : '0') . ', affected=' . $affected . ', error=' . htmlspecialchars($sqlErr);
+            $message_type = 'error';
+            $step = 'new_password';
+        } else {
+            // Cleanup only on successful update
+            $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+            $stmt->bind_param("s", $reset_email);
+            $stmt->execute();
+            $stmt->close();
 
-        session_destroy();
+            session_destroy();
 
-        $message = "Your password has been reset successfully!";
-        $message_type = "success";
-        $step = 'done';
+            $message = "Your password has been reset successfully!";
+            $message_type = "success";
+            $step = 'done';
+        }
     }
 }
 ?>
