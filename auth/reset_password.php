@@ -193,16 +193,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         } else {
 
             // CLEANUP
-            $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
-            $stmt->bind_param("s", $reset_email);
-            $stmt->execute();
-            $stmt->close();
+                // Verify the stored hash matches the new password to be sure update applied
+                $db_hash = null;
+                $q = $conn->prepare("SELECT password FROM users WHERE id = ? LIMIT 1");
+                if ($q) {
+                    $q->bind_param('i', $reset_user_id);
+                    $q->execute();
+                    $res = $q->get_result();
+                    if ($res && $res->num_rows > 0) {
+                        $db_hash = $res->fetch_assoc()['password'] ?? null;
+                    }
+                    $q->close();
+                }
 
-            session_destroy();
+                $verify_new_matches = false;
+                if ($db_hash !== null) {
+                    $verify_new_matches = password_verify($new_pass, $db_hash);
+                }
 
-            $message = "Your password has been reset successfully!";
-            $message_type = "success";
-            $step = 'done';
+                if (!$verify_new_matches) {
+                    // Strange: update reported success but stored hash doesn't match new password
+                    error_log("Password reset: UPDATE succeeded but verification failed for id=" . $reset_user_id);
+                    $message = "Password updated but verification failed. Please contact support.";
+                    $message_type = 'error';
+                    $step = 'new_password';
+                } else {
+                    // Clear remember token to prevent old persistent login from bypassing new password
+                    $clear = $conn->prepare("UPDATE users SET remember_token = NULL, remember_token_expires = NULL WHERE id = ?");
+                    if ($clear) {
+                        $clear->bind_param('i', $reset_user_id);
+                        $clear->execute();
+                        $clear->close();
+                    }
+
+                    // Remove the reset request
+                    $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+                    $stmt->bind_param("s", $reset_email);
+                    $stmt->execute();
+                    $stmt->close();
+
+                    session_destroy();
+
+                    $message = "Your password has been reset successfully!";
+                    $message_type = "success";
+                    $step = 'done';
+                }
         }
     }
 }
