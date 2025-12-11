@@ -1,275 +1,261 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+// URL helper for base_url()
+require_once __DIR__ . '/../partials/url.php';
 
 // Only allow admin users
 $role = $_SESSION['role'] ?? null;
 if ($role !== 'admin') {
-		http_response_code(403);
-		echo '<h2>Access denied</h2><p>You must be an admin to access this page.</p>';
-		exit();
+    http_response_code(403);
+    echo '<h2>Access denied</h2><p>You must be an admin to access this page.</p>';
+    exit();
 }
 
-// Helper: get all table names
-function get_tables($conn) {
-		$tables = [];
-		$res = $conn->query("SHOW TABLES");
-		if ($res) {
-				while ($row = $res->fetch_array(MYSQLI_NUM)) {
-						$tables[] = $row[0];
-				}
-				$res->free();
-		}
-		return $tables;
+$mysqli = $conn; // config.php provides $conn
+
+// Fetch tables
+$tables = [];
+$res = $mysqli->query("SHOW TABLES");
+if ($res) {
+    while ($row = $res->fetch_array()) {
+        $tables[] = $row[0];
+    }
 }
 
-// Helper: get row count for table
+// Helper: table row count
 function table_count($conn, $table) {
-		$safe = $conn->real_escape_string($table);
-		$res = $conn->query("SELECT COUNT(*) AS c FROM `" . $safe . "`");
-		if ($res) {
-				$r = $res->fetch_assoc();
-				$res->free();
-				return intval($r['c'] ?? 0);
-		}
-		return 0;
+    $safe = $conn->real_escape_string($table);
+    $r = $conn->query("SELECT COUNT(*) AS c FROM `" . $safe . "`");
+    if ($r) return (int)$r->fetch_assoc()['c'];
+    return 0;
 }
 
-// Download handler: stream entire table as CSV or Excel (HTML .xls)
-if (isset($_GET['download'])) {
-	$table = $_GET['download'];
-	$format = strtolower($_GET['format'] ?? 'csv'); // csv or excel
-	$tables = get_tables($conn);
-	if (!in_array($table, $tables, true)) {
-		http_response_code(400);
-		echo 'Invalid table specified.';
-		exit();
-	}
-
-	$safeTable = $conn->real_escape_string($table);
-	$query = "SELECT * FROM `" . $safeTable . "`";
-	$result = $conn->query($query);
-	if (!$result) {
-		http_response_code(500);
-		echo 'Query failed: ' . htmlspecialchars($conn->error);
-		exit();
-	}
-
-	if ($format === 'excel' || $format === 'xls') {
-		// Excel-compatible HTML table (works well for most MS Excel versions)
-		$filename = $table . '_' . date('Ymd_His') . '.xls';
-		header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
-		header('Content-Disposition: attachment; filename="' . $filename . '"');
-		// BOM for UTF-8
-		echo "\xEF\xBB\xBF";
-
-		echo "<table border=1>\n";
-		$first = $result->fetch_assoc();
-		if ($first) {
-			echo "<tr>";
-			foreach (array_keys($first) as $h) {
-				echo '<th>' . htmlspecialchars($h) . '</th>';
-			}
-			echo "</tr>\n";
-			// first row
-			echo "<tr>";
-			foreach ($first as $c) echo '<td>' . htmlspecialchars((string)$c) . '</td>';
-			echo "</tr>\n";
-		}
-		while ($row = $result->fetch_assoc()) {
-			echo "<tr>";
-			foreach ($row as $c) echo '<td>' . htmlspecialchars((string)$c) . '</td>';
-			echo "</tr>\n";
-		}
-		echo "</table>";
-		$result->free();
-		exit();
-	} else {
-		// Default CSV
-		$filename = $table . '_' . date('Ymd_His') . '.csv';
-		header('Content-Type: text/csv; charset=utf-8');
-		header('Content-Disposition: attachment; filename="' . $filename . '"');
-		$out = fopen('php://output', 'w');
-		if ($out === false) {
-			http_response_code(500);
-			echo 'Failed to open output stream.';
-			exit();
-		}
-
-		// Write header and rows
-		rewind($result);
-		// mysqli_result doesn't support rewind; we already used first row earlier for csv -> restructure
-		// Instead, execute query again for CSV to ensure full rows
-		$result->free();
-		$result2 = $conn->query($query);
-		if ($result2) {
-			$first = $result2->fetch_assoc();
-			if ($first) {
-				fputcsv($out, array_keys($first));
-				fputcsv($out, array_values($first));
-			}
-			while ($row = $result2->fetch_assoc()) {
-				fputcsv($out, array_values($row));
-			}
-			$result2->free();
-		}
-		fclose($out);
-		exit();
-	}
+// ---- Download handlers -------------------------------------------------------
+// Per-table CSV
+if (isset($_GET['download_table'])) {
+    $table = $mysqli->real_escape_string($_GET['download_table']);
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="' . $table . '.csv"');
+    $out = fopen('php://output', 'w');
+    $r = $mysqli->query("SELECT * FROM `$table` LIMIT 10000");
+    if ($r) {
+        $first = true;
+        while ($row = $r->fetch_assoc()) {
+            if ($first) { fputcsv($out, array_keys($row)); $first = false; }
+            fputcsv($out, array_values($row));
+        }
+    }
+    fclose($out);
+    exit;
 }
 
-$tables = get_tables($conn);
+// Per-table Excel-compatible (HTML table)
+if (isset($_GET['download_table_xls'])) {
+    $table = $mysqli->real_escape_string($_GET['download_table_xls']);
+    header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $table . '.xls"');
+    echo "\xEF\xBB\xBF"; // BOM
+    echo "<table border=1><tr>";
+    $r = $mysqli->query("SELECT * FROM `$table` LIMIT 10000");
+    $first = true;
+    while ($row = $r->fetch_assoc()) {
+        if ($first) { foreach (array_keys($row) as $h) echo "<th>".htmlspecialchars($h)."</th>"; echo "</tr>"; $first = false; }
+        echo "<tr>";
+        foreach ($row as $v) echo "<td>".htmlspecialchars($v)."</td>";
+        echo "</tr>";
+    }
+    echo "</table>";
+    exit;
+}
+
+// Bulk ZIP of all tables (CSV)
+if (isset($_GET['download_all_zip'])) {
+    $tmpdir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'portalsite_backup_' . time() . '_' . uniqid();
+    if (!mkdir($tmpdir) && !is_dir($tmpdir)) {
+        http_response_code(500);
+        echo 'Failed to create temp directory.';
+        exit;
+    }
+    $filenames = [];
+    foreach ($tables as $table) {
+        $fname = $tmpdir . DIRECTORY_SEPARATOR . $table . '.csv';
+        $filenames[] = $fname;
+        $out = fopen($fname, 'w');
+        $r = $mysqli->query("SELECT * FROM `$table`");
+        if ($r) {
+            $first = true;
+            while ($row = $r->fetch_assoc()) {
+                if ($first) { fputcsv($out, array_keys($row)); $first = false; }
+                fputcsv($out, array_values($row));
+            }
+        }
+        fclose($out);
+    }
+
+    // Prefer ZipArchive when available
+    $timestamp = date('Ymd_His');
+    $zipname = $tmpdir . DIRECTORY_SEPARATOR . 'portalsite_backup_' . $timestamp . '.zip';
+    if (class_exists('ZipArchive')) {
+        $zip = new ZipArchive();
+        if ($zip->open($zipname, ZipArchive::CREATE) === TRUE) {
+            foreach ($filenames as $f) $zip->addFile($f, basename($f));
+            $zip->close();
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="' . basename($zipname) . '"');
+            readfile($zipname);
+            // cleanup
+            foreach ($filenames as $f) @unlink($f);
+            @unlink($zipname);
+            @rmdir($tmpdir);
+            exit;
+        } else {
+            http_response_code(500);
+            echo 'Failed to create zip archive.';
+            // cleanup files
+            foreach ($filenames as $f) @unlink($f);
+            @rmdir($tmpdir);
+            exit;
+        }
+    }
+
+    // Fallback: use PharData to create a tar.gz if available
+    if (class_exists('PharData')) {
+        try {
+            $tarPath = $tmpdir . DIRECTORY_SEPARATOR . 'portalsite_backup_' . $timestamp . '.tar';
+            $phar = new PharData($tarPath);
+            foreach ($filenames as $f) {
+                $phar->addFile($f, basename($f));
+            }
+            // compress to gzip (.tar.gz)
+            $phar->compress(Phar::GZ);
+            $gzPath = $tarPath . '.gz';
+            header('Content-Type: application/gzip');
+            header('Content-Disposition: attachment; filename="' . basename($gzPath) . '"');
+            readfile($gzPath);
+            // cleanup
+            foreach ($filenames as $f) @unlink($f);
+            @unlink($tarPath);
+            @unlink($gzPath);
+            @rmdir($tmpdir);
+            exit;
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo 'Failed to create archive: ' . htmlspecialchars($e->getMessage());
+            foreach ($filenames as $f) @unlink($f);
+            @rmdir($tmpdir);
+            exit;
+        }
+    }
+
+    // Last resort: combine all CSVs into one downloadable CSV with table markers
+    $combined = $tmpdir . DIRECTORY_SEPARATOR . 'portalsite_combined_' . $timestamp . '.csv';
+    $outc = fopen($combined, 'w');
+    foreach ($filenames as $f) {
+        $tableName = pathinfo($f, PATHINFO_FILENAME);
+        fwrite($outc, "## Table: " . $tableName . "\n");
+        $fh = fopen($f, 'r');
+        if ($fh) {
+            while (($line = fgets($fh)) !== false) fwrite($outc, $line);
+            fclose($fh);
+        }
+        fwrite($outc, "\n");
+    }
+    fclose($outc);
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="' . basename($combined) . '"');
+    readfile($combined);
+    // cleanup
+    foreach ($filenames as $f) @unlink($f);
+    @unlink($combined);
+    @rmdir($tmpdir);
+    exit;
+}
+// -----------------------------------------------------------------------------
 ?>
 <!doctype html>
 <html>
 <head>
-	<meta charset="utf-8">
-	<title>DB Backup - Admin</title>
-	<style>
-		body{font-family: Arial, Helvetica, sans-serif; margin:20px}
-		table{border-collapse:collapse;width:100%;margin-bottom:20px}
-		th,td{border:1px solid #ccc;padding:8px;text-align:left}
-		.preview{max-height:200px;overflow:auto;background:#f9f9f9}
-		.download{white-space:nowrap}
-		.btn{background:#2d6cdf;color:#fff;padding:6px 10px;text-decoration:none;border-radius:4px}
-	</style>
+    <meta charset="utf-8">
+    <title>Database Backup (Admin)</title>
+    <style>
+        body{font-family:Arial, Helvetica, sans-serif; margin:18px; background:#f3f4f6}
+        .tables-list{display:flex;flex-direction:column;gap:12px;max-width:1100px}
+        .table-card{border:1px solid #e5e7eb;padding:10px;border-radius:6px;background:#fff}
+        .table-card-header{display:flex;align-items:center;gap:12px}
+        .table-title{font-weight:700;flex:1}
+        .table-meta{color:#6b7280}
+        .table-actions{display:flex;gap:8px}
+        .preview{display:none;margin-top:8px}
+        .preview.open{display:block}
+        .preview-table{border-collapse:collapse;width:100%}
+        .preview-table th,.preview-table td{border:1px solid #e5e7eb;padding:6px;text-align:left}
+        .btn{background:#2d6cdf;color:#fff;padding:6px 10px;text-decoration:none;border-radius:4px;border:0;cursor:pointer}
+        .muted{color:#6b7280}
+    </style>
 </head>
 <body>
-	<h1>Database Backup (Admin)</h1>
-	<p>Below are the existing tables in the database. Click "Download" to export the entire table as CSV.</p>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <h1 style="margin:0">Database Backup (Admin)</h1>
+        <div style="margin-left:auto">
+            <a class="btn" href="<?php echo htmlspecialchars(base_url('/pages/dashboard/')); ?>">Home</a>
+        </div>
+    </div>
+    <p class="muted">Below are the existing tables in the database. Use Preview to inspect first rows, or download per table.</p>
 
-	<table>
-		<thead>
-			<tr><th>Table</th><th>Rows</th><th>Preview (first 10 rows)</th><th>Download</th></tr>
-		</thead>
-		<tbody>
-<?php foreach ($tables as $t): ?>
-			<tr>
-				<td><?php echo htmlspecialchars($t); ?></td>
-				<td><?php echo table_count($conn, $t); ?></td>
-				<td class="preview">
-					<?php
-						// Show a small preview of first 10 rows
-						$safeT = $conn->real_escape_string($t);
-						$res = $conn->query("SELECT * FROM `" . $safeT . "` LIMIT 10");
-						if ($res && $res->num_rows) {
-								echo '<table>'; 
-								// header
-								$row = $res->fetch_assoc();
-								echo '<tr>'; foreach(array_keys($row) as $h) echo '<th>'.htmlspecialchars($h).'</th>'; echo '</tr>';
-								// first row
-								echo '<tr>'; foreach($row as $c) echo '<td>'.htmlspecialchars(substr((string)$c,0,200)).'</td>'; echo '</tr>';
-								// remaining rows
-								while($r = $res->fetch_assoc()){
-										echo '<tr>'; foreach($r as $c) echo '<td>'.htmlspecialchars(substr((string)$c,0,200)).'</td>'; echo '</tr>';
-								}
-								echo '</table>';
-								$res->free();
-						} else {
-								echo '<em>(no rows)</em>';
-						}
-					?>
-				</td>
-				<td class="download">
-				  <a class="btn" href="?download=<?php echo urlencode($t); ?>&format=csv">CSV</a>
-				  &nbsp;
-				  <a class="btn" href="?download=<?php echo urlencode($t); ?>&format=excel">Excel</a>
-				</td>
-			</tr>
-<?php endforeach; ?>
-		</tbody>
-	</table>
-		  <p>
-			<strong>Bulk export:</strong>
-			<a class="btn" href="?export_all=zip&format=csv">Download all tables (ZIP, CSV)</a>
-			&nbsp;
-			<a class="btn" href="?export_all=zip&format=excel">Download all tables (ZIP, Excel)</a>
-		  </p>
+    <p><a class="btn" href="?download_all_zip=1">Download All Tables (ZIP)</a></p>
+
+    <div class="tables-list">
+    <?php foreach ($tables as $t):
+        $count = table_count($mysqli, $t);
+    ?>
+        <div class="table-card">
+            <div class="table-card-header">
+                <div class="table-title"><?php echo htmlspecialchars($t); ?></div>
+                <div class="table-meta"><?php echo number_format($count); ?> rows</div>
+                <div class="table-actions">
+                    <a class="btn" href="?download_table=<?php echo urlencode($t); ?>">CSV</a>
+                    <a class="btn" href="?download_table_xls=<?php echo urlencode($t); ?>">Excel</a>
+                    <button class="btn toggle-preview" data-table="<?php echo htmlspecialchars($t); ?>">Preview</button>
+                </div>
+            </div>
+            <div class="preview" id="preview-<?php echo htmlspecialchars($t); ?>">
+                <?php
+                $safeT = $mysqli->real_escape_string($t);
+                $res2 = $mysqli->query("SELECT * FROM `" . $safeT . "` LIMIT 10");
+                if ($res2 && $res2->num_rows) {
+                    echo '<table class="preview-table">';
+                    $first = true;
+                    while ($row = $res2->fetch_assoc()) {
+                        if ($first) {
+                            echo '<tr>'; foreach (array_keys($row) as $h) echo '<th>'.htmlspecialchars($h).'</th>'; echo '</tr>';
+                            $first = false;
+                        }
+                        echo '<tr>'; foreach ($row as $c) echo '<td>'.htmlspecialchars(substr((string)$c,0,200)).'</td>'; echo '</tr>';
+                    }
+                    echo '</table>';
+                    $res2->free();
+                } else {
+                    echo '<em>(no rows)</em>';
+                }
+                ?>
+            </div>
+        </div>
+    <?php endforeach; ?>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        var toggles = document.querySelectorAll('.toggle-preview');
+        toggles.forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var id = 'preview-' + btn.getAttribute('data-table');
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.classList.toggle('open');
+            });
+        });
+    });
+    </script>
 </body>
 </html>
- 
-		<?php
-		// Bulk export handler: generate per-table files, zip them, stream, cleanup
-		if (isset($_GET['export_all']) && $_GET['export_all'] === 'zip') {
-			$format = strtolower($_GET['format'] ?? 'csv');
-			$tmpDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'sso_backup_' . uniqid();
-			if (!mkdir($tmpDir) && !is_dir($tmpDir)) {
-				http_response_code(500);
-				echo 'Failed to create temp directory.';
-				exit();
-			}
-
-			$createdFiles = [];
-			foreach ($tables as $table) {
-				$safe = $conn->real_escape_string($table);
-				$query = "SELECT * FROM `" . $safe . "`";
-				$result = $conn->query($query);
-				if (!$result) continue;
-
-				$basename = $table . ($format === 'excel' ? '.xls' : '.csv');
-				$filePath = $tmpDir . DIRECTORY_SEPARATOR . $basename;
-
-				if ($format === 'excel') {
-					$fh = fopen($filePath, 'w');
-					if ($fh) {
-						// write UTF-8 BOM
-						fwrite($fh, "\xEF\xBB\xBF");
-						fwrite($fh, "<table border=1>\n");
-						$first = $result->fetch_assoc();
-						if ($first) {
-							fwrite($fh, "<tr>");
-							foreach (array_keys($first) as $h) fwrite($fh, '<th>' . htmlspecialchars($h) . '</th>');
-							fwrite($fh, "</tr>\n");
-							fwrite($fh, "<tr>"); foreach ($first as $c) fwrite($fh, '<td>' . htmlspecialchars((string)$c) . '</td>'); fwrite($fh, "</tr>\n");
-						}
-						while ($row = $result->fetch_assoc()) {
-							fwrite($fh, "<tr>"); foreach ($row as $c) fwrite($fh, '<td>' . htmlspecialchars((string)$c) . '</td>'); fwrite($fh, "</tr>\n");
-						}
-						fwrite($fh, "</table>");
-						fclose($fh);
-						$createdFiles[] = $filePath;
-					}
-				} else {
-					$fh = fopen($filePath, 'w');
-					if ($fh) {
-						$first = $result->fetch_assoc();
-						if ($first) {
-							fputcsv($fh, array_keys($first));
-							fputcsv($fh, array_values($first));
-						}
-						while ($row = $result->fetch_assoc()) {
-							fputcsv($fh, array_values($row));
-						}
-						fclose($fh);
-						$createdFiles[] = $filePath;
-					}
-				}
-				$result->free();
-			}
-
-			// Create ZIP
-			$zipPath = $tmpDir . DIRECTORY_SEPARATOR . 'db_export_' . date('Ymd_His') . '.zip';
-			$zip = new ZipArchive();
-			if ($zip->open($zipPath, ZipArchive::CREATE) === TRUE) {
-				foreach ($createdFiles as $f) {
-					$zip->addFile($f, basename($f));
-				}
-				$zip->close();
-
-				// Stream ZIP
-				header('Content-Type: application/zip');
-				header('Content-Disposition: attachment; filename="' . basename($zipPath) . '"');
-				header('Content-Length: ' . filesize($zipPath));
-				readfile($zipPath);
-			} else {
-				http_response_code(500);
-				echo 'Failed to create zip file.';
-			}
-
-			// Cleanup
-			foreach ($createdFiles as $f) { if (file_exists($f)) @unlink($f); }
-			if (file_exists($zipPath)) @unlink($zipPath);
-			@rmdir($tmpDir);
-			exit();
-		}
-
