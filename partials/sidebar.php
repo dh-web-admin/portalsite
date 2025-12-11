@@ -46,6 +46,15 @@ if (isset($_GET['preview_role'])) {
         </div>
     </div>
     
+    <div class="nav-group" id="maintenanceGroup">
+        <div class="nav-toggle">
+            <button class="nav-btn" id="maintenanceToggle" type="button">Maintenance ▾</button>
+        </div>
+        <div class="sub-nav">
+            <a href="<?php echo htmlspecialchars(base_url('/admin/backup.php') . $previewParam); ?>" class="nav-btn">DB Backup</a>
+        </div>
+    </div>
+    
     <?php
     // Show "Add Service" section only on maps page
     $currentPage = basename($_SERVER['PHP_SELF']);
