@@ -63,6 +63,14 @@ $stmt->close();
           devGroup.classList.toggle('open');
         });
       }
+      // Toggle maintenance sub-nav
+      var maintenanceToggle = document.getElementById('maintenanceToggle');
+      var maintenanceGroup = document.getElementById('maintenanceGroup');
+      if (maintenanceToggle && maintenanceGroup) {
+        maintenanceToggle.addEventListener('click', function(){
+          maintenanceGroup.classList.toggle('open');
+        });
+      }
     })();
   </script>
   <script src="../assets/js/mobile-menu.js"></script>
