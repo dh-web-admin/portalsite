@@ -16,7 +16,7 @@ $message_type = '';
 -------------------------------------------------------
 */
 
-$step = 'email'; // default first step
+$step = 'email'; // default
 $reset_email = $_SESSION['reset_email'] ?? '';
 
 if (!empty($_SESSION['reset_email']) && !empty($_SESSION['reset_email_sent'])) {
@@ -41,23 +41,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
         $message_type = "error";
         $step = 'email';
     } else {
-        // Validate email exists
-        $check = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
-        $check->bind_param("s", $reset_email);
-        $check->execute();
-        $result = $check->get_result();
-        $check->close();
+
+        // Check if email exists
+        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+        $stmt->bind_param("s", $reset_email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $stmt->close();
 
         if ($result->num_rows === 0) {
             $message = "No account found with that email.";
             $message_type = "error";
             $step = 'email';
         } else {
-            // Create code
-            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $expires_at = time() + (15 * 60);
 
-            // Store code
+            // Create reset code
+            $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $expires_at = time() + (15 * 60); // 15 mins
+
+            // Save reset code
             $stmt = $conn->prepare("REPLACE INTO password_resets (email, code, expires_at) VALUES (?, ?, ?)");
             $stmt->bind_param("ssi", $reset_email, $code, $expires_at);
             $stmt->execute();
@@ -66,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
             // Send email
             sendResetCode($reset_email, $code);
 
-            // Save state
+            // Save session state
             $_SESSION['reset_email'] = $reset_email;
             $_SESSION['reset_email_sent'] = true;
 
@@ -84,15 +86,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
 */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code') {
 
-    // Email MUST come from session
     $reset_email = $_SESSION['reset_email'] ?? '';
     $submitted_code = trim($_POST['code']);
 
-    if (empty($reset_email) || empty($submitted_code)) {
+    if (empty($submitted_code)) {
         $message = "Please enter the code.";
         $message_type = "error";
         $step = 'verify_code';
     } else {
+
         $stmt = $conn->prepare("SELECT code, expires_at FROM password_resets WHERE email = ? LIMIT 1");
         $stmt->bind_param("s", $reset_email);
         $stmt->execute();
@@ -102,22 +104,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code')
         if ($result->num_rows === 0) {
             $message = "No reset request found. Please request a new code.";
             $message_type = "error";
-            $step = 'email';
             session_destroy();
+            $step = 'email';
         } else {
             $data = $result->fetch_assoc();
 
             if (time() > $data['expires_at']) {
                 $message = "Your reset code has expired.";
                 $message_type = "error";
-                $step = 'email';
                 session_destroy();
+                $step = 'email';
             } elseif ($submitted_code !== $data['code']) {
                 $message = "Invalid code. Please try again.";
                 $message_type = "error";
                 $step = 'verify_code';
             } else {
-                // SUCCESS: move to new password
+                // Code verified — proceed
                 $_SESSION['reset_code_verified'] = true;
                 $message = "Code verified! Please enter your new password.";
                 $message_type = "success";
@@ -147,25 +149,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         $message_type = "error";
         $step = 'new_password';
     } else {
-        // Update password
+
+        // Hash new password
         $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
 
+        // ALWAYS update by email — 100% reliable on Railway
         $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
         $stmt->bind_param("ss", $hashed, $reset_email);
         $stmt->execute();
+
+        $execOk = $stmt->errno === 0;
+        $affected = $stmt->affected_rows;
+        $sqlErr = $stmt->error;
+
         $stmt->close();
 
-        // Cleanup
-        $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
-        $stmt->bind_param("s", $reset_email);
-        $stmt->execute();
-        $stmt->close();
+        // Logging for debugging
+        error_log("PASSWORD RESET | email=$reset_email | execOk=$execOk | affected=$affected | error=$sqlErr");
 
-        session_destroy();
+        if (!$execOk) {
+            $message = "Error updating password: " . htmlspecialchars($sqlErr);
+            $message_type = "error";
+            $step = 'new_password';
+        } else {
 
-        $message = "Your password has been reset successfully!";
-        $message_type = "success";
-        $step = 'done';
+            // Cleanup reset record
+            $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+            $stmt->bind_param("s", $reset_email);
+            $stmt->execute();
+            $stmt->close();
+
+            session_destroy();
+
+            $message = "Your password has been reset successfully!";
+            $message_type = "success";
+            $step = 'done';
+        }
     }
 }
 ?>
@@ -202,8 +221,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         <form method="POST">
             <label>Enter 6-digit code:</label>
             <input type="text" name="code" maxlength="6" required>
-
-            <!-- Not needed now because session holds email -->
             <button type="submit" name="action" value="verify_code">Verify Code</button>
         </form>
     <?php endif; ?>
@@ -223,7 +240,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
     <?php endif; ?>
 
 
-    <!-- STEP 4: DONE -->
+    <!-- DONE -->
     <?php if ($step === 'done'): ?>
         <a href="login.php" class="btn-primary">Go to Login</a>
     <?php endif; ?>
