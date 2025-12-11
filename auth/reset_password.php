@@ -16,9 +16,9 @@ $message_type = '';
 -------------------------------------------------------
 */
 
-$step = 'email'; // default first step
-    $reset_email = $_SESSION['reset_email'] ?? '';
-    $reset_user_id = $_SESSION['reset_user_id'] ?? null;
+$step = 'email'; // default
+$reset_email = $_SESSION['reset_email'] ?? '';
+$reset_user_id = $_SESSION['reset_user_id'] ?? null;
 
 if (!empty($_SESSION['reset_email']) && !empty($_SESSION['reset_email_sent'])) {
     $step = 'verify_code';
@@ -42,39 +42,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
         $message_type = "error";
         $step = 'email';
     } else {
-        // Validate email exists (also capture user id for reliable updates)
+        // Grab user ID from DB
         $check = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
         $check->bind_param("s", $reset_email);
         $check->execute();
         $result = $check->get_result();
-        $user_id = null;
-        if ($result && $result->num_rows > 0) {
-            $row = $result->fetch_assoc();
-            $user_id = isset($row['id']) ? intval($row['id']) : null;
-        }
         $check->close();
 
-        if ($user_id === null) {
+        if ($result->num_rows === 0) {
             $message = "No account found with that email.";
             $message_type = "error";
             $step = 'email';
         } else {
-            // Persist user id in session so subsequent steps update by id
+            $row = $result->fetch_assoc();
+            $user_id = intval($row['id']);
+
+            // Store ID in session
             $_SESSION['reset_user_id'] = $user_id;
-            // Create code
+
+            // Generate code
             $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $expires_at = time() + (15 * 60);
 
-            // Store code
+            // Save code
             $stmt = $conn->prepare("REPLACE INTO password_resets (email, code, expires_at) VALUES (?, ?, ?)");
             $stmt->bind_param("ssi", $reset_email, $code, $expires_at);
             $stmt->execute();
             $stmt->close();
 
-            // Send email
+            // Send mail
             sendResetCode($reset_email, $code);
 
-            // Save state
+            // Save session state
             $_SESSION['reset_email'] = $reset_email;
             $_SESSION['reset_email_sent'] = true;
 
@@ -87,14 +86,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
 
 /*
 -------------------------------------------------------
- STEP 2 — VERIFY CODE
+ STEP 2 — VERIFY CODE (NOW SAFELY FETCHES USER ID AGAIN)
 -------------------------------------------------------
 */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code') {
 
-    // Email MUST come from session
     $reset_email = $_SESSION['reset_email'] ?? '';
-    $reset_user_id = $_SESSION['reset_user_id'] ?? null;
     $submitted_code = trim($_POST['code']);
 
     if (empty($reset_email) || empty($submitted_code)) {
@@ -111,22 +108,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code')
         if ($result->num_rows === 0) {
             $message = "No reset request found. Please request a new code.";
             $message_type = "error";
-            $step = 'email';
             session_destroy();
+            $step = 'email';
         } else {
             $data = $result->fetch_assoc();
 
+            // Expired?
             if (time() > $data['expires_at']) {
                 $message = "Your reset code has expired.";
                 $message_type = "error";
-                $step = 'email';
                 session_destroy();
-            } elseif ($submitted_code !== $data['code']) {
+                $step = 'email';
+            }
+            // Wrong code?
+            elseif ($submitted_code !== $data['code']) {
                 $message = "Invalid code. Please try again.";
                 $message_type = "error";
                 $step = 'verify_code';
-            } else {
-                // SUCCESS: move to new password
+            }
+            // Code OK
+            else {
+
+                // 🔥 FIX: Re-fetch user ID to ensure accurate update
+                $get = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+                $get->bind_param("s", $reset_email);
+                $get->execute();
+                $id_result = $get->get_result();
+                $get->close();
+
+                if ($id_result->num_rows > 0) {
+                    $_SESSION['reset_user_id'] = intval($id_result->fetch_assoc()['id']);
+                }
+
                 $_SESSION['reset_code_verified'] = true;
                 $message = "Code verified! Please enter your new password.";
                 $message_type = "success";
@@ -157,44 +170,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         $message_type = "error";
         $step = 'new_password';
     } else {
-        // Update password
+
         $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
 
-        // Prefer updating by user id (more reliable); fallback to email if id missing
-        if (!empty($reset_user_id)) {
-            $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-            if ($stmt) {
-                $stmt->bind_param("si", $hashed, $reset_user_id);
-            }
-        } else {
-            $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
-            if ($stmt) {
-                $stmt->bind_param("ss", $hashed, $reset_email);
-            }
-        }
-        $execOk = false;
-        if ($stmt) {
-            $execOk = $stmt->execute();
-            $affected = $stmt->affected_rows;
-            $sqlErr = $stmt->error;
-            $stmt->close();
-        } else {
-            $affected = 0;
-            $sqlErr = $conn->error ?? 'prepare_failed';
-        }
+        // Must update by ID (safest)
+        $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+        $stmt->bind_param("si", $hashed, $reset_user_id);
+        $stmt->execute();
 
-        // Log the outcome for diagnostics
-        $log = date('c') . " | update_password | email:" . $reset_email . " | execOk:" . ($execOk ? '1' : '0') . " | affected:" . $affected . " | error:" . $sqlErr . "\n";
-        @file_put_contents(__DIR__ . '/../debug/password_reset_update.log', $log, FILE_APPEND | LOCK_EX);
-        error_log($log);
+        $execOk = $stmt->errno === 0;
+        $affected = $stmt->affected_rows;
+        $sqlErr = $stmt->error;
+        $stmt->close();
 
-        // If update failed or matched zero rows, show exact diagnostic message on the page
+        // Diagnostic
+        error_log("UPDATE PASSWORD | id=$reset_user_id | execOk=$execOk | affected=$affected | error=$sqlErr");
+
         if (!$execOk || $affected === 0) {
-            $message = 'Failed to update password. execOk=' . ($execOk ? '1' : '0') . ', affected=' . $affected . ', error=' . htmlspecialchars($sqlErr);
-            $message_type = 'error';
+            $message = "Password update failed. (affected=$affected | error=$sqlErr)";
+            $message_type = "error";
             $step = 'new_password';
         } else {
-            // Cleanup only on successful update
+
+            // CLEANUP
             $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
             $stmt->bind_param("s", $reset_email);
             $stmt->execute();
@@ -242,8 +240,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         <form method="POST">
             <label>Enter 6-digit code:</label>
             <input type="text" name="code" maxlength="6" required>
-
-            <!-- Not needed now because session holds email -->
             <button type="submit" name="action" value="verify_code">Verify Code</button>
         </form>
     <?php endif; ?>
