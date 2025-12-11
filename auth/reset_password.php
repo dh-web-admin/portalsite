@@ -152,8 +152,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
 
         $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
         $stmt->bind_param("ss", $hashed, $reset_email);
-        $stmt->execute();
-        $stmt->close();
+        $execOk = false;
+        if ($stmt) {
+            $execOk = $stmt->execute();
+            $affected = $stmt->affected_rows;
+            $sqlErr = $stmt->error;
+            $stmt->close();
+        } else {
+            $affected = 0;
+            $sqlErr = $conn->error ?? 'prepare_failed';
+        }
+
+        // Log the outcome for diagnostics
+        $log = date('c') . " | update_password | email:" . $reset_email . " | execOk:" . ($execOk ? '1' : '0') . " | affected:" . $affected . " | error:" . $sqlErr . "\n";
+        @file_put_contents(__DIR__ . '/../debug/password_reset_update.log', $log, FILE_APPEND | LOCK_EX);
+        error_log($log);
 
         // Cleanup
         $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
