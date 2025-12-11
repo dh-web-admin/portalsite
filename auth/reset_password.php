@@ -17,7 +17,8 @@ $message_type = '';
 */
 
 $step = 'email'; // default first step
-$reset_email = $_SESSION['reset_email'] ?? '';
+    $reset_email = $_SESSION['reset_email'] ?? '';
+    $reset_user_id = $_SESSION['reset_user_id'] ?? null;
 
 if (!empty($_SESSION['reset_email']) && !empty($_SESSION['reset_email_sent'])) {
     $step = 'verify_code';
@@ -41,18 +42,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
         $message_type = "error";
         $step = 'email';
     } else {
-        // Validate email exists
+        // Validate email exists (also capture user id for reliable updates)
         $check = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
         $check->bind_param("s", $reset_email);
         $check->execute();
         $result = $check->get_result();
+        $user_id = null;
+        if ($result && $result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $user_id = isset($row['id']) ? intval($row['id']) : null;
+        }
         $check->close();
 
-        if ($result->num_rows === 0) {
+        if ($user_id === null) {
             $message = "No account found with that email.";
             $message_type = "error";
             $step = 'email';
         } else {
+            // Persist user id in session so subsequent steps update by id
+            $_SESSION['reset_user_id'] = $user_id;
             // Create code
             $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $expires_at = time() + (15 * 60);
@@ -86,6 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code')
 
     // Email MUST come from session
     $reset_email = $_SESSION['reset_email'] ?? '';
+    $reset_user_id = $_SESSION['reset_user_id'] ?? null;
     $submitted_code = trim($_POST['code']);
 
     if (empty($reset_email) || empty($submitted_code)) {
@@ -135,6 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code')
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password') {
 
     $reset_email = $_SESSION['reset_email'] ?? '';
+    $reset_user_id = $_SESSION['reset_user_id'] ?? null;
     $new_pass = trim($_POST['new_password']);
     $confirm_pass = trim($_POST['confirm_password']);
 
@@ -150,8 +160,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         // Update password
         $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
 
-        $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
-        $stmt->bind_param("ss", $hashed, $reset_email);
+        // Prefer updating by user id (more reliable); fallback to email if id missing
+        if (!empty($reset_user_id)) {
+            $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+            if ($stmt) {
+                $stmt->bind_param("si", $hashed, $reset_user_id);
+            }
+        } else {
+            $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+            if ($stmt) {
+                $stmt->bind_param("ss", $hashed, $reset_email);
+            }
+        }
         $execOk = false;
         if ($stmt) {
             $execOk = $stmt->execute();
