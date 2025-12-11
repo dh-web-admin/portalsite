@@ -32,9 +32,9 @@ if (!empty($_SESSION['reset_code_verified'])) {
  STEP 1 — SEND CODE
 -------------------------------------------------------
 */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_code') {
 
-    $reset_email = trim($_POST['email']);
+    $reset_email = trim($_POST['email'] ?? '');
 
     if (empty($reset_email)) {
         $message = "Please enter your email.";
@@ -84,12 +84,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'send_code') {
  STEP 2 — VERIFY CODE
 -------------------------------------------------------
 */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verify_code') {
 
     $reset_email = $_SESSION['reset_email'] ?? '';
-    $submitted_code = trim($_POST['code']);
+    $submitted_code = trim($_POST['code'] ?? '');
 
-    if (empty($submitted_code)) {
+    if (empty($reset_email)) {
+        $message = "Your reset session has expired. Please request a new code.";
+        $message_type = "error";
+        $step = 'email';
+    } elseif (empty($submitted_code)) {
         $message = "Please enter the code.";
         $message_type = "error";
         $step = 'verify_code';
@@ -134,13 +138,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'verify_code')
  STEP 3 — SET NEW PASSWORD
 -------------------------------------------------------
 */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_password') {
 
     $reset_email = $_SESSION['reset_email'] ?? '';
-    $new_pass = trim($_POST['new_password']);
-    $confirm_pass = trim($_POST['confirm_password']);
+    $new_pass = trim($_POST['new_password'] ?? '');
+    $confirm_pass = trim($_POST['confirm_password'] ?? '');
 
-    if (empty($new_pass) || empty($confirm_pass)) {
+    if (empty($reset_email)) {
+        $message = "Your reset session has expired. Please request a new code.";
+        $message_type = "error";
+        $step = 'email';
+    } elseif (empty($new_pass) || empty($confirm_pass)) {
         $message = "Please fill in both password fields.";
         $message_type = "error";
         $step = 'new_password';
@@ -153,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         // Hash new password
         $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
 
-        // ALWAYS update by email — 100% reliable on Railway
+        // ALWAYS update by email
         $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
         $stmt->bind_param("ss", $hashed, $reset_email);
         $stmt->execute();
@@ -161,10 +169,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
         $execOk = $stmt->errno === 0;
         $affected = $stmt->affected_rows;
         $sqlErr = $stmt->error;
-
         $stmt->close();
 
-        // Logging for debugging
         error_log("PASSWORD RESET | email=$reset_email | execOk=$execOk | affected=$affected | error=$sqlErr");
 
         if (!$execOk) {
@@ -172,6 +178,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
             $message_type = "error";
             $step = 'new_password';
         } else {
+            /*
+             * IMPORTANT PART:
+             * Invalidate all remember-me tokens for this account
+             */
+            $stmt = $conn->prepare("UPDATE users SET remember_token = NULL, remember_token_expires = NULL WHERE email = ?");
+            $stmt->bind_param("s", $reset_email);
+            $stmt->execute();
+            $stmt->close();
+
+            // Clear remember_token cookie in browser (if set)
+            if (isset($_COOKIE['remember_token'])) {
+                $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+                setcookie('remember_token', '', [
+                    'expires' => time() - 3600,
+                    'path' => '/',
+                    'domain' => '',
+                    'secure' => $isHttps,
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+            }
 
             // Cleanup reset record
             $stmt = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
@@ -179,9 +208,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'set_password'
             $stmt->execute();
             $stmt->close();
 
+            // Destroy session (logout everywhere)
             session_destroy();
 
-            $message = "Your password has been reset successfully!";
+            $message = "Your password has been reset successfully! Please log in with your new password.";
             $message_type = "success";
             $step = 'done';
         }
