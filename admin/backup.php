@@ -14,12 +14,56 @@ if ($role !== 'admin') {
 
 $mysqli = $conn; // config.php provides $conn
 
+$show_hidden = isset($_GET['show_hidden']) && $_GET['show_hidden'] === '1';
+
+// Hide system/auth tables from this UI (and block direct downloads)
+$hidden_tables = [
+    'password_resets',
+    'sso_tokens',
+    // Common token table names (in case they exist in the DB)
+    'auth_tokens',
+    'api_tokens',
+    'access_tokens',
+    'refresh_tokens',
+    'oauth_access_tokens',
+    'oauth_refresh_tokens',
+    'personal_access_tokens',
+];
+
+$hidden_table_patterns = [
+    // Anything that looks like an auth/token system table
+    '/token/i',
+    '/password_reset/i',
+];
+
+function is_hidden_table(string $table): bool {
+    global $hidden_tables;
+    global $hidden_table_patterns;
+    if (in_array($table, $hidden_tables, true)) {
+        return true;
+    }
+    foreach ($hidden_table_patterns as $pattern) {
+        if (preg_match($pattern, $table)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function is_valid_table_name(string $table): bool {
+    // MySQL identifiers we expect in this app are simple snake_case
+    return (bool)preg_match('/^[A-Za-z0-9_]+$/', $table);
+}
+
 // Fetch tables
 $tables = [];
 $res = $mysqli->query("SHOW TABLES");
 if ($res) {
     while ($row = $res->fetch_array()) {
-        $tables[] = $row[0];
+        $t = $row[0];
+        if ($show_hidden || !is_hidden_table($t)) {
+            $tables[] = $t;
+        }
     }
 }
 
@@ -34,7 +78,13 @@ function table_count($conn, $table) {
 // ---- Download handlers -------------------------------------------------------
 // Per-table CSV
 if (isset($_GET['download_table'])) {
-    $table = $mysqli->real_escape_string($_GET['download_table']);
+    $requested = (string)$_GET['download_table'];
+    if (!is_valid_table_name($requested) || (!$show_hidden && is_hidden_table($requested))) {
+        http_response_code(404);
+        echo 'Not found.';
+        exit;
+    }
+    $table = $mysqli->real_escape_string($requested);
     header('Content-Type: text/csv');
     header('Content-Disposition: attachment; filename="' . $table . '.csv"');
     $out = fopen('php://output', 'w');
@@ -52,7 +102,13 @@ if (isset($_GET['download_table'])) {
 
 // Per-table Excel-compatible (HTML table)
 if (isset($_GET['download_table_xls'])) {
-    $table = $mysqli->real_escape_string($_GET['download_table_xls']);
+    $requested = (string)$_GET['download_table_xls'];
+    if (!is_valid_table_name($requested) || (!$show_hidden && is_hidden_table($requested))) {
+        http_response_code(404);
+        echo 'Not found.';
+        exit;
+    }
+    $table = $mysqli->real_escape_string($requested);
     header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
     header('Content-Disposition: attachment; filename="' . $table . '.xls"');
     echo "\xEF\xBB\xBF"; // BOM
@@ -171,6 +227,43 @@ if (isset($_GET['download_all_zip'])) {
     @rmdir($tmpdir);
     exit;
 }
+
+// Per-table preview (HTML snippet)
+if (isset($_GET['preview_table'])) {
+    $requested = (string)$_GET['preview_table'];
+    if (!is_valid_table_name($requested) || (!$show_hidden && is_hidden_table($requested))) {
+        http_response_code(404);
+        echo 'Not found.';
+        exit;
+    }
+
+    $table = $mysqli->real_escape_string($requested);
+    $res2 = $mysqli->query("SELECT * FROM `" . $table . "` LIMIT 5");
+    if ($res2 && $res2->num_rows) {
+        echo '<table class="preview-table">';
+        $first = true;
+        while ($row = $res2->fetch_assoc()) {
+            if ($first) {
+                echo '<tr>';
+                foreach (array_keys($row) as $h) {
+                    echo '<th>' . htmlspecialchars($h) . '</th>';
+                }
+                echo '</tr>';
+                $first = false;
+            }
+            echo '<tr>';
+            foreach ($row as $c) {
+                echo '<td>' . htmlspecialchars(substr((string)$c, 0, 200)) . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</table>';
+        $res2->free();
+    } else {
+        echo '<em>(no rows)</em>';
+    }
+    exit;
+}
 // -----------------------------------------------------------------------------
 ?>
 <!doctype html>
@@ -186,24 +279,38 @@ if (isset($_GET['download_all_zip'])) {
         .table-title{font-weight:700;flex:1}
         .table-meta{color:#6b7280}
         .table-actions{display:flex;gap:8px}
-        .preview{display:none;margin-top:8px}
+        .preview{display:none;margin-top:8px;overflow-x:auto}
         .preview.open{display:block}
-        .preview-table{border-collapse:collapse;width:100%}
-        .preview-table th,.preview-table td{border:1px solid #e5e7eb;padding:6px;text-align:left}
+        .preview-table{border-collapse:collapse;width:max-content;min-width:100%}
+        .preview-table th,.preview-table td{border:1px solid #e5e7eb;padding:6px;text-align:left;vertical-align:top}
+        .preview-table td{overflow-wrap:anywhere;word-break:break-word}
         .btn{background:#2d6cdf;color:#fff;padding:6px 10px;text-decoration:none;border-radius:4px;border:0;cursor:pointer}
         .muted{color:#6b7280}
     </style>
 </head>
-<body>
+<body data-show-hidden="<?php echo $show_hidden ? '1' : '0'; ?>">
     <div style="display:flex;align-items:center;gap:12px;">
         <h1 style="margin:0">Database Backup (Admin)</h1>
         <div style="margin-left:auto">
+            <?php if ($show_hidden): ?>
+                <a class="btn" href="?show_hidden=0">Hide System Tables</a>
+            <?php else: ?>
+                <a class="btn" href="?show_hidden=1">View Hidden Tables</a>
+            <?php endif; ?>
             <a class="btn" href="<?php echo htmlspecialchars(base_url('/pages/dashboard/')); ?>">Home</a>
         </div>
     </div>
-    <p class="muted">Below are the existing tables in the database. Use Preview to inspect first rows, or download per table.</p>
+    <p class="muted">
+        <?php if ($show_hidden): ?>
+            Showing all tables (including system/auth tables).
+        <?php else: ?>
+            Showing application tables only. System/auth tables (like password resets and SSO tokens) are hidden.
+        <?php endif; ?>
+    </p>
 
-    <p><a class="btn" href="?download_all_zip=1">Download All Tables (ZIP)</a></p>
+    <p>
+        <a class="btn" href="?download_all_zip=1<?php echo $show_hidden ? '&show_hidden=1' : ''; ?>">Download All Tables (ZIP)</a>
+    </p>
 
     <div class="tables-list">
     <?php foreach ($tables as $t):
@@ -216,29 +323,11 @@ if (isset($_GET['download_all_zip'])) {
                 <div class="table-actions">
                     <a class="btn" href="?download_table=<?php echo urlencode($t); ?>">CSV</a>
                     <a class="btn" href="?download_table_xls=<?php echo urlencode($t); ?>">Excel</a>
-                    <button class="btn toggle-preview" data-table="<?php echo htmlspecialchars($t); ?>">Preview</button>
+                    <button class="btn toggle-preview" data-table="<?php echo htmlspecialchars($t); ?>" aria-label="Toggle preview">&#9660;</button>
                 </div>
             </div>
             <div class="preview" id="preview-<?php echo htmlspecialchars($t); ?>">
-                <?php
-                $safeT = $mysqli->real_escape_string($t);
-                $res2 = $mysqli->query("SELECT * FROM `" . $safeT . "` LIMIT 10");
-                if ($res2 && $res2->num_rows) {
-                    echo '<table class="preview-table">';
-                    $first = true;
-                    while ($row = $res2->fetch_assoc()) {
-                        if ($first) {
-                            echo '<tr>'; foreach (array_keys($row) as $h) echo '<th>'.htmlspecialchars($h).'</th>'; echo '</tr>';
-                            $first = false;
-                        }
-                        echo '<tr>'; foreach ($row as $c) echo '<td>'.htmlspecialchars(substr((string)$c,0,200)).'</td>'; echo '</tr>';
-                    }
-                    echo '</table>';
-                    $res2->free();
-                } else {
-                    echo '<em>(no rows)</em>';
-                }
-                ?>
+                <em class="muted">(click &#9660; to load 5 rows)</em>
             </div>
         </div>
     <?php endforeach; ?>
@@ -252,7 +341,22 @@ if (isset($_GET['download_all_zip'])) {
                 var id = 'preview-' + btn.getAttribute('data-table');
                 var el = document.getElementById(id);
                 if (!el) return;
+                var opening = !el.classList.contains('open');
                 el.classList.toggle('open');
+                if (opening && !el.getAttribute('data-loaded')) {
+                    el.innerHTML = '<em>(loading...)</em>';
+                    var showHidden = document.body.getAttribute('data-show-hidden') === '1';
+                    var url = '?preview_table=' + encodeURIComponent(btn.getAttribute('data-table')) + (showHidden ? '&show_hidden=1' : '');
+                    fetch(url, { credentials: 'same-origin' })
+                        .then(function(r){ return r.text(); })
+                        .then(function(html){
+                            el.innerHTML = html;
+                            el.setAttribute('data-loaded', '1');
+                        })
+                        .catch(function(){
+                            el.innerHTML = '<em>(failed to load)</em>';
+                        });
+                }
             });
         });
     });
