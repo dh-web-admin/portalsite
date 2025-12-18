@@ -80,7 +80,7 @@ function eq_format_warranty($dateValue) {
 	<link rel="stylesheet" href="../../assets/css/base.css" />
 	<link rel="stylesheet" href="../../assets/css/admin-layout.css" />
 	<link rel="stylesheet" href="../../assets/css/dashboard.css" />
-  <link rel="stylesheet" href="style.css" />
+	<link rel="stylesheet" href="../../pages/equipments/style.css" />
 </head>
 <body class="admin-page">
 	<div class="admin-container">
