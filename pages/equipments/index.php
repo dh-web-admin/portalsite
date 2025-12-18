@@ -174,7 +174,7 @@ function eq_format_warranty($dateValue) {
 													data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
 													data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
 												>
-													<td><span class="equipment-number"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></span></td>
+													<td><a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a></td>
 													<td><?php echo htmlspecialchars((string)($eq['type'] ?? '')); ?></td>
 													<td>
 														<?php $val = trim((string)($eq['operating_condition'] ?? '')); ?>
