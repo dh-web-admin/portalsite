@@ -32,6 +32,9 @@ if (!$equipment) {
     echo "<h2>Equipment not found.</h2>";
     exit();
 }
+
+// Check if in edit mode
+$editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -343,17 +346,24 @@ if (!$equipment) {
   color: #1d4ed8;
 }
 .equipment-editable-cell {
-  background: #f6f8fa !important;
-  border: 1.5px solid #b6c2d2 !important;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 15px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #eef7ff;
+  color: #0b5ed7;
+  box-sizing: border-box;
+  margin: 0;
   outline: none;
-  box-shadow: 0 0 0 2px #e0e7ef;
-  transition: box-shadow 0.2s, background 0.2s, border 0.2s;
-  color: #1e293b;
+  transition: border 0.2s, background 0.2s;
 }
 .equipment-editable-cell:focus {
-  background: #e8f0fe !important;
-  border: 1.5px solid #60a5fa !important;
-  box-shadow: 0 0 0 2px #bae6fd;
+  background: #e0e7ef;
+  border-color: #2563eb;
+}
+.equipment-value-cell {
+  vertical-align: middle;
 }
 /* ================================
    FINAL SPACING FIXES
@@ -426,53 +436,165 @@ if (!$equipment) {
                             <span>Back to Equipments</span>
                         </a>
                     </div>
-                    <div class="equipment-details-table-wrapper">
-                        <div class="equipment-details-row" style="display: flex; align-items: flex-start;">
-                          <div class="equipment-details-table-wrapper" style="flex: 1;">
-                            <table class="equipment-details-table">
-                                <tbody>
-                                    <tr>
-                                        <th class="equipment-label-cell">DHCST Equipment number</th>
-                                        <td class="equipment-value-cell"><?php echo htmlspecialchars($equipment['dhcst_equipment_number'] ?? ''); ?></td>
-                                        <th class="equipment-label-cell">Make</th>
-                                        <td class="equipment-value-cell equipment-value-cell--border"><?php echo htmlspecialchars($equipment['make'] ?? ''); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th class="equipment-label-cell">DHSS Equipment number</th>
-                                        <td class="equipment-value-cell"><?php echo htmlspecialchars($equipment['dhss_equipment_number'] ?? ''); ?></td>
-                                        <th class="equipment-label-cell">Model</th>
-                                        <td class="equipment-value-cell equipment-value-cell--border"><?php echo htmlspecialchars($equipment['model'] ?? ''); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th class="equipment-label-cell">Type</th>
-                                        <td class="equipment-value-cell"><?php echo htmlspecialchars($equipment['type'] ?? ''); ?></td>
-                                        <th class="equipment-label-cell">Engine</th>
-                                        <td class="equipment-value-cell equipment-value-cell--border"><?php echo htmlspecialchars($equipment['engine'] ?? ''); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th class="equipment-label-cell">Year</th>
-                                        <td class="equipment-value-cell"><?php echo htmlspecialchars($equipment['year'] ?? ''); ?></td>
-                                        <th class="equipment-label-cell">Engine Serial Number</th>
-                                        <td class="equipment-value-cell equipment-value-cell--border"><?php echo htmlspecialchars($equipment['engine_serial_number'] ?? ''); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th class="equipment-label-cell">Vin</th>
-                                        <td class="equipment-value-cell"><?php echo htmlspecialchars($equipment['vin'] ?? ''); ?></td>
-                                        <th class="equipment-label-cell">Transmission</th>
-                                        <td class="equipment-value-cell equipment-value-cell--border"><?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th class="equipment-label-cell">Location</th>
-                                        <td class="equipment-value-cell"><?php echo htmlspecialchars($equipment['location'] ?? ''); ?></td>
-                                        <th class="equipment-label-cell">Trans Serial Number</th>
-                                        <td class="equipment-value-cell equipment-value-cell--border"><?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                          </div>
-                          <!-- Action buttons removed as requested -->
-                        </div>
-                    </div>
+                    <?php if ($editMode) { ?>
+<form method="POST" style="margin-bottom:0;">
+<?php } ?>
+<div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 18px; gap: 12px;">
+    <?php if (!$editMode) { ?>
+        <a href="equipment.php?id=<?php echo $equipmentId; ?>&edit=1" class="equipment-action-btn equipment-action-btn--primary" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Edit</a>
+    <?php } else { ?>
+        <button class="equipment-action-btn equipment-action-btn--primary" type="submit" name="save_changes" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Save Changes</button>
+        <a href="equipment.php?id=<?php echo $equipmentId; ?>" class="equipment-action-btn" style="background:#f3f6f9;color:#2563eb;border-color:#d1d5db;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);text-decoration:none;">Cancel</a>
+        <input type="hidden" name="equipment_id" value="<?php echo $equipmentId; ?>" />
+        <button type="submit" name="delete_equipment" class="equipment-action-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);" onclick="return confirm('Are you sure you want to delete this equipment?');">Delete</button>
+    <?php } ?>
+</div>
+<div class="equipment-details-table-wrapper">
+    <div class="equipment-details-row" style="display: flex; align-items: flex-start;">
+      <div class="equipment-details-table-wrapper" style="flex: 1;">
+        <table class="equipment-details-table">
+            <tbody>
+                <tr>
+                    <th class="equipment-label-cell">DHCST Equipment number</th>
+                    <td class="equipment-value-cell">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="dhcst_equipment_number" value="<?php echo htmlspecialchars($equipment['dhcst_equipment_number'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['dhcst_equipment_number'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                    <th class="equipment-label-cell">Make</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="make" value="<?php echo htmlspecialchars($equipment['make'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['make'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="equipment-label-cell">DHSS Equipment number</th>
+                    <td class="equipment-value-cell">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="dhss_equipment_number" value="<?php echo htmlspecialchars($equipment['dhss_equipment_number'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['dhss_equipment_number'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                    <th class="equipment-label-cell">Model</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="model" value="<?php echo htmlspecialchars($equipment['model'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['model'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="equipment-label-cell">Type</th>
+                    <td class="equipment-value-cell">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="type" value="<?php echo htmlspecialchars($equipment['type'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['type'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                    <th class="equipment-label-cell">Engine</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="engine" value="<?php echo htmlspecialchars($equipment['engine'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['engine'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="equipment-label-cell">Year</th>
+                    <td class="equipment-value-cell">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="vehicle_year" value="<?php echo htmlspecialchars($equipment['vehicle_year'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['vehicle_year'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                    <th class="equipment-label-cell">Engine Serial Number</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="engine_serial_number" value="<?php echo htmlspecialchars($equipment['engine_serial_number'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['engine_serial_number'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="equipment-label-cell">Vin</th>
+                    <td class="equipment-value-cell">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="vin" value="<?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                    <th class="equipment-label-cell">Transmission</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="transmission" value="<?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="equipment-label-cell">Location</th>
+                    <td class="equipment-value-cell">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="location" value="<?php echo htmlspecialchars($equipment['location'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['location'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                    <th class="equipment-label-cell">Trans Serial Number</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
+                        <?php if ($editMode) { ?>
+                            <input type="text" name="trans_serial_number" value="<?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>" class="equipment-editable-cell" />
+                        <?php } else { ?>
+                            <?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>
+                        <?php } ?>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+      </div>
+      <!-- Action buttons removed as requested -->
+    </div>
+</div>
+<input type="hidden" name="equipment_id" value="<?php echo $equipmentId; ?>" />
+</form>
+<?php
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && isset($_POST['equipment_id'])) {
+    $fields = [
+        'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
+        'vehicle_year', 'vin', 'transmission', 'trans_serial_number', 'location'
+    ];
+    $updates = [];
+    $params = [];
+    $types = '';
+    foreach ($fields as $field) {
+        $updates[] = "$field = ?";
+        $params[] = $_POST[$field] ?? '';
+        $types .= 's';
+    }
+    $params[] = $_POST['equipment_id'];
+    $types .= 'i';
+    $sql = 'UPDATE equipments SET ' . implode(', ', $updates) . ' WHERE equipment_id = ?';
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    // Redirect to view mode after save
+    header('Location: equipment.php?id=' . $_POST['equipment_id']);
+    exit();
+}
+?>
                     <hr class="equipment-section-separator" />
                     <!-- Future Sections Placeholder -->
                     <div class="equipment-future-section">

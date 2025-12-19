@@ -11,17 +11,7 @@ require_once __DIR__ . '/../config/config.php';
 $sql = "CREATE TABLE IF NOT EXISTS equipments (
     equipment_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     equipment_number VARCHAR(50) NOT NULL,
-    dhcst_equipment_number VARCHAR(50) NULL,
-    dhss_equipment_number VARCHAR(50) NULL,
     type VARCHAR(100) NOT NULL,
-    make VARCHAR(100) NULL,
-    model VARCHAR(100) NULL,
-    engine VARCHAR(120) NULL,
-    engine_serial_number VARCHAR(120) NULL,
-    transmission VARCHAR(120) NULL,
-    trans_serial_number VARCHAR(120) NULL,
-    vehicle_year VARCHAR(10) NULL,
-    vin VARCHAR(50) NULL,
     operating_condition VARCHAR(60) NULL,
     location VARCHAR(150) NULL,
     current_hours DECIMAL(10,1) NOT NULL DEFAULT 0.0,
@@ -37,9 +27,26 @@ $sql = "CREATE TABLE IF NOT EXISTS equipments (
     KEY idx_location (location)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
+$alterColumns = [
+    "ADD COLUMN dhcst_equipment_number VARCHAR(50) NULL",
+    "ADD COLUMN dhss_equipment_number VARCHAR(50) NULL",
+    "ADD COLUMN make VARCHAR(100) NULL",
+    "ADD COLUMN model VARCHAR(100) NULL",
+    "ADD COLUMN engine VARCHAR(120) NULL",
+    "ADD COLUMN engine_serial_number VARCHAR(120) NULL",
+    "ADD COLUMN transmission VARCHAR(120) NULL",
+    "ADD COLUMN trans_serial_number VARCHAR(120) NULL",
+    "ADD COLUMN vehicle_year VARCHAR(10) NULL",
+    "ADD COLUMN vin VARCHAR(50) NULL"
+];
+
 try {
     if ($conn->query($sql) === TRUE) {
         echo "<h2 style='color: green;'>✓ equipments table created successfully!</h2>";
+        foreach ($alterColumns as $alter) {
+            $conn->query("ALTER TABLE equipments $alter");
+        }
+        echo "<p>All columns ensured.</p>";
         echo "<p>You can now view the equipment list on <code>/pages/equipments/</code>.</p>";
     } else {
         echo "<h2 style='color: red;'>✗ Error creating table:</h2>";
