@@ -7,17 +7,20 @@ require_once __DIR__ . '/../config/config.php';
 try {
     // Check if column already exists
     $exists = false;
-    $stmt = $pdo->query("SHOW COLUMNS FROM Projects LIKE 'updated_at'");
-    if ($stmt && $stmt->fetch(PDO::FETCH_ASSOC)) {
+    $result = $conn->query("SHOW COLUMNS FROM Projects LIKE 'updated_at'");
+    if ($result && $result->fetch_assoc()) {
         $exists = true;
     }
     if ($exists) {
         echo "<div style='color:blue'>Column 'updated_at' already exists in Projects table.</div>";
     } else {
         $sql = "ALTER TABLE Projects ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP";
-        $pdo->exec($sql);
-        echo "<div style='color:green'>Column 'updated_at' added to Projects table successfully.</div>";
+        if ($conn->query($sql) === TRUE) {
+            echo "<div style='color:green'>Column 'updated_at' added to Projects table successfully.</div>";
+        } else {
+            echo "<div style='color:red'>Error: " . htmlspecialchars($conn->error) . "</div>";
+        }
     }
-} catch (PDOException $e) {
+} catch (Exception $e) {
     echo "<div style='color:red'>Error: " . htmlspecialchars($e->getMessage()) . "</div>";
 }
