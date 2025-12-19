@@ -52,6 +52,13 @@ try {
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
   <link rel="stylesheet" href="../../assets/css/project-checklist.css" />
   <link rel="stylesheet" href="style.css" />
+  <script>
+  // Detect base path dynamically (XAMPP + Railway safe)
+  window.APP_BASE = "<?php
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    echo rtrim(str_replace('/pages/project_checklist/', '', $path), '/');
+  ?>";
+</script>
 </head>
 <body class="admin-page">
   <div class="admin-container">
@@ -641,6 +648,26 @@ try {
       var editingEnabled = false;
       var refreshTimer = null; // debounce timer for summary refresh during typing
 
+        // Reusable exitEditMode function per requirements
+        function exitEditMode() {
+          editingEnabled = false;
+          pending = {};
+          table.querySelectorAll('td.editable').forEach(td => {
+            td.contentEditable = 'false';
+            td.classList.remove('dirty', 'save-error');
+          });
+          editBtn.textContent = 'Edit';
+          editBtn.title = 'Enable editing';
+          cancelBtn.disabled = true;
+          window.hasUnsavedChanges = false;
+          window.onbeforeunload = null;
+          if (window.UnsavedGuard) {
+            UnsavedGuard.markClean();
+            UnsavedGuard.syncSnapshot();
+          }
+          updateControlsVisibility();
+        }
+
       function refreshSummaryIfNeeded(targetCell){
         if (!window.ProjectSummary) return;
         var selected = table.querySelector('tbody tr.is-selected');
@@ -703,12 +730,9 @@ try {
         table.querySelectorAll('td.editable').forEach(function(td){
           td.contentEditable = editingEnabled ? 'true' : 'false';
           if (editingEnabled) {
-            // refresh baseline original value when entering edit mode
             td.dataset.original = td.textContent.trim();
-            // register with global unsaved guard
             if (window.UnsavedGuard) { window.UnsavedGuard.registerElement(td); }
           } else {
-            // when disabling, undo any pending changes to avoid accidental commits
             var key = td.closest('tr') && td.closest('tr').dataset.projectId ? (td.closest('tr').dataset.projectId + '|' + (td.dataset.col || '')) : null;
             if (key && pending[key]) {
               pending[key].td.textContent = pending[key].td.dataset.original || '';
@@ -717,16 +741,13 @@ try {
             }
           }
         });
-        // clear pending entirely when locking editing off
         if (!editingEnabled) {
           pending = {};
           updateControlsVisibility();
         }
-  // update edit button text/aria
-  editBtn.textContent = editingEnabled ? 'Save' : 'Edit';
-  editBtn.title = editingEnabled ? 'Save changes (or click to save and lock)' : 'Enable editing';
-  // Update control enabled/disabled states based on whether there are pending edits
-  updateControlsVisibility();
+        editBtn.textContent = editingEnabled ? 'Save' : 'Edit';
+        editBtn.title = editingEnabled ? 'Save changes (or click to save and lock)' : 'Enable editing';
+        updateControlsVisibility();
       }
 
       // Enter commits (blur) to avoid inserting newlines (only relevant when editing enabled)
@@ -840,675 +861,72 @@ try {
             if ((item.td.dataset.original || '').trim() === '') item.td.classList.add('empty-cell'); else item.td.classList.remove('empty-cell');
           }
         });
-        pending = {};
-        updateControlsVisibility();
-        // Exit edit mode on cancel for a clean state
-        setEditing(false);
-        // Sync global unsaved guard snapshot so no false positives
-        try { if (window.UnsavedGuard) window.UnsavedGuard.syncSnapshot(); } catch(_){}
-        // If user cancelled after initiating navigation, allow navigation now
+        exitEditMode();
       });
 
       // Toggle edit / Save behavior on the primary toggle button.
-      editBtn.addEventListener('click', function(e){
-        e.preventDefault();
-        // If currently not editing, turn editing on (button becomes Save)
-        if (!editingEnabled) {
-          setEditing(true);
-          return;
-        }
-
-        // If editing is active, treat this click as Save (if there are pending changes)
-        var keys = Object.keys(pending);
-        if (keys.length === 0) {
-          // Nothing to save — just lock editing back off
-          setEditing(false);
-          return;
-        }
-
-        // Disable controls while saving
-        editBtn.disabled = true; cancelBtn.disabled = true;
-
-        var payload = { changes: keys.map(function(k){
-          var it = pending[k];
-          return { project_id: it.project_id, column: it.column, value: it.value };
-        }) };
-
-        fetch('../../api/update_project_cells.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload)
-        }).then(function(r){ return r.json(); })
-        .then(function(json){
-          if (json && json.success) {
-            // apply success: clear dirty classes, update originals
-            keys.forEach(function(k){
-                var it = pending[k];
-                if (it && it.td) {
-                    it.td.classList.remove('dirty');
-                    it.td.classList.remove('save-error');
-                    it.td.dataset.original = it.value;
-                    // remove empty highlight if value is non-empty, otherwise keep it
-                    if ((it.value || '').toString().trim() === '') {
-                      it.td.classList.add('empty-cell');
-                    } else {
-                      it.td.classList.remove('empty-cell');
-                    }
-                    
-                    // If Status column was changed, update the project name cell color
-                    if (it.column === 'Status') {
-                      var tr = it.td.closest('tr');
-                      if (tr) {
-                        var projectNameCell = tr.querySelector('td.project-name');
-                        if (projectNameCell) {
-                          // Remove all status classes
-                          projectNameCell.classList.remove('status-ongoing', 'status-cancelled', 'status-completed');
-                          // Add the appropriate class based on the new status value
-                          if (it.value === 'Ongoing') {
-                            projectNameCell.classList.add('status-ongoing');
-                          } else if (it.value === 'Cancelled') {
-                            projectNameCell.classList.add('status-cancelled');
-                          } else if (it.value === 'Completed') {
-                            projectNameCell.classList.add('status-completed');
-                          }
-                        }
-                      }
-                    }
-                    
-                    try { if (window && typeof window.flashRow === 'function') { var r = it.td.closest('tr'); if (r) window.flashRow(r, 'success', false); } } catch(e){}
-                  }
-              });
-              pending = {};
-              updateControlsVisibility();
-              // After saving, lock editing off to avoid accidental further edits
-              setEditing(false);
-              try { if (window && typeof window.showStatusToast === 'function') window.showStatusToast('Changes saved', 'success'); } catch(e){}
-              // Reset global unsaved guard snapshot to prevent stray prompts
-              try { if (window.UnsavedGuard) window.UnsavedGuard.markClean(); } catch(_){ }
-              // Refresh summary if selected row was part of saved changes
-              var selected = table.querySelector('tbody tr.is-selected');
-              if (selected) refreshSummaryIfNeeded(selected);
-          } else {
-            alert((json && json.message) ? json.message : 'Failed to save changes');
-            // mark all as error
-            keys.forEach(function(k){ var it = pending[k]; if (it && it.td) it.td.classList.add('save-error'); });
-          }
-        }).catch(function(err){
-          console.error('Batch save error', err);
-          try { if (window && typeof window.showStatusToast === 'function') window.showStatusToast('Failed to save changes', 'error'); else alert('Failed to save changes'); } catch(e){ alert('Failed to save changes'); }
-          keys.forEach(function(k){ var it = pending[k]; if (it && it.td) it.td.classList.add('save-error'); });
-        }).finally(function(){ editBtn.disabled = false; cancelBtn.disabled = false; });
+editBtn.addEventListener('click', function(e){
+  e.preventDefault();
+  if (!editingEnabled) {
+    setEditing(true);
+    return;
+  }
+  var keys = Object.keys(pending);
+  if (keys.length === 0) {
+    exitEditMode();
+    return;
+  }
+  // Mark page as clean BEFORE starting fetch
+  if (window.UnsavedGuard && typeof window.UnsavedGuard.markClean === 'function') {
+    window.UnsavedGuard.markClean();
+  }
+  window.hasUnsavedChanges = false;
+  window.onbeforeunload = null;
+  editBtn.disabled = true; cancelBtn.disabled = true;
+  var payload = { changes: keys.map(function(k){
+    var it = pending[k];
+    return { project_id: it.project_id, column: it.column, value: it.value };
+  }) };
+  fetch('../../api/update_project_cells.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(payload)
+  }).then(function(r){ return r.json(); })
+  .then(function(json){
+    if (json && json.success) {
+      // update originals
+      keys.forEach(function(k){
+        var it = pending[k];
+        if (!it || !it.td) return;
+        it.td.dataset.original = it.value;
+        it.td.classList.remove('dirty', 'save-error');
       });
-
-      // Initialize controls disabled state (buttons are visible but inactive by default)
-      setEditing(false);
-      setControlsEnabled(false);
-
-      // Supply save handler for global UnsavedGuard
-      window.addEventListener('unsaved:save', function(e){
-        // If not in edit mode, just resolve immediately
-        var resolver = e.detail && e.detail.resolve ? e.detail.resolve : function(){};
-        var keys = Object.keys(pending);
-        if (!editingEnabled || keys.length === 0){ resolver(); return; }
-        // Simulate clicking save logic (without changing button label prematurely)
-        var payload = { changes: keys.map(function(k){ var it = pending[k]; return { project_id: it.project_id, column: it.column, value: it.value }; }) };
-        fetch('../../api/update_project_cells.php', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload)
-        }).then(function(r){ return r.json(); })
-          .then(function(json){
-            if (json && json.success){
-              keys.forEach(function(k){ var it = pending[k]; if (it && it.td){ it.td.classList.remove('dirty','save-error'); it.td.dataset.original = it.value; if ((it.value||'').trim()===''){ it.td.classList.add('empty-cell'); } else { it.td.classList.remove('empty-cell'); } } });
-              pending = {}; updateControlsVisibility(); setEditing(false);
-              try { if (window.showStatusToast) window.showStatusToast('Changes saved','success'); } catch(e){}
-            } else {
-              keys.forEach(function(k){ var it = pending[k]; if (it && it.td) it.td.classList.add('save-error'); });
-            }
-          })
-          .catch(function(err){ console.error('UnsavedGuard batch save error', err); keys.forEach(function(k){ var it = pending[k]; if (it && it.td) it.td.classList.add('save-error'); }); })
-          .finally(function(){ resolver(); });
-      });
-    })();
-  </script>
-  <script>
-    // Horizontal scrollbar proxy: syncs a visible, larger scrollbar with the table wrapper
-    (function(){
-      var tableWrap = document.querySelector('.table-wrap');
-      var proxy = document.getElementById('tableScrollProxy');
-      var proxyInner = document.getElementById('tableScrollProxyInner');
-      if (!tableWrap || !proxy || !proxyInner) return;
-
-      function updateProxyWidth(){
-        var table = tableWrap.querySelector('.project-table');
-        if (!table) return;
-        // Ensure the proxy inner width is at least slightly larger than the visible wrapper
-        // so the proxy always shows a scrollbar even when table exactly fits the viewport.
-        var minWidth = tableWrap.clientWidth + 20;
-        var w = Math.max(table.scrollWidth, minWidth);
-        proxyInner.style.width = w + 'px';
-        proxy.style.display = 'block';
+      // THIS is the critical line
+      exitEditMode();
+      // optional toast
+      if (window.showStatusToast) {
+        showStatusToast('Changes saved', 'success');
       }
-
-      // Two-way sync
-      proxy.addEventListener('scroll', function(){ tableWrap.scrollLeft = proxy.scrollLeft; });
-      tableWrap.addEventListener('scroll', function(){ proxy.scrollLeft = tableWrap.scrollLeft; });
-
-      // Update on load and resize
-      window.addEventListener('resize', updateProxyWidth);
-
-      // Use ResizeObserver if available to detect table width changes
-      var tbl = tableWrap.querySelector('.project-table');
-      if (window.ResizeObserver && tbl) {
-        var ro = new ResizeObserver(function(){ updateProxyWidth(); });
-        ro.observe(tbl);
-      } else if (tbl) {
-        // Fallback mutation observer
-        var mo = new MutationObserver(function(){ updateProxyWidth(); });
-        mo.observe(tbl, { attributes:true, childList:true, subtree:true });
-      }
-
-  // Initial sync after a short delay to allow layout
-  setTimeout(function(){ updateProxyWidth(); proxy.scrollLeft = tableWrap.scrollLeft; }, 200);
-    })();
-  </script>
-  <script>
-    // Sync top and bottom horizontal scrollbars
-    (function(){
-      var topScroll = document.getElementById('topScrollbar');
-      var tableContainer = document.querySelector('.table-container');
-      var table = document.querySelector('.project-table');
-      if (!topScroll || !tableContainer || !table) return;
-
-      var topScrollInner = topScroll.querySelector('div');
-
-      function updateTopScrollWidth(){
-        // Set the inner div width to match the table width so scrollbar appears
-        topScrollInner.style.width = table.scrollWidth + 'px';
-      }
-
-      // Two-way sync between top and bottom scrollbars
-      topScroll.addEventListener('scroll', function(){ 
-        tableContainer.scrollLeft = topScroll.scrollLeft; 
-      });
-      tableContainer.addEventListener('scroll', function(){ 
-        topScroll.scrollLeft = tableContainer.scrollLeft; 
-      });
-
-      // Update on load and resize
-      window.addEventListener('resize', updateTopScrollWidth);
-      updateTopScrollWidth();
-
-      // Use ResizeObserver if available to detect table width changes
-      if (window.ResizeObserver) {
-        var ro = new ResizeObserver(updateTopScrollWidth);
-        ro.observe(table);
-      }
-    })();
-  </script>
-  <script src="../../assets/js/mobile-menu.js"></script>
-  <script>
-  // === SSE: Real-time project checklist updates ===
-  (function(){
-    // Get current project IDs in table
-    var table = document.querySelector('.project-table');
-    if (!table) return;
-    // Get all visible project IDs
-    var projectRows = table.querySelectorAll('tbody tr[data-project-id]');
-    if (!projectRows.length) return;
-
-    // Helper: get project_id list (for multi-project view, but usually one)
-    function getProjectIds() {
-      return Array.from(table.querySelectorAll('tbody tr[data-project-id]')).map(function(tr){
-        return tr.getAttribute('data-project-id');
-      });
+    } else {
+      throw new Error(json.message || 'Save failed');
     }
-
-    // Track which cells are being edited to avoid overwriting local edits
-    var editingCells = new Set();
-    table.addEventListener('focusin', function(e){
-      var td = e.target.closest('td.editable');
-      if (td) editingCells.add(td);
+  }).catch(function(err){
+    console.error('Save error', err);
+    // Show error state on all pending cells
+    keys.forEach(function(k){
+      var it = pending[k];
+      if (it && it.td) {
+        it.td.classList.add('save-error');
+      }
     });
-    table.addEventListener('focusout', function(e){
-      var td = e.target.closest('td.editable');
-      if (td) editingCells.delete(td);
-    });
+    // Re-enable buttons
+    editBtn.disabled = false;
+    cancelBtn.disabled = false;
+    alert('Failed to save changes');
+  });
+});
 
-    // Get current project_id(s) for SSE
-    var projectIds = getProjectIds();
-    if (!projectIds.length) return;
-    // For this checklist, we assume one project per row, but support multiple
-    // We'll listen for updates for all visible projects
-
-    // For each project, open an SSE connection
-    projectIds.forEach(function(pid){
-      var esUrl = '/pages/project_checklist/events.php?project_id=' + encodeURIComponent(pid);
-      var es = new EventSource(esUrl);
-
-      es.addEventListener('projectUpdate', function(ev){
-        try {
-          var data = JSON.parse(ev.data);
-          if (!data || !data.Project_ID) return;
-          var tr = table.querySelector('tr[data-project-id="' + data.Project_ID + '"]');
-          if (!tr) return;
-          // For each column, update cell if value changed and not being edited
-          Array.from(tr.children).forEach(function(td){
-            var col = td.getAttribute('data-col');
-            if (!col) return;
-            // Project_Name is in the first cell (no data-col)
-            var dbCol = col;
-            if (col === 'Project_Name' || td.classList.contains('project-name')) dbCol = 'Project_Name';
-            if (typeof data[dbCol] === 'undefined') return;
-            // Only update if not being edited and value changed
-            if (!editingCells.has(td)) {
-              var newVal = (data[dbCol] || '').toString();
-              var oldVal = (td.textContent || '').trim();
-              if (newVal !== oldVal) {
-                td.textContent = newVal;
-                // Highlight updated cell (yellow fade)
-                td.classList.add('sse-updated');
-                setTimeout(function(){ td.classList.remove('sse-updated'); }, 1200);
-                // If project name/status, update color class
-                if (col === 'Status' && tr.querySelector('.project-name')) {
-                  var pn = tr.querySelector('.project-name');
-                  pn.classList.remove('status-ongoing', 'status-cancelled', 'status-completed');
-                  if (newVal === 'Ongoing') pn.classList.add('status-ongoing');
-                  else if (newVal === 'Cancelled') pn.classList.add('status-cancelled');
-                  else if (newVal === 'Completed') pn.classList.add('status-completed');
-                }
-              }
-            }
-          });
-        } catch(e) { /* ignore */ }
-      });
-
-      es.addEventListener('error', function(){
-        // Try to reconnect after a delay
-        setTimeout(function(){
-          es.close();
-          // Recreate EventSource
-          var newEs = new EventSource(esUrl);
-          // Re-attach listeners
-          newEs.addEventListener('projectUpdate', arguments.callee);
-        }, 3000);
-      });
-    });
-
-    // Add minimal CSS for highlight
-    var style = document.createElement('style');
-    style.textContent = '.sse-updated { background: #fff8b3 !important; transition: background 1.2s; }';
-    document.head.appendChild(style);
-  })();
-  // === End SSE logic ===
-  </script>
-  <script>
-    // Edit menu behavior: rename / delete / mark status
-    (function(){
-      var table = document.querySelector('.project-table');
-      var editMenu = document.getElementById('editMenu');
-      if (!table || !editMenu) return;
-      var hasStatus = table.getAttribute('data-has-status') === '1';
-      var current = { projectId: null, tr: null, td: null, button: null };
-
-      // Visual helpers: toast + row highlight
-      function showStatusToast(message, type, undoData){
-        try{
-          var t = document.getElementById('statusToast');
-          if (!t) return;
-          // ensure the toast lives inside the main content area so it appears
-          // below the header and inside the primary content region
-          var container = document.querySelector('.main-content') || document.body;
-          if (t.parentElement !== container) container.appendChild(t);
-          // set message while keeping an Undo button element inside
-          // ensure we don't clobber the Undo button when setting text
-          var undoBtn = document.getElementById('statusToastUndo');
-          // prepare content node
-          var msgNode = t.querySelector('.toast-msg');
-          if (!msgNode) {
-            msgNode = document.createElement('span');
-            msgNode.className = 'toast-msg';
-            // insert at start
-            t.insertBefore(msgNode, t.firstChild);
-          }
-          msgNode.textContent = message || '';
-          t.className = '';
-          t.classList.add(type === 'error' ? 'error' : 'success');
-          // if undoData provided, enable and show undo button; otherwise hide it
-          if (undoData && undoBtn) {
-            undoBtn.style.display = 'inline-block';
-            undoBtn.disabled = false;
-            // store rollback info on the toast element for the handler
-            t._lastChange = undoData;
-          } else if (undoBtn) {
-            undoBtn.style.display = 'none';
-            t._lastChange = null;
-          }
-          t.style.display = 'flex';
-          // small reflow
-          void t.offsetWidth;
-          clearTimeout(t._hideTimer);
-          t._hideTimer = setTimeout(function(){ t.style.display = 'none'; if (t._lastChange) t._lastChange = null; }, 10000);
-        }catch(e){ /* ignore */ }
-      }
-
-      function flashRow(tr, type, removeAfter){
-        if (!tr) return;
-        try{
-          tr.classList.add('row-flash');
-          tr.classList.add(type === 'error' ? 'error' : 'success');
-          // remove flash after a short delay
-          setTimeout(function(){
-            tr.classList.remove(type === 'error' ? 'error' : 'success');
-            tr.classList.remove('row-flash');
-            if (removeAfter) {
-              // fade out then remove
-              tr.classList.add('fade-out');
-              setTimeout(function(){ if (tr && tr.parentNode) tr.parentNode.removeChild(tr); }, 320);
-            }
-          }, 900);
-        }catch(e){ /* ignore */ }
-      }
-
-  // Wire Undo button click handler: revert last status change if possible
-      (function(){
-        var toast = document.getElementById('statusToast');
-        var undo = document.getElementById('statusToastUndo');
-        if (!toast || !undo) return;
-        undo.addEventListener('click', function(e){
-          e.preventDefault();
-          var data = toast._lastChange;
-          if (!data) return;
-          // disable button to prevent double-click
-          undo.disabled = true;
-          // send request to revert status
-          var fd = new FormData();
-          fd.append('project_id', data.projectId);
-          fd.append('column', 'Status');
-          fd.append('value', data.prev || '');
-          fetch('../../api/update_project_cell.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-            .then(function(r){ return r.json(); })
-            .then(function(json){
-              if (json && json.success) {
-                // if the row was removed, re-insert backupRow if present
-                if (data.removed && data.backupRow) {
-                  var tbody = document.querySelector('.project-table tbody');
-                  if (tbody) tbody.insertBefore(data.backupRow, tbody.firstChild);
-                } else {
-                  // update existing row status cell
-                  var tr = document.querySelector('tr[data-project-id="'+data.projectId+'"]');
-                  if (tr) {
-                    var st = tr.querySelector('td[data-col="Status"]');
-                    if (st) st.textContent = data.prev || '';
-                    
-                    // Update the project name cell's color based on the reverted status
-                    var projectNameCell = tr.querySelector('td.project-name');
-                    if (projectNameCell) {
-                      // Remove all status classes
-                      projectNameCell.classList.remove('status-ongoing', 'status-cancelled', 'status-completed');
-                      // Add the appropriate class based on the previous status
-                      if (data.prev === 'Ongoing') {
-                        projectNameCell.classList.add('status-ongoing');
-                      } else if (data.prev === 'Cancelled') {
-                        projectNameCell.classList.add('status-cancelled');
-                      } else if (data.prev === 'Completed') {
-                        projectNameCell.classList.add('status-completed');
-                      }
-                    }
-                    
-                    flashRow(tr, 'success', false);
-                  }
-                }
-                showStatusToast('Undo successful', 'success');
-                // clear stored rollback
-                toast._lastChange = null;
-              } else {
-                showStatusToast((json && json.message) ? json.message : 'Undo failed', 'error');
-              }
-            }).catch(function(err){ console.error('Undo error', err); showStatusToast('Undo failed', 'error'); })
-            .finally(function(){ undo.disabled = false; });
-        });
-      })();
-
-      // expose helpers globally so other scripts (save flow) can call them
-      try{
-        window.showStatusToast = showStatusToast;
-        window.flashRow = flashRow;
-      }catch(e){ /* ignore in strict environments */ }
-
-      function openMenuFor(button){
-        var tr = button.closest('tr');
-        if (!tr) return;
-        var pid = tr.dataset.projectId;
-        current.projectId = pid;
-        current.tr = tr;
-        current.td = button.closest('td');
-        current.button = button;
-        // set input to current name
-        var nameSpan = current.td.querySelector('.project-title');
-        var input = editMenu.querySelector('input[name="edit_name"]');
-        input.value = nameSpan ? nameSpan.textContent.trim() : '';
-        
-        // Get current status to show/hide appropriate buttons
-        var currentStatus = '';
-        var statusCell = tr.querySelector('td[data-col="Status"]');
-        if (statusCell) {
-          currentStatus = (statusCell.textContent || '').trim();
-        }
-        
-        // Show status action buttons in the edit menu. If the Projects table
-        // does not have a Status column we keep the buttons visible but
-        // disabled and provide a tooltip so the user understands why they
-        // are inactive. This avoids the menu looking incomplete.
-        var btnCompleteVisible = editMenu.querySelector('#editMenuCompleteProject');
-        var btnCancelVisible = editMenu.querySelector('#editMenuCancelProject');
-        var btnContinueVisible = editMenu.querySelector('#editMenuContinueProject');
-        
-        // Logic: Show Complete/Cancel buttons only if NOT already Completed or Cancelled
-        // Show Continue button only if Completed or Cancelled
-        var isCompletedOrCancelled = (currentStatus === 'Completed' || currentStatus === 'Cancelled');
-        
-        if (btnCompleteVisible) {
-          btnCompleteVisible.style.display = (!isCompletedOrCancelled && hasStatus) ? 'inline-block' : 'none';
-          btnCompleteVisible.disabled = !hasStatus;
-          btnCompleteVisible.title = hasStatus ? 'Mark project as completed' : 'Status column not available in database';
-          if (!hasStatus) btnCompleteVisible.classList.add('muted'); else btnCompleteVisible.classList.remove('muted');
-        }
-        if (btnCancelVisible) {
-          btnCancelVisible.style.display = (!isCompletedOrCancelled && hasStatus) ? 'inline-block' : 'none';
-          btnCancelVisible.disabled = !hasStatus;
-          btnCancelVisible.title = hasStatus ? 'Cancel this project' : 'Status column not available in database';
-          if (!hasStatus) btnCancelVisible.classList.add('muted'); else btnCancelVisible.classList.remove('muted');
-        }
-        if (btnContinueVisible) {
-          btnContinueVisible.style.display = (isCompletedOrCancelled && hasStatus) ? 'inline-block' : 'none';
-          btnContinueVisible.disabled = !hasStatus;
-          btnContinueVisible.title = hasStatus ? 'Continue this project (set status to Ongoing)' : 'Status column not available in database';
-          if (!hasStatus) btnContinueVisible.classList.add('muted'); else btnContinueVisible.classList.remove('muted');
-        }
-        
-        // position menu near button
-        editMenu.style.display = 'block';
-        editMenu.setAttribute('aria-hidden','false');
-        // compute after making visible so offsetWidth/offsetHeight is available
-        var rect = button.getBoundingClientRect();
-        var left = rect.right + window.pageXOffset - editMenu.offsetWidth;
-        if (left < 8) left = rect.left + window.pageXOffset; // fallback
-        editMenu.style.left = left + 'px';
-        
-        // Check if there's enough space below; if not, position above
-        var menuHeight = editMenu.offsetHeight;
-        var spaceBelow = window.innerHeight - rect.bottom;
-        var spaceAbove = rect.top;
-        
-        if (spaceBelow < menuHeight + 20 && spaceAbove > menuHeight) {
-          // Position above the button
-          editMenu.style.top = (rect.top + window.pageYOffset - menuHeight - 6) + 'px';
-        } else {
-          // Position below the button (default)
-          editMenu.style.top = (rect.bottom + window.pageYOffset + 6) + 'px';
-        }
-        
-        input.focus();
-        input.select && input.select();
-      }
-
-      function closeMenu(){
-        editMenu.style.display = 'none';
-        editMenu.setAttribute('aria-hidden','true');
-        current = { projectId: null, tr: null, td: null, button: null };
-      }
-
-      // open menu when clicking the edit icon
-      table.addEventListener('click', function(e){
-        var btn = e.target.closest('.edit-btn');
-        if (!btn) return;
-        e.preventDefault();
-        var pid = btn.getAttribute('data-project-id');
-        if (!pid) return;
-        // toggle if same row
-        if (editMenu.style.display === 'block' && current.projectId === pid) { closeMenu(); return; }
-        openMenuFor(btn);
-      });
-
-      // Rename
-      editMenu.querySelector('#editMenuRename').addEventListener('click', function(){
-        var input = editMenu.querySelector('input[name="edit_name"]');
-        var name = (input.value || '').trim();
-        if (!name) { alert('Name cannot be empty'); input.focus(); return; }
-        var fd = new FormData(); fd.append('project_id', current.projectId); fd.append('new_name', name);
-        this.disabled = true;
-        fetch('../../api/rename_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-          .then(function(r){ return r.json(); })
-          .then(function(json){
-            if (json && json.success) {
-              var span = current.tr && current.tr.querySelector('.project-title');
-              if (span) span.textContent = name;
-              try { showStatusToast('Project renamed', 'success'); } catch(e){}
-              closeMenu();
-            } else {
-              alert((json && json.message) ? json.message : 'Failed to rename project');
-            }
-          }).catch(function(err){ console.error(err); alert('Failed to rename project'); })
-          .finally(() => { editMenu.querySelector('#editMenuRename').disabled = false; });
-      });
-
-      // Delete
-      editMenu.querySelector('#editMenuDelete').addEventListener('click', function(){
-        if (!confirm('Permanently delete this project? This cannot be undone.')) return;
-        var fd = new FormData(); fd.append('project_id', current.projectId);
-        this.disabled = true;
-        fetch('../../api/delete_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-          .then(function(r){ return r.json(); })
-          .then(function(json){
-            if (json && json.success) {
-              if (current.tr) current.tr.parentNode.removeChild(current.tr);
-              try { showStatusToast('Project deleted', 'success'); } catch(e){}
-              closeMenu();
-            } else {
-              alert((json && json.message) ? json.message : 'Failed to delete project');
-            }
-          }).catch(function(err){ console.error(err); alert('Failed to delete project'); })
-          .finally(() => { editMenu.querySelector('#editMenuDelete').disabled = false; });
-      });
-
-      // Mark status helper
-      function markStatus(value, btn){
-        if (!hasStatus) { alert('Status column is not available in this database'); return; }
-        
-        // Add confirmation for status changes
-        if (value === 'Completed') {
-          if (!confirm('Mark this project as Completed?')) return;
-        } else if (value === 'Cancelled') {
-          if (!confirm('Cancel this project?')) return;
-        } else if (value === 'Ongoing') {
-          if (!confirm('Continue this project and set status to Ongoing?')) return;
-        }
-        
-        // capture previous status from the row (if present) so we can undo
-        var stBefore = current.tr && current.tr.querySelector('td[data-col="Status"]');
-        var prev = stBefore ? (stBefore.textContent || '').trim() : '';
-        var fd = new FormData(); fd.append('project_id', current.projectId); fd.append('column', 'Status'); fd.append('value', value);
-        btn.disabled = true;
-        fetch('../../api/update_project_cell.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-          .then(function(r){ return r.json(); })
-          .then(function(json){
-            if (json && json.success) {
-              // Update the row's Status cell if present
-              var st = current.tr && current.tr.querySelector('td[data-col="Status"]');
-              if (st) st.textContent = value;
-
-              // Update the project name cell's color based on the new status
-              if (current.tr) {
-                var projectNameCell = current.tr.querySelector('td.project-name');
-                if (projectNameCell) {
-                  // Remove all status classes
-                  projectNameCell.classList.remove('status-ongoing', 'status-cancelled', 'status-completed');
-                  // Add the appropriate class based on the new status
-                  if (value === 'Ongoing') {
-                    projectNameCell.classList.add('status-ongoing');
-                  } else if (value === 'Cancelled') {
-                    projectNameCell.classList.add('status-cancelled');
-                  } else if (value === 'Completed') {
-                    projectNameCell.classList.add('status-completed');
-                  }
-                }
-              }
-
-              // If the page is currently filtered by status and the new value
-              // doesn't match the active filter, remove the row from the table
-              // so it immediately disappears from the current view.
-              try {
-                var params = new URLSearchParams(window.location.search);
-                var currFilter = params.get('status') || '';
-                // If a specific filter is active (not the 'All Projects' empty filter)
-                // and it doesn't match the value we just set, remove the row.
-                if (currFilter !== '' && currFilter !== value) {
-                  // Keep a backup of the existing row so we can undo if needed
-                  var backup = current.tr ? current.tr.cloneNode(true) : null;
-                  // set backup status cell back to previous value for restore
-                  if (backup) {
-                    var bst = backup.querySelector('td[data-col="Status"]');
-                    if (bst) bst.textContent = (typeof prev !== 'undefined') ? prev : '';
-                  }
-                  // show a toast & fade the row out before removing it for a nicer UX
-                  showStatusToast('Status updated — removing from current view', 'success', { projectId: current.projectId, prev: prev, newValue: value, removed: true, backupRow: backup });
-                  if (current.tr && current.tr.parentNode) {
-                    // store backupRow as a DOM node on the stored undo data (clone is detached)
-                    // (already set above)
-                    flashRow(current.tr, 'success', true);
-                  }
-                } else {
-                  // update in-place and show confirmation with undo available
-                  showStatusToast('Status updated', 'success', { projectId: current.projectId, prev: prev, newValue: value, removed: false });
-                  if (current.tr) flashRow(current.tr, 'success', false);
-                }
-              } catch (e) {
-                // ignore URL parsing issues
-              }
-
-              closeMenu();
-            } else {
-              alert((json && json.message) ? json.message : 'Failed to update status');
-            }
-          }).catch(function(err){ console.error(err); alert('Failed to update status'); })
-          .finally(() => { btn.disabled = false; });
-      }
-
-      // Wire visible action buttons to update status
-      var completeBtn = editMenu.querySelector('#editMenuCompleteProject');
-      if (completeBtn) completeBtn.addEventListener('click', function(){ markStatus('Completed', this); });
-      var cancelBtn = editMenu.querySelector('#editMenuCancelProject');
-      if (cancelBtn) cancelBtn.addEventListener('click', function(){ markStatus('Cancelled', this); });
-      var continueBtn = editMenu.querySelector('#editMenuContinueProject');
-      if (continueBtn) continueBtn.addEventListener('click', function(){ markStatus('Ongoing', this); });
-
-      // Close on outside click / escape
-      document.addEventListener('click', function(e){ if (!editMenu.contains(e.target) && !e.target.closest('.edit-btn')) closeMenu(); });
-      document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeMenu(); });
-
-      // Reposition on scroll/resize
-      window.addEventListener('scroll', function(){ if (editMenu.style.display === 'block' && current.button) { var rect = current.button.getBoundingClientRect(); editMenu.style.left = (rect.right + window.pageXOffset - editMenu.offsetWidth) + 'px'; editMenu.style.top = (rect.bottom + window.pageYOffset + 6) + 'px'; } }, true);
-      window.addEventListener('resize', function(){ if (editMenu.style.display === 'block' && current.button) { var rect = current.button.getBoundingClientRect(); editMenu.style.left = (rect.right + window.pageXOffset - editMenu.offsetWidth) + 'px'; editMenu.style.top = (rect.bottom + window.pageYOffset + 6) + 'px'; } });
     })();
   </script>
 </body>
