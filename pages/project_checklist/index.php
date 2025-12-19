@@ -926,8 +926,86 @@ editBtn.addEventListener('click', function(e){
     alert('Failed to save changes');
   });
 });
-
     })();
   </script>
+  <script>
+/**
+ * SSE: Real-time project checklist updates
+ * Other users see changes instantly without refresh
+ */
+(function () {
+  var table = document.querySelector('.project-table');
+  if (!table) return;
+
+  // Track cells currently being edited locally
+  var editingCells = new Set();
+  table.addEventListener('focusin', function (e) {
+    var td = e.target.closest('td.editable');
+    if (td) editingCells.add(td);
+  });
+  table.addEventListener('focusout', function (e) {
+    var td = e.target.closest('td.editable');
+    if (td) editingCells.delete(td);
+  });
+
+  table.querySelectorAll('tbody tr[data-project-id]').forEach(function (tr) {
+    var projectId = tr.dataset.projectId;
+    if (!projectId) return;
+
+    var url =
+      window.APP_BASE +
+      '/pages/project_checklist/events.php?project_id=' +
+      encodeURIComponent(projectId);
+
+    console.log('[SSE] Connecting:', url);
+
+    var es = new EventSource(url);
+
+    es.addEventListener('projectUpdate', function (ev) {
+      try {
+        var data = JSON.parse(ev.data || '{}');
+        if (!data.project_id) return;
+
+        var row = table.querySelector(
+          'tr[data-project-id="' + data.project_id + '"]'
+        );
+        if (!row) return;
+
+        row.querySelectorAll('td[data-col]').forEach(function (td) {
+          if (editingCells.has(td)) return; // don't overwrite local edits
+          var col = td.dataset.col;
+          if (typeof data[col] === 'undefined') return;
+
+          var newVal = String(data[col] ?? '');
+          if (td.textContent.trim() !== newVal) {
+            td.textContent = newVal;
+            td.dataset.original = newVal;
+            td.classList.add('sse-updated');
+            setTimeout(function () {
+              td.classList.remove('sse-updated');
+            }, 1200);
+          }
+        });
+      } catch (e) {
+        console.warn('[SSE] parse error', e);
+      }
+    });
+
+    es.onerror = function () {
+      console.warn('[SSE] connection lost, retrying…');
+      es.close();
+      setTimeout(function () {
+        new EventSource(url);
+      }, 3000);
+    };
+  });
+
+  // highlight effect
+  var style = document.createElement('style');
+  style.textContent =
+    '.sse-updated{background:#fff8b3!important;transition:background 1.2s;}';
+  document.head.appendChild(style);
+})();
+</script>
 </body>
 </html>
