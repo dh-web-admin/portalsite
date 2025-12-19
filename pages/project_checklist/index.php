@@ -1047,6 +1047,101 @@ try {
   </script>
   <script src="../../assets/js/mobile-menu.js"></script>
   <script>
+  // === SSE: Real-time project checklist updates ===
+  (function(){
+    // Get current project IDs in table
+    var table = document.querySelector('.project-table');
+    if (!table) return;
+    // Get all visible project IDs
+    var projectRows = table.querySelectorAll('tbody tr[data-project-id]');
+    if (!projectRows.length) return;
+
+    // Helper: get project_id list (for multi-project view, but usually one)
+    function getProjectIds() {
+      return Array.from(table.querySelectorAll('tbody tr[data-project-id]')).map(function(tr){
+        return tr.getAttribute('data-project-id');
+      });
+    }
+
+    // Track which cells are being edited to avoid overwriting local edits
+    var editingCells = new Set();
+    table.addEventListener('focusin', function(e){
+      var td = e.target.closest('td.editable');
+      if (td) editingCells.add(td);
+    });
+    table.addEventListener('focusout', function(e){
+      var td = e.target.closest('td.editable');
+      if (td) editingCells.delete(td);
+    });
+
+    // Get current project_id(s) for SSE
+    var projectIds = getProjectIds();
+    if (!projectIds.length) return;
+    // For this checklist, we assume one project per row, but support multiple
+    // We'll listen for updates for all visible projects
+
+    // For each project, open an SSE connection
+    projectIds.forEach(function(pid){
+      var esUrl = '/pages/project_checklist/events.php?project_id=' + encodeURIComponent(pid);
+      var es = new EventSource(esUrl);
+
+      es.addEventListener('projectUpdate', function(ev){
+        try {
+          var data = JSON.parse(ev.data);
+          if (!data || !data.Project_ID) return;
+          var tr = table.querySelector('tr[data-project-id="' + data.Project_ID + '"]');
+          if (!tr) return;
+          // For each column, update cell if value changed and not being edited
+          Array.from(tr.children).forEach(function(td){
+            var col = td.getAttribute('data-col');
+            if (!col) return;
+            // Project_Name is in the first cell (no data-col)
+            var dbCol = col;
+            if (col === 'Project_Name' || td.classList.contains('project-name')) dbCol = 'Project_Name';
+            if (typeof data[dbCol] === 'undefined') return;
+            // Only update if not being edited and value changed
+            if (!editingCells.has(td)) {
+              var newVal = (data[dbCol] || '').toString();
+              var oldVal = (td.textContent || '').trim();
+              if (newVal !== oldVal) {
+                td.textContent = newVal;
+                // Highlight updated cell (yellow fade)
+                td.classList.add('sse-updated');
+                setTimeout(function(){ td.classList.remove('sse-updated'); }, 1200);
+                // If project name/status, update color class
+                if (col === 'Status' && tr.querySelector('.project-name')) {
+                  var pn = tr.querySelector('.project-name');
+                  pn.classList.remove('status-ongoing', 'status-cancelled', 'status-completed');
+                  if (newVal === 'Ongoing') pn.classList.add('status-ongoing');
+                  else if (newVal === 'Cancelled') pn.classList.add('status-cancelled');
+                  else if (newVal === 'Completed') pn.classList.add('status-completed');
+                }
+              }
+            }
+          });
+        } catch(e) { /* ignore */ }
+      });
+
+      es.addEventListener('error', function(){
+        // Try to reconnect after a delay
+        setTimeout(function(){
+          es.close();
+          // Recreate EventSource
+          var newEs = new EventSource(esUrl);
+          // Re-attach listeners
+          newEs.addEventListener('projectUpdate', arguments.callee);
+        }, 3000);
+      });
+    });
+
+    // Add minimal CSS for highlight
+    var style = document.createElement('style');
+    style.textContent = '.sse-updated { background: #fff8b3 !important; transition: background 1.2s; }';
+    document.head.appendChild(style);
+  })();
+  // === End SSE logic ===
+  </script>
+  <script>
     // Edit menu behavior: rename / delete / mark status
     (function(){
       var table = document.querySelector('.project-table');
