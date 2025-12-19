@@ -951,8 +951,17 @@ editBtn.addEventListener('click', function(e){
   // SSE logic: single EventSource for all projects
   var since = Math.floor(Date.now() / 1000) - 60; // start with last 60s
   var es;
+  function getSelectedProjectId() {
+    var selected = table.querySelector('tbody tr.is-selected');
+    if (selected && selected.dataset.projectId) return selected.dataset.projectId;
+    // fallback: first row
+    var first = table.querySelector('tbody tr[data-project-id]');
+    return first ? first.dataset.projectId : '';
+  }
   function connectSSE() {
-    var url = window.APP_BASE + '/pages/project_checklist/events.php?since=' + encodeURIComponent(since);
+    var projectId = getSelectedProjectId();
+    if (!projectId) return;
+    var url = window.APP_BASE + '/pages/project_checklist/events.php?project_id=' + encodeURIComponent(projectId) + '&since=' + encodeURIComponent(since);
     if (es) es.close();
     es = new EventSource(url);
     console.log('[SSE] Connecting:', url);
