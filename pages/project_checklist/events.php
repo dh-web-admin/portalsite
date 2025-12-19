@@ -1,74 +1,77 @@
 <?php
-// events.php - SSE endpoint for real-time project checklist updates
-// Uses: text/event-stream, disables output buffering, polls for updated project rows
+// /pages/project_checklist/events.php
+// Short-lived SSE endpoint (Railway + XAMPP safe)
 
-require_once '../../config/config.php';
-require_once '../../session_init.php';
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../session_init.php';
 
-// Auth check (reuse existing logic)
 if (!isset($_SESSION['user_id'])) {
     http_response_code(403);
     exit;
 }
 
+// SSE headers
 header('Content-Type: text/event-stream');
 header('Cache-Control: no-cache');
 header('Connection: keep-alive');
-header('X-Accel-Buffering: no'); // For nginx, disables buffering
+header('X-Accel-Buffering: no');
 
-// Disable PHP output buffering
-while (ob_get_level() > 0) {
-    ob_end_flush();
-}
-ob_implicit_flush(1);
+// Disable buffering
+while (ob_get_level() > 0) ob_end_flush();
+ob_implicit_flush(true);
 
-$projectId = isset($_GET['project_id']) ? intval($_GET['project_id']) : 0;
+global $conn;
+
+// Validate project_id
+$projectId = isset($_GET['project_id']) ? (int)$_GET['project_id'] : 0;
 if ($projectId <= 0) {
-    echo ": invalid project_id\n\n";
+    echo "event: error\n";
+    echo "data: invalid_project\n\n";
+    flush();
     exit;
 }
 
-// Track last sent update timestamp
-$lastSent = isset($_GET['since']) ? $_GET['since'] : null;
-if (!$lastSent) {
-    $lastSent = date('Y-m-d H:i:s', time() - 60); // default: last 60s
-}
+// Track updates since timestamp
+$since = isset($_GET['since']) && is_numeric($_GET['since'])
+    ? (int)$_GET['since']
+    : (time() - 60);
 
-$pollInterval = 2; // seconds
-$maxDuration = 60 * 5; // 5 minutes per connection
-$startTime = time();
+// Tell browser retry delay
+echo "retry: 3000\n\n";
+flush();
 
-// Use PDO from config.php
-$db = $pdo;
+// Fetch up to 10 updates for THIS project
+$sql = "
+    SELECT *,
+           UNIX_TIMESTAMP(updated_at) AS updated_ts
+    FROM Projects
+    WHERE Project_ID = ?
+      AND updated_at > FROM_UNIXTIME(?)
+    ORDER BY updated_at ASC
+    LIMIT 10
+";
 
-function sendEvent($row) {
+$stmt = $conn->prepare($sql);
+$stmt->bind_param('ii', $projectId, $since);
+$stmt->execute();
+$res = $stmt->get_result();
+
+while ($row = $res->fetch_assoc()) {
+    $payload = [
+        'project_id' => (int)$row['Project_ID'],
+        'updated_at' => (int)$row['updated_ts'],
+        'row'        => $row
+    ];
+
     echo "event: projectUpdate\n";
-    echo "data: ".json_encode($row)."\n\n";
-    @ob_flush();
-    @flush();
+    echo "data: " . json_encode($payload, JSON_UNESCAPED_UNICODE) . "\n\n";
+    flush();
 }
 
-while (true) {
-    // Stop after max duration
-    if ((time() - $startTime) > $maxDuration) {
-        break;
-    }
+// Named heartbeat event
+echo "event: heartbeat\n";
+echo "data: ping\n\n";
+flush();
 
-    // Query for updated project rows
-    $stmt = $db->prepare("SELECT * FROM Projects WHERE id = :id AND updated_at > :since LIMIT 1");
-    $stmt->execute([
-        ':id' => $projectId,
-        ':since' => $lastSent
-    ]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($row) {
-        sendEvent($row);
-        $lastSent = $row['updated_at'];
-    }
-
-    // Heartbeat to keep connection alive
-    echo ": heartbeat\n\n";
-    @ob_flush();
-    @flush();
-    sleep($pollInterval);
-}
+// IMPORTANT: exit so Railway doesn't kill the process
+exit;

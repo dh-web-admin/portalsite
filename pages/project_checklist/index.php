@@ -948,35 +948,28 @@ editBtn.addEventListener('click', function(e){
     if (td) editingCells.delete(td);
   });
 
-  table.querySelectorAll('tbody tr[data-project-id]').forEach(function (tr) {
-    var projectId = tr.dataset.projectId;
-    if (!projectId) return;
-
-    var url =
-      window.APP_BASE +
-      '/pages/project_checklist/events.php?project_id=' +
-      encodeURIComponent(projectId);
-
+  // SSE logic: single EventSource for all projects
+  var since = Math.floor(Date.now() / 1000) - 60; // start with last 60s
+  var es;
+  function connectSSE() {
+    var url = window.APP_BASE + '/pages/project_checklist/events.php?since=' + encodeURIComponent(since);
+    if (es) es.close();
+    es = new EventSource(url);
     console.log('[SSE] Connecting:', url);
-
-    var es = new EventSource(url);
 
     es.addEventListener('projectUpdate', function (ev) {
       try {
-        var data = JSON.parse(ev.data || '{}');
-        if (!data.project_id) return;
-
-        var row = table.querySelector(
-          'tr[data-project-id="' + data.project_id + '"]'
-        );
+        var payload = JSON.parse(ev.data || '{}');
+        if (!payload.project_id || !payload.row) return;
+        var row = table.querySelector('tr[data-project-id="' + payload.project_id + '"]');
         if (!row) return;
-
+        var rowData = payload.row;
+        // Update only cells not being edited
         row.querySelectorAll('td[data-col]').forEach(function (td) {
-          if (editingCells.has(td)) return; // don't overwrite local edits
+          if (editingCells.has(td)) return;
           var col = td.dataset.col;
-          if (typeof data[col] === 'undefined') return;
-
-          var newVal = String(data[col] ?? '');
+          if (typeof rowData[col] === 'undefined') return;
+          var newVal = String(rowData[col] ?? '');
           if (td.textContent.trim() !== newVal) {
             td.textContent = newVal;
             td.dataset.original = newVal;
@@ -986,19 +979,26 @@ editBtn.addEventListener('click', function(e){
             }, 1200);
           }
         });
+        // Update since timestamp for next poll
+        if (payload.updated_at && payload.updated_at > since) {
+          since = payload.updated_at;
+        }
       } catch (e) {
         console.warn('[SSE] parse error', e);
       }
     });
 
+    es.addEventListener('heartbeat', function () {
+      // no-op, just to keep connection alive
+    });
+
     es.onerror = function () {
       console.warn('[SSE] connection lost, retrying…');
       es.close();
-      setTimeout(function () {
-        new EventSource(url);
-      }, 3000);
+      setTimeout(connectSSE, 3000);
     };
-  });
+  }
+  connectSSE();
 
   // highlight effect
   var style = document.createElement('style');
