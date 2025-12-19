@@ -101,7 +101,7 @@ try {
               <!-- Inline styles removed; consolidated into external project-checklist.css -->
 
               <!-- Top horizontal scrollbar synced with table -->
-              <div id="topScrollbar"><div></div></div>
+              <div id="topScrollbar" style="height:20px;overflow-x:scroll;overflow-y:hidden;"><div></div></div>
 
               <div class="table-container" role="region" aria-label="Project checklist table">
                 <table class="project-table" role="table" aria-label="Projects checklist" data-has-status="<?php echo !empty($has_status) ? '1' : '0'; ?>">
@@ -1016,5 +1016,39 @@ editBtn.addEventListener('click', function(e){
   document.head.appendChild(style);
 })();
 </script>
+<script>
+          // Sync top and bottom horizontal scrollbars
+          (function(){
+            var topScroll = document.getElementById('topScrollbar');
+            var tableContainer = document.querySelector('.table-container');
+            var table = document.querySelector('.project-table');
+            if (!topScroll || !tableContainer || !table) return;
+
+            var topScrollInner = topScroll.querySelector('div');
+
+            function updateTopScrollWidth(){
+              // Set the inner div width to match the table width so scrollbar appears
+              topScrollInner.style.width = table.scrollWidth + 'px';
+            }
+
+            // Two-way sync between top and bottom scrollbars
+            topScroll.addEventListener('scroll', function(){ 
+              tableContainer.scrollLeft = topScroll.scrollLeft; 
+            });
+            tableContainer.addEventListener('scroll', function(){ 
+              topScroll.scrollLeft = tableContainer.scrollLeft; 
+            });
+
+            // Update on load and resize
+            window.addEventListener('resize', updateTopScrollWidth);
+            updateTopScrollWidth();
+
+            // Use ResizeObserver if available to detect table width changes
+            if (window.ResizeObserver) {
+              var ro = new ResizeObserver(updateTopScrollWidth);
+              ro.observe(table);
+            }
+          })();
+          </script>
 </body>
 </html>
