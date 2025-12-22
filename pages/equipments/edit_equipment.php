@@ -24,7 +24,7 @@ if (!$equipment) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fields = [
         'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
-        'year', 'vin', 'transmission', 'trans_serial_number', 'location'
+        'year', 'vin', 'transmission', 'trans_serial_number', 'location', 'operating_condition', 'oil_status'
     ];
     $updates = [];
     $params = [];
@@ -94,6 +94,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="text" name="trans_serial_number" value="<?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>" />
             <label>Location</label>
             <input type="text" name="location" value="<?php echo htmlspecialchars($equipment['location'] ?? ''); ?>" />
+
+            <label>Engine Operating Condition</label>
+            <select name="operating_condition">
+                <option value="green" <?php if (($equipment['operating_condition'] ?? '') === 'green') echo 'selected'; ?>>Green</option>
+                <option value="yellow" <?php if (($equipment['operating_condition'] ?? '') === 'yellow') echo 'selected'; ?>>Yellow</option>
+                <option value="red" <?php if (($equipment['operating_condition'] ?? '') === 'red') echo 'selected'; ?>>Red</option>
+            </select>
+
+            <label>Oil Status</label>
+            <select name="oil_status">
+                <option value="green" <?php if (($equipment['oil_status'] ?? '') === 'green') echo 'selected'; ?>>Green</option>
+                <option value="yellow" <?php if (($equipment['oil_status'] ?? '') === 'yellow') echo 'selected'; ?>>Yellow</option>
+                <option value="red" <?php if (($equipment['oil_status'] ?? '') === 'red') echo 'selected'; ?>>Red</option>
+            </select>
             <button type="submit">Save Changes</button>
             <a href="equipment.php?id=<?php echo $equipmentId; ?>" style="margin-left:16px; color:#2563eb; text-decoration:underline;">Cancel</a>
         </form>

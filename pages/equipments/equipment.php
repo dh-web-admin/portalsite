@@ -1,6 +1,32 @@
 <?php
 require_once __DIR__ . '/../../session_init.php';
+
 require_once __DIR__ . '/../../config/config.php';
+
+// Handle save changes POST request (move this block to the top to avoid headers already sent)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && isset($_POST['equipment_id'])) {
+    $fields = [
+        'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
+        'vehicle_year', 'vin', 'transmission', 'trans_serial_number', 'location', 'operating_condition', 'oil_status'
+    ];
+    $updates = [];
+    $params = [];
+    $types = '';
+    foreach ($fields as $field) {
+        $updates[] = "$field = ?";
+        $params[] = $_POST[$field] ?? '';
+        $types .= 's';
+    }
+    $params[] = $_POST['equipment_id'];
+    $types .= 'i';
+    $sql = 'UPDATE equipments SET ' . implode(', ', $updates) . ' WHERE equipment_id = ?';
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    // Redirect to view mode after save
+    header('Location: equipment.php?id=' . $_POST['equipment_id']);
+    exit();
+}
 
 // Handle delete request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_equipment']) && isset($_POST['equipment_id'])) {
@@ -118,32 +144,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 .equipment-back-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-
-    padding: 6px 14px;
-    border-radius: 6px;
-
-    background: #ffffff;
-    border: 1px solid rgba(15, 23, 42, 0.15);
-
-    font-size: 13px;
-    font-weight: 700;
-    color: #0f172a;
-    text-decoration: none;
-
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    transition: all 0.2s ease;
-}
-
-.equipment-back-btn:hover {
-    background: #f8fafc;
-    transform: translateX(-2px);
-}
-
-/* ---------- TABS ---------- */
-
-.equipment-tabs {
-  display: flex;
+    // ...existing code...
   gap: 2px;
   margin-bottom: 16px;
   background: #f1f5f9;
@@ -449,7 +450,18 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
         <button type="submit" name="delete_equipment" class="equipment-action-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);" onclick="return confirm('Are you sure you want to delete this equipment?');">Delete</button>
     <?php } ?>
 </div>
-<div class="equipment-details-table-wrapper">
+<?php
+$isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipment['oil_status'] ?? '') === 'red';
+?>
+<div class="equipment-details-table-wrapper<?php if ($isRedStatus) echo ' equipment-details-table-wrapper--red'; ?>">
+        <style>
+        /* Add red border for red status */
+        .equipment-details-table-wrapper--red {
+            border: 3px solid #e53935 !important;
+            box-shadow: 0 0 0 2px #ffb3b3;
+            border-radius: 10px;
+        }
+        </style>
     <div class="equipment-details-row" style="display: flex; align-items: flex-start;">
       <div class="equipment-details-table-wrapper" style="flex: 1;">
         <table class="equipment-details-table">
@@ -560,6 +572,52 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
                         <?php } else { ?>
                             <?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>
                         <?php } ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th class="equipment-label-cell">Engine Operating Condition</th>
+                    <td class="equipment-value-cell">
+                        <?php if ($editMode) { ?>
+                            <select name="operating_condition" class="equipment-editable-cell">
+                                <option value="green" <?php if (($equipment['operating_condition'] ?? '') === 'green') echo 'selected'; ?>>Green</option>
+                                <option value="yellow" <?php if (($equipment['operating_condition'] ?? '') === 'yellow') echo 'selected'; ?>>Yellow</option>
+                                <option value="red" <?php if (($equipment['operating_condition'] ?? '') === 'red') echo 'selected'; ?>>Red</option>
+                            </select>
+                        <?php } else {
+                            $val = trim((string)($equipment['operating_condition'] ?? ''));
+                            $svgMap = [
+                                'green' => 'greenengine.svg',
+                                'yellow' => 'yellowengine.svg',
+                                'red' => 'redengine.svg'
+                            ];
+                            if ($val !== '' && isset($svgMap[$val])) {
+                                echo '<img src="images/' . htmlspecialchars($svgMap[$val]) . '" alt="' . htmlspecialchars($val) . ' engine" style="height:28px;vertical-align:middle;" />';
+                            } else {
+                                echo '<span class="equipment-pill equipment-pill--neutral">—</span>';
+                            }
+                        } ?>
+                    </td>
+                    <th class="equipment-label-cell">Oil Status</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
+                        <?php if ($editMode) { ?>
+                            <select name="oil_status" class="equipment-editable-cell">
+                                <option value="green" <?php if (($equipment['oil_status'] ?? '') === 'green') echo 'selected'; ?>>Green</option>
+                                <option value="yellow" <?php if (($equipment['oil_status'] ?? '') === 'yellow') echo 'selected'; ?>>Yellow</option>
+                                <option value="red" <?php if (($equipment['oil_status'] ?? '') === 'red') echo 'selected'; ?>>Red</option>
+                            </select>
+                        <?php } else {
+                            $val = trim((string)($equipment['oil_status'] ?? ''));
+                            $oilSvgMap = [
+                                'green' => 'greenoil.svg',
+                                'yellow' => 'yellowoil.svg',
+                                'red' => 'redoil.svg'
+                            ];
+                            if ($val !== '' && isset($oilSvgMap[$val])) {
+                                echo '<img src="images/' . htmlspecialchars($oilSvgMap[$val]) . '" alt="' . htmlspecialchars($val) . ' oil" style="height:28px;vertical-align:middle;" />';
+                            } else {
+                                echo '<span class="equipment-pill equipment-pill--neutral">—</span>';
+                            }
+                        } ?>
                     </td>
                 </tr>
             </tbody>

@@ -1,4 +1,30 @@
 <?php
+// Debug: Log errors to a file for troubleshooting
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../uploads/equipment/upload_debug.log');
+error_reporting(E_ALL);
+
+// Debug: Output file upload errors if any
+function debug_upload_error($file, $field) {
+    if ($file && isset($file['error']) && $file['error'] !== UPLOAD_ERR_OK) {
+        $errCodes = [
+            UPLOAD_ERR_INI_SIZE => 'The uploaded file exceeds the upload_max_filesize directive in php.ini.',
+            UPLOAD_ERR_FORM_SIZE => 'The uploaded file exceeds the MAX_FILE_SIZE directive that was specified in the HTML form.',
+            UPLOAD_ERR_PARTIAL => 'The uploaded file was only partially uploaded.',
+            UPLOAD_ERR_NO_FILE => 'No file was uploaded.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing a temporary folder.',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk.',
+            UPLOAD_ERR_EXTENSION => 'A PHP extension stopped the file upload.'
+        ];
+        $msg = isset($errCodes[$file['error']]) ? $errCodes[$file['error']] : 'Unknown upload error.';
+        error_log("Upload error for $field: $msg");
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => "Upload error for $field: $msg"]);
+        exit();
+    }
+}
+
+// These variables are set later, but we must not call debug_upload_error before they exist
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../session_init.php';
@@ -42,9 +68,15 @@ $operating_condition = isset($_POST['operating_condition']) ? trim($_POST['opera
 $location = isset($_POST['location']) ? trim($_POST['location']) : '';
 $current_hours_raw = isset($_POST['current_hours']) ? trim($_POST['current_hours']) : '';
 $oil_status = isset($_POST['oil_status']) ? trim($_POST['oil_status']) : '';
-$air_filters = isset($_POST['air_filters']) ? trim($_POST['air_filters']) : '';
-$warranty = isset($_POST['warranty']) ? trim($_POST['warranty']) : '';
-$tires = isset($_POST['tires']) ? trim($_POST['tires']) : '';
+
+// File upload fields
+$air_filters_file = $_FILES['air_filters'] ?? null;
+$warranty_file = $_FILES['warranty'] ?? null;
+$tires_file = $_FILES['tires'] ?? null;
+
+$air_filters = '';
+$warranty = '';
+$tires = '';
 
 if ($equipment_number === '' || $type === '') {
     http_response_code(400);
@@ -74,46 +106,71 @@ if ($warranty !== '') {
     $warrantyParam = date('Y-m-d', $ts);
 }
 
-$stmt = $conn->prepare('INSERT INTO equipments (equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+
+$stmt = $conn->prepare('INSERT INTO equipments (equipment_number, type, operating_condition, location, current_hours, oil_status) VALUES (?, ?, ?, ?, ?, ?)');
 if (!$stmt) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database prepare failed']);
     exit();
 }
-
-// bind warranty as string (or null)
 $stmt->bind_param(
-    'ssssdssss',
+    'ssssds',
     $equipment_number,
     $type,
     $operating_condition,
     $location,
     $current_hours,
-    $oil_status,
-    $air_filters,
-    $warrantyParam,
-    $tires
+    $oil_status
 );
-
 $ok = $stmt->execute();
 if (!$ok) {
     $err = $stmt->error;
     $stmt->close();
-
-    // Friendly unique constraint message
     if (stripos($err, 'Duplicate') !== false) {
         http_response_code(409);
         echo json_encode(['success' => false, 'message' => 'Equipment number already exists']);
         exit();
     }
-
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Insert failed: ' . $err]);
     exit();
 }
-
 $insertId = $stmt->insert_id;
 $stmt->close();
+
+// Handle file uploads and insert into equipment_uploads
+$upload_dir = realpath(__DIR__ . '/../uploads/equipment');
+if (!is_dir($upload_dir)) {
+    mkdir($upload_dir, 0777, true);
+}
+
+function handle_upload($file, $equipment_id, $field, $conn, $upload_dir) {
+    if ($file && isset($file['tmp_name']) && is_uploaded_file($file['tmp_name'])) {
+        // Extra debug: check directory is writable
+        if (!is_writable($upload_dir)) {
+            error_log('Upload directory not writable: ' . $upload_dir);
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Upload directory is not writable.']);
+            exit();
+        }
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $safe_name = uniqid($field . '_') . '.' . $ext;
+        $target = $upload_dir . DIRECTORY_SEPARATOR . $safe_name;
+        if (move_uploaded_file($file['tmp_name'], $target)) {
+            $url = 'uploads/equipment/' . $safe_name;
+            $stmt = $conn->prepare('INSERT INTO equipment_uploads (equipment_id, field, file_url) VALUES (?, ?, ?)');
+            $stmt->bind_param('iss', $equipment_id, $field, $url);
+            $stmt->execute();
+            $stmt->close();
+            return $url;
+        }
+    }
+    return null;
+}
+
+handle_upload($air_filters_file, $insertId, 'air_filters', $conn, $upload_dir);
+handle_upload($warranty_file, $insertId, 'warranty', $conn, $upload_dir);
+handle_upload($tires_file, $insertId, 'tires', $conn, $upload_dir);
 
 echo json_encode(['success' => true, 'equipment_id' => $insertId]);
 exit();

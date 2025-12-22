@@ -1,10 +1,11 @@
+
 <?php
 require_once __DIR__ . '/../../session_init.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-		header('Location: /auth/login.php');
-		exit();
+	header('Location: /auth/login.php');
+	exit();
 }
 
 // Include database configuration
@@ -31,7 +32,9 @@ if (!can_access($role, 'equipments')) {
 $equipments = [];
 $equipmentsError = null;
 
-$sql = "SELECT equipment_id, equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires\n        FROM equipments\n        ORDER BY equipment_id DESC";
+$sql = "SELECT equipment_id, equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires
+        FROM equipments
+        ORDER BY equipment_id DESC";
 
 try {
 	$res = $conn->query($sql);
@@ -77,12 +80,225 @@ function eq_format_warranty($dateValue) {
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Equipments</title>
-    <link rel="stylesheet" href="../../assets/css/base.css">
-    <link rel="stylesheet" href="../../assets/css/admin-layout.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../assets/css/base.css">
+	<link rel="stylesheet" href="../../assets/css/admin-layout.css">
+	<link rel="stylesheet" href="../../assets/css/dashboard.css">
+	<link rel="stylesheet" href="style.css">
+	<style>
+						/* Force Add Equipment button to be green and pill-shaped */
+				#newEquipmentBtn.equipment-btn--green {
+					background: #22c55e !important;
+					color: #fff !important;
+					border-radius: 999px !important;
+					box-shadow: 0 4px 16px rgba(34,197,94,0.10);
+				}
+				#newEquipmentBtn.equipment-btn--green:hover {
+					background: #16a34a !important;
+				}
+		.equipment-btn--green {
+			background: #22c55e !important;
+			color: #fff !important;
+			border-radius: 999px !important;
+			box-shadow: 0 4px 16px rgba(34,197,94,0.10);
+		}
+		
+		/* Fix modal overlay and dialog clickability */
+		.equipment-modal {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			background: rgba(0,0,0,0.5);
+			z-index: 9999 !important;
+			pointer-events: auto !important;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+		}
+		.equipment-modal.is-open {
+			display: flex;
+		}
+		.equipment-modal__dialog {
+			background: white;
+			border-radius: 16px;
+			box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+			z-index: 10000 !important;
+			pointer-events: auto;
+			width: 100%;
+			max-width: 900px;
+			max-height: 90vh;
+			overflow-y: auto;
+			animation: slideUp 0.3s ease-out;
+		}
+		@keyframes slideUp {
+			from {
+				opacity: 0;
+				transform: translateY(30px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+		.equipment-modal__header {
+			padding: 24px 32px;
+			border-bottom: 1px solid #e5e7eb;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			background: #22c55e;
+			color: white;
+			border-radius: 16px 16px 0 0;
+		}
+		.equipment-modal__title {
+			margin: 0;
+			font-size: 24px;
+			font-weight: 600;
+		}
+		.equipment-icon-btn {
+			background: rgba(255,255,255,0.2);
+			border: none;
+			color: white;
+			font-size: 28px;
+			width: 36px;
+			height: 36px;
+			border-radius: 8px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: all 0.2s;
+			line-height: 1;
+		}
+		.equipment-icon-btn:hover {
+			background: rgba(255,255,255,0.3);
+			transform: scale(1.1);
+		}
+		.equipment-form {
+			padding: 32px;
+		}
+		.equipment-form__grid {
+			display: grid;
+			grid-template-columns: repeat(2, 1fr);
+			gap: 24px;
+			margin-bottom: 32px;
+		}
+		.equipment-form__field {
+			display: flex;
+			flex-direction: column;
+		}
+		.equipment-form__field label {
+			font-weight: 600;
+			margin-bottom: 8px;
+			color: #374151;
+			font-size: 14px;
+		}
+		.equipment-form__field input,
+		.equipment-form__field select {
+			padding: 12px 16px;
+			border: 2px solid #e5e7eb;
+			border-radius: 8px;
+			font-size: 15px;
+			transition: all 0.2s;
+			background: white;
+		}
+		.equipment-form__field input:focus,
+		.equipment-form__field select:focus {
+			outline: none;
+			border-color: #667eea;
+			box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+		}
+		.equipment-form__actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 12px;
+			padding-top: 24px;
+			border-top: 1px solid #e5e7eb;
+		}
+		.equipment-btn {
+			padding: 12px 32px;
+			border-radius: 8px;
+			font-weight: 600;
+			font-size: 15px;
+			cursor: pointer;
+			transition: all 0.2s;
+			border: none;
+		}
+		.equipment-btn:not(.equipment-btn--secondary) {
+			background: #667eea;
+			color: white;
+		}
+		.equipment-btn:not(.equipment-btn--secondary):hover {
+			transform: translateY(-2px);
+			box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+		}
+		.equipment-btn--secondary {
+			background: #f3f4f6;
+			color: #6b7280;
+		}
+		.equipment-btn--secondary:hover {
+			background: #e5e7eb;
+		}
+		.equipment-form__error {
+			background: #fee;
+			border: 1px solid #fcc;
+			color: #c33;
+			padding: 12px 16px;
+			border-radius: 8px;
+			margin-top: 16px;
+		}
+		.equipment-topbar {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 18px;
+			margin-bottom: 18px;
+		}
+		.main-content {
+			margin-top: 80px;
+		}
+		.equipment-table {
+			background: #b0b3b8;
+			margin-left: 10px;
+			margin-right: 10px;
+			width: auto;
+			min-width: 1200px;
+			max-width: 1700px;
+		}
+		.table-container {
+			display: flex;
+			justify-content: center;
+		}
+		.equipment-row--green,
+		.equipment-row--yellow,
+		.equipment-table tbody tr,
+		.equipment-table tr,
+		.equipment-table tr:nth-child(even),
+		.equipment-table tr:nth-child(odd),
+		.equipment-table tbody tr:hover,
+		.equipment-table tr:hover,
+		.equipment-table td,
+		.equipment-table th {
+			background-color: #e0e1e3 !important;
+		}
+		.equipment-row--red {
+			background-color: #ffe6e6 !important;
+		}
+		/* Stronger specificity to override all other color rules */
+		.equipment-table .equipment-row--font-red td,
+		.equipment-table .equipment-row--font-red a,
+		.equipment-table .equipment-row--font-red span,
+		.equipment-table .equipment-row--font-red {
+			color: #e53935 !important;
+		}
+		.equipment-table .equipment-row--font-red * {
+			color: #e53935 !important;
+		}
+	</style>
 </head>
-<body class="admin-page">
+<body>
 	<div class="admin-container">
 		<?php include __DIR__ . '/../../partials/portalheader.php'; ?>
 		<div class="admin-layout">
@@ -116,110 +332,174 @@ function eq_format_warranty($dateValue) {
 							<div class="table-wrap">
 								<div class="table-container" role="region" aria-label="Equipment table">
 									<table class="project-table equipment-table" role="table" aria-label="Equipment list">
-									<thead>
-										<tr>
-											<th scope="col">
-												<span class="equip-th">
-													<span class="equip-th__label">Equipment #</span>
-													<button class="equip-sort-btn" type="button" aria-label="Sort equipment number" data-sort="equipment_number">▾</button>
-												</span>
-											</th>
-											<th scope="col">Type</th>
-											<th scope="col">
-												<span class="equip-th">
-													<span class="equip-th__label">Operating Condition</span>
-													<button class="equip-sort-btn" type="button" aria-label="Sort operating condition" data-sort="operating_condition">▾</button>
-												</span>
-											</th>
-											<th scope="col">Location</th>
-											<th scope="col">
-												<span class="equip-th">
-													<span class="equip-th__label">Current Hours</span>
-													<button class="equip-sort-btn" type="button" aria-label="Sort current hours" data-sort="current_hours">▾</button>
-												</span>
-											</th>
-											<th scope="col">
-												<span class="equip-th">
-													<span class="equip-th__label">Oil Status</span>
-													<button class="equip-sort-btn" type="button" aria-label="Sort oil status" data-sort="oil_status">▾</button>
-												</span>
-											</th>
-											<th scope="col">Air Filters</th>
-											<th scope="col">Warranty</th>
-											<th scope="col">Tires</th>
-										</tr>
-									</thead>
-									<tbody>
-										<?php if (count($equipments) === 0): ?>
+										<thead>
 											<tr>
-												<td class="equipment-empty" colspan="9">No equipment yet. Once rows exist in the database, they’ll show up here.</td>
+												<th scope="col">
+													<span class="equip-th">
+														<span class="equip-th__label">Equipment #</span>
+														<button class="equip-sort-btn" type="button" aria-label="Sort equipment number" data-sort="equipment_number">▾</button>
+													</span>
+												</th>
+												<th scope="col">Type</th>
+												<th scope="col">
+													<span class="equip-th">
+														<span class="equip-th__label">Operating Condition</span>
+														<button class="equip-sort-btn" type="button" aria-label="Sort operating condition" data-sort="operating_condition">▾</button>
+													</span>
+												</th>
+												<th scope="col">Location</th>
+												<th scope="col">
+													<span class="equip-th">
+														<span class="equip-th__label">Current Hours</span>
+														<button class="equip-sort-btn" type="button" aria-label="Sort current hours" data-sort="current_hours">▾</button>
+													</span>
+												</th>
+												<th scope="col">
+													<span class="equip-th">
+														<span class="equip-th__label">Oil Status</span>
+														<button class="equip-sort-btn" type="button" aria-label="Sort oil status" data-sort="oil_status">▾</button>
+													</span>
+												</th>
+												<th scope="col">Air Filters</th>
+												<th scope="col">Tires</th>
+												<th scope="col">Warranty</th>
 											</tr>
-										<?php else: ?>
-											<?php $eqIndex = 0; ?>
-											<?php foreach ($equipments as $eq): ?>
-												<?php
-													$opState = eq_normalize_status($eq['operating_condition'] ?? '');
-													$oilState = eq_normalize_status($eq['oil_status'] ?? '');
-													$airState = eq_normalize_status($eq['air_filters'] ?? '');
-													$tiresState = eq_normalize_status($eq['tires'] ?? '');
-													$warranty = eq_format_warranty($eq['warranty'] ?? null);
-													$eqNumSort = strtolower(trim((string)($eq['equipment_number'] ?? '')));
-													$hoursSort = is_numeric($eq['current_hours'] ?? null) ? (float)$eq['current_hours'] : 0.0;
-												?>
-												<tr
-													data-equipment-id="<?php echo (int)$eq['equipment_id']; ?>"
-													data-original-index="<?php echo (int)$eqIndex; ?>"
-													data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
-													data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
-													data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
-													data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
-												>
-													<td><a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a></td>
-													<td><?php echo htmlspecialchars((string)($eq['type'] ?? '')); ?></td>
-													<td>
-														<?php $val = trim((string)($eq['operating_condition'] ?? '')); ?>
-														<?php if ($val === ''): ?>
-															<span class="equipment-pill equipment-pill--neutral">—</span>
-														<?php else: ?>
-															<span class="equipment-pill equipment-pill--<?php echo htmlspecialchars($opState); ?>"><?php echo htmlspecialchars($val); ?></span>
-														<?php endif; ?>
-													</td>
-													<td><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></td>
-													<td><span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span></td>
-													<td>
-														<?php $val = trim((string)($eq['oil_status'] ?? '')); ?>
-														<?php if ($val === ''): ?>
-															<span class="equipment-pill equipment-pill--neutral">—</span>
-														<?php else: ?>
-															<span class="equipment-pill equipment-pill--<?php echo htmlspecialchars($oilState); ?>"><?php echo htmlspecialchars($val); ?></span>
-														<?php endif; ?>
-													</td>
-													<td>
-														<?php $val = trim((string)($eq['air_filters'] ?? '')); ?>
-														<?php if ($val === ''): ?>
-															<span class="equipment-pill equipment-pill--neutral">—</span>
-														<?php else: ?>
-															<span class="equipment-pill equipment-pill--<?php echo htmlspecialchars($airState); ?>"><?php echo htmlspecialchars($val); ?></span>
-														<?php endif; ?>
-													</td>
-													<td>
-														<span class="equipment-pill equipment-pill--<?php echo htmlspecialchars($warranty['state']); ?>"><?php echo htmlspecialchars($warranty['label']); ?></span>
-													</td>
-													<td>
-														<?php $val = trim((string)($eq['tires'] ?? '')); ?>
-														<?php if ($val === ''): ?>
-															<span class="equipment-pill equipment-pill--neutral">—</span>
-														<?php else: ?>
-															<span class="equipment-pill equipment-pill--<?php echo htmlspecialchars($tiresState); ?>"><?php echo htmlspecialchars($val); ?></span>
-														<?php endif; ?>
-													</td>
+										</thead>
+										<tbody>
+											<?php if (count($equipments) === 0): ?>
+												<tr>
+													<td class="equipment-empty" colspan="9">No equipment yet. Once rows exist in the database, they'll show up here.</td>
 												</tr>
-												<?php $eqIndex++; ?>
-											<?php endforeach; ?>
-										<?php endif; ?>
-									</tbody>
-								</table>
-								<div id="equipSortMenu" class="equip-sort-menu" aria-hidden="true"></div>
+											<?php else: ?>
+												<?php $eqIndex = 0; ?>
+												<?php foreach ($equipments as $eq): ?>
+													<?php
+														$opState = eq_normalize_status($eq['operating_condition'] ?? '');
+														$oilState = eq_normalize_status($eq['oil_status'] ?? '');
+														$airState = eq_normalize_status($eq['air_filters'] ?? '');
+														$tiresState = eq_normalize_status($eq['tires'] ?? '');
+														$warranty = eq_format_warranty($eq['warranty'] ?? null);
+														$eqNumSort = strtolower(trim((string)($eq['equipment_number'] ?? '')));
+														$hoursSort = is_numeric($eq['current_hours'] ?? null) ? (float)$eq['current_hours'] : 0.0;
+													?>
+													<?php
+														$val = trim((string)($eq['operating_condition'] ?? ''));
+														$rowColor = '';
+														$isRedEngine = ($eq['operating_condition'] ?? '') === 'red';
+														$isRedOil = ($eq['oil_status'] ?? '') === 'red';
+														if ($val === 'green') $rowColor = 'equipment-row--green';
+														elseif ($val === 'yellow') $rowColor = 'equipment-row--yellow';
+														elseif ($val === 'red') $rowColor = 'equipment-row--red';
+														$rowFontRed = ($isRedEngine || $isRedOil) ? ' equipment-row--font-red' : '';
+													?>
+													<tr
+														class="<?php echo $rowColor . $rowFontRed; ?>"
+														data-equipment-id="<?php echo (int)$eq['equipment_id']; ?>"
+														data-original-index="<?php echo (int)$eqIndex; ?>"
+														data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
+														data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
+														data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
+														data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
+													>
+														<td><a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a></td>
+														<td><?php echo htmlspecialchars((string)($eq['type'] ?? '')); ?></td>
+														<td>
+															<?php $val = trim((string)($eq['operating_condition'] ?? '')); ?>
+															<?php
+															$svgMap = [
+																'green' => 'greenengine.svg',
+																'yellow' => 'yellowengine.svg',
+																'red' => 'redengine.svg'
+															];
+															?>
+															<?php if ($val === '' || !isset($svgMap[$val])): ?>
+																<span class="equipment-pill equipment-pill--neutral">—</span>
+															<?php else: ?>
+																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?>">
+																	<img src="images/<?php echo htmlspecialchars($svgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> engine" style="height:28px;vertical-align:middle;" />
+																</a>
+															<?php endif; ?>
+														</td>
+														<td><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></td>
+														<td><span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span></td>
+														<td style="text-align:center;vertical-align:middle;">
+															<?php $val = trim((string)($eq['oil_status'] ?? '')); ?>
+															<?php
+															$oilSvgMap = [
+																'green' => 'greenoil.svg',
+																'yellow' => 'yellowoil.svg',
+																'red' => 'redoil.svg'
+															];
+															?>
+															<?php if ($val === '' || !isset($oilSvgMap[$val])): ?>
+																<span class="equipment-pill equipment-pill--neutral">—</span>
+															<?php else: ?>
+																<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+																	<img src="images/<?php echo htmlspecialchars($oilSvgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> oil" style="height:28px;display:block;margin:0 auto;" />
+																</div>
+															<?php endif; ?>
+														</td>
+														<td style="text-align:center;">
+															<?php
+															$airFiles = 0;
+															$stmtAir = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'air_filters'");
+															$stmtAir->bind_param('i', $eq['equipment_id']);
+															$stmtAir->execute();
+															$resAir = $stmtAir->get_result();
+															if ($rowAir = $resAir->fetch_assoc()) {
+																$airFiles = (int)$rowAir['cnt'];
+															}
+															$stmtAir->close();
+															?>
+															<?php if ($airFiles > 0): ?>
+																<a href="Airfilters.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Air Filters</a>
+															<?php else: ?>
+																<span style="color:#bbb !important;">Not available</span>
+															<?php endif; ?>
+														</td>
+														<td style="text-align:center;">
+															<?php
+															$tiresFiles = 0;
+															$stmtTires = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'tires'");
+															$stmtTires->bind_param('i', $eq['equipment_id']);
+															$stmtTires->execute();
+															$resTires = $stmtTires->get_result();
+															if ($rowTires = $resTires->fetch_assoc()) {
+																$tiresFiles = (int)$rowTires['cnt'];
+															}
+															$stmtTires->close();
+															?>
+															<?php if ($tiresFiles > 0): ?>
+																<a href="Tires.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Tires</a>
+															<?php else: ?>
+																<span style="color:#bbb !important;">Not available</span>
+															<?php endif; ?>
+														</td>
+														<td style="text-align:center;">
+															<?php
+															$warrantyFiles = 0;
+															$stmtWarranty = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'warranty'");
+															$stmtWarranty->bind_param('i', $eq['equipment_id']);
+															$stmtWarranty->execute();
+															$resWarranty = $stmtWarranty->get_result();
+															if ($rowWarranty = $resWarranty->fetch_assoc()) {
+																$warrantyFiles = (int)$rowWarranty['cnt'];
+															}
+															$stmtWarranty->close();
+															?>
+															<?php if ($warrantyFiles > 0): ?>
+																<a href="Warrenty.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>
+															<?php else: ?>
+																<span style="color:#bbb !important;">Not available</span>
+															<?php endif; ?>
+														</td>
+													</tr>
+													<?php $eqIndex++; ?>
+												<?php endforeach; ?>
+											<?php endif; ?>
+										</tbody>
+									</table>
+									<div id="equipSortMenu" class="equip-sort-menu" aria-hidden="true"></div>
 								</div>
 							</div>
 						</div>
@@ -236,7 +516,7 @@ function eq_format_warranty($dateValue) {
 				<h3 class="equipment-modal__title">Add Equipment</h3>
 				<button id="closeNewEquipmentModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
 			</div>
-			<form id="newEquipmentForm" class="equipment-form">
+			<form id="newEquipmentForm" class="equipment-form" enctype="multipart/form-data">
 				<div class="equipment-form__grid">
 					<div class="equipment-form__field">
 						<label for="eq_equipment_number">Equipment #</label>
@@ -248,7 +528,12 @@ function eq_format_warranty($dateValue) {
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_operating_condition">Operating Condition</label>
-						<input id="eq_operating_condition" name="operating_condition" type="text" />
+						<select id="eq_operating_condition" name="operating_condition">
+							<option value="">Select...</option>
+							<option value="green">Green</option>
+							<option value="yellow">Yellow</option>
+							<option value="red">Red</option>
+						</select>
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_location">Location</label>
@@ -260,19 +545,24 @@ function eq_format_warranty($dateValue) {
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_oil_status">Oil Status</label>
-						<input id="eq_oil_status" name="oil_status" type="text" />
+						<select id="eq_oil_status" name="oil_status">
+							<option value="">Select...</option>
+							<option value="green">Green</option>
+							<option value="yellow">Yellow</option>
+							<option value="red">Red</option>
+						</select>
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_air_filters">Air Filters</label>
-						<input id="eq_air_filters" name="air_filters" type="text" />
+						<input id="eq_air_filters" name="air_filters" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_warranty">Warranty</label>
-						<input id="eq_warranty" name="warranty" type="date" />
+						<input id="eq_warranty" name="warranty" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_tires">Tires</label>
-						<input id="eq_tires" name="tires" type="text" />
+						<input id="eq_tires" name="tires" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
 					</div>
 				</div>
 				<div class="equipment-form__actions">
@@ -286,147 +576,146 @@ function eq_format_warranty($dateValue) {
 
 	<script>
 		(function(){
-			// Equipment table sorting dropdowns
-			(function(){
-				var table = document.querySelector('.equipment-table');
-				var sortMenu = document.getElementById('equipSortMenu');
-				if (!table || !sortMenu) return;
-				var tbody = table.querySelector('tbody');
-				if (!tbody) return;
-				var buttons = Array.prototype.slice.call(document.querySelectorAll('.equip-sort-btn'));
-				var menuOpen = false;
-				var currentSortKey = null;
+			'use strict';
 
-				function closeMenu(){
-					sortMenu.style.display = 'none';
-					sortMenu.setAttribute('aria-hidden','true');
-					sortMenu.innerHTML = '';
-					menuOpen = false;
-					currentSortKey = null;
-				}
+			// Sort functionality
+			var tbody = document.querySelector('.equipment-table tbody');
+			var buttons = document.querySelectorAll('.equip-sort-btn');
+			var sortMenu = document.getElementById('equipSortMenu');
+			var menuOpen = false;
+			var currentSortKey = null;
 
-				function getRows(){
-					return Array.prototype.slice.call(tbody.querySelectorAll('tr'))
-						.filter(function(tr){ return tr.getAttribute('data-equipment-id'); });
-				}
+			function closeMenu(){
+				if (!menuOpen) return;
+				sortMenu.style.display = 'none';
+				sortMenu.setAttribute('aria-hidden','true');
+				sortMenu.innerHTML = '';
+				menuOpen = false;
+				currentSortKey = null;
+			}
 
-				function stableFallback(a, b){
-					var ai = parseInt(a.getAttribute('data-original-index') || '0', 10);
-					var bi = parseInt(b.getAttribute('data-original-index') || '0', 10);
-					return ai - bi;
-				}
+			function getRows(){
+				return Array.prototype.slice.call(tbody.querySelectorAll('tr'))
+					.filter(function(tr){ return tr.getAttribute('data-equipment-id'); });
+			}
 
-				function replaceRows(rows){
-					var emptyRow = tbody.querySelector('tr:not([data-equipment-id])');
-					rows.forEach(function(tr){ tbody.appendChild(tr); });
-					if (emptyRow) tbody.appendChild(emptyRow);
-				}
+			function stableFallback(a, b){
+				var ai = parseInt(a.getAttribute('data-original-index') || '0', 10);
+				var bi = parseInt(b.getAttribute('data-original-index') || '0', 10);
+				return ai - bi;
+			}
 
-				function applyTextSort(direction){
-					var rows = getRows();
-					rows.sort(function(a, b){
-						var av = (a.getAttribute('data-sort-equipment-number') || '').toLowerCase();
-						var bv = (b.getAttribute('data-sort-equipment-number') || '').toLowerCase();
-						if (av < bv) return direction === 'asc' ? -1 : 1;
-						if (av > bv) return direction === 'asc' ? 1 : -1;
-						return stableFallback(a, b);
-					});
-					replaceRows(rows);
-				}
+			function replaceRows(rows){
+				var emptyRow = tbody.querySelector('tr:not([data-equipment-id])');
+				rows.forEach(function(tr){ tbody.appendChild(tr); });
+				if (emptyRow) tbody.appendChild(emptyRow);
+			}
 
-				function applyHoursSort(direction){
-					var rows = getRows();
-					rows.sort(function(a, b){
-						var av = parseFloat(a.getAttribute('data-sort-current-hours') || '0');
-						var bv = parseFloat(b.getAttribute('data-sort-current-hours') || '0');
-						if (av < bv) return direction === 'asc' ? -1 : 1;
-						if (av > bv) return direction === 'asc' ? 1 : -1;
-						return stableFallback(a, b);
-					});
-					replaceRows(rows);
-				}
-
-				function applyStatusSort(key, preferred){
-					var order;
-					if (preferred === 'good') order = ['good', 'warn', 'bad', 'neutral'];
-					else if (preferred === 'warn') order = ['warn', 'good', 'bad', 'neutral'];
-					else order = ['bad', 'warn', 'good', 'neutral'];
-
-					var rows = getRows();
-					rows.sort(function(a, b){
-						var attr = key === 'operating_condition' ? 'data-sort-operating-condition' : 'data-sort-oil-status';
-						var av = a.getAttribute(attr) || 'neutral';
-						var bv = b.getAttribute(attr) || 'neutral';
-						var ai = order.indexOf(av); if (ai === -1) ai = order.length;
-						var bi = order.indexOf(bv); if (bi === -1) bi = order.length;
-						if (ai < bi) return -1;
-						if (ai > bi) return 1;
-						return stableFallback(a, b);
-					});
-					replaceRows(rows);
-				}
-
-				function openMenuFor(btn, key){
-					currentSortKey = key;
-					sortMenu.innerHTML = '';
-					sortMenu.setAttribute('aria-hidden','false');
-					sortMenu.style.display = 'block';
-					menuOpen = true;
-
-					var rect = btn.getBoundingClientRect();
-					var menuWidth = 190;
-					var left = rect.left + window.pageXOffset;
-					var top = rect.bottom + window.pageYOffset + 6;
-					var maxLeft = (window.pageXOffset + window.innerWidth) - menuWidth - 10;
-					if (left > maxLeft) left = Math.max(10, maxLeft);
-					sortMenu.style.left = left + 'px';
-					sortMenu.style.top = top + 'px';
-
-					function addOption(label, action){
-						var opt = document.createElement('button');
-						opt.type = 'button';
-						opt.className = 'equip-sort-option';
-						opt.textContent = label;
-						opt.addEventListener('click', function(e){
-							e.preventDefault();
-							action();
-							closeMenu();
-						});
-						sortMenu.appendChild(opt);
-					}
-
-					if (key === 'operating_condition' || key === 'oil_status') {
-						addOption('Green', function(){ applyStatusSort(key, 'good'); });
-						addOption('Yellow', function(){ applyStatusSort(key, 'warn'); });
-						addOption('Red', function(){ applyStatusSort(key, 'bad'); });
-					} else if (key === 'current_hours') {
-						addOption('Highest', function(){ applyHoursSort('desc'); });
-						addOption('Lowest', function(){ applyHoursSort('asc'); });
-					} else if (key === 'equipment_number') {
-						addOption('A → Z', function(){ applyTextSort('asc'); });
-						addOption('Z → A', function(){ applyTextSort('desc'); });
-					}
-				}
-
-				buttons.forEach(function(btn){
-					btn.addEventListener('click', function(e){
-						e.preventDefault();
-						e.stopPropagation();
-						var key = btn.getAttribute('data-sort');
-						if (menuOpen && currentSortKey === key) {
-							closeMenu();
-							return;
-						}
-						openMenuFor(btn, key);
-					});
+			function applyTextSort(direction){
+				var rows = getRows();
+				rows.sort(function(a, b){
+					var av = (a.getAttribute('data-sort-equipment-number') || '').toLowerCase();
+					var bv = (b.getAttribute('data-sort-equipment-number') || '').toLowerCase();
+					if (av < bv) return direction === 'asc' ? -1 : 1;
+					if (av > bv) return direction === 'asc' ? 1 : -1;
+					return stableFallback(a, b);
 				});
+				replaceRows(rows);
+			}
 
-				document.addEventListener('click', function(){ if (menuOpen) closeMenu(); });
-				document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && menuOpen) closeMenu(); });
-				window.addEventListener('resize', function(){ if (menuOpen) closeMenu(); });
-				window.addEventListener('scroll', function(){ if (menuOpen) closeMenu(); }, true);
-			})();
+			function applyHoursSort(direction){
+				var rows = getRows();
+				rows.sort(function(a, b){
+					var av = parseFloat(a.getAttribute('data-sort-current-hours') || '0');
+					var bv = parseFloat(b.getAttribute('data-sort-current-hours') || '0');
+					if (av < bv) return direction === 'asc' ? -1 : 1;
+					if (av > bv) return direction === 'asc' ? 1 : -1;
+					return stableFallback(a, b);
+				});
+				replaceRows(rows);
+			}
 
+			function applyStatusSort(key, preferred){
+				var order;
+				if (preferred === 'good') order = ['good', 'warn', 'bad', 'neutral'];
+				else if (preferred === 'warn') order = ['warn', 'good', 'bad', 'neutral'];
+				else order = ['bad', 'warn', 'good', 'neutral'];
+
+				var rows = getRows();
+				rows.sort(function(a, b){
+					var attr = key === 'operating_condition' ? 'data-sort-operating-condition' : 'data-sort-oil-status';
+					var av = a.getAttribute(attr) || 'neutral';
+					var bv = b.getAttribute(attr) || 'neutral';
+					var ai = order.indexOf(av); if (ai === -1) ai = order.length;
+					var bi = order.indexOf(bv); if (bi === -1) bi = order.length;
+					if (ai < bi) return -1;
+					if (ai > bi) return 1;
+					return stableFallback(a, b);
+				});
+				replaceRows(rows);
+			}
+
+			function openMenuFor(btn, key){
+				currentSortKey = key;
+				sortMenu.innerHTML = '';
+				sortMenu.setAttribute('aria-hidden','false');
+				sortMenu.style.display = 'block';
+				menuOpen = true;
+
+				var rect = btn.getBoundingClientRect();
+				var menuWidth = 190;
+				var left = rect.left + window.pageXOffset;
+				var top = rect.bottom + window.pageYOffset + 6;
+				var maxLeft = (window.pageXOffset + window.innerWidth) - menuWidth - 10;
+				if (left > maxLeft) left = Math.max(10, maxLeft);
+				sortMenu.style.left = left + 'px';
+				sortMenu.style.top = top + 'px';
+
+				function addOption(label, action){
+					var opt = document.createElement('button');
+					opt.type = 'button';
+					opt.className = 'equip-sort-option';
+					opt.textContent = label;
+					opt.addEventListener('click', function(e){
+						e.preventDefault();
+						action();
+						closeMenu();
+					});
+					sortMenu.appendChild(opt);
+				}
+
+				if (key === 'operating_condition' || key === 'oil_status') {
+					addOption('Green', function(){ applyStatusSort(key, 'good'); });
+					addOption('Yellow', function(){ applyStatusSort(key, 'warn'); });
+					addOption('Red', function(){ applyStatusSort(key, 'bad'); });
+				} else if (key === 'current_hours') {
+					addOption('Highest', function(){ applyHoursSort('desc'); });
+					addOption('Lowest', function(){ applyHoursSort('asc'); });
+				} else if (key === 'equipment_number') {
+					addOption('A → Z', function(){ applyTextSort('asc'); });
+					addOption('Z → A', function(){ applyTextSort('desc'); });
+				}
+			}
+
+			buttons.forEach(function(btn){
+				btn.addEventListener('click', function(e){
+					e.preventDefault();
+					e.stopPropagation();
+					var key = btn.getAttribute('data-sort');
+					if (menuOpen && currentSortKey === key) {
+						closeMenu();
+						return;
+					}
+					openMenuFor(btn, key);
+				});
+			});
+
+			document.addEventListener('click', function(){ if (menuOpen) closeMenu(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && menuOpen) closeMenu(); });
+			window.addEventListener('resize', function(){ if (menuOpen) closeMenu(); });
+			window.addEventListener('scroll', function(){ if (menuOpen) closeMenu(); }, true);
+
+			// Modal functionality
 			var newBtn = document.getElementById('newEquipmentBtn');
 			var modal = document.getElementById('newEquipmentModal');
 			var closeBtn = document.getElementById('closeNewEquipmentModal');
@@ -452,7 +741,11 @@ function eq_format_warranty($dateValue) {
 				if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
 			}
 
-			if (newBtn) newBtn.addEventListener('click', function(){ openModal(); });
+			if (newBtn) newBtn.addEventListener('click', function(e){ 
+				e.preventDefault();
+				e.stopPropagation();
+				openModal(); 
+			});
 			if (closeBtn) closeBtn.addEventListener('click', function(){ closeModal(); });
 			if (cancelBtn) cancelBtn.addEventListener('click', function(){ closeModal(); });
 			if (modal) modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
@@ -472,7 +765,6 @@ function eq_format_warranty($dateValue) {
 							if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; }
 							return;
 						}
-						// Reload to show new row
 						window.location.reload();
 					})
 					.catch(function(){
@@ -483,6 +775,7 @@ function eq_format_warranty($dateValue) {
 					});
 			});
 
+			// Users toggle
 			var usersToggle = document.getElementById('usersToggle');
 			var usersGroup = document.getElementById('usersGroup');
 			if (usersToggle && usersGroup) {
@@ -494,4 +787,3 @@ function eq_format_warranty($dateValue) {
 	</script>
 </body>
 </html>
-
