@@ -51,11 +51,49 @@ if (!$stmt) {
     exit();
 }
 $stmt->bind_param($types, ...$params);
-if ($stmt->execute()) {
-    echo json_encode(['success' => true]);
-    exit();
-} else {
+
+if (!$stmt->execute()) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $stmt->error]);
     exit();
 }
+$stmt->close();
+
+// --- Multi-upload support for air_filters, warranty, tires ---
+$upload_dir = realpath(__DIR__ . '/../uploads/equipment');
+if (!is_dir($upload_dir)) {
+    mkdir($upload_dir, 0777, true);
+}
+
+function handle_multi_upload($files, $equipment_id, $field, $conn, $upload_dir) {
+    if (!$files || !isset($files['tmp_name'])) return;
+    $count = is_array($files['tmp_name']) ? count($files['tmp_name']) : 0;
+    for ($i = 0; $i < $count; $i++) {
+        if (isset($files['tmp_name'][$i]) && is_uploaded_file($files['tmp_name'][$i])) {
+            $ext = pathinfo($files['name'][$i], PATHINFO_EXTENSION);
+            $safe_name = uniqid($field . '_') . '.' . $ext;
+            $target = $upload_dir . DIRECTORY_SEPARATOR . $safe_name;
+            if (move_uploaded_file($files['tmp_name'][$i], $target)) {
+                $url = 'uploads/equipment/' . $safe_name;
+                $stmt = $conn->prepare('INSERT INTO equipment_uploads (equipment_id, field, file_url) VALUES (?, ?, ?)');
+                $stmt->bind_param('iss', $equipment_id, $field, $url);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+    }
+}
+
+// Accept multiple files for each field (if present)
+if (isset($_FILES['air_filters']) && is_array($_FILES['air_filters']['name'])) {
+    handle_multi_upload($_FILES['air_filters'], $equipmentId, 'air_filters', $conn, $upload_dir);
+}
+if (isset($_FILES['warranty']) && is_array($_FILES['warranty']['name'])) {
+    handle_multi_upload($_FILES['warranty'], $equipmentId, 'warranty', $conn, $upload_dir);
+}
+if (isset($_FILES['tires']) && is_array($_FILES['tires']['name'])) {
+    handle_multi_upload($_FILES['tires'], $equipmentId, 'tires', $conn, $upload_dir);
+}
+
+echo json_encode(['success' => true]);
+exit();

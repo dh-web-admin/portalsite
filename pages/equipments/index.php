@@ -624,44 +624,88 @@ function eq_format_warranty($dateValue) {
 				<h3 class="equipment-modal__title">Edit Equipment</h3>
 				<button id="closeEditEquipmentModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
 			</div>
-			<form id="editEquipmentForm" class="equipment-form" enctype="multipart/form-data">
-				<input type="hidden" id="edit_equipment_id" name="equipment_id" />
-				<div class="equipment-form__grid">
-					<div class="equipment-form__field">
-						<label for="edit_equipment_number">Equipment #</label>
-						<input id="edit_equipment_number" name="equipment_number" type="text" required />
-					</div>
-					<div class="equipment-form__field">
-						<label for="edit_type">Type</label>
-						<input id="edit_type" name="type" type="text" required />
-					</div>
-					<div class="equipment-form__field">
-						<label for="edit_operating_condition">Operating Condition</label>
-						<select id="edit_operating_condition" name="operating_condition">
-							<option value="">Select...</option>
-							<option value="green">Green</option>
-							<option value="yellow">Yellow</option>
-							<option value="red">Red</option>
-						</select>
-					</div>
-					<div class="equipment-form__field">
-						<label for="edit_location">Location</label>
-						<input id="edit_location" name="location" type="text" />
-					</div>
-					<div class="equipment-form__field">
-						<label for="edit_current_hours">Current Hours</label>
-						<input id="edit_current_hours" name="current_hours" type="number" step="0.1" min="0" />
-					</div>
-					<div class="equipment-form__field">
-						<label for="edit_oil_status">Oil Status</label>
-						<select id="edit_oil_status" name="oil_status">
-							<option value="">Select...</option>
-							<option value="green">Green</option>
-							<option value="yellow">Yellow</option>
-							<option value="red">Red</option>
-						</select>
-					</div>
-				</div>
+			   <form id="editEquipmentForm" class="equipment-form" enctype="multipart/form-data">
+				   <input type="hidden" id="edit_equipment_id" name="equipment_id" />
+				   <?php
+				   // Prepare to show previews of uploaded files for the selected equipment in the edit modal
+				   $editUploads = [
+					   'air_filters' => [],
+					   'warranty' => [],
+					   'tires' => []
+				   ];
+				   if (isset($_GET['edit_id']) && is_numeric($_GET['edit_id'])) {
+					   $eid = (int)$_GET['edit_id'];
+					   $stmt = $conn->prepare("SELECT field, file_url, id FROM equipment_uploads WHERE equipment_id = ?");
+					   $stmt->bind_param('i', $eid);
+					   $stmt->execute();
+					   $res = $stmt->get_result();
+					   while ($row = $res->fetch_assoc()) {
+						   $f = $row['field'];
+						   if (isset($editUploads[$f])) $editUploads[$f][] = $row;
+					   }
+					   $stmt->close();
+				   }
+				   ?>
+				   <div class="equipment-form__grid">
+					   <div class="equipment-form__field">
+						   <label for="edit_equipment_number">Equipment #</label>
+						   <input id="edit_equipment_number" name="equipment_number" type="text" required />
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_type">Type</label>
+						   <input id="edit_type" name="type" type="text" required />
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_operating_condition">Operating Condition</label>
+						   <select id="edit_operating_condition" name="operating_condition">
+							   <option value="">Select...</option>
+							   <option value="green">Green</option>
+							   <option value="yellow">Yellow</option>
+							   <option value="red">Red</option>
+						   </select>
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_location">Location</label>
+						   <input id="edit_location" name="location" type="text" />
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_current_hours">Current Hours</label>
+						   <input id="edit_current_hours" name="current_hours" type="number" step="0.1" min="0" />
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_oil_status">Oil Status</label>
+						   <select id="edit_oil_status" name="oil_status">
+							   <option value="">Select...</option>
+							   <option value="green">Green</option>
+							   <option value="yellow">Yellow</option>
+							   <option value="red">Red</option>
+						   </select>
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_air_filters">Air Filters</label>
+						   <label class="equipment-file-label add-more-btn" id="air_filters_file_label" for="edit_air_filters">
+							   Add More
+							   <input id="edit_air_filters" name="air_filters[]" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple style="display:none;" />
+						   </label>
+						   <div class="equipment-upload-preview" data-field="air_filters"></div>
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_warranty">Warranty</label>
+						   <label class="equipment-file-label add-more-btn" id="warranty_file_label" for="edit_warranty">
+							   Add More
+							   <input id="edit_warranty" name="warranty[]" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple style="display:none;" />
+						   </label>
+						   <div class="equipment-upload-preview" data-field="warranty"></div>
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_tires">Tires</label>
+						   <label class="equipment-file-label add-more-btn" id="tires_file_label" for="edit_tires">
+							   Add More
+							   <input id="edit_tires" name="tires[]" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple style="display:none;" />
+						   </label>
+						   <div class="equipment-upload-preview" data-field="tires"></div>
+					   </div>
+				   </div>
 				   <div class="equipment-form__actions">
 					   <button id="cancelEditEquipment" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
 					   <button id="deleteEditEquipment" class="equipment-btn equipment-btn--danger" type="button" style="margin-right:auto;background:#dc2626;color:#fff;">Delete</button>
@@ -883,7 +927,6 @@ function eq_format_warranty($dateValue) {
 
 			function openEditModal(row){
 				if (!editModal || !row) return;
-				
 				var equipmentId = row.getAttribute('data-equipment-id');
 				var equipmentNumber = row.getAttribute('data-equipment-number');
 				var type = row.getAttribute('data-type');
@@ -891,7 +934,7 @@ function eq_format_warranty($dateValue) {
 				var location = row.getAttribute('data-location');
 				var currentHours = row.getAttribute('data-current-hours');
 				var oilStatus = row.getAttribute('data-oil-status');
-				
+
 				document.getElementById('edit_equipment_id').value = equipmentId || '';
 				document.getElementById('edit_equipment_number').value = equipmentNumber || '';
 				document.getElementById('edit_type').value = type || '';
@@ -899,7 +942,44 @@ function eq_format_warranty($dateValue) {
 				document.getElementById('edit_location').value = location || '';
 				document.getElementById('edit_current_hours').value = currentHours || '0';
 				document.getElementById('edit_oil_status').value = oilStatus || '';
-				
+
+				// Clear previous previews
+				['air_filters','warranty','tires'].forEach(function(field){
+					var preview = document.querySelector('.equipment-upload-preview[data-field="'+field+'"]');
+					if (preview) preview.innerHTML = '';
+				});
+
+				// Fetch and show uploaded files for this equipment
+				if (equipmentId) {
+					fetch('../../api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
+					.then(function(r){ return r.json(); })
+					.then(function(data){
+						if (!data.success) return;
+						   ['air_filters','warranty','tires'].forEach(function(field){
+							   var preview = document.querySelector('.equipment-upload-preview[data-field="'+field+'"]');
+							   var label = document.getElementById(field + '_file_label');
+							   if (preview) {
+								   preview.innerHTML = '';
+								   var hasFiles = (data.uploads && data.uploads[field] && data.uploads[field].length > 0);
+								   if (label) {
+									   label.childNodes[0].nodeValue = hasFiles ? 'Add More' : 'Browse...';
+								   }
+								   if (hasFiles) {
+									   data.uploads[field].forEach(function(file){
+										   var a = document.createElement('a');
+										   a.href = file.file_url;
+										   a.target = '_blank';
+										   a.textContent = file.file_url.split('/').pop();
+										   a.style.display = 'block';
+										   a.style.marginTop = '4px';
+										   preview.appendChild(a);
+									   });
+								   }
+							   }
+						   });
+					});
+				}
+
 				editModal.classList.add('is-open');
 				editModal.setAttribute('aria-hidden','false');
 				if (editErrBox) { editErrBox.style.display = 'none'; editErrBox.textContent = ''; }
@@ -997,3 +1077,35 @@ function eq_format_warranty($dateValue) {
 	</script>
 </body>
 </html>
+<style>
+	.add-more-btn {
+		cursor: pointer;
+		display: inline-block;
+		margin-bottom: 6px;
+		padding: 7px 18px;
+		background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+		color: #fff;
+		font-weight: 600;
+		border-radius: 22px;
+		border: none;
+		font-size: 1rem;
+		box-shadow: 0 2px 8px #0001;
+		transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+		position: relative;
+		outline: none;
+		text-align: center;
+		width: auto;
+		min-width: 110px;
+		max-width: 220px;
+	}
+	.add-more-btn:hover, .add-more-btn:focus {
+		background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
+		box-shadow: 0 4px 16px #0002;
+		transform: translateY(-2px) scale(1.04);
+		color: #fff;
+		text-decoration: none;
+	}
+	.add-more-btn input[type="file"] {
+		display: none;
+	}
+</style>

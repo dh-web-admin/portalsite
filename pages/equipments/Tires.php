@@ -32,8 +32,20 @@ $res = $stmt->get_result();
                         <h1 class="success" style="text-align:center;">Tires Files</h1>
                         <h2 style="margin-top:0;font-size:1.2rem;font-weight:600;color:#222;">For Equipment #<?php echo $equipment_id; ?></h2>
                         <ul class="file-list">
-                        <?php while ($row = $res->fetch_assoc()):
-                            $fileUrl = '../../' . $row['file_url'];
+                        <?php 
+                        echo '<div style="color:red;font-weight:bold;">Debug: num_rows = ' . $res->num_rows . '</div>';
+                        $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+                        while ($row = $res->fetch_assoc()):
+                            $fileUrl = $row['file_url'];
+                            if ($isProduction) {
+                                if (strpos($fileUrl, '/uploads/equipment/') !== 0) {
+                                    $fileUrl = '/uploads/equipment/' . ltrim($fileUrl, '/');
+                                }
+                            } else {
+                                if (strpos($fileUrl, '/PortalSite/uploads/equipment/') !== 0) {
+                                    $fileUrl = '/PortalSite/uploads/equipment/' . ltrim($fileUrl, '/');
+                                }
+                            }
                             $ext = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
                             $isImage = in_array($ext, ['jpg','jpeg','png','gif','bmp','webp','svg']);
                         ?>
