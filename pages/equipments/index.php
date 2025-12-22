@@ -656,6 +656,14 @@ function eq_format_warranty($dateValue) {
 						   <input id="edit_type" name="type" type="text" required />
 					   </div>
 					   <div class="equipment-form__field">
+						   <label for="edit_current_hours">Current Hours</label>
+						   <input id="edit_current_hours" name="current_hours" type="number" step="0.1" min="0" />
+					   </div>
+					   <div class="equipment-form__field">
+						   <label for="edit_location">Location</label>
+						   <input id="edit_location" name="location" type="text" />
+					   </div>
+					   <div class="equipment-form__field">
 						   <label for="edit_operating_condition">Operating Condition</label>
 						   <select id="edit_operating_condition" name="operating_condition">
 							   <option value="">Select...</option>
@@ -663,14 +671,6 @@ function eq_format_warranty($dateValue) {
 							   <option value="yellow">Yellow</option>
 							   <option value="red">Red</option>
 						   </select>
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_location">Location</label>
-						   <input id="edit_location" name="location" type="text" />
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_current_hours">Current Hours</label>
-						   <input id="edit_current_hours" name="current_hours" type="number" step="0.1" min="0" />
 					   </div>
 					   <div class="equipment-form__field">
 						   <label for="edit_oil_status">Oil Status</label>
