@@ -27,13 +27,14 @@ if (!can_access($role, 'equipments')) {
 	exit();
 }
 
+
 // Fetch equipment rows
 $equipments = [];
 $equipmentsError = null;
 
 $sql = "SELECT equipment_id, equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires
-        FROM equipments
-        ORDER BY equipment_id DESC";
+		FROM equipments
+		ORDER BY equipment_id DESC";
 
 try {
 	$res = $conn->query($sql);
@@ -44,6 +45,23 @@ try {
 			$equipments[] = $row;
 		}
 		$res->free();
+		// Custom sort: red engine (operating_condition) or oil_status first, then yellow, then green, then others
+		usort($equipments, function($a, $b) {
+			$getStatus = function($row) {
+				$eng = strtolower(trim($row['operating_condition'] ?? ''));
+				$oil = strtolower(trim($row['oil_status'] ?? ''));
+				// Priority: red > yellow > green > other
+				if ($eng === 'red' || $oil === 'red') return 0;
+				if ($eng === 'yellow' || $oil === 'yellow') return 1;
+				if ($eng === 'green' || $oil === 'green') return 2;
+				return 3;
+			};
+			$aStatus = $getStatus($a);
+			$bStatus = $getStatus($b);
+			if ($aStatus !== $bStatus) return $aStatus - $bStatus;
+			// fallback: keep original order (by equipment_id desc)
+			return ($b['equipment_id'] ?? 0) - ($a['equipment_id'] ?? 0);
+		});
 	}
 } catch (Throwable $e) {
 	$equipmentsError = $e->getMessage();
