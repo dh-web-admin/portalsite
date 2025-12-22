@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . '/../../session_init.php';
 
@@ -85,21 +84,51 @@ function eq_format_warranty($dateValue) {
 	<link rel="stylesheet" href="../../assets/css/dashboard.css">
 	<link rel="stylesheet" href="style.css">
 	<style>
-						/* Force Add Equipment button to be green and pill-shaped */
-				#newEquipmentBtn.equipment-btn--green {
-					background: #22c55e !important;
-					color: #fff !important;
-					border-radius: 999px !important;
-					box-shadow: 0 4px 16px rgba(34,197,94,0.10);
-				}
-				#newEquipmentBtn.equipment-btn--green:hover {
-					background: #16a34a !important;
-				}
+		/* Force Add Equipment button to be green and pill-shaped */
+		#newEquipmentBtn.equipment-btn--green {
+			background: #22c55e !important;
+			color: #fff !important;
+			border-radius: 999px !important;
+			box-shadow: 0 4px 16px rgba(34,197,94,0.10);
+		}
+		#newEquipmentBtn.equipment-btn--green:hover {
+			background: #16a34a !important;
+		}
 		.equipment-btn--green {
 			background: #22c55e !important;
 			color: #fff !important;
 			border-radius: 999px !important;
 			box-shadow: 0 4px 16px rgba(34,197,94,0.10);
+		}
+		
+		/* Equipment number cell with edit icon */
+		.equipment-number-cell {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+		}
+		
+		.equipment-edit-icon {
+			opacity: 0;
+			transition: opacity 0.2s, transform 0.2s;
+			cursor: pointer;
+			font-size: 16px;
+			color: #667eea;
+			padding: 4px;
+			border-radius: 4px;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+		
+		.equipment-number-cell:hover .equipment-edit-icon {
+			opacity: 1;
+		}
+		
+		.equipment-edit-icon:hover {
+			background: rgba(102, 126, 234, 0.1);
+			transform: scale(1.1);
 		}
 		
 		/* Fix modal overlay and dialog clickability */
@@ -151,6 +180,9 @@ function eq_format_warranty($dateValue) {
 			background: #22c55e;
 			color: white;
 			border-radius: 16px 16px 0 0;
+		}
+		.equipment-modal__header--edit {
+			background: #667eea;
 		}
 		.equipment-modal__title {
 			margin: 0;
@@ -226,11 +258,11 @@ function eq_format_warranty($dateValue) {
 			transition: all 0.2s;
 			border: none;
 		}
-		.equipment-btn:not(.equipment-btn--secondary) {
+		.equipment-btn:not(.equipment-btn--secondary):not(.equipment-btn--green) {
 			background: #667eea;
 			color: white;
 		}
-		.equipment-btn:not(.equipment-btn--secondary):hover {
+		.equipment-btn:not(.equipment-btn--secondary):not(.equipment-btn--green):hover {
 			transform: translateY(-2px);
 			box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 		}
@@ -395,13 +427,24 @@ function eq_format_warranty($dateValue) {
 													<tr
 														class="<?php echo $rowColor . $rowFontRed; ?>"
 														data-equipment-id="<?php echo (int)$eq['equipment_id']; ?>"
+														data-equipment-number="<?php echo htmlspecialchars($eq['equipment_number'] ?? ''); ?>"
+														data-type="<?php echo htmlspecialchars($eq['type'] ?? ''); ?>"
+														data-operating-condition="<?php echo htmlspecialchars($eq['operating_condition'] ?? ''); ?>"
+														data-location="<?php echo htmlspecialchars($eq['location'] ?? ''); ?>"
+														data-current-hours="<?php echo htmlspecialchars($eq['current_hours'] ?? '0'); ?>"
+														data-oil-status="<?php echo htmlspecialchars($eq['oil_status'] ?? ''); ?>"
 														data-original-index="<?php echo (int)$eqIndex; ?>"
 														data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
 														data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
 														data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
 														data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
 													>
-														<td><a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a></td>
+														<td>
+															<div class="equipment-number-cell">
+																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a>
+																<span class="equipment-edit-icon" title="Edit equipment">Edit</span>
+															</div>
+														</td>
 														<td><?php echo htmlspecialchars((string)($eq['type'] ?? '')); ?></td>
 														<td>
 															<?php $val = trim((string)($eq['operating_condition'] ?? '')); ?>
@@ -574,6 +617,61 @@ function eq_format_warranty($dateValue) {
 		</div>
 	</div>
 
+	<!-- Edit Equipment Modal -->
+	<div id="editEquipmentModal" class="equipment-modal" aria-hidden="true">
+		<div class="equipment-modal__dialog" role="dialog" aria-modal="true" aria-label="Edit equipment">
+			<div class="equipment-modal__header equipment-modal__header--edit">
+				<h3 class="equipment-modal__title">Edit Equipment</h3>
+				<button id="closeEditEquipmentModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+			</div>
+			<form id="editEquipmentForm" class="equipment-form" enctype="multipart/form-data">
+				<input type="hidden" id="edit_equipment_id" name="equipment_id" />
+				<div class="equipment-form__grid">
+					<div class="equipment-form__field">
+						<label for="edit_equipment_number">Equipment #</label>
+						<input id="edit_equipment_number" name="equipment_number" type="text" required />
+					</div>
+					<div class="equipment-form__field">
+						<label for="edit_type">Type</label>
+						<input id="edit_type" name="type" type="text" required />
+					</div>
+					<div class="equipment-form__field">
+						<label for="edit_operating_condition">Operating Condition</label>
+						<select id="edit_operating_condition" name="operating_condition">
+							<option value="">Select...</option>
+							<option value="green">Green</option>
+							<option value="yellow">Yellow</option>
+							<option value="red">Red</option>
+						</select>
+					</div>
+					<div class="equipment-form__field">
+						<label for="edit_location">Location</label>
+						<input id="edit_location" name="location" type="text" />
+					</div>
+					<div class="equipment-form__field">
+						<label for="edit_current_hours">Current Hours</label>
+						<input id="edit_current_hours" name="current_hours" type="number" step="0.1" min="0" />
+					</div>
+					<div class="equipment-form__field">
+						<label for="edit_oil_status">Oil Status</label>
+						<select id="edit_oil_status" name="oil_status">
+							<option value="">Select...</option>
+							<option value="green">Green</option>
+							<option value="yellow">Yellow</option>
+							<option value="red">Red</option>
+						</select>
+					</div>
+				</div>
+				   <div class="equipment-form__actions">
+					   <button id="cancelEditEquipment" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+					   <button id="deleteEditEquipment" class="equipment-btn equipment-btn--danger" type="button" style="margin-right:auto;background:#dc2626;color:#fff;">Delete</button>
+					   <button id="saveEditEquipment" class="equipment-btn" type="submit">Update Equipment</button>
+				   </div>
+				<div id="editEquipmentError" class="equipment-form__error" role="alert" style="display:none;"></div>
+			</form>
+		</div>
+	</div>
+
 	<script>
 		(function(){
 			'use strict';
@@ -715,65 +813,177 @@ function eq_format_warranty($dateValue) {
 			window.addEventListener('resize', function(){ if (menuOpen) closeMenu(); });
 			window.addEventListener('scroll', function(){ if (menuOpen) closeMenu(); }, true);
 
-			// Modal functionality
+			// Add Equipment Modal functionality
 			var newBtn = document.getElementById('newEquipmentBtn');
-			var modal = document.getElementById('newEquipmentModal');
-			var closeBtn = document.getElementById('closeNewEquipmentModal');
-			var cancelBtn = document.getElementById('cancelNewEquipment');
-			var form = document.getElementById('newEquipmentForm');
-			var errBox = document.getElementById('newEquipmentError');
-			var saveBtn = document.getElementById('saveNewEquipment');
+			var newModal = document.getElementById('newEquipmentModal');
+			var closeNewBtn = document.getElementById('closeNewEquipmentModal');
+			var cancelNewBtn = document.getElementById('cancelNewEquipment');
+			var newForm = document.getElementById('newEquipmentForm');
+			var newErrBox = document.getElementById('newEquipmentError');
+			var saveNewBtn = document.getElementById('saveNewEquipment');
 
-			function openModal(){
-				if (!modal) return;
-				modal.classList.add('is-open');
-				modal.setAttribute('aria-hidden','false');
-				if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+			function openNewModal(){
+				if (!newModal) return;
+				newModal.classList.add('is-open');
+				newModal.setAttribute('aria-hidden','false');
+				if (newErrBox) { newErrBox.style.display = 'none'; newErrBox.textContent = ''; }
 				var first = document.getElementById('eq_equipment_number');
 				if (first) first.focus();
 			}
 
-			function closeModal(){
-				if (!modal) return;
-				modal.classList.remove('is-open');
-				modal.setAttribute('aria-hidden','true');
-				if (form) form.reset();
-				if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+			function closeNewModal(){
+				if (!newModal) return;
+				newModal.classList.remove('is-open');
+				newModal.setAttribute('aria-hidden','true');
+				if (newForm) newForm.reset();
+				if (newErrBox) { newErrBox.style.display = 'none'; newErrBox.textContent = ''; }
 			}
 
 			if (newBtn) newBtn.addEventListener('click', function(e){ 
 				e.preventDefault();
 				e.stopPropagation();
-				openModal(); 
+				openNewModal(); 
 			});
-			if (closeBtn) closeBtn.addEventListener('click', function(){ closeModal(); });
-			if (cancelBtn) cancelBtn.addEventListener('click', function(){ closeModal(); });
-			if (modal) modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
-			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && modal && modal.classList.contains('is-open')) closeModal(); });
+			if (closeNewBtn) closeNewBtn.addEventListener('click', function(){ closeNewModal(); });
+			if (cancelNewBtn) cancelNewBtn.addEventListener('click', function(){ closeNewModal(); });
+			if (newModal) newModal.addEventListener('click', function(e){ if (e.target === newModal) closeNewModal(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && newModal && newModal.classList.contains('is-open')) closeNewModal(); });
 
-			if (form) form.addEventListener('submit', function(e){
+			if (newForm) newForm.addEventListener('submit', function(e){
 				e.preventDefault();
-				if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
-				if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
+				if (saveNewBtn) { saveNewBtn.disabled = true; saveNewBtn.textContent = 'Saving...'; }
+				if (newErrBox) { newErrBox.style.display = 'none'; newErrBox.textContent = ''; }
 
-				var fd = new FormData(form);
+				var fd = new FormData(newForm);
 				fetch('../../api/add_equipment.php', { method: 'POST', body: fd, credentials: 'same-origin' })
 					.then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
 					.then(function(res){
 						if (!res.ok || !res.json || !res.json.success) {
 							var msg = (res.json && res.json.message) ? res.json.message : 'Failed to save equipment';
-							if (errBox) { errBox.textContent = msg; errBox.style.display = 'block'; }
+							if (newErrBox) { newErrBox.textContent = msg; newErrBox.style.display = 'block'; }
 							return;
 						}
 						window.location.reload();
 					})
 					.catch(function(){
-						if (errBox) { errBox.textContent = 'Network error while saving'; errBox.style.display = 'block'; }
+						if (newErrBox) { newErrBox.textContent = 'Network error while saving'; newErrBox.style.display = 'block'; }
 					})
 					.finally(function(){
-						if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+						if (saveNewBtn) { saveNewBtn.disabled = false; saveNewBtn.textContent = 'Save'; }
 					});
 			});
+
+			// Edit Equipment Modal functionality
+			var editModal = document.getElementById('editEquipmentModal');
+			var closeEditBtn = document.getElementById('closeEditEquipmentModal');
+			var cancelEditBtn = document.getElementById('cancelEditEquipment');
+			var editForm = document.getElementById('editEquipmentForm');
+			var editErrBox = document.getElementById('editEquipmentError');
+			var saveEditBtn = document.getElementById('saveEditEquipment');
+
+			function openEditModal(row){
+				if (!editModal || !row) return;
+				
+				var equipmentId = row.getAttribute('data-equipment-id');
+				var equipmentNumber = row.getAttribute('data-equipment-number');
+				var type = row.getAttribute('data-type');
+				var operatingCondition = row.getAttribute('data-operating-condition');
+				var location = row.getAttribute('data-location');
+				var currentHours = row.getAttribute('data-current-hours');
+				var oilStatus = row.getAttribute('data-oil-status');
+				
+				document.getElementById('edit_equipment_id').value = equipmentId || '';
+				document.getElementById('edit_equipment_number').value = equipmentNumber || '';
+				document.getElementById('edit_type').value = type || '';
+				document.getElementById('edit_operating_condition').value = operatingCondition || '';
+				document.getElementById('edit_location').value = location || '';
+				document.getElementById('edit_current_hours').value = currentHours || '0';
+				document.getElementById('edit_oil_status').value = oilStatus || '';
+				
+				editModal.classList.add('is-open');
+				editModal.setAttribute('aria-hidden','false');
+				if (editErrBox) { editErrBox.style.display = 'none'; editErrBox.textContent = ''; }
+				var first = document.getElementById('edit_equipment_number');
+				if (first) first.focus();
+			}
+
+			function closeEditModal(){
+				if (!editModal) return;
+				editModal.classList.remove('is-open');
+				editModal.setAttribute('aria-hidden','true');
+				if (editForm) editForm.reset();
+				if (editErrBox) { editErrBox.style.display = 'none'; editErrBox.textContent = ''; }
+			}
+
+			// Attach click handlers to edit icons
+			document.addEventListener('click', function(e){
+				if (e.target.classList.contains('equipment-edit-icon')) {
+					var row = e.target.closest('tr');
+					if (row && row.getAttribute('data-equipment-id')) {
+						e.preventDefault();
+						e.stopPropagation();
+						openEditModal(row);
+					}
+				}
+			});
+
+			if (closeEditBtn) closeEditBtn.addEventListener('click', function(){ closeEditModal(); });
+			if (cancelEditBtn) cancelEditBtn.addEventListener('click', function(){ closeEditModal(); });
+			if (editModal) editModal.addEventListener('click', function(e){ if (e.target === editModal) closeEditModal(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && editModal && editModal.classList.contains('is-open')) closeEditModal(); });
+
+			if (editForm) editForm.addEventListener('submit', function(e){
+				e.preventDefault();
+				if (saveEditBtn) { saveEditBtn.disabled = true; saveEditBtn.textContent = 'Updating...'; }
+				if (editErrBox) { editErrBox.style.display = 'none'; editErrBox.textContent = ''; }
+
+				var fd = new FormData(editForm);
+				fetch('../../api/update_equipment.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+					.then(function(res){
+						if (!res.ok || !res.json || !res.json.success) {
+							var msg = (res.json && res.json.message) ? res.json.message : 'Failed to update equipment';
+							if (editErrBox) { editErrBox.textContent = msg; editErrBox.style.display = 'block'; }
+							return;
+						}
+						window.location.reload();
+					})
+					.catch(function(){
+						if (editErrBox) { editErrBox.textContent = 'Network error while updating'; editErrBox.style.display = 'block'; }
+					})
+					.finally(function(){
+						if (saveEditBtn) { saveEditBtn.disabled = false; saveEditBtn.textContent = 'Update Equipment'; }
+					});
+			});
+
+			// Delete Equipment logic for Edit Modal
+			var deleteBtn = document.getElementById('deleteEditEquipment');
+			if (deleteBtn) {
+				deleteBtn.addEventListener('click', function() {
+					var eqid = document.getElementById('edit_equipment_id').value;
+					if (!eqid || !confirm('Are you sure you want to delete this equipment? This cannot be undone.')) return;
+					deleteBtn.disabled = true;
+					fetch('../../api/delete_equipment.php', {
+						method: 'POST',
+						body: new URLSearchParams({ equipment_id: eqid }),
+						credentials: 'same-origin'
+					})
+					.then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+					.then(function(res){
+						if (!res.ok || !res.json || !res.json.success) {
+							var msg = (res.json && res.json.message) ? res.json.message : 'Failed to delete equipment';
+							if (editErrBox) { editErrBox.textContent = msg; editErrBox.style.display = 'block'; }
+							deleteBtn.disabled = false;
+							return;
+						}
+						window.location.reload();
+					})
+					.catch(function(){
+						if (editErrBox) { editErrBox.textContent = 'Network error while deleting'; editErrBox.style.display = 'block'; }
+						deleteBtn.disabled = false;
+					});
+				});
+			}
 
 			// Users toggle
 			var usersToggle = document.getElementById('usersToggle');

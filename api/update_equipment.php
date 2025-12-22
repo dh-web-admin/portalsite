@@ -8,57 +8,46 @@ require_once __DIR__ . '/../config/config.php';
 header('Content-Type: application/json');
 while (ob_get_level()) ob_end_clean();
 
-$input = json_decode(file_get_contents('php://input'), true);
-if (json_last_error() !== JSON_ERROR_NONE) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid JSON input.']);
-    exit();
-}
 
-$equipmentId = isset($input['equipment_id']) ? (int)$input['equipment_id'] : 0;
+// Accept POST data from form
+$equipmentId = isset($_POST['equipment_id']) ? (int)$_POST['equipment_id'] : 0;
 if ($equipmentId <= 0) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid equipment ID.']);
+    echo json_encode(['success' => false, 'message' => 'Invalid equipment ID.']);
     exit();
 }
 
 $fields = [
-    'dhcst_equipment_number',
-    'dhss_equipment_number',
+    'equipment_number',
     'type',
-    'engine',
-    'year',
-    'engine_serial_number',
-    'vin',
-    'transmission',
+    'operating_condition',
     'location',
-    'trans_serial_number',
-    'model'
+    'current_hours',
+    'oil_status'
 ];
-
 $set = [];
 $params = [];
 $types = '';
 foreach ($fields as $field) {
-    if (isset($input[$field])) {
+    if (isset($_POST[$field])) {
         $set[] = "$field = ?";
-        $params[] = $input[$field];
+        $params[] = $_POST[$field];
         $types .= 's';
     }
 }
 if (empty($set)) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'No fields to update.']);
+    echo json_encode(['success' => false, 'message' => 'No fields to update.']);
     exit();
 }
 $params[] = $equipmentId;
 $types .= 'i';
 
-$sql = "UPDATE equipment SET " . implode(', ', $set) . " WHERE equipment_id = ?";
+$sql = "UPDATE equipments SET " . implode(', ', $set) . " WHERE equipment_id = ?";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Prepare failed: ' . $conn->error]);
+    echo json_encode(['success' => false, 'message' => 'Prepare failed: ' . $conn->error]);
     exit();
 }
 $stmt->bind_param($types, ...$params);
@@ -67,6 +56,6 @@ if ($stmt->execute()) {
     exit();
 } else {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $stmt->error]);
+    echo json_encode(['success' => false, 'message' => $stmt->error]);
     exit();
 }
