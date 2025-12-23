@@ -422,6 +422,160 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
   margin: 0 auto 16px auto;
   max-width: 100%;
 }
+
+/* Edit button styling */
+.equipment-history-row {
+    position: relative;
+}
+.equipment-history-edit-cell {
+    padding: 0 !important;
+    width: 40px;
+    text-align: center;
+}
+.equipment-history-edit-btn {
+    opacity: 0;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s, background 0.2s;
+}
+.equipment-history-row:hover .equipment-history-edit-btn {
+    opacity: 1;
+}
+.equipment-history-edit-btn:hover {
+    background: #1d4ed8;
+}
+
+/* Modal styling */
+.equipment-modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: rgba(30,41,59,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+}
+.equipment-modal__dialog {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 32px #0002;
+    min-width: 520px;
+    max-width: 640px;
+    width: 100%;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.equipment-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f1f5f9;
+    padding: 18px 22px 12px 22px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.equipment-modal__title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #222;
+    margin: 0;
+}
+.equipment-icon-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0 2px;
+    margin-left: 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+.equipment-icon-btn:hover {
+    background: #e5e7eb;
+}
+.equipment-form__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 28px;
+    padding: 28px 32px 0 32px;
+}
+.equipment-form__field label {
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 6px;
+    display: block;
+}
+.equipment-form__field input,
+.equipment-form__field select,
+.equipment-form__field textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 1.08rem;
+    background: #f8fafc;
+    color: #222;
+    margin-top: 2px;
+    box-sizing: border-box;
+    transition: border 0.15s;
+}
+.equipment-form__field input:focus,
+.equipment-form__field select:focus,
+.equipment-form__field textarea:focus {
+    border: 1.5px solid #2563eb;
+    outline: none;
+    background: #fff;
+}
+.equipment-form__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: 22px 32px 28px 32px;
+    background: #f8fafc;
+    border-top: 1px solid #e5e7eb;
+}
+.equipment-btn {
+    padding: 8px 22px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    background: #2563eb;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.equipment-btn--secondary {
+    background: #e5e7eb;
+    color: #222;
+}
+.equipment-btn:hover {
+    background: #1d4ed8;
+}
+.equipment-btn--secondary:hover {
+    background: #cbd5e1;
+}
+.equipment-form__error {
+    color: #dc2626;
+    font-weight: 600;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* Add red border for red status */
+.equipment-details-table-wrapper--red {
+    border: 3px solid #e53935 !important;
+    box-shadow: 0 0 0 2px #ffb3b3;
+    border-radius: 10px;
+}
     </style>
 </head>
 <body class="admin-page">
@@ -454,14 +608,6 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipment['oil_status'] ?? '') === 'red';
 ?>
 <div class="equipment-details-table-wrapper<?php if ($isRedStatus) echo ' equipment-details-table-wrapper--red'; ?>">
-        <style>
-        /* Add red border for red status */
-        .equipment-details-table-wrapper--red {
-            border: 3px solid #e53935 !important;
-            box-shadow: 0 0 0 2px #ffb3b3;
-            border-radius: 10px;
-        }
-        </style>
     <div class="equipment-details-row" style="display: flex; align-items: flex-start;">
       <div class="equipment-details-table-wrapper" style="flex: 1;">
         <table class="equipment-details-table">
@@ -623,36 +769,11 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
             </tbody>
         </table>
       </div>
-      <!-- Action buttons removed as requested -->
     </div>
 </div>
 <input type="hidden" name="equipment_id" value="<?php echo $equipmentId; ?>" />
 </form>
-<?php
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && isset($_POST['equipment_id'])) {
-    $fields = [
-        'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
-        'vehicle_year', 'vin', 'transmission', 'trans_serial_number', 'location'
-    ];
-    $updates = [];
-    $params = [];
-    $types = '';
-    foreach ($fields as $field) {
-        $updates[] = "$field = ?";
-        $params[] = $_POST[$field] ?? '';
-        $types .= 's';
-    }
-    $params[] = $_POST['equipment_id'];
-    $types .= 'i';
-    $sql = 'UPDATE equipments SET ' . implode(', ', $updates) . ' WHERE equipment_id = ?';
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-    // Redirect to view mode after save
-    header('Location: equipment.php?id=' . $_POST['equipment_id']);
-    exit();
-}
-?>
+
                     <hr class="equipment-section-separator" />
                     <!-- Future Sections Placeholder -->
                     <div class="equipment-future-section">
@@ -672,6 +793,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && is
                         <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 8px;">
                             <button id="new-issue-btn" style="padding: 8px 18px; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 700; font-size: 15px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.07); cursor: pointer; transition: background 0.2s;">New Issue</button>
                         </div>
+                        
+                        <!-- New Issue Modal -->
+                        <div id="newIssueModal" class="equipment-modal" style="display:none;" aria-hidden="true">
+                            <div class="equipment-modal__dialog" role="dialog" aria-modal="true" aria-label="Create new issue">
+                                <div class="equipment-modal__header">
+                                    <h3 class="equipment-modal__title">Create New Issue</h3>
+                                    <button id="closeNewIssueModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+                                </div>
+                                <form id="newIssueForm" class="equipment-form" autocomplete="off">
+                                    <input type="hidden" id="issue_equipment_id" name="equipment_id" value="<?php echo (int)$equipmentId; ?>" />
+                                    <div class="equipment-form__grid" style="grid-template-columns: 1fr 1fr;">
+                                        <div class="equipment-form__field">
+                                            <label for="issue_date_reported">Date Reported</label>
+                                            <input id="issue_date_reported" name="date_reported" type="datetime-local" required />
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="issue_reported_by">Reported by</label>
+                                            <input id="issue_reported_by" name="reported_by" type="text" list="reportedByList" autocomplete="off" required />
+                                            <datalist id="reportedByList">
+                                                <!-- JS will populate with user names -->
+                                            </datalist>
+                                        </div>
+                                        <div class="equipment-form__field" style="grid-column: span 2;">
+                                            <label for="issue_reported_issues">Reported Issues</label>
+                                            <textarea id="issue_reported_issues" name="reported_issues" rows="4" style="width:100%;resize:vertical;" required></textarea>
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="issue_equipment_location">Equipment Location</label>
+                                            <input id="issue_equipment_location" name="equipment_location" type="text" required />
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="issue_operating_condition">Operating Condition</label>
+                                            <select id="issue_operating_condition" name="operating_condition" required>
+                                                <option value="">Select...</option>
+                                                <option value="green">Green</option>
+                                                <option value="yellow">Yellow</option>
+                                                <option value="red">Red</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="equipment-form__actions" style="margin-top:18px;">
+                                        <button id="cancelNewIssue" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+                                        <button id="saveNewIssue" class="equipment-btn" type="submit">Save</button>
+                                    </div>
+                                    <div id="newIssueError" class="equipment-form__error" role="alert" style="display:none;"></div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Edit Issue Modal -->
+                        <div id="editIssueModal" class="equipment-modal" style="display:none;" aria-hidden="true">
+                            <div class="equipment-modal__dialog" role="dialog" aria-modal="true" aria-label="Edit issue">
+                                <div class="equipment-modal__header">
+                                    <h3 class="equipment-modal__title">Edit Issue</h3>
+                                    <button id="closeEditIssueModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+                                </div>
+                                <form id="editIssueForm" class="equipment-form" autocomplete="off">
+                                    <input type="hidden" id="edit_equipment_id" name="equipment_id" value="<?php echo (int)$equipmentId; ?>" />
+                                    <input type="hidden" id="edit_original_date_reported" name="original_date_reported" value="" />
+                                    <div class="equipment-form__grid" style="grid-template-columns: 1fr 1fr;">
+                                        <div class="equipment-form__field">
+                                            <label for="edit_date_reported">Date Reported</label>
+                                            <input id="edit_date_reported" name="date_reported" type="datetime-local" required />
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_reported_by">Reported by</label>
+                                            <input id="edit_reported_by" name="reported_by" type="text" list="reportedByList" autocomplete="off" required />
+                                        </div>
+                                        <div class="equipment-form__field" style="grid-column: span 2;">
+                                            <label for="edit_reported_issues">Reported Issues</label>
+                                            <textarea id="edit_reported_issues" name="reported_issues" rows="4" style="width:100%;resize:vertical;" required></textarea>
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_equipment_location">Equipment Location</label>
+                                            <input id="edit_equipment_location" name="equipment_location" type="text" required />
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_operating_condition">Operating Condition</label>
+                                            <select id="edit_operating_condition" name="operating_condition" required>
+                                                <option value="">Select...</option>
+                                                <option value="green">Green</option>
+                                                <option value="yellow">Yellow</option>
+                                                <option value="red">Red</option>
+                                            </select>
+                                        </div>
+                                        <div style="grid-column: span 2; width:100%;"><hr style="border:0;border-top:3px solid #334155;margin:18px 0 18px 0;"></div>
+                                        <div class="equipment-form__field" style="grid-column: span 2;">
+                                            <label for="edit_mechanic_diagnosis">Mechanic Diagnosis</label>
+                                            <textarea id="edit_mechanic_diagnosis" name="mechanic_diagnosis" rows="3" style="width:100%;resize:vertical;"></textarea>
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_date_repaired">Date Repaired</label>
+                                            <input id="edit_date_repaired" name="date_repaired" type="datetime-local" />
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_repair_mechanic">Repair Mechanic</label>
+                                            <input id="edit_repair_mechanic" name="repair_mechanic" type="text" />
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_parts_fixed">Parts Fixed</label>
+                                            <input id="edit_parts_fixed" name="parts_fixed" type="text" />
+                                        </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_pictures">Pictures</label>
+                                            <input id="edit_pictures" name="pictures" type="text" />
+                                        </div>
+                                    </div>
+                                    <div class="equipment-form__actions" style="margin-top:18px;">
+                                        <button id="cancelEditIssue" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+                                        <button id="saveEditIssue" class="equipment-btn" type="submit">Save as New Version</button>
+                                    </div>
+                                    <div id="editIssueError" class="equipment-form__error" role="alert" style="display:none;"></div>
+                                </form>
+                            </div>
+                        </div>
+
                         <div class="equipment-card">
                             <div class="equipment-card-header">
                                 <h2 class="equipment-card-title">Equipment History</h2>
@@ -680,21 +917,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && is
                                 <table class="equipment-history-table">
                                     <thead>
                                         <tr>
+                                            <th style="width: 70px;">Issue #</th>
                                             <th>Date Reported</th>
                                             <th>Reported Issues</th>
+                                            <th>Reported by</th>
+                                            <th>Equipment Location</th>
+                                            <th>Operating Condition</th>
                                             <th>Mechanic Diagnosis</th>
                                             <th>Date Repaired</th>
                                             <th>Repair Mechanic</th>
-                                            <th>Part</th>
-                                            <th>Photo</th>
+                                            <th>Parts fixed</th>
+                                            <th>pictures</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td colspan="7" style="text-align: center; padding: 24px; color: #94a3b8;">
-                                                No history records yet. Add equipment issues and repairs to track maintenance history.
-                                            </td>
-                                        </tr>
+<?php
+$historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy FROM equipment_history WHERE equipment_id = ? ORDER BY id DESC');
+$historyStmt->bind_param('i', $equipmentId);
+$historyStmt->execute();
+$historyRes = $historyStmt->get_result();
+if ($historyRes && $historyRes->num_rows > 0) {
+    while ($row = $historyRes->fetch_assoc()) {
+        $rowData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
+        echo '<tr class="equipment-history-row" data-row="' . $rowData . '">';
+        // Issue number column, with edit button and edited copy marker if needed
+        echo '<td class="equipment-history-edit-cell">';
+        echo '<button class="equipment-history-edit-btn" aria-label="Edit">✎</button> ';
+        if (!empty($row['is_edited_copy'])) {
+            echo '<span style="color:#2563eb;font-weight:700;font-size:0.98em;">edited copy of issue#' . htmlspecialchars($row['id']) . '</span>';
+        } else {
+            echo htmlspecialchars($row['id']);
+        }
+        echo '</td>';
+        echo '<td>' . htmlspecialchars($row['date_reported'] ?? '') . '</td>';
+        echo '<td>' . nl2br(htmlspecialchars($row['reported_issues'] ?? '')) . '</td>';
+        echo '<td>' . htmlspecialchars($row['reported_by'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['equipment_location'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['operating_condition'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['mechanic_diagnosis'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['date_repaired'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['repair_mechanic'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['parts_fixed'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['pictures'] ?? '') . '</td>';
+        echo '</tr>';
+    }
+} else {
+    echo '<tr><td colspan="11" style="text-align: center; padding: 24px; color: #94a3b8;">No history records yet. Add equipment issues and repairs to track maintenance history.</td></tr>';
+}
+$historyStmt->close();
+?>
                                     </tbody>
                                 </table>
                             </div>
@@ -704,8 +975,188 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && is
             </main>
         </div>
     </div>
+
+<script>
+// Modal open/close logic
+const newIssueBtn = document.getElementById('new-issue-btn');
+const newIssueModal = document.getElementById('newIssueModal');
+const closeNewIssueModal = document.getElementById('closeNewIssueModal');
+const cancelNewIssue = document.getElementById('cancelNewIssue');
+const issueDateInput = document.getElementById('issue_date_reported');
+
+// Edit modal elements
+const editIssueModal = document.getElementById('editIssueModal');
+const closeEditIssueModal = document.getElementById('closeEditIssueModal');
+const cancelEditIssue = document.getElementById('cancelEditIssue');
+const editIssueForm = document.getElementById('editIssueForm');
+const saveEditIssueBtn = document.getElementById('saveEditIssue');
+const editIssueError = document.getElementById('editIssueError');
+
+function openNewIssueModal() {
+    if (newIssueModal) {
+        newIssueModal.style.display = 'flex';
+        newIssueModal.setAttribute('aria-hidden', 'false');
+        if (issueDateInput) {
+            const now = new Date();
+            const pad = n => n.toString().padStart(2, '0');
+            const local = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+            issueDateInput.value = local;
+        }
+        setTimeout(() => {
+            const first = document.getElementById('issue_reported_issues');
+            if (first) first.focus();
+        }, 100);
+    }
+}
+
+function closeNewIssueModalFn() {
+    if (newIssueModal) {
+        newIssueModal.style.display = 'none';
+        newIssueModal.setAttribute('aria-hidden', 'true');
+        document.getElementById('newIssueForm').reset();
+        document.getElementById('newIssueError').style.display = 'none';
+    }
+}
+
+function openEditIssueModal(rowData) {
+    if (editIssueModal && rowData) {
+        document.getElementById('edit_date_reported').value = formatDateTimeLocal(rowData.date_reported);
+        document.getElementById('edit_original_date_reported').value = rowData.date_reported;
+        document.getElementById('edit_reported_by').value = rowData.reported_by || '';
+        document.getElementById('edit_reported_issues').value = rowData.reported_issues || '';
+        document.getElementById('edit_equipment_location').value = rowData.equipment_location || '';
+        document.getElementById('edit_operating_condition').value = rowData.operating_condition || '';
+        document.getElementById('edit_mechanic_diagnosis').value = rowData.mechanic_diagnosis || '';
+        document.getElementById('edit_date_repaired').value = formatDateTimeLocal(rowData.date_repaired);
+        document.getElementById('edit_repair_mechanic').value = rowData.repair_mechanic || '';
+        document.getElementById('edit_parts_fixed').value = rowData.parts_fixed || '';
+        document.getElementById('edit_pictures').value = rowData.pictures || '';
+        
+        editIssueModal.style.display = 'flex';
+        editIssueModal.setAttribute('aria-hidden', 'false');
+        
+        setTimeout(() => {
+            const first = document.getElementById('edit_reported_issues');
+            if (first) first.focus();
+        }, 100);
+    }
+}
+
+function closeEditIssueModalFn() {
+    if (editIssueModal) {
+        editIssueModal.style.display = 'none';
+        editIssueModal.setAttribute('aria-hidden', 'true');
+        editIssueForm.reset();
+        editIssueError.style.display = 'none';
+    }
+}
+
+function formatDateTimeLocal(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        const pad = n => n.toString().padStart(2, '0');
+        return date.getFullYear() + '-' + 
+               pad(date.getMonth()+1) + '-' + 
+               pad(date.getDate()) + 'T' + 
+               pad(date.getHours()) + ':' + 
+               pad(date.getMinutes());
+    } catch (e) {
+        return '';
+    }
+}
+
+if (newIssueBtn) newIssueBtn.addEventListener('click', openNewIssueModal);
+if (closeNewIssueModal) closeNewIssueModal.addEventListener('click', closeNewIssueModalFn);
+if (cancelNewIssue) cancelNewIssue.addEventListener('click', closeNewIssueModalFn);
+if (newIssueModal) newIssueModal.addEventListener('click', function(e){ if (e.target === newIssueModal) closeNewIssueModalFn(); });
+
+if (closeEditIssueModal) closeEditIssueModal.addEventListener('click', closeEditIssueModalFn);
+if (cancelEditIssue) cancelEditIssue.addEventListener('click', closeEditIssueModalFn);
+if (editIssueModal) editIssueModal.addEventListener('click', function(e){ if (e.target === editIssueModal) closeEditIssueModalFn(); });
+
+document.querySelectorAll('.equipment-history-edit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const row = this.closest('.equipment-history-row');
+        if (row) {
+            const rowDataStr = row.getAttribute('data-row');
+            if (rowDataStr) {
+                try {
+                    const rowData = JSON.parse(rowDataStr);
+                    openEditIssueModal(rowData);
+                } catch (e) {
+                    console.error('Error parsing row data:', e);
+                }
+            }
+        }
+    });
+});
+
+document.addEventListener('keydown', function(e){ 
+    if (e.key === 'Escape') {
+        if (newIssueModal && newIssueModal.style.display === 'flex') closeNewIssueModalFn();
+        if (editIssueModal && editIssueModal.style.display === 'flex') closeEditIssueModalFn();
+    }
+});
+
+// AJAX submit for new issue form
+const newIssueForm = document.getElementById('newIssueForm');
+const saveNewIssueBtn = document.getElementById('saveNewIssue');
+const newIssueError = document.getElementById('newIssueError');
+if (newIssueForm) {
+    newIssueForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (saveNewIssueBtn) { saveNewIssueBtn.disabled = true; saveNewIssueBtn.textContent = 'Saving...'; }
+        if (newIssueError) { newIssueError.style.display = 'none'; newIssueError.textContent = ''; }
+        const fd = new FormData(newIssueForm);
+        fetch('../../api/add_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) {
+                    if (newIssueError) { newIssueError.textContent = res.message || 'Failed to save issue.'; newIssueError.style.display = 'block'; }
+                    return;
+                }
+                closeNewIssueModalFn();
+                window.location.reload();
+            })
+            .catch(() => {
+                if (newIssueError) { newIssueError.textContent = 'Network error while saving.'; newIssueError.style.display = 'block'; }
+            })
+            .finally(() => {
+                if (saveNewIssueBtn) { saveNewIssueBtn.disabled = false; saveNewIssueBtn.textContent = 'Save'; }
+            });
+    });
+}
+
+// AJAX submit for edit issue form (creates new copy)
+if (editIssueForm) {
+    editIssueForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (saveEditIssueBtn) { saveEditIssueBtn.disabled = true; saveEditIssueBtn.textContent = 'Saving...'; }
+        if (editIssueError) { editIssueError.style.display = 'none'; editIssueError.textContent = ''; }
+        const fd = new FormData(editIssueForm);
+        // Always use the original reported time for edited copies
+        if (fd.has('is_edited_copy') || true) {
+            fd.set('date_reported', document.getElementById('edit_original_date_reported').value);
+        }
+        fetch('../../api/add_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(res => {
+                if (!res.success) {
+                    if (editIssueError) { editIssueError.textContent = res.message || 'Failed to save changes.'; editIssueError.style.display = 'block'; }
+                    return;
+                }
+                closeEditIssueModalFn();
+                window.location.reload();
+            })
+            .catch(() => {
+                if (editIssueError) { editIssueError.textContent = 'Network error while saving.'; editIssueError.style.display = 'block'; }
+            })
+            .finally(() => {
+                if (saveEditIssueBtn) { saveEditIssueBtn.disabled = false; saveEditIssueBtn.textContent = 'Save as New Version'; }
+            });
+    });
+}
+</script>
 </body>
 </html>
-<script>
-// Action buttons and edit/save/cancel logic removed as requested
-</script>
