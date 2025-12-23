@@ -142,7 +142,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     color: #1f2937;
     font-weight: 700;
 
-    padding: 8px 12px;
+    padding: 6px 12px;
     text-align: left;
     vertical-align: middle;
     white-space: nowrap;
@@ -157,7 +157,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     color: #0b5ed7;
     font-weight: 600;
 
-    padding: 8px 16px;
+    padding: 6px 16px;
     text-align: left;
     vertical-align: middle;
 
@@ -547,6 +547,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     align-items: center;
     justify-content: center;
     transition: opacity 0.2s;
+    padding: 20px;
 }
 .equipment-modal__dialog {
     background: #fff;
@@ -555,6 +556,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     min-width: 520px;
     max-width: 640px;
     width: 100%;
+    max-height: calc(100vh - 40px);
     padding: 0;
     overflow: hidden;
     display: flex;
@@ -565,11 +567,12 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     align-items: center;
     justify-content: space-between;
     background: #f1f5f9;
-    padding: 18px 22px 12px 22px;
+    padding: 12px 18px;
     border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
 }
 .equipment-modal__title {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: #222;
     margin: 0;
@@ -588,26 +591,32 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 .equipment-icon-btn:hover {
     background: #e5e7eb;
 }
+.equipment-form {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
 .equipment-form__grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 22px 28px;
-    padding: 28px 32px 0 32px;
+    gap: 16px 20px;
+    padding: 18px 20px 0 20px;
 }
 .equipment-form__field label {
     font-weight: 600;
     color: #222;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
     display: block;
+    font-size: 0.85rem;
 }
 .equipment-form__field input,
 .equipment-form__field select,
 .equipment-form__field textarea {
     width: 100%;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    font-size: 1.08rem;
+    font-size: 0.95rem;
     background: #f8fafc;
     color: #222;
     margin-top: 2px;
@@ -635,10 +644,11 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 .equipment-form__actions {
     display: flex;
     justify-content: flex-end;
-    gap: 16px;
-    padding: 22px 32px 28px 32px;
+    gap: 12px;
+    padding: 16px 20px;
     background: #f8fafc;
     border-top: 1px solid #e5e7eb;
+    flex-shrink: 0;
 }
 .equipment-btn {
     padding: 8px 22px;
@@ -921,7 +931,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                         </div>
                                         <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="issue_reported_issues">Reported Issues</label>
-                                            <textarea id="issue_reported_issues" name="reported_issues" rows="4" style="width:100%;resize:vertical;" required></textarea>
+                                            <textarea id="issue_reported_issues" name="reported_issues" rows="3" style="width:100%;resize:vertical;" required></textarea>
                                         </div>
                                         <div class="equipment-form__field">
                                             <label for="issue_equipment_location">Equipment Location</label>
@@ -971,13 +981,13 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                         </div>
                                         <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="edit_reported_issues">Reported Issues</label>
-                                            <textarea id="edit_reported_issues" name="reported_issues" rows="4" style="width:100%;resize:vertical;" required readonly></textarea>
+                                            <textarea id="edit_reported_issues" name="reported_issues" rows="3" style="width:100%;resize:vertical;" required readonly></textarea>
                                         </div>
                                         <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="edit_equipment_location">Equipment Location</label>
                                             <input id="edit_equipment_location" name="equipment_location" type="text" required readonly />
                                         </div>
-                                        <div style="grid-column: span 2; width:100%;"><hr style="border:0;border-top:3px solid #334155;margin:18px 0 18px 0;"></div>
+                                        <div style="grid-column: span 2; width:100%;"><hr style="border:0;border-top:3px solid #334155;margin:12px 0 12px 0;"></div>
                                         <div class="equipment-form__field">
                                             <label for="edit_operating_condition">Operating Condition</label>
                                             <select id="edit_operating_condition" name="operating_condition" required>
@@ -993,7 +1003,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                         </div>
                                         <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="edit_mechanic_diagnosis">Mechanic Diagnosis</label>
-                                            <textarea id="edit_mechanic_diagnosis" name="mechanic_diagnosis" rows="3" style="width:100%;resize:vertical;"></textarea>
+                                            <textarea id="edit_mechanic_diagnosis" name="mechanic_diagnosis" rows="2" style="width:100%;resize:vertical;"></textarea>
                                         </div>
                                         <div class="equipment-form__field">
                                             <label for="edit_repair_mechanic">Repair Mechanic</label>
