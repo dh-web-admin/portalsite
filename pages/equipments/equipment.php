@@ -141,19 +141,33 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 
 
 /* Back button styling */
+.equipment-back-btn-wrapper--top-left {
+    margin-bottom: 18px;
+}
+
 .equipment-back-btn {
     display: inline-flex;
     align-items: center;
-    // ...existing code...
-  gap: 2px;
-  margin-bottom: 16px;
-  background: #f1f5f9;
-  padding: 4px;
-  border-radius: 8px;
-  overflow-x: auto;
-  /* Add left alignment */
-  justify-content: flex-start;
-  margin-left: 0;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #2563eb;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.2s, transform 0.1s;
+    border: none;
+    cursor: pointer;
+}
+
+.equipment-back-btn:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+.equipment-back-btn:active {
+    transform: translateY(0);
 }
 
 .equipment-tab {
@@ -384,6 +398,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 .equipment-back-btn-wrapper--top-left {
   margin-left: 0 !important;
   padding-left: 0 !important;
+  display: flex;
   justify-content: flex-start;
 }
 
@@ -428,9 +443,11 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     position: relative;
 }
 .equipment-history-edit-cell {
-    padding: 0 !important;
-    width: 40px;
-    text-align: center;
+    padding: 10px !important;
+    width: auto;
+    min-width: 120px;
+    text-align: left;
+    white-space: nowrap;
 }
 .equipment-history-edit-btn {
     opacity: 0;
@@ -442,12 +459,40 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     font-size: 14px;
     cursor: pointer;
     transition: opacity 0.2s, background 0.2s;
+    vertical-align: middle;
+    margin-right: 6px;
 }
 .equipment-history-row:hover .equipment-history-edit-btn {
     opacity: 1;
 }
 .equipment-history-edit-btn:hover {
     background: #1d4ed8;
+}
+.equipment-edited-copy-badge {
+    display: inline-block;
+    background: #dbeafe;
+    color: #1e40af;
+    font-size: 0.85em;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-right: 6px;
+    border: 1px solid #93c5fd;
+    vertical-align: middle;
+}
+.equipment-copy-toggle {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.equipment-copy-toggle:hover {
+    background: #bfdbfe;
+}
+.equipment-history-original-hidden {
+    display: none;
+}
+.equipment-history-copy-row {
+    background: #f8fafc;
 }
 
 /* Modal styling */
@@ -534,6 +579,17 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     outline: none;
     background: #fff;
 }
+.equipment-form__field input[readonly],
+.equipment-form__field textarea[readonly] {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    cursor: not-allowed;
+}
+.equipment-form__field select[disabled] {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    cursor: not-allowed;
+}
 .equipment-form__actions {
     display: flex;
     justify-content: flex-end;
@@ -562,6 +618,9 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 }
 .equipment-btn--secondary:hover {
     background: #cbd5e1;
+}
+.equipment-btn[style*="background: #dc2626"]:hover {
+    background: #b91c1c !important;
 }
 .equipment-form__error {
     color: #dc2626;
@@ -847,28 +906,33 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                             <div class="equipment-modal__dialog" role="dialog" aria-modal="true" aria-label="Edit issue">
                                 <div class="equipment-modal__header">
                                     <h3 class="equipment-modal__title">Edit Issue</h3>
-                                    <button id="closeEditIssueModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <button id="editTopFieldsBtn" class="equipment-btn equipment-btn--secondary" type="button" style="padding: 6px 16px; font-size: 0.9rem;">Edit</button>
+                                        <button id="closeEditIssueModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+                                    </div>
                                 </div>
                                 <form id="editIssueForm" class="equipment-form" autocomplete="off">
                                     <input type="hidden" id="edit_equipment_id" name="equipment_id" value="<?php echo (int)$equipmentId; ?>" />
+                                    <input type="hidden" id="edit_issue_id" name="issue_id" value="" />
                                     <input type="hidden" id="edit_original_date_reported" name="original_date_reported" value="" />
                                     <div class="equipment-form__grid" style="grid-template-columns: 1fr 1fr;">
                                         <div class="equipment-form__field">
                                             <label for="edit_date_reported">Date Reported</label>
-                                            <input id="edit_date_reported" name="date_reported" type="datetime-local" required />
+                                            <input id="edit_date_reported" name="date_reported" type="datetime-local" required readonly />
                                         </div>
                                         <div class="equipment-form__field">
                                             <label for="edit_reported_by">Reported by</label>
-                                            <input id="edit_reported_by" name="reported_by" type="text" list="reportedByList" autocomplete="off" required />
+                                            <input id="edit_reported_by" name="reported_by" type="text" list="reportedByList" autocomplete="off" required readonly />
                                         </div>
                                         <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="edit_reported_issues">Reported Issues</label>
-                                            <textarea id="edit_reported_issues" name="reported_issues" rows="4" style="width:100%;resize:vertical;" required></textarea>
+                                            <textarea id="edit_reported_issues" name="reported_issues" rows="4" style="width:100%;resize:vertical;" required readonly></textarea>
                                         </div>
-                                        <div class="equipment-form__field">
+                                        <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="edit_equipment_location">Equipment Location</label>
-                                            <input id="edit_equipment_location" name="equipment_location" type="text" required />
+                                            <input id="edit_equipment_location" name="equipment_location" type="text" required readonly />
                                         </div>
+                                        <div style="grid-column: span 2; width:100%;"><hr style="border:0;border-top:3px solid #334155;margin:18px 0 18px 0;"></div>
                                         <div class="equipment-form__field">
                                             <label for="edit_operating_condition">Operating Condition</label>
                                             <select id="edit_operating_condition" name="operating_condition" required>
@@ -878,14 +942,13 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                                 <option value="red">Red</option>
                                             </select>
                                         </div>
-                                        <div style="grid-column: span 2; width:100%;"><hr style="border:0;border-top:3px solid #334155;margin:18px 0 18px 0;"></div>
-                                        <div class="equipment-form__field" style="grid-column: span 2;">
-                                            <label for="edit_mechanic_diagnosis">Mechanic Diagnosis</label>
-                                            <textarea id="edit_mechanic_diagnosis" name="mechanic_diagnosis" rows="3" style="width:100%;resize:vertical;"></textarea>
-                                        </div>
                                         <div class="equipment-form__field">
                                             <label for="edit_date_repaired">Date Repaired</label>
                                             <input id="edit_date_repaired" name="date_repaired" type="datetime-local" />
+                                        </div>
+                                        <div class="equipment-form__field" style="grid-column: span 2;">
+                                            <label for="edit_mechanic_diagnosis">Mechanic Diagnosis</label>
+                                            <textarea id="edit_mechanic_diagnosis" name="mechanic_diagnosis" rows="3" style="width:100%;resize:vertical;"></textarea>
                                         </div>
                                         <div class="equipment-form__field">
                                             <label for="edit_repair_mechanic">Repair Mechanic</label>
@@ -900,9 +963,12 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                             <input id="edit_pictures" name="pictures" type="text" />
                                         </div>
                                     </div>
-                                    <div class="equipment-form__actions" style="margin-top:18px;">
-                                        <button id="cancelEditIssue" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
-                                        <button id="saveEditIssue" class="equipment-btn" type="submit">Save as New Version</button>
+                                    <div class="equipment-form__actions" style="margin-top:18px; justify-content: space-between;">
+                                        <button id="deleteEditIssue" class="equipment-btn" type="button" style="background: #dc2626; color: #fff;">Delete Issue</button>
+                                        <div style="display: flex; gap: 16px;">
+                                            <button id="cancelEditIssue" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+                                            <button id="saveEditIssue" class="equipment-btn" type="submit">Update Issue</button>
+                                        </div>
                                     </div>
                                     <div id="editIssueError" class="equipment-form__error" role="alert" style="display:none;"></div>
                                 </form>
@@ -932,20 +998,65 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                     </thead>
                                     <tbody>
 <?php
-$historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy FROM equipment_history WHERE equipment_id = ? ORDER BY id DESC');
+$historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id FROM equipment_history WHERE equipment_id = ? ORDER BY id DESC');
 $historyStmt->bind_param('i', $equipmentId);
 $historyStmt->execute();
 $historyRes = $historyStmt->get_result();
+
+// Build arrays to track the chain of edits
+$allRows = [];
+$rowsById = [];
+$hasNewerVersion = []; // Track which rows have newer versions (edited copies)
+
 if ($historyRes && $historyRes->num_rows > 0) {
     while ($row = $historyRes->fetch_assoc()) {
+        $allRows[] = $row;
+        $rowsById[$row['id']] = $row;
+        // If this is an edited copy, mark its parent as having a newer version
+        if (!empty($row['is_edited_copy']) && !empty($row['original_issue_id'])) {
+            $hasNewerVersion[$row['original_issue_id']] = true;
+        }
+    }
+}
+
+if (count($allRows) > 0) {
+    foreach ($allRows as $row) {
         $rowData = htmlspecialchars(json_encode($row), ENT_QUOTES, 'UTF-8');
-        echo '<tr class="equipment-history-row" data-row="' . $rowData . '">';
+        $hasNewer = isset($hasNewerVersion[$row['id']]);
+        
+        $rowClass = 'equipment-history-row';
+        if (!empty($row['is_edited_copy'])) {
+            $rowClass .= ' equipment-history-copy-row';
+        }
+        
+        // Hide rows only if they have a newer edited copy version
+        // Show all standalone issues (non-edited copies) and the latest version of each edited chain
+        if ($hasNewer) {
+            // This row has a newer edited copy, so hide it by default
+            $rowClass .= ' equipment-history-original-hidden';
+        }
+        
+        echo '<tr class="' . $rowClass . '" data-row="' . $rowData . '"';
+        if (!empty($row['is_edited_copy']) && !empty($row['original_issue_id'])) {
+            echo ' data-original-id="' . htmlspecialchars($row['original_issue_id']) . '"';
+        }
+        if ($hasNewer) {
+            echo ' data-issue-id="' . htmlspecialchars($row['id']) . '"';
+        }
+        echo '>';
         // Issue number column, with edit button and edited copy marker if needed
         echo '<td class="equipment-history-edit-cell">';
-        echo '<button class="equipment-history-edit-btn" aria-label="Edit">✎</button> ';
-        if (!empty($row['is_edited_copy'])) {
-            echo '<span style="color:#2563eb;font-weight:700;font-size:0.98em;">edited copy of issue#' . htmlspecialchars($row['id']) . '</span>';
+        // Show edit button for all visible rows (not hidden ones)
+        if (!$hasNewer) {
+            echo '<button class="equipment-history-edit-btn" aria-label="Edit">✎</button> ';
+            // Only show "edited" badge if this is an edited copy (and it's the latest in its chain)
+            if (!empty($row['is_edited_copy'])) {
+                echo '<span class="equipment-edited-copy-badge equipment-copy-toggle" title="Click to show previous version">edited</span>';
+            } else {
+                echo htmlspecialchars($row['id']);
+            }
         } else {
+            // Hidden previous versions just show their issue number (no edit button or "edited" badge)
             echo htmlspecialchars($row['id']);
         }
         echo '</td>';
@@ -991,6 +1102,7 @@ const cancelEditIssue = document.getElementById('cancelEditIssue');
 const editIssueForm = document.getElementById('editIssueForm');
 const saveEditIssueBtn = document.getElementById('saveEditIssue');
 const editIssueError = document.getElementById('editIssueError');
+const editTopFieldsBtn = document.getElementById('editTopFieldsBtn');
 
 function openNewIssueModal() {
     if (newIssueModal) {
@@ -1020,6 +1132,10 @@ function closeNewIssueModalFn() {
 
 function openEditIssueModal(rowData) {
     if (editIssueModal && rowData) {
+        // Set issue ID
+        document.getElementById('edit_issue_id').value = rowData.id || '';
+        
+        // Set field values
         document.getElementById('edit_date_reported').value = formatDateTimeLocal(rowData.date_reported);
         document.getElementById('edit_original_date_reported').value = rowData.date_reported;
         document.getElementById('edit_reported_by').value = rowData.reported_by || '';
@@ -1032,13 +1148,22 @@ function openEditIssueModal(rowData) {
         document.getElementById('edit_parts_fixed').value = rowData.parts_fixed || '';
         document.getElementById('edit_pictures').value = rowData.pictures || '';
         
+        // Ensure top fields are disabled/readonly
+        document.getElementById('edit_date_reported').readOnly = true;
+        document.getElementById('edit_reported_by').readOnly = true;
+        document.getElementById('edit_reported_issues').readOnly = true;
+        document.getElementById('edit_equipment_location').readOnly = true;
+        
+        // Reset Edit button text
+        const editBtn = document.getElementById('editTopFieldsBtn');
+        if (editBtn) editBtn.textContent = 'Edit';
+        
+        // Reset save button text
+        const saveBtn = document.getElementById('saveEditIssue');
+        if (saveBtn) saveBtn.textContent = 'Update Issue';
+        
         editIssueModal.style.display = 'flex';
         editIssueModal.setAttribute('aria-hidden', 'false');
-        
-        setTimeout(() => {
-            const first = document.getElementById('edit_reported_issues');
-            if (first) first.focus();
-        }, 100);
     }
 }
 
@@ -1049,6 +1174,50 @@ function closeEditIssueModalFn() {
         editIssueForm.reset();
         editIssueError.style.display = 'none';
     }
+}
+
+// Handle Edit button for top fields
+if (editTopFieldsBtn) {
+    editTopFieldsBtn.addEventListener('click', function() {
+        const dateReported = document.getElementById('edit_date_reported');
+        const reportedBy = document.getElementById('edit_reported_by');
+        const reportedIssues = document.getElementById('edit_reported_issues');
+        const equipmentLocation = document.getElementById('edit_equipment_location');
+        
+        if (dateReported.readOnly) {
+            // Enable editing
+            dateReported.readOnly = false;
+            reportedBy.readOnly = false;
+            reportedIssues.readOnly = false;
+            equipmentLocation.readOnly = false;
+            editTopFieldsBtn.textContent = 'Cancel Edit';
+            
+            // Update button text to indicate it will create a copy
+            if (saveEditIssueBtn) {
+                saveEditIssueBtn.textContent = 'Save edited copy';
+            }
+        } else {
+            // Disable editing and restore original values
+            dateReported.readOnly = true;
+            reportedBy.readOnly = true;
+            reportedIssues.readOnly = true;
+            equipmentLocation.readOnly = true;
+            editTopFieldsBtn.textContent = 'Edit';
+            
+            // Restore original values from the form data
+            const originalDate = document.getElementById('edit_original_date_reported').value;
+            if (originalDate) {
+                dateReported.value = formatDateTimeLocal(originalDate);
+            }
+            // Note: We'd need to store original values if we want to restore them fully
+            // For now, just disable the fields
+            
+            // Reset button text
+            if (saveEditIssueBtn) {
+                saveEditIssueBtn.textContent = 'Update Issue';
+            }
+        }
+    });
 }
 
 function formatDateTimeLocal(dateStr) {
@@ -1075,6 +1244,48 @@ if (closeEditIssueModal) closeEditIssueModal.addEventListener('click', closeEdit
 if (cancelEditIssue) cancelEditIssue.addEventListener('click', closeEditIssueModalFn);
 if (editIssueModal) editIssueModal.addEventListener('click', function(e){ if (e.target === editIssueModal) closeEditIssueModalFn(); });
 
+// Handle delete issue button
+const deleteEditIssueBtn = document.getElementById('deleteEditIssue');
+if (deleteEditIssueBtn) {
+    deleteEditIssueBtn.addEventListener('click', function() {
+        const issueId = document.getElementById('edit_issue_id').value;
+        if (!issueId) {
+            alert('Invalid issue ID.');
+            return;
+        }
+        
+        // Show confirmation dialog
+        if (confirm('Are you sure you want to delete this issue? This action cannot be undone.')) {
+            // Disable the button and show loading state
+            deleteEditIssueBtn.disabled = true;
+            deleteEditIssueBtn.textContent = 'Deleting...';
+            
+            // Send delete request
+            const fd = new FormData();
+            fd.append('issue_id', issueId);
+            
+            fetch('../../api/delete_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) {
+                        alert(res.message || 'Failed to delete issue.');
+                        deleteEditIssueBtn.disabled = false;
+                        deleteEditIssueBtn.textContent = 'Delete Issue';
+                        return;
+                    }
+                    // Close modal and reload page
+                    closeEditIssueModalFn();
+                    window.location.reload();
+                })
+                .catch(() => {
+                    alert('Network error while deleting issue.');
+                    deleteEditIssueBtn.disabled = false;
+                    deleteEditIssueBtn.textContent = 'Delete Issue';
+                });
+        }
+    });
+}
+
 document.querySelectorAll('.equipment-history-edit-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const row = this.closest('.equipment-history-row');
@@ -1090,6 +1301,61 @@ document.querySelectorAll('.equipment-history-edit-btn').forEach(btn => {
             }
         }
     });
+});
+
+// Handle clicking on edited copy badge to show/hide all previous versions
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('equipment-copy-toggle')) {
+        e.preventDefault();
+        e.stopPropagation();
+        const currentRow = e.target.closest('.equipment-history-row');
+        if (currentRow) {
+            const originalId = currentRow.getAttribute('data-original-id');
+            if (originalId) {
+                // Build the chain of all previous versions by following original_issue_id
+                const allPreviousRows = [];
+                let currentId = originalId;
+                const processedIds = new Set();
+                
+                while (currentId && !processedIds.has(currentId)) {
+                    processedIds.add(currentId);
+                    const row = document.querySelector('.equipment-history-row[data-issue-id="' + currentId + '"]');
+                    if (row) {
+                        allPreviousRows.push(row);
+                        // Check if this row also has a previous version
+                        const rowOriginalId = row.getAttribute('data-original-id');
+                        if (rowOriginalId) {
+                            currentId = rowOriginalId;
+                        } else {
+                            break; // Reached the original
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                
+                if (allPreviousRows.length > 0) {
+                    // Check if any previous rows are currently visible
+                    const anyVisible = allPreviousRows.some(row => !row.classList.contains('equipment-history-original-hidden'));
+                    
+                    if (anyVisible) {
+                        // Hide all previous versions
+                        allPreviousRows.forEach(row => {
+                            row.classList.add('equipment-history-original-hidden');
+                        });
+                    } else {
+                        // Show all previous versions in order
+                        let insertAfter = currentRow;
+                        allPreviousRows.forEach(row => {
+                            row.classList.remove('equipment-history-original-hidden');
+                            insertAfter.insertAdjacentElement('afterend', row);
+                            insertAfter = row;
+                        });
+                    }
+                }
+            }
+        }
+    }
 });
 
 document.addEventListener('keydown', function(e){ 
@@ -1128,33 +1394,67 @@ if (newIssueForm) {
     });
 }
 
-// AJAX submit for edit issue form (creates new copy)
+// AJAX submit for edit issue form
 if (editIssueForm) {
     editIssueForm.addEventListener('submit', function(e) {
         e.preventDefault();
         if (saveEditIssueBtn) { saveEditIssueBtn.disabled = true; saveEditIssueBtn.textContent = 'Saving...'; }
         if (editIssueError) { editIssueError.style.display = 'none'; editIssueError.textContent = ''; }
-        const fd = new FormData(editIssueForm);
-        // Always use the original reported time for edited copies
-        if (fd.has('is_edited_copy') || true) {
-            fd.set('date_reported', document.getElementById('edit_original_date_reported').value);
+        
+        const dateReported = document.getElementById('edit_date_reported');
+        const issueId = document.getElementById('edit_issue_id').value;
+        const isTopFieldsEditable = !dateReported.readOnly;
+        
+        if (isTopFieldsEditable) {
+            // Top fields are editable, so create a new copy
+            const fd = new FormData(editIssueForm);
+            fd.append('is_edited_copy', '1');
+            fd.append('original_issue_id', issueId); // Track the original issue ID
+            fetch('../../api/add_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) {
+                        if (editIssueError) { editIssueError.textContent = res.message || 'Failed to save edited copy.'; editIssueError.style.display = 'block'; }
+                        return;
+                    }
+                    closeEditIssueModalFn();
+                    window.location.reload();
+                })
+                .catch(() => {
+                    if (editIssueError) { editIssueError.textContent = 'Network error while saving.'; editIssueError.style.display = 'block'; }
+                })
+                .finally(() => {
+                    if (saveEditIssueBtn) { saveEditIssueBtn.disabled = false; saveEditIssueBtn.textContent = 'Save edited copy'; }
+                });
+        } else {
+            // Top fields are readonly, so update existing issue
+            const updateFd = new FormData();
+            updateFd.append('issue_id', issueId);
+            updateFd.append('equipment_id', document.getElementById('edit_equipment_id').value || '');
+            updateFd.append('operating_condition', document.getElementById('edit_operating_condition').value || '');
+            updateFd.append('mechanic_diagnosis', document.getElementById('edit_mechanic_diagnosis').value || '');
+            updateFd.append('date_repaired', document.getElementById('edit_date_repaired').value || '');
+            updateFd.append('repair_mechanic', document.getElementById('edit_repair_mechanic').value || '');
+            updateFd.append('parts_fixed', document.getElementById('edit_parts_fixed').value || '');
+            updateFd.append('pictures', document.getElementById('edit_pictures').value || '');
+            
+            fetch('../../api/update_equipment_issue.php', { method: 'POST', body: updateFd, credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res.success) {
+                        if (editIssueError) { editIssueError.textContent = res.message || 'Failed to update issue.'; editIssueError.style.display = 'block'; }
+                        return;
+                    }
+                    closeEditIssueModalFn();
+                    window.location.reload();
+                })
+                .catch(() => {
+                    if (editIssueError) { editIssueError.textContent = 'Network error while saving.'; editIssueError.style.display = 'block'; }
+                })
+                .finally(() => {
+                    if (saveEditIssueBtn) { saveEditIssueBtn.disabled = false; saveEditIssueBtn.textContent = 'Update Issue'; }
+                });
         }
-        fetch('../../api/add_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-            .then(r => r.json())
-            .then(res => {
-                if (!res.success) {
-                    if (editIssueError) { editIssueError.textContent = res.message || 'Failed to save changes.'; editIssueError.style.display = 'block'; }
-                    return;
-                }
-                closeEditIssueModalFn();
-                window.location.reload();
-            })
-            .catch(() => {
-                if (editIssueError) { editIssueError.textContent = 'Network error while saving.'; editIssueError.style.display = 'block'; }
-            })
-            .finally(() => {
-                if (saveEditIssueBtn) { saveEditIssueBtn.disabled = false; saveEditIssueBtn.textContent = 'Save as New Version'; }
-            });
     });
 }
 </script>

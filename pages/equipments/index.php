@@ -483,7 +483,7 @@ function eq_format_warranty($dateValue) {
 														</td>
 														<td><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></td>
 														<td><span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span></td>
-														<td style="text-align:center;vertical-align:middle;">
+														<td>
 															<?php $val = trim((string)($eq['oil_status'] ?? '')); ?>
 															<?php
 															$oilSvgMap = [
@@ -495,12 +495,12 @@ function eq_format_warranty($dateValue) {
 															<?php if ($val === '' || !isset($oilSvgMap[$val])): ?>
 																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-																	<img src="images/<?php echo htmlspecialchars($oilSvgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> oil" style="height:28px;display:block;margin:0 auto;" />
-																</div>
+																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?>">
+																	<img src="images/<?php echo htmlspecialchars($oilSvgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> oil" style="height:28px;vertical-align:middle;" />
+																</a>
 															<?php endif; ?>
 														</td>
-														<td style="text-align:center;">
+														<td>
 															<?php
 															$airFiles = 0;
 															$stmtAir = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'air_filters'");
@@ -518,7 +518,7 @@ function eq_format_warranty($dateValue) {
 																<span style="color:#bbb !important;">Not available</span>
 															<?php endif; ?>
 														</td>
-														<td style="text-align:center;">
+														<td>
 															<?php
 															$tiresFiles = 0;
 															$stmtTires = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'tires'");
@@ -536,7 +536,7 @@ function eq_format_warranty($dateValue) {
 																<span style="color:#bbb !important;">Not available</span>
 															<?php endif; ?>
 														</td>
-														<td style="text-align:center;">
+														<td>
 															<?php
 															$warrantyFiles = 0;
 															$stmtWarranty = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'warranty'");

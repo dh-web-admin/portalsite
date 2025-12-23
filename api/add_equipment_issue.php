@@ -16,10 +16,19 @@ if ($equipment_id <= 0 || !$date_reported || !$reported_issues || !$reported_by 
     exit();
 }
 
-// Insert into equipment_history
+// Optional fields for edited copies (fields below the bar)
+$mechanic_diagnosis = $_POST['mechanic_diagnosis'] ?? '';
+$date_repaired_raw = $_POST['date_repaired'] ?? '';
+$date_repaired = !empty(trim($date_repaired_raw)) ? $date_repaired_raw : null;
+$repair_mechanic = $_POST['repair_mechanic'] ?? '';
+$parts_fixed = $_POST['parts_fixed'] ?? '';
+$pictures = $_POST['pictures'] ?? '';
+
+// Insert into equipment_history with all fields
 $is_edited_copy = isset($_POST['is_edited_copy']) ? (int)$_POST['is_edited_copy'] : 0;
-$stmt = $conn->prepare('INSERT INTO equipment_history (equipment_id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, is_edited_copy) VALUES (?, ?, ?, ?, ?, ?, ?)');
-$stmt->bind_param('isssssi', $equipment_id, $date_reported, $reported_issues, $reported_by, $equipment_location, $operating_condition, $is_edited_copy);
+$original_issue_id = isset($_POST['original_issue_id']) && $is_edited_copy ? (int)$_POST['original_issue_id'] : null;
+$stmt = $conn->prepare('INSERT INTO equipment_history (equipment_id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+$stmt->bind_param('issssssssssii', $equipment_id, $date_reported, $reported_issues, $reported_by, $equipment_location, $operating_condition, $mechanic_diagnosis, $date_repaired, $repair_mechanic, $parts_fixed, $pictures, $is_edited_copy, $original_issue_id);
 $ok = $stmt->execute();
 $stmt->close();
 
