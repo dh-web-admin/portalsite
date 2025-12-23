@@ -143,8 +143,7 @@ body.admin-page {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: white;
-  padding: 24px 16px;
-  padding-top: 0%;
+  padding: 0 16px 24px 16px;
   box-shadow: 2px 0 20px rgba(45, 64, 130, 0.3);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
@@ -152,6 +151,7 @@ body.admin-page {
   position: fixed;
   top: var(--admin-header-h);
   left: 0;
+  height: calc(100vh - var(--admin-header-h));
   bottom: 0;
   overflow-y: auto;
   z-index: 5;
@@ -192,10 +192,9 @@ body.admin-page {
   color: #667eea;
   padding: 14px 16px;
   font-weight: 700;
-  margin: 0 0 16px 0;
+  margin: 24px -16px 16px -16px;
   display: block;
   width: calc(100% + 32px);
-  margin-left: -16px;
   box-sizing: border-box;
   text-align: left;
   font-size: 15px;

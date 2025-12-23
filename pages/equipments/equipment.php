@@ -1,7 +1,37 @@
 <?php
 require_once __DIR__ . '/../../session_init.php';
 
+// Check if user is logged in
+if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
+    header('Location: /auth/login.php');
+    exit();
+}
+
 require_once __DIR__ . '/../../config/config.php';
+
+// Get user role for sidebar
+$email = $_SESSION['email'];
+$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$res = $stmt->get_result();
+$user = $res ? $res->fetch_assoc() : null;
+$actualRole = $user ? $user['role'] : 'laborer';
+
+// Check if developer is previewing as another role
+if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
+    $role = $_GET['preview_role'];
+} else {
+    $role = $actualRole;
+}
+
+$stmt->close();
+
+// Preserve preview mode in URLs
+$previewParam = '';
+if (isset($_GET['preview_role'])) {
+    $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
+}
 
 // Handle save changes POST request (move this block to the top to avoid headers already sent)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && isset($_POST['equipment_id'])) {
@@ -24,7 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && is
     $stmt->bind_param($types, ...$params);
     $stmt->execute();
     // Redirect to view mode after save
-    header('Location: equipment.php?id=' . $_POST['equipment_id']);
+    $redirectUrl = 'equipment.php?id=' . $_POST['equipment_id'];
+    // Preserve preview_role from POST (if submitted via form) or GET (if still in URL)
+    $previewRole = $_POST['preview_role'] ?? $_GET['preview_role'] ?? null;
+    if ($previewRole) {
+        $redirectUrl .= '&preview_role=' . urlencode($previewRole);
+    }
+    header('Location: ' . $redirectUrl);
     exit();
 }
 
@@ -35,7 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_equipment']) &
         $stmt = $conn->prepare('DELETE FROM equipments WHERE equipment_id = ?');
         $stmt->bind_param('i', $deleteId);
         $stmt->execute();
-        header('Location: index.php');
+        $redirectUrl = 'index.php';
+        // Preserve preview_role from POST (if submitted via form) or GET (if still in URL)
+        $previewRole = $_POST['preview_role'] ?? $_GET['preview_role'] ?? null;
+        if ($previewRole) {
+            $redirectUrl .= '?preview_role=' . urlencode($previewRole);
+        }
+        header('Location: ' . $redirectUrl);
         exit();
     }
 }
@@ -645,20 +687,23 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
             <main class="content-area">
                 <div class="equipment-detail-page">
                     <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left">
-                        <a href="index.php" class="equipment-back-btn">
+                        <a href="index.php<?php echo $previewParam; ?>" class="equipment-back-btn">
                             <span>←</span>
                             <span>Back to Equipments</span>
                         </a>
                     </div>
                     <?php if ($editMode) { ?>
 <form method="POST" style="margin-bottom:0;">
+<?php if (isset($_GET['preview_role'])): ?>
+<input type="hidden" name="preview_role" value="<?php echo htmlspecialchars($_GET['preview_role']); ?>" />
+<?php endif; ?>
 <?php } ?>
 <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 18px; gap: 12px;">
     <?php if (!$editMode) { ?>
-        <a href="equipment.php?id=<?php echo $equipmentId; ?>&edit=1" class="equipment-action-btn equipment-action-btn--primary" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Edit</a>
+        <a href="equipment.php?id=<?php echo $equipmentId; ?>&edit=1<?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-action-btn equipment-action-btn--primary" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Edit</a>
     <?php } else { ?>
         <button class="equipment-action-btn equipment-action-btn--primary" type="submit" name="save_changes" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Save Changes</button>
-        <a href="equipment.php?id=<?php echo $equipmentId; ?>" class="equipment-action-btn" style="background:#f3f6f9;color:#2563eb;border-color:#d1d5db;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);text-decoration:none;">Cancel</a>
+        <a href="equipment.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-action-btn" style="background:#f3f6f9;color:#2563eb;border-color:#d1d5db;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);text-decoration:none;">Cancel</a>
         <input type="hidden" name="equipment_id" value="<?php echo $equipmentId; ?>" />
         <button type="submit" name="delete_equipment" class="equipment-action-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);" onclick="return confirm('Are you sure you want to delete this equipment?');">Delete</button>
     <?php } ?>
@@ -1275,7 +1320,7 @@ if (deleteEditIssueBtn) {
                     }
                     // Close modal and reload page
                     closeEditIssueModalFn();
-                    window.location.reload();
+                    window.location.href = window.location.pathname + window.location.search;
                 })
                 .catch(() => {
                     alert('Network error while deleting issue.');
@@ -1383,7 +1428,7 @@ if (newIssueForm) {
                     return;
                 }
                 closeNewIssueModalFn();
-                window.location.reload();
+                window.location.href = window.location.pathname + window.location.search;
             })
             .catch(() => {
                 if (newIssueError) { newIssueError.textContent = 'Network error while saving.'; newIssueError.style.display = 'block'; }
@@ -1418,7 +1463,7 @@ if (editIssueForm) {
                         return;
                     }
                     closeEditIssueModalFn();
-                    window.location.reload();
+                    window.location.href = window.location.pathname + window.location.search;
                 })
                 .catch(() => {
                     if (editIssueError) { editIssueError.textContent = 'Network error while saving.'; editIssueError.style.display = 'block'; }
@@ -1446,7 +1491,7 @@ if (editIssueForm) {
                         return;
                     }
                     closeEditIssueModalFn();
-                    window.location.reload();
+                    window.location.href = window.location.pathname + window.location.search;
                 })
                 .catch(() => {
                     if (editIssueError) { editIssueError.textContent = 'Network error while saving.'; editIssueError.style.display = 'block'; }
@@ -1457,6 +1502,19 @@ if (editIssueForm) {
         }
     });
 }
+
+// Sidebar toggle handlers
+(function(){
+    // Toggle users sub-nav
+    var usersToggle = document.getElementById('usersToggle');
+    var usersGroup = document.getElementById('usersGroup');
+    if (usersToggle && usersGroup) {
+        usersToggle.addEventListener('click', function(){
+            usersGroup.classList.toggle('open');
+        });
+    }
+})();
 </script>
+<script src="../../assets/js/mobile-menu.js"></script>
 </body>
 </html>

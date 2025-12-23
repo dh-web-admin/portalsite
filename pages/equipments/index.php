@@ -348,7 +348,7 @@ function eq_format_warranty($dateValue) {
 		}
 	</style>
 </head>
-<body>
+<body class="admin-page">
 	<div class="admin-container">
 		<?php include __DIR__ . '/../../partials/portalheader.php'; ?>
 		<div class="admin-layout">
@@ -459,7 +459,7 @@ function eq_format_warranty($dateValue) {
 													>
 														<td>
 															<div class="equipment-number-cell">
-																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a>
+																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a>
 																<span class="equipment-edit-icon" title="Edit equipment">Edit</span>
 															</div>
 														</td>
@@ -476,7 +476,7 @@ function eq_format_warranty($dateValue) {
 															<?php if ($val === '' || !isset($svgMap[$val])): ?>
 																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?>">
+																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">
 																	<img src="images/<?php echo htmlspecialchars($svgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> engine" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
@@ -495,7 +495,7 @@ function eq_format_warranty($dateValue) {
 															<?php if ($val === '' || !isset($oilSvgMap[$val])): ?>
 																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?>">
+																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">
 																	<img src="images/<?php echo htmlspecialchars($oilSvgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> oil" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
@@ -1093,6 +1093,7 @@ function eq_format_warranty($dateValue) {
 			}
 		})();
 	</script>
+	<script src="../../assets/js/mobile-menu.js"></script>
 </body>
 </html>
 <style>
