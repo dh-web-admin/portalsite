@@ -32,9 +32,11 @@ if (!can_access($role, 'equipments')) {
 $equipments = [];
 $equipmentsError = null;
 
-$sql = "SELECT equipment_id, equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires
-		FROM equipments
-		ORDER BY equipment_id DESC";
+$sql = "SELECT equipment_id, equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires,
+	vin, vehicle_year, make, model, engine, engine_serial_number, transmission, trans_serial_number, transfer_case_serial,
+	front_differential_serial, middle_differential_serial, rear_differential_serial, dhcst_equipment_number, dhss_equipment_number
+	FROM equipments
+	ORDER BY equipment_id DESC";
 
 try {
 	$res = $conn->query($sql);
@@ -452,21 +454,35 @@ function eq_format_warranty($dateValue) {
 														elseif ($val === 'red') $rowColor = 'equipment-row--red';
 														$rowFontRed = ($isRedEngine || $isRedOil) ? ' equipment-row--font-red' : '';
 													?>
-													<tr
-														class="<?php echo $rowColor . $rowFontRed; ?>"
-														data-equipment-id="<?php echo (int)$eq['equipment_id']; ?>"
-														data-equipment-number="<?php echo htmlspecialchars($eq['equipment_number'] ?? ''); ?>"
-														data-type="<?php echo htmlspecialchars($eq['type'] ?? ''); ?>"
-														data-operating-condition="<?php echo htmlspecialchars($eq['operating_condition'] ?? ''); ?>"
-														data-location="<?php echo htmlspecialchars($eq['location'] ?? ''); ?>"
-														data-current-hours="<?php echo htmlspecialchars($eq['current_hours'] ?? '0'); ?>"
-														data-oil-status="<?php echo htmlspecialchars($eq['oil_status'] ?? ''); ?>"
-														data-original-index="<?php echo (int)$eqIndex; ?>"
-														data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
-														data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
-														data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
-														data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
-													>
+													   <tr
+														   class="<?php echo $rowColor . $rowFontRed; ?>"
+														   data-equipment-id="<?php echo (int)$eq['equipment_id']; ?>"
+														   data-equipment-number="<?php echo htmlspecialchars($eq['equipment_number'] ?? ''); ?>"
+														   data-type="<?php echo htmlspecialchars($eq['type'] ?? ''); ?>"
+														   data-operating-condition="<?php echo htmlspecialchars($eq['operating_condition'] ?? ''); ?>"
+														   data-location="<?php echo htmlspecialchars($eq['location'] ?? ''); ?>"
+														   data-current-hours="<?php echo htmlspecialchars($eq['current_hours'] ?? '0'); ?>"
+														   data-oil-status="<?php echo htmlspecialchars($eq['oil_status'] ?? ''); ?>"
+														   data-vin="<?php echo htmlspecialchars($eq['vin'] ?? ''); ?>"
+														   data-vehicle-year="<?php echo htmlspecialchars($eq['vehicle_year'] ?? ''); ?>"
+														   data-make="<?php echo htmlspecialchars($eq['make'] ?? ''); ?>"
+														   data-model="<?php echo htmlspecialchars($eq['model'] ?? ''); ?>"
+														   data-engine="<?php echo htmlspecialchars($eq['engine'] ?? ''); ?>"
+														   data-engine-serial-number="<?php echo htmlspecialchars($eq['engine_serial_number'] ?? ''); ?>"
+														   data-transmission="<?php echo htmlspecialchars($eq['transmission'] ?? ''); ?>"
+														   data-trans-serial-number="<?php echo htmlspecialchars($eq['trans_serial_number'] ?? ''); ?>"
+														   data-transfer-case-serial="<?php echo htmlspecialchars($eq['transfer_case_serial'] ?? ''); ?>"
+														   data-front-differential-serial="<?php echo htmlspecialchars($eq['front_differential_serial'] ?? ''); ?>"
+														   data-middle-differential-serial="<?php echo htmlspecialchars($eq['middle_differential_serial'] ?? ''); ?>"
+														   data-rear-differential-serial="<?php echo htmlspecialchars($eq['rear_differential_serial'] ?? ''); ?>"
+														   data-dhcst-equipment-number="<?php echo htmlspecialchars($eq['dhcst_equipment_number'] ?? ''); ?>"
+														   data-dhss-equipment-number="<?php echo htmlspecialchars($eq['dhss_equipment_number'] ?? ''); ?>"
+														   data-original-index="<?php echo (int)$eqIndex; ?>"
+														   data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
+														   data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
+														   data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
+														   data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
+													   >
 														<td>
 															<div class="equipment-number-cell">
 																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a>
@@ -796,6 +812,63 @@ function eq_format_warranty($dateValue) {
 						   </label>
 						   <div class="equipment-upload-preview" data-field="tires"></div>
 					   </div>
+					   <hr style="grid-column:1/-1;margin:18px 0 8px 0;border:0;border-top:1.5px solid #e5e7eb;background:none;">
+					   <div style="display:flex;justify-content:flex-end;align-items:center;grid-column:1/-1;margin-bottom:8px;">
+						   <button type="button" id="showEditAdditionalDetailsBtn" style="height:38px;display:flex;align-items:center;gap:4px;padding:0 14px;border-radius:8px;border:1px solid #e5e7eb;background:#f3f4f6;font-weight:600;cursor:pointer;">
+							   <span>Additional Details</span>
+							   <span id="editAdditionalDetailsIcon" style="font-size:18px;transition:transform 0.2s;">▼</span>
+						   </button>
+					   </div>
+					   <div id="editAdditionalDetailsFields" style="display:none;grid-column:1/-1;gap:24px;">
+						   <div class="equipment-form__field">
+							   <label for="edit_vin">VIN Number</label>
+							   <input id="edit_vin" name="vin" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_vehicle_year">Year</label>
+							   <input id="edit_vehicle_year" name="vehicle_year" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_make">Make</label>
+							   <input id="edit_make" name="make" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_model">Model</label>
+							   <input id="edit_model" name="model" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_engine">Engine</label>
+							   <input id="edit_engine" name="engine" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_engine_serial_number">Engine Serial Number</label>
+							   <input id="edit_engine_serial_number" name="engine_serial_number" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_transmission">Transmission</label>
+							   <input id="edit_transmission" name="transmission" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_trans_serial_number">Transmission Serial Number</label>
+							   <input id="edit_trans_serial_number" name="trans_serial_number" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_transfer_case_serial">TRANSFER CASE SERIAL</label>
+							   <input id="edit_transfer_case_serial" name="transfer_case_serial" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_front_differential_serial">FRONT DIFFERENTIAL SERIAL</label>
+							   <input id="edit_front_differential_serial" name="front_differential_serial" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_middle_differential_serial">MIDDLE DIFFERENTIAL SERIAL</label>
+							   <input id="edit_middle_differential_serial" name="middle_differential_serial" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_rear_differential_serial">REAR DIFFERENTIAL SERIAL</label>
+							   <input id="edit_rear_differential_serial" name="rear_differential_serial" type="text" />
+						   </div>
+					   </div>
 				   </div>
 				   <div class="equipment-form__actions">
 					   <button id="cancelEditEquipment" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
@@ -1069,6 +1142,7 @@ function eq_format_warranty($dateValue) {
 			var editErrBox = document.getElementById('editEquipmentError');
 			var saveEditBtn = document.getElementById('saveEditEquipment');
 
+
 			function openEditModal(row){
 				if (!editModal || !row) return;
 				var equipmentId = row.getAttribute('data-equipment-id');
@@ -1079,6 +1153,7 @@ function eq_format_warranty($dateValue) {
 				var currentHours = row.getAttribute('data-current-hours');
 				var oilStatus = row.getAttribute('data-oil-status');
 
+
 				document.getElementById('edit_equipment_id').value = equipmentId || '';
 				document.getElementById('edit_equipment_number').value = equipmentNumber || '';
 				document.getElementById('edit_type').value = type || '';
@@ -1086,6 +1161,33 @@ function eq_format_warranty($dateValue) {
 				document.getElementById('edit_location').value = location || '';
 				document.getElementById('edit_current_hours').value = currentHours || '0';
 				document.getElementById('edit_oil_status').value = oilStatus || '';
+				// DHCST and DHSS Equipment Number
+				var dhcst = row.getAttribute('data-dhcst-equipment-number') || '';
+				var dhss = row.getAttribute('data-dhss-equipment-number') || '';
+				var dhcstInput = document.getElementById('edit_dhcst_equipment_number');
+				var dhssInput = document.getElementById('edit_dhss_equipment_number');
+				if (dhcstInput) dhcstInput.value = dhcst;
+				if (dhssInput) dhssInput.value = dhss;
+
+				// Additional Details fields (clear by default)
+				var additionalFields = [
+					'vin',
+					'vehicle_year',
+					'make',
+					'model',
+					'engine',
+					'engine_serial_number',
+					'transmission',
+					'trans_serial_number',
+					'transfer_case_serial',
+					'front_differential_serial',
+					'middle_differential_serial',
+					'rear_differential_serial'
+				];
+				additionalFields.forEach(function(field) {
+					var el = document.getElementById('edit_' + field);
+					if (el) el.value = row.getAttribute('data-' + field.replace(/_/g, '-')) || '';
+				});
 
 				// Clear previous previews
 				['air_filters','warranty','tires'].forEach(function(field){
@@ -1170,7 +1272,8 @@ function eq_format_warranty($dateValue) {
 							if (editErrBox) { editErrBox.textContent = msg; editErrBox.style.display = 'block'; }
 							return;
 						}
-						window.location.reload();
+						showSiteNotification('Equipment updated successfully!', 'success');
+						setTimeout(function(){ window.location.reload(); }, 1200);
 					})
 					.catch(function(){
 						if (editErrBox) { editErrBox.textContent = 'Network error while updating'; editErrBox.style.display = 'block'; }
@@ -1179,6 +1282,31 @@ function eq_format_warranty($dateValue) {
 						if (saveEditBtn) { saveEditBtn.disabled = false; saveEditBtn.textContent = 'Update Equipment'; }
 					});
 			});
+
+			// Site-level notification bar
+			function showSiteNotification(message, type) {
+				var existing = document.getElementById('siteNotificationBar');
+				if (existing) existing.remove();
+				var bar = document.createElement('div');
+				bar.id = 'siteNotificationBar';
+				bar.textContent = message;
+				bar.style.position = 'fixed';
+				bar.style.top = '0';
+				bar.style.left = '0';
+				bar.style.width = '100%';
+				bar.style.zIndex = '10001';
+				bar.style.padding = '18px 0';
+				bar.style.textAlign = 'center';
+				bar.style.fontSize = '18px';
+				bar.style.fontWeight = 'bold';
+				bar.style.background = (type === 'success') ? '#22c55e' : '#dc2626';
+				bar.style.color = '#fff';
+				bar.style.boxShadow = '0 2px 8px #0002';
+				document.body.appendChild(bar);
+				setTimeout(function(){
+					if (bar.parentNode) bar.parentNode.removeChild(bar);
+				}, 2000);
+			}
 
 			// Delete Equipment logic for Edit Modal
 			var deleteBtn = document.getElementById('deleteEditEquipment');
@@ -1256,20 +1384,38 @@ function eq_format_warranty($dateValue) {
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    var showAdditionalDetailsBtn = document.getElementById('showAdditionalDetailsBtn');
-    var additionalDetailsFields = document.getElementById('additionalDetailsFields');
-    var additionalDetailsIcon = document.getElementById('additionalDetailsIcon');
-    if (showAdditionalDetailsBtn && additionalDetailsFields && additionalDetailsIcon) {
-        showAdditionalDetailsBtn.addEventListener('click', function() {
-            var isOpen = additionalDetailsFields.style.display === 'grid';
-            if (isOpen) {
-                additionalDetailsFields.style.display = 'none';
-                additionalDetailsIcon.style.transform = '';
-            } else {
-                additionalDetailsFields.style.display = 'grid';
-                additionalDetailsIcon.style.transform = 'rotate(180deg)';
-            }
-        });
-    }
+	// Add Equipment Modal Additional Details toggle
+	var showAdditionalDetailsBtn = document.getElementById('showAdditionalDetailsBtn');
+	var additionalDetailsFields = document.getElementById('additionalDetailsFields');
+	var additionalDetailsIcon = document.getElementById('additionalDetailsIcon');
+	if (showAdditionalDetailsBtn && additionalDetailsFields && additionalDetailsIcon) {
+		showAdditionalDetailsBtn.addEventListener('click', function() {
+			var isOpen = additionalDetailsFields.style.display === 'grid';
+			if (isOpen) {
+				additionalDetailsFields.style.display = 'none';
+				additionalDetailsIcon.style.transform = '';
+			} else {
+				additionalDetailsFields.style.display = 'grid';
+				additionalDetailsIcon.style.transform = 'rotate(180deg)';
+			}
+		});
+	}
+
+	// Edit Equipment Modal Additional Details toggle
+	var showEditAdditionalDetailsBtn = document.getElementById('showEditAdditionalDetailsBtn');
+	var editAdditionalDetailsFields = document.getElementById('editAdditionalDetailsFields');
+	var editAdditionalDetailsIcon = document.getElementById('editAdditionalDetailsIcon');
+	if (showEditAdditionalDetailsBtn && editAdditionalDetailsFields && editAdditionalDetailsIcon) {
+		showEditAdditionalDetailsBtn.addEventListener('click', function() {
+			var isOpen = editAdditionalDetailsFields.style.display === 'grid';
+			if (isOpen) {
+				editAdditionalDetailsFields.style.display = 'none';
+				editAdditionalDetailsIcon.style.transform = '';
+			} else {
+				editAdditionalDetailsFields.style.display = 'grid';
+				editAdditionalDetailsIcon.style.transform = 'rotate(180deg)';
+			}
+		});
+	}
 });
 </script>

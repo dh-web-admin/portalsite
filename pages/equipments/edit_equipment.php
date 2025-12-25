@@ -24,7 +24,7 @@ if (!$equipment) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fields = [
         'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
-        'year', 'vin', 'transmission', 'trans_serial_number', 'location', 'operating_condition', 'oil_status'
+        'year', 'vin', 'transmission', 'trans_serial_number', 'location', 'operating_condition', 'oil_status', 'additional_info'
     ];
     $updates = [];
     $params = [];
@@ -108,6 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <option value="yellow" <?php if (($equipment['oil_status'] ?? '') === 'yellow') echo 'selected'; ?>>Yellow</option>
                 <option value="red" <?php if (($equipment['oil_status'] ?? '') === 'red') echo 'selected'; ?>>Red</option>
             </select>
+            <label>Additional Info</label>
+            <textarea name="additional_info" rows="4" style="width:100%;padding:8px;margin-top:4px;margin-bottom:12px;border-radius:6px;border:1px solid #d1d5db;resize:vertical;">
+                <?php echo htmlspecialchars($equipment['additional_info'] ?? ''); ?>
+            </textarea>
             <button type="submit">Save Changes</button>
             <a href="equipment.php?id=<?php echo $equipmentId; ?>" style="margin-left:16px; color:#2563eb; text-decoration:underline;">Cancel</a>
         </form>

@@ -23,7 +23,21 @@ $fields = [
     'operating_condition',
     'location',
     'current_hours',
-    'oil_status'
+    'oil_status',
+    'vin',
+    'vehicle_year',
+    'make',
+    'model',
+    'engine',
+    'engine_serial_number',
+    'transmission',
+    'trans_serial_number',
+    'transfer_case_serial',
+    'front_differential_serial',
+    'middle_differential_serial',
+    'rear_differential_serial',
+    'dhcst_equipment_number',
+    'dhss_equipment_number'
 ];
 $set = [];
 $params = [];
