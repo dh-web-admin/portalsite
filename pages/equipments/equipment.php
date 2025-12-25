@@ -941,9 +941,9 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                             <label for="issue_operating_condition">Operating Condition</label>
                                             <select id="issue_operating_condition" name="operating_condition" required>
                                                 <option value="">Select...</option>
-                                                <option value="green">Green</option>
-                                                <option value="yellow">Yellow</option>
-                                                <option value="red">Red</option>
+                                                <option value="green">Fully operable</option>
+                                                <option value="yellow">minor issue|operable</option>
+                                                <option value="red">inoperable</option>
                                             </select>
                                         </div>
                                     </div>
@@ -992,9 +992,9 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                             <label for="edit_operating_condition">Operating Condition</label>
                                             <select id="edit_operating_condition" name="operating_condition" required>
                                                 <option value="">Select...</option>
-                                                <option value="green">Green</option>
-                                                <option value="yellow">Yellow</option>
-                                                <option value="red">Red</option>
+                                                <option value="green">Fully operable</option>
+                                                <option value="yellow">minor issue|operable</option>
+                                                <option value="red">inoperable</option>
                                             </select>
                                         </div>
                                         <div class="equipment-form__field">
@@ -1039,9 +1039,9 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                     <thead>
                                         <tr>
                                             <th style="width: 70px;">Issue #</th>
-                                            <th>Date Reported</th>
                                             <th>Reported Issues</th>
                                             <th>Reported by</th>
+                                            <th>Date Reported</th>
                                             <th>Equipment Location</th>
                                             <th>Operating Condition</th>
                                             <th>Mechanic Diagnosis</th>
@@ -1115,11 +1115,23 @@ if (count($allRows) > 0) {
             echo htmlspecialchars($row['id']);
         }
         echo '</td>';
-        echo '<td>' . htmlspecialchars($row['date_reported'] ?? '') . '</td>';
         echo '<td>' . nl2br(htmlspecialchars($row['reported_issues'] ?? '')) . '</td>';
         echo '<td>' . htmlspecialchars($row['reported_by'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['date_reported'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['equipment_location'] ?? '') . '</td>';
-        echo '<td>' . htmlspecialchars($row['operating_condition'] ?? '') . '</td>';
+        // Format operating condition for display
+        $opCondition = strtolower(trim($row['operating_condition'] ?? ''));
+        $opConditionDisplay = '';
+        if ($opCondition === 'green') {
+            $opConditionDisplay = 'Fully operable';
+        } elseif ($opCondition === 'yellow') {
+            $opConditionDisplay = 'minor issue|operable';
+        } elseif ($opCondition === 'red') {
+            $opConditionDisplay = 'inoperable';
+        } else {
+            $opConditionDisplay = htmlspecialchars($row['operating_condition'] ?? '');
+        }
+        echo '<td>' . htmlspecialchars($opConditionDisplay) . '</td>';
         echo '<td>' . htmlspecialchars($row['mechanic_diagnosis'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['date_repaired'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['repair_mechanic'] ?? '') . '</td>';

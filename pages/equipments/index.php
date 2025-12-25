@@ -70,6 +70,11 @@ try {
 function eq_normalize_status($value) {
 	$val = strtolower(trim((string)$value));
 	if ($val === '') return 'neutral';
+	// Handle specific color values first (green, yellow, red)
+	if ($val === 'green') return 'good';
+	if ($val === 'yellow') return 'warn';
+	if ($val === 'red') return 'bad';
+	// Handle other common status values
 	if (strpos($val, 'good') !== false || strpos($val, 'ok') !== false || strpos($val, 'pass') !== false || $val === 'yes') return 'good';
 	if (strpos($val, 'warn') !== false || strpos($val, 'soon') !== false || strpos($val, 'due') !== false || strpos($val, 'needs') !== false) return 'warn';
 	if (strpos($val, 'bad') !== false || strpos($val, 'fail') !== false || strpos($val, 'no') !== false || strpos($val, 'down') !== false || strpos($val, 'out') !== false) return 'bad';
@@ -390,7 +395,12 @@ function eq_format_warranty($dateValue) {
 														<button class="equip-sort-btn" type="button" aria-label="Sort equipment number" data-sort="equipment_number">▾</button>
 													</span>
 												</th>
-												<th scope="col">Type</th>
+												<th scope="col">
+													<span class="equip-th">
+														<span class="equip-th__label">Type</span>
+														<button class="equip-sort-btn" type="button" aria-label="Filter type" data-sort="type">▾</button>
+													</span>
+												</th>
 												<th scope="col">
 													<span class="equip-th">
 														<span class="equip-th__label">Operating Condition</span>
@@ -815,6 +825,25 @@ function eq_format_warranty($dateValue) {
 				replaceRows(rows);
 			}
 
+			var currentTypeFilter = 'all';
+
+			function applyTypeFilter(typeValue){
+				currentTypeFilter = typeValue;
+				var rows = getRows();
+				rows.forEach(function(tr){
+					if (typeValue === 'all') {
+						tr.style.display = '';
+					} else {
+						var rowType = (tr.getAttribute('data-type') || '').trim();
+						if (rowType.toLowerCase() === typeValue.toLowerCase()) {
+							tr.style.display = '';
+						} else {
+							tr.style.display = 'none';
+						}
+					}
+				});
+			}
+
 			function openMenuFor(btn, key){
 				currentSortKey = key;
 				sortMenu.innerHTML = '';
@@ -824,27 +853,56 @@ function eq_format_warranty($dateValue) {
 
 				var rect = btn.getBoundingClientRect();
 				var menuWidth = 190;
-				var left = rect.left + window.pageXOffset;
-				var top = rect.bottom + window.pageYOffset + 6;
-				var maxLeft = (window.pageXOffset + window.innerWidth) - menuWidth - 10;
+				var scrollX = window.pageXOffset || window.scrollX || 0;
+				var scrollY = window.pageYOffset || window.scrollY || 0;
+				var left = rect.left + scrollX;
+				var top = rect.bottom + scrollY + 6;
+				var maxLeft = (scrollX + window.innerWidth) - menuWidth - 10;
 				if (left > maxLeft) left = Math.max(10, maxLeft);
 				sortMenu.style.left = left + 'px';
 				sortMenu.style.top = top + 'px';
 
-				function addOption(label, action){
+				function addOption(label, action, isActive){
 					var opt = document.createElement('button');
 					opt.type = 'button';
 					opt.className = 'equip-sort-option';
+					if (isActive) {
+						opt.style.background = 'rgba(15, 23, 42, 0.08)';
+						opt.style.fontWeight = '900';
+					}
 					opt.textContent = label;
 					opt.addEventListener('click', function(e){
 						e.preventDefault();
+						e.stopPropagation();
 						action();
 						closeMenu();
 					});
 					sortMenu.appendChild(opt);
 				}
 
-				if (key === 'operating_condition' || key === 'oil_status') {
+				if (key === 'type') {
+					// Get all unique types from table rows
+					var rows = getRows();
+					var types = [];
+					var typeMap = {};
+					rows.forEach(function(tr){
+						var rowType = (tr.getAttribute('data-type') || '').trim();
+						if (rowType && !typeMap[rowType.toLowerCase()]) {
+							typeMap[rowType.toLowerCase()] = rowType;
+							types.push(rowType);
+						}
+					});
+					types.sort(function(a, b){
+						return a.localeCompare(b);
+					});
+					
+					// Add "All" option as default
+					addOption('All', function(){ applyTypeFilter('all'); }, currentTypeFilter === 'all');
+					// Add each unique type
+					types.forEach(function(type){
+						addOption(type, function(){ applyTypeFilter(type); }, currentTypeFilter.toLowerCase() === type.toLowerCase());
+					});
+				} else if (key === 'operating_condition' || key === 'oil_status') {
 					addOption('Green', function(){ applyStatusSort(key, 'good'); });
 					addOption('Yellow', function(){ applyStatusSort(key, 'warn'); });
 					addOption('Red', function(){ applyStatusSort(key, 'bad'); });
@@ -870,7 +928,12 @@ function eq_format_warranty($dateValue) {
 				});
 			});
 
-			document.addEventListener('click', function(){ if (menuOpen) closeMenu(); });
+			document.addEventListener('click', function(e){ 
+				// Don't close if clicking inside the sort menu
+				if (menuOpen && sortMenu && !sortMenu.contains(e.target)) {
+					closeMenu();
+				}
+			});
 			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && menuOpen) closeMenu(); });
 			window.addEventListener('resize', function(){ if (menuOpen) closeMenu(); });
 			window.addEventListener('scroll', function(){ if (menuOpen) closeMenu(); }, true);
