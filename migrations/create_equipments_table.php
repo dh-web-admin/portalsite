@@ -37,7 +37,12 @@ $alterColumns = [
     "ADD COLUMN transmission VARCHAR(120) NULL",
     "ADD COLUMN trans_serial_number VARCHAR(120) NULL",
     "ADD COLUMN vehicle_year VARCHAR(10) NULL",
-    "ADD COLUMN vin VARCHAR(50) NULL"
+    "ADD COLUMN vin VARCHAR(50) NULL",
+    // Newly added columns for differentials and transfer case
+    "ADD COLUMN transfer_case_serial VARCHAR(120) NULL",
+    "ADD COLUMN front_differential_serial VARCHAR(120) NULL",
+    "ADD COLUMN middle_differential_serial VARCHAR(120) NULL",
+    "ADD COLUMN rear_differential_serial VARCHAR(120) NULL"
 ];
 
 try {

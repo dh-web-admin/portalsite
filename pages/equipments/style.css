@@ -5,6 +5,38 @@
 
 /* Add any equipments specific overrides or additional styles here */
 
+/* Remove underlines from all buttons and links styled as buttons */
+a.equipment-btn,
+a.equipment-ribbon__item,
+a.equipment-action-btn,
+a.equipment-back-btn,
+.back-link,
+button,
+a[class*="btn"] {
+  text-decoration: none;
+}
+
+.back-link {
+  display: inline-block;
+  color: #2563eb;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease, color 0.2s ease;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  cursor: pointer;
+}
+
+.back-link:active {
+  transform: scale(0.98);
+}
+
 .equipment-page {
   width: 100%;
   text-align: left; /* override admin-container centering */
@@ -50,8 +82,28 @@
   cursor: default;
 }
 
+a.equipment-ribbon__item {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease, color 0.2s,
+    text-decoration 0.2s;
+}
+
+a.equipment-ribbon__item:hover {
+  background: rgba(15, 23, 42, 0.03);
+  cursor: pointer;
+  text-decoration: none;
+  color: #2563eb;
+}
+
 .equipment-ribbon__item:hover {
   background: rgba(15, 23, 42, 0.03);
+  cursor: pointer;
+}
+
+a.equipment-ribbon__item:active {
+  transform: scale(0.98);
 }
 
 .equipment-ribbon__label {
@@ -101,10 +153,17 @@
   padding: 9px 12px;
   border-radius: 10px;
   cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .equipment-btn:hover {
   background: rgba(15, 23, 42, 0.03);
+  cursor: pointer;
+}
+
+.equipment-btn:active {
+  transform: scale(0.98);
 }
 
 .equipment-btn--green {
@@ -117,9 +176,18 @@
   background: rgba(22, 163, 74, 1);
 }
 
+.equipment-btn--green:active {
+  transform: scale(0.98);
+}
+
 .equipment-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+}
+
+.equipment-btn:disabled:active {
+  transform: none;
 }
 
 .equipment-btn--secondary {
@@ -137,10 +205,17 @@
   line-height: 1;
   font-weight: 900;
   color: #0f172a;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .equipment-icon-btn:hover {
   background: rgba(15, 23, 42, 0.03);
+  cursor: pointer;
+}
+
+.equipment-icon-btn:active {
+  transform: scale(0.95);
 }
 
 .equipment-header {

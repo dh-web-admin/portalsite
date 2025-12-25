@@ -198,18 +198,18 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     border-radius: 8px;
     font-weight: 600;
     font-size: 14px;
-    transition: background 0.2s, transform 0.1s;
+    transition: background 0.2s ease, transform 0.1s ease;
     border: none;
     cursor: pointer;
 }
 
 .equipment-back-btn:hover {
     background: #1d4ed8;
-    transform: translateY(-1px);
+    cursor: pointer;
 }
 
 .equipment-back-btn:active {
-    transform: translateY(0);
+    transform: scale(0.98);
 }
 
 .equipment-tab {
@@ -384,14 +384,19 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
   border: 1px solid #d1d5db;
   background: #f4f6fa;
   color: #334155;
-  transition: all 0.2s;
+  transition: all 0.2s ease, transform 0.1s ease;
   margin-bottom: 0;
   box-shadow: none;
   letter-spacing: 0.01em;
+  text-decoration: none;
 }
 .equipment-action-btn:hover {
   background: #e9eef5;
   color: #1e293b;
+  cursor: pointer;
+}
+.equipment-action-btn:active {
+  transform: scale(0.98);
 }
 .equipment-action-btn--primary {
   background: #e0e7ef;
@@ -401,6 +406,10 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 .equipment-action-btn--primary:hover {
   background: #cbd5e1;
   color: #1d4ed8;
+  cursor: pointer;
+}
+.equipment-action-btn--primary:active {
+  transform: scale(0.98);
 }
 .equipment-editable-cell {
   width: 100%;

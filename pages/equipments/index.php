@@ -364,14 +364,14 @@ function eq_format_warranty($dateValue) {
 						<div class="equipment-topbar" role="region" aria-label="Equipment actions">
 							<button id="newEquipmentBtn" class="equipment-btn equipment-btn--green" type="button">Add Equipment</button>
 							<div class="equipment-ribbon" aria-label="Cheat sheets">
-								<span class="equipment-ribbon__item">All Eng Cheat Sheet</span>
-								<span class="equipment-ribbon__item">Filter Cheat Sheet</span>
-								<span class="equipment-ribbon__item">Tire Cheat Sheet</span>
+								<a href="all_engine.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">All Eng Cheat Sheet</a>
+								<a href="all_filters.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Filter Cheat Sheet</a>
+								<a href="all_tires.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Tire Cheat Sheet</a>
 								<span class="equipment-ribbon__item">Dimension Cheat Sheet</span>
 							</div>
 							<div class="equipment-ribbon" aria-label="Reports">
-								<span class="equipment-ribbon__item equipment-ribbon__item--danger">Engine Reports</span>
-								<span class="equipment-ribbon__item">Oil Change Reports</span>
+								<a href="all_engine_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item equipment-ribbon__item--danger">Engine Reports</a>
+								<a href="all_oil_change_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Oil Change Reports</a>
 							</div>
 						</div>
 
@@ -628,12 +628,75 @@ function eq_format_warranty($dateValue) {
 						<input id="eq_air_filters" name="air_filters" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
 					</div>
 					<div class="equipment-form__field">
+						<label for="eq_tires">Tires</label>
+						<input id="eq_tires" name="tires" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+					</div>
+					<div class="equipment-form__field">
 						<label for="eq_warranty">Warranty</label>
 						<input id="eq_warranty" name="warranty" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
 					</div>
-					<div class="equipment-form__field">
-						<label for="eq_tires">Tires</label>
-						<input id="eq_tires" name="tires" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+					<div class="equipment-form__field" style="display:flex;align-items:end;gap:8px;">
+						<div style="flex:1;">
+							<label for="eq_dhcst_equipment_number">DHCST Equipment #</label>
+							<input id="eq_dhcst_equipment_number" name="dhcst_equipment_number" type="text" />
+						</div>
+					</div>
+					<hr style="grid-column:1/-1;margin:18px 0 8px 0;border:0;border-top:1.5px solid #e5e7eb;background:none;">
+					<div style="display:flex;justify-content:flex-end;align-items:center;grid-column:1/-1;margin-bottom:8px;">
+						<button type="button" id="showAdditionalDetailsBtn" style="height:38px;display:flex;align-items:center;gap:4px;padding:0 14px;border-radius:8px;border:1px solid #e5e7eb;background:#f3f4f6;font-weight:600;cursor:pointer;">
+							<span>Additional Details</span>
+							<span id="additionalDetailsIcon" style="font-size:18px;transition:transform 0.2s;">▼</span>
+						</button>
+					</div>
+					<div id="additionalDetailsFields" style="display:none;grid-column:1/-1;gap:24px;">
+						<div class="equipment-form__field">
+							<label for="eq_vin">VIN Number</label>
+							<input id="eq_vin" name="vin" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_vehicle_year">Year</label>
+							<input id="eq_vehicle_year" name="vehicle_year" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_make">Make</label>
+							<input id="eq_make" name="make" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_model">Model</label>
+							<input id="eq_model" name="model" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_engine">Engine</label>
+							<input id="eq_engine" name="engine" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_engine_serial_number">Engine Serial Number</label>
+							<input id="eq_engine_serial_number" name="engine_serial_number" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_transmission">Transmission</label>
+							<input id="eq_transmission" name="transmission" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_trans_serial_number">Transmission Serial Number</label>
+							<input id="eq_trans_serial_number" name="trans_serial_number" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_transfer_case_serial">TRANSFER CASE SERIAL</label>
+							<input id="eq_transfer_case_serial" name="transfer_case_serial" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_front_differential_serial">FRONT DIFFERENTIAL SERIAL</label>
+							<input id="eq_front_differential_serial" name="front_differential_serial" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_middle_differential_serial">MIDDLE DIFFERENTIAL SERIAL</label>
+							<input id="eq_middle_differential_serial" name="middle_differential_serial" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_rear_differential_serial">REAR DIFFERENTIAL SERIAL</label>
+							<input id="eq_rear_differential_serial" name="rear_differential_serial" type="text" />
+						</div>
 					</div>
 				</div>
 				<div class="equipment-form__actions">
@@ -1191,3 +1254,22 @@ function eq_format_warranty($dateValue) {
 		display: none;
 	}
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var showAdditionalDetailsBtn = document.getElementById('showAdditionalDetailsBtn');
+    var additionalDetailsFields = document.getElementById('additionalDetailsFields');
+    var additionalDetailsIcon = document.getElementById('additionalDetailsIcon');
+    if (showAdditionalDetailsBtn && additionalDetailsFields && additionalDetailsIcon) {
+        showAdditionalDetailsBtn.addEventListener('click', function() {
+            var isOpen = additionalDetailsFields.style.display === 'grid';
+            if (isOpen) {
+                additionalDetailsFields.style.display = 'none';
+                additionalDetailsIcon.style.transform = '';
+            } else {
+                additionalDetailsFields.style.display = 'grid';
+                additionalDetailsIcon.style.transform = 'rotate(180deg)';
+            }
+        });
+    }
+});
+</script>
