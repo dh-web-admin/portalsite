@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 require_once __DIR__ . '/../config/config.php';
 header('Content-Type: application/json');
 
@@ -15,17 +18,9 @@ if (!$equipment_id || !$filter_name) {
     exit;
 }
 
-// Generate a new filter_id (auto-increment)
-$stmt = $conn->prepare('SELECT MAX(filter_id) AS max_id FROM filter_info');
-$stmt->execute();
-$res = $stmt->get_result();
-$row = $res ? $res->fetch_assoc() : null;
-$stmt->close();
-$filter_id = ($row && $row['max_id']) ? ((int)$row['max_id'] + 1) : 1;
-
-// Insert into filter_info
-$stmt = $conn->prepare('INSERT INTO filter_info (filter_id, equipment_id, filter_name, filter_date, hours, part_number, make) VALUES (?, ?, ?, ?, ?, ?, ?)');
-$stmt->bind_param('iisssss', $filter_id, $equipment_id, $filter_name, $filter_date, $hours, $part_number, $make);
+// Insert into filter_info (let filter_id auto-increment)
+$stmt = $conn->prepare('INSERT INTO filter_info (equipment_id, filter_name, filter_date, hours, part_number, make) VALUES (?, ?, ?, ?, ?, ?)');
+$stmt->bind_param('isssss', $equipment_id, $filter_name, $filter_date, $hours, $part_number, $make);
 $success = $stmt->execute();
 $stmt->close();
 
