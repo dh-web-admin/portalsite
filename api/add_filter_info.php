@@ -2,6 +2,7 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+ob_start();
 require_once __DIR__ . '/../config/config.php';
 header('Content-Type: application/json');
 
@@ -14,6 +15,7 @@ $part_number = isset($_POST['part_number']) ? trim($_POST['part_number']) : null
 $make = isset($_POST['make']) ? trim($_POST['make']) : null;
 
 if (!$equipment_id || !$filter_name) {
+    ob_clean();
     echo json_encode(['success' => false, 'error' => 'Missing equipment_id or filter_name']);
     exit;
 }
@@ -24,9 +26,9 @@ $stmt->bind_param('isssss', $equipment_id, $filter_name, $filter_date, $hours, $
 $success = $stmt->execute();
 $stmt->close();
 
+ob_clean();
 if ($success) {
     echo json_encode(['success' => true]);
 } else {
     echo json_encode(['success' => false, 'error' => $conn->error]);
 }
-?>
