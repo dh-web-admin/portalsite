@@ -15,19 +15,17 @@ $res = $stmt->get_result();
 $uploads = [
     'air_filters' => [],
     'warranty' => [],
-    'tires' => []
+    'tires' => [],
+    'dimension' => []
 ];
 // Detect environment (same as config.php)
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 $filePrefix = $isProduction ? '/uploads/equipment/' : '/PortalSite/uploads/equipment/';
 while ($row = $res->fetch_assoc()) {
     $f = $row['field'];
-    // Ensure file_url is a full web path, but don't double-prefix
-    if (isset($row['file_url']) && strpos($row['file_url'], 'uploads/equipment/') === false) {
+    // Always prefix with correct path for frontend
+    if (isset($row['file_url'])) {
         $row['file_url'] = $filePrefix . ltrim($row['file_url'], '/');
-    } else if (isset($row['file_url']) && strpos($row['file_url'], $filePrefix) !== 0) {
-        // If the file_url is already prefixed but not with the right prefix, fix it
-        $row['file_url'] = $filePrefix . basename($row['file_url']);
     }
     if (isset($uploads[$f])) $uploads[$f][] = $row;
 }

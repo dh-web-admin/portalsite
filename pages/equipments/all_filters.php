@@ -45,20 +45,39 @@ if (isset($_GET['preview_role'])) {
     .download-print-btn {
         padding: 10px 22px 10px 16px;
         border-radius: 12px;
-        font-weight: 600;
-        font-size: 15px;
+        font-weight: 700;
+        font-size: 16px;
         cursor: pointer;
         border: none;
-        background: #667eea;
+        background: #6c7ae0;
         color: #fff;
         margin-right: 18px;
         transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.1s;
         box-shadow: 0 2px 8px #0001;
         outline: none;
         text-align: center;
-        min-width: 140px;
+        min-width: 160px;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
+        gap: 7px;
+        letter-spacing: 0.01em;
+    }
+    .download-print-btn svg {
+        margin-right: 7px;
+        vertical-align: middle;
+    }
+    .download-print-btn:focus {
+        outline: 2px solid #a5b4fc;
+        outline-offset: 2px;
+    }
+    .download-print-btn:hover, .download-print-btn:active {
+        background: #f3f4f6;
+        color: #4663c6;
+        box-shadow: 0 4px 16px #0002;
+    }
+    .download-print-btn:hover svg, .download-print-btn:active svg {
+        stroke: #4663c6;
     }
     .filter-table {
         width: 100%;
@@ -200,6 +219,9 @@ if (isset($_GET['preview_role'])) {
             <main class="content-area">
                 <div class="main-content" style="display: flex; flex-direction: row; gap: 32px; align-items: flex-start;">
                     <div style="flex: 0 0 340px; max-width: 340px; min-width: 240px; background: #f8fafc; border-radius: 14px; box-shadow: 0 2px 8px #0001; padding: 24px 12px 24px 18px; height: 80vh; overflow-y: auto;">
+                        <div style="margin-bottom: 16px; display: flex; align-items: center;">
+                            <a href="index.php<?php echo $previewParam; ?>" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
+                        </div>
                         <h2 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 18px; color: #374151;">Select an equipment.</h2>
                         <ul id="equipmentList" style="list-style: none; padding: 0; margin: 0;">
                         <?php
@@ -228,10 +250,119 @@ if (isset($_GET['preview_role'])) {
                         </ul>
                     </div>
                     <div id="equipmentDetailsArea" style="flex: 1 1 0; min-width: 0; background: #fff; border-radius: 14px; box-shadow: 0 2px 8px #0001; padding: 32px; min-height: 400px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 18px;">
                             <h2 style="font-size: 1.3rem; font-weight: 700; color: #374151;">All Filters Cheat-Sheet</h2>
-                            <button id="addFilterBtn" style="background: #6c7ae0; color: #fff; border: none; border-radius: 6px; padding: 8px 22px; font-size: 16px; font-weight: 600; cursor: pointer;">Add Filter</button>
+                            <div>
+                                <button id="downloadCsvBtn" class="download-print-btn" style="margin-right:10px;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" style="margin-right:7px;vertical-align:middle;"><path stroke="#fff" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4"/><rect width="20" height="14" x="2" y="6" stroke="#fff" stroke-width="2" rx="2"/></svg>
+                                    Download CSV
+                                </button>
+                                <button id="printTableBtn" class="download-print-btn">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" style="margin-right:7px;vertical-align:middle;" stroke="currentColor"><rect width="18" height="14" x="3" y="7" stroke="currentColor" stroke-width="2" rx="2"/><path stroke="currentColor" stroke-width="2" d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/></svg>
+                                    Print Table
+                                </button>
+                                <button id="addFilterBtn" style="background: #6c7ae0; color: #fff; border: none; border-radius: 6px; padding: 8px 22px; font-size: 16px; font-weight: 600; cursor: pointer; margin-left:10px;">Add Filter</button>
+                            </div>
                         </div>
+                                    <script>
+                                    // Print and Download CSV for ALL filters (all equipment)
+                                    document.addEventListener('DOMContentLoaded', function() {
+                                        var printBtn = document.getElementById('printTableBtn');
+                                        var downloadBtn = document.getElementById('downloadCsvBtn');
+                                        var equipmentList = document.querySelectorAll('.equipment-list-btn');
+
+                                        function fetchAllEquipmentFilters(callback) {
+                                            var allData = [];
+                                            var pending = equipmentList.length;
+                                            if (pending === 0) return callback([]);
+                                            equipmentList.forEach(function(btn) {
+                                                var eqid = btn.getAttribute('data-eqid');
+                                                var label = btn.getAttribute('data-label');
+                                                fetch('../../api/fetch_equipment_filters.php?equipment_id=' + encodeURIComponent(eqid))
+                                                    .then(response => response.json())
+                                                    .then(data => {
+                                                        allData.push({ label: label, filters: data });
+                                                    })
+                                                    .finally(function() {
+                                                        pending--;
+                                                        if (pending === 0) callback(allData);
+                                                    });
+                                            });
+                                        }
+
+                                        if (printBtn) {
+                                            printBtn.addEventListener('click', function() {
+                                                fetchAllEquipmentFilters(function(allData) {
+                                                    var printWindow = window.open('', '', 'height=700,width=1000');
+                                                    printWindow.document.write('<html><head><title>Print Filters Cheat Sheet</title>');
+                                                    printWindow.document.write('<link rel="stylesheet" href="../../assets/css/base.css" />');
+                                                    printWindow.document.write('<style>body{font-family:sans-serif;} table{border-collapse:collapse;width:100%;margin-bottom:32px;} th,td{border:1px solid #eee;padding:8px 12px;text-align:left;} th{background:#f3f4f6;} .equip-header{font-weight:bold;background:#e0e7ff;font-size:1.1em;}</style>');
+                                                    printWindow.document.write('</head><body >');
+                                                    printWindow.document.write('<h2>All Filters Cheat Sheet</h2>');
+                                                    printWindow.document.write('<table>');
+                                                    printWindow.document.write('<thead><tr><th>Equipment</th><th>Filter Name</th><th>Date</th><th>Hours</th><th>Part Number</th><th>Make</th></tr></thead><tbody>');
+                                                    allData.forEach(function(equip) {
+                                                        // Equipment header row
+                                                        printWindow.document.write('<tr class="equip-header"><td colspan="6">' + equip.label + '</td></tr>');
+                                                        if (equip.filters && equip.filters.length > 0) {
+                                                            equip.filters.forEach(function(row) {
+                                                                printWindow.document.write('<tr>');
+                                                                printWindow.document.write('<td></td>');
+                                                                printWindow.document.write('<td>' + (row.filter_name || '') + '</td>');
+                                                                printWindow.document.write('<td>' + (row.filter_date || '') + '</td>');
+                                                                printWindow.document.write('<td>' + (row.hours || '') + '</td>');
+                                                                printWindow.document.write('<td>' + (row.part_number || '') + '</td>');
+                                                                printWindow.document.write('<td>' + (row.make || '') + '</td>');
+                                                                printWindow.document.write('</tr>');
+                                                            });
+                                                        } else {
+                                                            printWindow.document.write('<tr><td colspan="6" style="color:#888;font-style:italic;">No filters available for this equipment.</td></tr>');
+                                                        }
+                                                    });
+                                                    printWindow.document.write('</tbody></table>');
+                                                    printWindow.document.write('</body></html>');
+                                                    printWindow.document.close();
+                                                    printWindow.focus();
+                                                    setTimeout(function(){ printWindow.print(); printWindow.close(); }, 400);
+                                                });
+                                            });
+                                        }
+                                        if (downloadBtn) {
+                                            downloadBtn.addEventListener('click', function() {
+                                                fetchAllEquipmentFilters(function(allData) {
+                                                    var csvRows = [];
+                                                    csvRows.push(['Equipment','Filter Name','Date','Hours','Part Number','Make']);
+                                                    allData.forEach(function(equip) {
+                                                        // Equipment header row
+                                                        csvRows.push([equip.label, '', '', '', '', '']);
+                                                        if (equip.filters && equip.filters.length > 0) {
+                                                            equip.filters.forEach(function(row) {
+                                                                csvRows.push([
+                                                                    '',
+                                                                    row.filter_name || '',
+                                                                    row.filter_date || '',
+                                                                    row.hours || '',
+                                                                    row.part_number || '',
+                                                                    row.make || ''
+                                                                ]);
+                                                            });
+                                                        } else {
+                                                            csvRows.push(['', '', '', '', '', '']);
+                                                        }
+                                                    });
+                                                    var csvContent = csvRows.map(e => e.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+                                                    var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                                    var link = document.createElement('a');
+                                                    link.href = URL.createObjectURL(blob);
+                                                    link.download = 'filters_cheat_sheet.csv';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                });
+                                            });
+                                        }
+                                    });
+                                    </script>
                         <div id="addFilterModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
                             <div style="background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.2); padding:32px 28px; min-width:400px; max-width:96vw;">
                                 <h3 style="margin-bottom:18px; font-size:1.18rem; font-weight:700; color:#374151;">Add Filter</h3>
@@ -428,23 +559,23 @@ if (isset($_GET['preview_role'])) {
                                     tableHtml += '<button class="edit-filter-btn" title="Edit Filter">Edit</button>';
                                     
                                     tableHtml += '<div style="background:#f3f4f6;font-weight:600;padding:14px 18px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:1.15rem;">' + (row.filter_name || 'Filter') + '</div>';
-                                    tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:15px;">';
+                                    tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:16px;">';
                                     tableHtml += '<tbody>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:12px 20px;text-align:left;width:45%;color:#374151;font-weight:600;">Date</th>' +
-                                        '<td style="padding:12px 16px;">' + (row.filter_date || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:16px 28px;text-align:left;width:52%;color:#374151;font-weight:600;">Date</th>' +
+                                        '<td style="padding:16px 18px;">' + (row.filter_date || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:12px 20px;text-align:left;color:#374151;font-weight:600;">Hours</th>' +
-                                        '<td style="padding:12px 16px;">' + (row.hours || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:16px 28px;text-align:left;color:#374151;font-weight:600;">Hours</th>' +
+                                        '<td style="padding:16px 18px;">' + (row.hours || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:12px 20px;text-align:left;color:#374151;font-weight:600;">Part Number</th>' +
-                                        '<td style="padding:12px 16px;">' + (row.part_number || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:16px 28px;text-align:left;color:#374151;font-weight:600;">Part Number</th>' +
+                                        '<td style="padding:16px 18px;">' + (row.part_number || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:12px 20px;text-align:left;color:#374151;font-weight:600;">Make</th>' +
-                                        '<td style="padding:12px 16px;">' + (row.make || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:16px 28px;text-align:left;color:#374151;font-weight:600;">Make</th>' +
+                                        '<td style="padding:16px 18px;">' + (row.make || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '</tbody></table>';
                                     tableHtml += '</div>'; // filter-card end

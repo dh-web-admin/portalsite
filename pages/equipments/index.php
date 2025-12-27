@@ -369,7 +369,7 @@ function eq_format_warranty($dateValue) {
 								<a href="all_engine.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">All Eng Cheat Sheet</a>
 								<a href="all_filters.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Filter Cheat Sheet</a>
 								<a href="all_tires.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Tire Cheat Sheet</a>
-								<span class="equipment-ribbon__item">Dimension Cheat Sheet</span>
+								<a href="all_dimensions.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Dimension Cheat Sheet</a>
 							</div>
 							<div class="equipment-ribbon" aria-label="Reports">
 								<a href="all_engine_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item equipment-ribbon__item--danger">Engine Reports</a>
@@ -575,7 +575,7 @@ function eq_format_warranty($dateValue) {
 															$stmtWarranty->close();
 															?>
 															<?php if ($warrantyFiles > 0): ?>
-																<a href="Warrenty.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>
+																<a href="Warranty.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>
 															<?php else: ?>
 																<span style="color:#bbb !important;">Not available</span>
 															<?php endif; ?>
@@ -1345,7 +1345,71 @@ function eq_format_warranty($dateValue) {
 					usersGroup.classList.toggle('open');
 				});
 			}
-		})();
+		// Equipment Uploads: Air Filters, Warranty, Tires (Edit Modal)
+		['air_filters','warranty','tires'].forEach(function(field){
+			var input = document.getElementById('edit_' + field);
+			var label = document.getElementById(field + '_file_label');
+			var preview = document.querySelector('.equipment-upload-preview[data-field="'+field+'"]');
+			if (!input || !label || !preview) return;
+
+			input.addEventListener('change', function(e){
+				var files = Array.from(input.files);
+				var equipmentId = document.getElementById('edit_equipment_id').value;
+				if (!equipmentId || files.length === 0) return;
+				label.childNodes[0].nodeValue = 'Uploading...';
+				var fd = new FormData();
+				fd.append('equipment_id', equipmentId);
+				fd.append('field', field);
+				files.forEach(function(file){
+					fd.append('files[]', file);
+				});
+				fetch('../../api/add_equipment_upload.php', {
+					method: 'POST',
+					body: fd,
+					credentials: 'same-origin'
+				})
+				.then(function(r){ return r.json(); })
+				.then(function(data){
+					label.childNodes[0].nodeValue = 'Add More';
+					if (!data.success) {
+						showSiteNotification('Upload failed: ' + (data.message || 'Unknown error'), 'error');
+						return;
+					}
+					// Refresh preview for this field
+					fetch('../../api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
+						.then(function(r){ return r.json(); })
+						.then(function(data){
+							if (!data.success) return;
+							if (preview) {
+								preview.innerHTML = '';
+								var hasFiles = (data.uploads && data.uploads[field] && data.uploads[field].length > 0);
+								if (label) {
+									label.childNodes[0].nodeValue = hasFiles ? 'Add More' : 'Browse...';
+								}
+								if (hasFiles) {
+									data.uploads[field].forEach(function(file){
+										var a = document.createElement('a');
+										a.href = file.file_url;
+										a.target = '_blank';
+										a.textContent = file.file_url.split('/').pop();
+										a.style.display = 'block';
+										a.style.marginTop = '4px';
+										preview.appendChild(a);
+									});
+								} else {
+									preview.innerHTML = '<span style="color:#888;">No file uploaded for this equipment.</span>';
+								}
+							}
+						});
+				})
+				.catch(function(){
+					label.childNodes[0].nodeValue = 'Add More';
+					showSiteNotification('Network error while uploading', 'error');
+				});
+			});
+		});
+		// End Equipment Uploads logic
+	})();
 	</script>
 	<script src="../../assets/js/mobile-menu.js"></script>
 </body>

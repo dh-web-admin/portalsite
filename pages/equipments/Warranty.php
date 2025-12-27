@@ -2,13 +2,11 @@
 require_once __DIR__ . '/../../session_init.php';
 require_once __DIR__ . '/../../config/config.php';
 
-// Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     header('Location: /auth/login.php');
     exit();
 }
 
-// Get user role
 $email = $_SESSION['email'];
 $roleStmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
 $roleStmt->bind_param('s', $email);
@@ -16,24 +14,16 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-
-// Developer preview mode
 if ($role === 'developer' && isset($_GET['preview_role'])) {
     $role = $_GET['preview_role'];
 }
 $roleStmt->close();
-
-// Preserve preview mode in URLs
 $previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : '';
-
-// Get equipment ID from query param
 $equipment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($equipment_id <= 0) {
     die("Invalid equipment ID.");
 }
-
-// Fetch all air_filter uploads for this equipment
-$fileStmt = $conn->prepare("SELECT id, file_url, uploaded_at FROM equipment_uploads WHERE equipment_id=? AND field='air_filters' ORDER BY uploaded_at DESC");
+$fileStmt = $conn->prepare("SELECT id, file_url, uploaded_at FROM equipment_uploads WHERE equipment_id=? AND field='warranty' ORDER BY uploaded_at DESC");
 $fileStmt->bind_param('i', $equipment_id);
 if (!$fileStmt->execute()) {
     die("SQL execute error: " . $fileStmt->error);
@@ -42,32 +32,22 @@ $res = $fileStmt->get_result();
 if (!$res) {
     die("SQL get_result error: " . $fileStmt->error);
 }
-
 $uploads = $res->fetch_all(MYSQLI_ASSOC);
 $fileStmt->close();
-
-// Normalize file URLs for display
 $fileList = [];
 foreach ($uploads as $row) {
     $fileUrl = $row['file_url'];
     if (!$fileUrl) continue;
-
-    // Fix Windows slashes
     $fileUrl = str_replace('\\', '/', $fileUrl);
-
-    // Remove any leading slashes
     $fileUrl = ltrim($fileUrl, '/');
-
     $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
     if ($isProduction) {
-        // Only prefix if not already present
         if (strpos($fileUrl, 'uploads/equipment/') === 0) {
             $fileUrl = '/' . $fileUrl;
         } else {
             $fileUrl = '/uploads/equipment/' . $fileUrl;
         }
     } else {
-        // Only prefix if not already present
         if (strpos($fileUrl, 'PortalSite/uploads/equipment/') === 0) {
             $fileUrl = '/' . $fileUrl;
         } else if (strpos($fileUrl, 'uploads/equipment/') === 0) {
@@ -76,10 +56,8 @@ foreach ($uploads as $row) {
             $fileUrl = '/PortalSite/uploads/equipment/' . $fileUrl;
         }
     }
-
     $ext = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
     $isImage = in_array($ext, ['jpg','jpeg','png','gif','bmp','webp','svg']);
-
     $fileList[] = [
         'url' => $fileUrl,
         'name' => basename($fileUrl),
@@ -94,12 +72,81 @@ $fileCount = count($fileList);
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Air Filter Uploads</title>
+<title>Warranty Uploads</title>
 <link rel="stylesheet" href="../../assets/css/base.css" />
 <link rel="stylesheet" href="../../assets/css/admin-layout.css" />
 <link rel="stylesheet" href="../../assets/css/dashboard.css" />
 <style>
 .file-list li.selected { background:#eef2ff; }
+</style>
+<!-- Button and preview stylings from Airfilters.php -->
+<style>
+.equipment-btn--secondary {
+    padding: 10px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+    margin: 18px 0 0 0;
+    transition: background 0.2s;
+}
+.equipment-btn--secondary:hover {
+    background: #e5e7eb !important;
+    color: #374151 !important;
+    text-decoration: none !important;
+}
+.download-print-btn {
+    padding: 10px 22px 10px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    background: #667eea;
+    color: #fff;
+    margin-right: 18px;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.1s;
+    box-shadow: 0 2px 8px #0001;
+    outline: none;
+    text-align: center;
+    min-width: 140px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+.download-print-btn:last-child {
+    margin-right: 0;
+}
+.download-print-btn .icon {
+    font-size: 20px;
+    display: inline-block;
+    vertical-align: middle;
+    transition: color 0.18s;
+}
+.download-print-btn:active, .download-print-btn.active {
+    background: #667eea !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px #0001;
+}
+.download-print-btn:active .icon, .download-print-btn.active .icon {
+    color: #fff !important;
+    stroke: #fff !important;
+}
+.download-print-btn:hover, .download-print-btn:focus {
+    background: #f3f4f6 !important;
+    color: #3b4cca !important;
+    box-shadow: 0 4px 16px #0002;
+    transform: translateY(-2px) scale(1.04);
+    text-decoration: none;
+}
+.download-print-btn:hover .icon, .download-print-btn:focus .icon {
+    color: #3b4cca !important;
+    stroke: #3b4cca !important;
+}
 </style>
 </head>
 <body class="admin-page">
@@ -109,13 +156,17 @@ $fileCount = count($fileList);
         <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
         <main class="content-area">
             <div style="display:flex;flex-direction:row;gap:40px;align-items:flex-start;min-height:480px;width:100%;">
-                <!-- Left panel: file list & upload -->
                 <div style="flex:2 1 0;min-width:400px;max-width:60vw;">
                     <a href="index.php<?php echo $previewParam; ?>" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin-bottom:18px; transition: background 0.2s;">&larr; Back to Equipments</a>
                     <div style="background:#e0e7ff;padding:16px 24px;border-radius:12px;font-weight:600;font-size:1.2rem;color:#374151;margin-bottom:18px;">
                         <?php echo $fileCount; ?> item<?php echo $fileCount !== 1 ? 's' : ''; ?> available for equipment #<?php echo $equipment_id; ?>
                     </div>
-                    <button id="uploadFilterBtn" class="download-print-btn" style="margin-bottom:12px;width:180px;">Upload</button>
+                    <button id="uploadFilterBtn" class="download-print-btn" style="margin-bottom:12px;">
+                        <span class="icon" aria-hidden="true" style="display:inline-flex;align-items:center;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                        </span>
+                        <span>Upload</span>
+                    </button>
                     <input type="file" id="filterFileInput" multiple style="display:none;" />
                     <ul id="filterFileList" class="file-list" style="list-style:none;padding:0;margin:0;min-height:40px;">
                         <?php if ($fileCount > 0): ?>
@@ -125,12 +176,10 @@ $fileCount = count($fileList);
                                 </li>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <li style="color:#94a3b8;font-style:italic;">No air filter files uploaded yet.</li>
+                            <li style="color:#94a3b8;font-style:italic;">No warranty files uploaded yet.</li>
                         <?php endif; ?>
                     </ul>
                 </div>
-
-                <!-- Right panel: preview & download/print -->
                 <div id="filterPreviewPanel" style="flex:3 1 0;min-width:320px;max-width:75vw;background:#f8fafc;border-radius:14px;box-shadow:0 2px 8px #0001;padding:32px 18px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:520px;">
                     <div style="width:100%;text-align:center;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
                         <span id="filterPreviewCountMsg" style="color:#374151;font-weight:600;font-size:1.1rem;"></span>
@@ -147,74 +196,6 @@ $fileCount = count($fileList);
                                 </span>
                                 <span>Print</span>
                             </button>
-                        </style>
-                        <style>
-                        .equipment-btn--secondary {
-                            padding: 10px 28px;
-                            border-radius: 8px;
-                            font-weight: 600;
-                            font-size: 15px;
-                            background: #f3f4f6;
-                            color: #6b7280;
-                            border: none;
-                            text-decoration: none;
-                            display: inline-block;
-                            margin: 18px 0 0 0;
-                            transition: background 0.2s;
-                        }
-                        .equipment-btn--secondary:hover {
-                            background: #e5e7eb !important;
-                            color: #374151 !important;
-                            text-decoration: none !important;
-                        }
-                        .download-print-btn {
-                            padding: 10px 22px 10px 16px;
-                            border-radius: 12px;
-                            font-weight: 600;
-                            font-size: 15px;
-                            cursor: pointer;
-                            border: none;
-                            background: #667eea;
-                            color: #fff;
-                            margin-right: 18px;
-                            transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.1s;
-                            box-shadow: 0 2px 8px #0001;
-                            outline: none;
-                            text-align: center;
-                            min-width: 140px;
-                            display: inline-flex;
-                            align-items: center;
-                            gap: 10px;
-                        }
-                        .download-print-btn:last-child {
-                            margin-right: 0;
-                        }
-                        .download-print-btn .icon {
-                            font-size: 20px;
-                            display: inline-block;
-                            vertical-align: middle;
-                            transition: color 0.18s;
-                        }
-                        .download-print-btn:active, .download-print-btn.active {
-                            background: #667eea !important;
-                            color: #fff !important;
-                            box-shadow: 0 2px 8px #0001;
-                        }
-                        .download-print-btn:active .icon, .download-print-btn.active .icon {
-                            color: #fff !important;
-                            stroke: #fff !important;
-                        }
-                        .download-print-btn:hover, .download-print-btn:focus {
-                            background: #f3f4f6 !important;
-                            color: #3b4cca !important;
-                            box-shadow: 0 4px 16px #0002;
-                            transform: translateY(-2px) scale(1.04);
-                            text-decoration: none;
-                        }
-                        .download-print-btn:hover .icon, .download-print-btn:focus .icon {
-                            color: #3b4cca !important;
-                            stroke: #3b4cca !important;
-                        }
                         </div>
                     </div>
                     <div id="filterPreviewWindow" style="width:100%;min-height:320px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:18px;align-items:center;justify-content:flex-start;background:#fff;border-radius:10px;box-shadow:0 1px 4px #0001;margin-bottom:18px;padding:18px 0;">
@@ -225,7 +206,6 @@ $fileCount = count($fileList);
         </main>
     </div>
 </div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var fileList = document.getElementById('filterFileList');
@@ -236,7 +216,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var selectedFileUrl = null;
     var selectedFileName = null;
     var equipmentId = <?php echo json_encode($equipment_id); ?>;
-
     function showPreview(url, name) {
         previewWindow.innerHTML = '';
         if (!url) {
@@ -266,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
             previewWindow.appendChild(link);
         }
     }
-
     fileList.addEventListener('click', function(e) {
         var item = e.target.closest('.filter-file-item');
         if (!item) return;
@@ -276,7 +254,6 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedFileName = item.textContent.trim();
         showPreview(selectedFileUrl, selectedFileName);
     });
-
     uploadBtn.addEventListener('click', function() { fileInput.click(); });
     fileInput.addEventListener('change', function() {
         if (!equipmentId || !fileInput.files.length) return;
@@ -285,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var formData = new FormData();
             formData.append('equipment_id', equipmentId);
             formData.append('file', file);
-            formData.append('field', 'air_filters');
+            formData.append('field', 'warranty');
             return fetch('/PortalSite/api/add_equipment_upload.php', { method:'POST', body:formData }).then(r => r.json());
         });
         Promise.all(uploads).then(results => {
@@ -295,7 +272,6 @@ document.addEventListener('DOMContentLoaded', function() {
             location.reload();
         });
     });
-
     document.getElementById('downloadFilterBtn').addEventListener('click', function() {
         if (!selectedFileUrl) return;
         var a = document.createElement('a');
