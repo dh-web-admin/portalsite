@@ -177,43 +177,7 @@ $fileCount = count($fileList);
                                     <span>📄 <?php echo htmlspecialchars($file['name']); ?></span>
                                     <button class="delete-upload-btn" style="margin-left:18px;padding:4px 12px;border-radius:6px;background:#f87171;color:#fff;border:none;font-size:13px;cursor:pointer;">Delete</button>
                                 </li>
-                            <script>
-                            // ...existing code...
-                                fileList.addEventListener('click', function(e) {
-                                    var item = e.target.closest('.filter-file-item');
-                                    if (!item) return;
-                                    // Handle delete button
-                                    if (e.target.classList.contains('delete-upload-btn')) {
-                                        var fileId = item.getAttribute('data-file-id');
-                                        var fileName = item.querySelector('span').textContent.trim();
-                                        if (confirm('Are you sure you want to delete "' + fileName + '"? This cannot be undone.')) {
-                                            fetch('/PortalSite/api/delete_equipment_upload.php', {
-                                                method: 'POST',
-                                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                                body: 'id=' + encodeURIComponent(fileId)
-                                            })
-                                            .then(r => r.json())
-                                            .then(res => {
-                                                if (res.success) {
-                                                    item.remove();
-                                                    previewWindow.innerHTML = '<span class="no-image">No file selected</span>';
-                                                    previewCountMsg.textContent = '';
-                                                } else {
-                                                    alert('Delete failed: ' + (res.error || 'Unknown error'));
-                                                }
-                                            });
-                                        }
-                                        return;
-                                    }
-                                    // ...existing code for preview...
-                                    fileList.querySelectorAll('.filter-file-item').forEach(i => i.classList.remove('selected'));
-                                    item.classList.add('selected');
-                                    selectedFileUrl = item.getAttribute('data-file-url');
-                                    selectedFileName = item.textContent.trim();
-                                    showPreview(selectedFileUrl, selectedFileName);
-                                });
-                            // ...existing code...
-                            </script>
+
                             <?php endforeach; ?>
                         <?php else: ?>
                             <li style="color:#94a3b8;font-style:italic;">No tire files uploaded yet.</li>
@@ -288,6 +252,30 @@ document.addEventListener('DOMContentLoaded', function() {
     fileList.addEventListener('click', function(e) {
         var item = e.target.closest('.filter-file-item');
         if (!item) return;
+        // Handle delete button
+        if (e.target.classList.contains('delete-upload-btn')) {
+            var fileId = item.getAttribute('data-file-id');
+            var fileName = item.querySelector('span').textContent.trim();
+            if (confirm('Are you sure you want to delete "' + fileName + '"? This cannot be undone.')) {
+                fetch('/PortalSite/api/delete_equipment_upload.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'id=' + encodeURIComponent(fileId)
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        item.remove();
+                        previewWindow.innerHTML = '<span class="no-image">No file selected</span>';
+                        previewCountMsg.textContent = '';
+                    } else {
+                        alert('Delete failed: ' + (res.error || 'Unknown error'));
+                    }
+                });
+            }
+            return;
+        }
+        // Preview logic
         fileList.querySelectorAll('.filter-file-item').forEach(i => i.classList.remove('selected'));
         item.classList.add('selected');
         selectedFileUrl = item.getAttribute('data-file-url');
