@@ -58,7 +58,16 @@ if (empty($files)) {
     exit;
 }
 
-$uploadDir = __DIR__ . '/../uploads/equipment/';
+
+// Use Railway volume mount in production
+$isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+if ($isProduction) {
+    $uploadDir = '/uploads/equipment/';
+    $fileUrlPrefix = '/uploads/equipment/';
+} else {
+    $uploadDir = __DIR__ . '/../uploads/equipment/';
+    $fileUrlPrefix = 'uploads/equipment/';
+}
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
@@ -69,7 +78,7 @@ $uploadedFiles = [];
 foreach ($files as $file) {
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     $baseName = $field . '_' . uniqid() . '.' . $ext;
-    $fileUrl = 'uploads/equipment/' . $baseName;
+    $fileUrl = $fileUrlPrefix . $baseName;
     $targetPath = $uploadDir . $baseName;
     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
         log_upload_debug("File uploaded: $targetPath for equipment_id=$equipment_id, field=$field");
@@ -88,9 +97,8 @@ foreach ($files as $file) {
         }
         $stmt->close();
         log_upload_debug("DB insert success for $fileUrl");
-        $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
-        $filePrefix = $isProduction ? '/' : '/PortalSite/';
-        $uploadedFiles[] = $filePrefix . $fileUrl;
+        // For production, the file is in /tmp but should be served from /uploads/equipment/ (handled by web server or CDN)
+        $uploadedFiles[] = $fileUrl;
         $successCount++;
     } else {
         log_upload_debug("Failed to move uploaded file: $targetPath");
