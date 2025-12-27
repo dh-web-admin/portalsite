@@ -23,9 +23,26 @@ $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 $filePrefix = $isProduction ? '/uploads/equipment/' : '/PortalSite/uploads/equipment/';
 while ($row = $res->fetch_assoc()) {
     $f = $row['field'];
-    // Always prefix with correct path for frontend
+    // Only prefix if not already present
     if (isset($row['file_url'])) {
-        $row['file_url'] = $filePrefix . ltrim($row['file_url'], '/');
+        $url = str_replace('\\', '/', $row['file_url']);
+        if ($isProduction) {
+            if (strpos($url, '/uploads/equipment/') === 0) {
+                $row['file_url'] = $url;
+            } else {
+                $row['file_url'] = '/uploads/equipment/' . ltrim($url, '/');
+            }
+        } else {
+            if (strpos($url, '/PortalSite/uploads/equipment/') === 0) {
+                $row['file_url'] = $url;
+            } else if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
+                $row['file_url'] = '/' . $url;
+            } else if (strpos($url, 'uploads/equipment/') === 0) {
+                $row['file_url'] = '/PortalSite/' . $url;
+            } else {
+                $row['file_url'] = '/PortalSite/uploads/equipment/' . ltrim($url, '/');
+            }
+        }
     }
     if (isset($uploads[$f])) $uploads[$f][] = $row;
 }
