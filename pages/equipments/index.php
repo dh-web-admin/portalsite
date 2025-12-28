@@ -611,7 +611,22 @@ function eq_format_warranty($dateValue) {
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_type">Type</label>
-						<input id="eq_type" name="type" type="text" required />
+						<input id="eq_type" name="type" type="text" required list="equipment-type-list" autocomplete="off" />
+						<datalist id="equipment-type-list">
+							<?php
+							// Collect unique types for datalist
+							$uniqueTypes = [];
+							foreach ($equipments as $eq) {
+								$type = trim($eq['type'] ?? '');
+								if ($type !== '' && !in_array($type, $uniqueTypes, true)) {
+									$uniqueTypes[] = $type;
+								}
+							}
+							foreach ($uniqueTypes as $type) {
+								echo '<option value="' . htmlspecialchars($type) . '"></option>';
+							}
+						?>
+						</datalist>
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_operating_condition">Operating Condition</label>
