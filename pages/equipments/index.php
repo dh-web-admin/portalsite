@@ -32,11 +32,12 @@ if (!can_access($role, 'equipments')) {
 $equipments = [];
 $equipmentsError = null;
 
+
 $sql = "SELECT equipment_id, equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires,
 	vin, vehicle_year, make, model, engine, engine_serial_number, transmission, trans_serial_number, transfer_case_serial,
 	front_differential_serial, middle_differential_serial, rear_differential_serial, dhcst_equipment_number, dhss_equipment_number
 	FROM equipments
-	ORDER BY equipment_id DESC";
+	ORDER BY equipment_id ASC";
 
 try {
 	$res = $conn->query($sql);
@@ -61,8 +62,8 @@ try {
 			$aStatus = $getStatus($a);
 			$bStatus = $getStatus($b);
 			if ($aStatus !== $bStatus) return $aStatus - $bStatus;
-			// fallback: keep original order (by equipment_id desc)
-			return ($b['equipment_id'] ?? 0) - ($a['equipment_id'] ?? 0);
+			// fallback: keep original order (by equipment_id asc)
+			return ($a['equipment_id'] ?? 0) - ($b['equipment_id'] ?? 0);
 		});
 	}
 } catch (Throwable $e) {
