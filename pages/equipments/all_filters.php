@@ -62,6 +62,7 @@ foreach ($equipments as $eid) {
         }
     }
 }
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -573,9 +574,9 @@ foreach ($equipments as $eid) {
                         .then(data => {
                             let tableHtml = '<div style="font-size:1.1rem;color:#374151;margin-bottom:18px;font-weight:600;">' + label + '</div>';
                             tableHtml += '<div style="max-height:70vh;overflow-y:auto;padding-right:8px;">';
-                            
+                            // Always show 4 per row, compact cards
                             if (data && data.length > 0) {
-                                tableHtml += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">';
+                                tableHtml += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">';
                                 data.forEach(row => {
                                     tableHtml += '<div class="filter-card" ' +
                                         'data-filter_id="' + (row.filter_id || '') + '" ' +
@@ -584,38 +585,35 @@ foreach ($equipments as $eid) {
                                         'data-hours="' + (row.hours || '') + '" ' +
                                         'data-part_number="' + (row.part_number || '') + '" ' +
                                         'data-make="' + (row.make || '') + '" ' +
-                                        'style="min-width:280px;">';
-                                    
+                                        'style="min-width:0;max-width:100%;height:auto;padding:0 0 2px 0;">';
                                     // Edit button (hidden by default, shown on hover)
                                     tableHtml += '<button class="edit-filter-btn" title="Edit Filter">Edit</button>';
-                                    
-                                    tableHtml += '<div style="background:#f3f4f6;font-weight:600;padding:14px 18px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:1.15rem;">' + (row.filter_name || 'Filter') + '</div>';
-                                    tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:16px;">';
+                                    tableHtml += '<div style="background:#f3f4f6;font-weight:600;padding:8px 10px 7px 14px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:1.05rem;">' + (row.filter_name || 'Filter') + '</div>';
+                                    tableHtml += '<table style="width:100%;border-collapse:collapse;font-size:13px;">';
                                     tableHtml += '<tbody>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:16px 28px;text-align:left;width:52%;color:#374151;font-weight:600;">Date</th>' +
-                                        '<td style="padding:16px 18px;">' + (row.filter_date || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:7px 10px 7px 16px;text-align:left;width:52%;color:#374151;font-weight:600;">Date</th>' +
+                                        '<td style="padding:7px 8px;">' + (row.filter_date || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:16px 28px;text-align:left;color:#374151;font-weight:600;">Hours</th>' +
-                                        '<td style="padding:16px 18px;">' + (row.hours || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:7px 10px 7px 16px;text-align:left;color:#374151;font-weight:600;">Hours</th>' +
+                                        '<td style="padding:7px 8px;">' + (row.hours || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:16px 28px;text-align:left;color:#374151;font-weight:600;">Part Number</th>' +
-                                        '<td style="padding:16px 18px;">' + (row.part_number || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:7px 10px 7px 16px;text-align:left;color:#374151;font-weight:600;">Part Number</th>' +
+                                        '<td style="padding:7px 8px;">' + (row.part_number || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '<tr>' +
-                                        '<th style="padding:16px 28px;text-align:left;color:#374151;font-weight:600;">Make</th>' +
-                                        '<td style="padding:16px 18px;">' + (row.make || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
+                                        '<th style="padding:7px 10px 7px 16px;text-align:left;color:#374151;font-weight:600;">Make</th>' +
+                                        '<td style="padding:7px 8px;">' + (row.make || '<span style="color:#999;font-style:italic;">N/A</span>') + '</td>' +
                                     '</tr>';
                                     tableHtml += '</tbody></table>';
                                     tableHtml += '</div>'; // filter-card end
                                 });
                                 tableHtml += '</div>';
                             } else {
-                                tableHtml += '<div style="text-align:center;color:#888;font-size:1.1rem;padding:32px 0;">No filters available for this equipment.</div>';
+                                tableHtml += '<div style="text-align:center;color:#888;font-size:1.1rem;padding:18px 0;">No filters available for this equipment.</div>';
                             }
-                            
                             tableHtml += '</div>';
                             document.getElementById('equipmentTables').innerHTML = tableHtml;
                             
