@@ -1,15 +1,10 @@
 <?php
 require_once __DIR__ . '/../../session_init.php';
-
-// Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     header('Location: /auth/login.php');
     exit();
 }
-
 require_once __DIR__ . '/../../config/config.php';
-
-// Get user role for sidebar
 $email = $_SESSION['email'];
 $roleStmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
 $roleStmt->bind_param('s', $email);
@@ -17,20 +12,56 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-
-// Check if developer is previewing as another role
 if ($role === 'developer' && isset($_GET['preview_role'])) {
     $role = $_GET['preview_role'];
 }
-
 $roleStmt->close();
-
-// Preserve preview mode in URLs
 $previewParam = '';
 if (isset($_GET['preview_role'])) {
     $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
 }
-?>
+
+// --- Default filter names ---
+$defaultFilters = [
+    'Air Filter 1',
+    'Air Filter 2',
+    'OIl Filter 1',
+    'Oil Filter 2',
+    'Fuel Filter 1',
+    'Fuel Filter 2',
+    'Water Filter 1',
+    'Water Filter 2',
+    'Hydraulic Filter',
+    'Coolant Filter',
+    'Water Separator',
+    'Canister Filter',
+];
+
+// --- Ensure all default filters exist for all equipments ---
+$equipments = [];
+$sql = "SELECT equipment_id FROM equipments ORDER BY equipment_id ASC";
+$res = $conn->query($sql);
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
+        $equipments[] = $row['equipment_id'];
+    }
+}
+foreach ($equipments as $eid) {
+    foreach ($defaultFilters as $fname) {
+        $stmt = $conn->prepare('SELECT COUNT(*) as cnt FROM filter_info WHERE equipment_id = ? AND filter_name = ?');
+        $stmt->bind_param('is', $eid, $fname);
+        $stmt->execute();
+        $r = $stmt->get_result();
+        $exists = $r && ($row = $r->fetch_assoc()) && $row['cnt'] > 0;
+        $stmt->close();
+        if (!$exists) {
+            $stmt = $conn->prepare('INSERT INTO filter_info (equipment_id, filter_name) VALUES (?, ?)');
+            $stmt->bind_param('is', $eid, $fname);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
