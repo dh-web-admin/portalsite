@@ -25,23 +25,13 @@ while ($row = $res->fetch_assoc()) {
     if (isset($row['file_url'])) {
         $url = str_replace('\\', '/', $row['file_url']);
         $url = ltrim($url, '/');
-        // Normalize for production
-        if ($isProduction) {
-            if (strpos($url, 'uploads/equipment/') === 0) {
-                $row['file_url'] = '/' . $url;
-            } else {
-                $row['file_url'] = '/uploads/equipment/' . $url;
-            }
-        } else {
-            // Local: always prefix with /PortalSite/
-            if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
-                $row['file_url'] = '/' . $url;
-            } else if (strpos($url, 'uploads/equipment/') === 0) {
-                $row['file_url'] = '/PortalSite/' . $url;
-            } else {
-                $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
-            }
+        // Remove any leading PortalSite/uploads/equipment/ or uploads/equipment/
+        if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
+            $url = substr($url, strlen('PortalSite/uploads/equipment/'));
+        } elseif (strpos($url, 'uploads/equipment/') === 0) {
+            $url = substr($url, strlen('uploads/equipment/'));
         }
+        $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
     }
     if (isset($uploads[$f])) $uploads[$f][] = $row;
 }
