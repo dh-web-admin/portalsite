@@ -375,9 +375,16 @@ if (isset($_GET['preview_role'])) {
 									$sql = "SELECT e.equipment_id AS main_equipment_id, e.dhcst_equipment_number, e.dhss_equipment_number, e.make, d.* FROM equipments e LEFT JOIN dimensions d ON e.equipment_id = d.equipment_id ORDER BY e.equipment_id DESC";
 									$result = $conn->query($sql);
 									if ($result && $result->num_rows > 0) {
+										$tempId = 1;
 										while ($row = $result->fetch_assoc()) {
-											$equipment_id = isset($row['main_equipment_id']) ? (int)$row['main_equipment_id'] : 0;
-											echo '<tr data-equipment-id="' . $equipment_id . '" data-debug-eid="' . htmlspecialchars($row['main_equipment_id']) . '" data-photo="' . htmlspecialchars($row['photos'] ?? '') . '">';
+											$equipment_id = isset($row['main_equipment_id']) && $row['main_equipment_id'] ? htmlspecialchars($row['main_equipment_id']) : '';
+											$rowDisabled = false;
+											if (!$equipment_id || $equipment_id === '0') {
+												// Fallback: assign a unique temp id, but mark row as disabled
+												$equipment_id = 'temp_' . $tempId++;
+												$rowDisabled = true;
+											}
+											echo '<tr data-equipment-id="' . $equipment_id . '" data-debug-eid="' . $equipment_id . '" data-photo="' . htmlspecialchars($row['photos'] ?? '') . '"' . ($rowDisabled ? ' class="disabled-row" style="opacity:0.5;pointer-events:none;"' : '') . '>';
 											echo '<td>' . htmlspecialchars($row['dhcst_equipment_number'] ?? '') . '</td>';
 											echo '<td>' . htmlspecialchars($row['dhss_equipment_number'] ?? '') . '</td>';
 											echo '<td>' . htmlspecialchars($row['make'] ?? '') . '</td>';
@@ -437,6 +444,11 @@ if (isset($_GET['preview_role'])) {
 						var selectedRow = null;
 						var selectedEquipmentId = null;
 						var selectedFiles = [];
+
+						function isValidEquipmentId(eid) {
+							// Accept only non-empty, non-zero, non-temp ids
+							return eid && eid !== '0' && !/^temp_/.test(eid);
+						}
 
 						function normalizeImageUrl(url) {
 							url = url.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '/');
@@ -534,30 +546,34 @@ if (isset($_GET['preview_role'])) {
 
 						tableBody.addEventListener('click', function(e) {
 							var tr = e.target.closest('tr');
-							if (!tr) return;
+							if (!tr || tr.classList.contains('disabled-row')) return;
 							if (selectedRow) selectedRow.classList.remove('selected');
 							tr.classList.add('selected');
 							selectedRow = tr;
 							var equipmentId = tr.getAttribute('data-equipment-id');
-							if (equipmentId && parseInt(equipmentId) > 0) {
+							if (isValidEquipmentId(equipmentId)) {
 								selectedEquipmentId = equipmentId;
 								addImageBtn.disabled = false;
 								addImageBtn.style.opacity = 1;
 								addImageBtn.style.cursor = 'pointer';
+								addImageBtn.style.display = '';
+								addImageBtn.classList.remove('hidden');
 								fetchAndShowImages(equipmentId);
 							} else {
 								selectedEquipmentId = null;
 								addImageBtn.disabled = true;
 								addImageBtn.style.opacity = 0.5;
 								addImageBtn.style.cursor = 'not-allowed';
+								addImageBtn.style.display = '';
+								addImageBtn.classList.remove('hidden');
 								imageList.innerHTML = '<span class="no-image">No valid equipment ID</span>';
 								clearSelectedPreviews();
 							}
 						});
 
 						addImageBtn.addEventListener('click', function() {
-							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
-								alert('Please select an equipment row first.');
+							if (!isValidEquipmentId(selectedEquipmentId)) {
+								alert('Please select a valid equipment row first.');
 								return;
 							}
 							imageInput.value = '';
@@ -565,8 +581,8 @@ if (isset($_GET['preview_role'])) {
 						});
 
 						imageInput.addEventListener('change', function(e) {
-							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
-								alert('Please select an equipment row first.');
+							if (!isValidEquipmentId(selectedEquipmentId)) {
+								alert('Please select a valid equipment row first.');
 								imageInput.value = '';
 								return;
 							}
@@ -581,8 +597,8 @@ if (isset($_GET['preview_role'])) {
 
 						uploadImagesBtn.addEventListener('click', function(e) {
 							e.preventDefault();
-							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
-								alert('Please select an equipment row from the table first.');
+							if (!isValidEquipmentId(selectedEquipmentId)) {
+								alert('Please select a valid equipment row from the table first.');
 								return;
 							}
 							if (!selectedFiles || selectedFiles.length === 0) {
@@ -620,16 +636,19 @@ if (isset($_GET['preview_role'])) {
 									countMsg.style.color = '#dc2626';
 								}
 								imageInput.value = '';
-								setTimeout(function(){ location.reload(); }, 1200);
+								setTimeout(function(){
+									fetchAndShowImages(selectedEquipmentId);
+									clearSelectedPreviews();
+									addImageBtn.disabled = false;
+									addImageBtn.style.opacity = 1;
+									addImageBtn.style.cursor = 'pointer';
+								}, 1200);
 							}).catch(function(err){
 								imageInput.value = '';
 								countMsg.textContent = 'Upload failed: ' + (err && err.message ? err.message : 'Network error');
 								countMsg.style.color = '#dc2626';
 							});
 						});
-					});
-						});
-						// --- End Improved Logic ---
 					});
 					</script>
 					
