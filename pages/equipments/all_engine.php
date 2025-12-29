@@ -176,6 +176,22 @@ if (isset($_GET['preview_role'])) {
     color: #3b4cca !important;
     stroke: #3b4cca !important;
 }
+    .edit-engine-btn {
+        display: none;
+        background: #9ca3af;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(156, 163, 175, 0.15);
+        transition: background 0.15s, transform 0.1s;
+        margin: 0 auto;
+    }
+    .edit-engine-btn:hover { background: #6b7280; transform: translateY(-1px); }
+    .engine-table tbody tr:hover .edit-engine-btn { display: inline-block; }
     </style>
 </head>
 <body class="admin-page">
@@ -229,6 +245,7 @@ if (isset($_GET['preview_role'])) {
                                     <th>Front Diff Serial</th>
                                     <th>Middle Diff Serial</th>
                                     <th>Rear Diff Serial</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -253,6 +270,21 @@ if (isset($_GET['preview_role'])) {
                                         echo '<td>' . htmlspecialchars($row['front_differential_serial'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['middle_differential_serial'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['rear_differential_serial'] ?? '') . '</td>';
+                                        // Actions column with edit button
+                                        echo '<td>';
+                                        echo '<button class="edit-engine-btn" '
+                                            . 'data-equipment_id="' . htmlspecialchars($row['equipment_id'] ?? '') . '" '
+                                            . 'data-dhcst="' . htmlspecialchars($row['dhcst_equipment_number'] ?? '') . '" '
+                                            . 'data-dhss="' . htmlspecialchars($row['dhss_equipment_number'] ?? '') . '" '
+                                            . 'data-engine="' . htmlspecialchars($row['engine'] ?? '') . '" '
+                                            . 'data-engine_serial_number="' . htmlspecialchars($row['engine_serial_number'] ?? '') . '" '
+                                            . 'data-transmission="' . htmlspecialchars($row['transmission'] ?? '') . '" '
+                                            . 'data-trans_serial_number="' . htmlspecialchars($row['trans_serial_number'] ?? '') . '" '
+                                            . 'data-transfer_case_serial="' . htmlspecialchars($row['transfer_case_serial'] ?? '') . '" '
+                                            . 'data-front_diff="' . htmlspecialchars($row['front_differential_serial'] ?? '') . '" '
+                                            . 'data-middle_diff="' . htmlspecialchars($row['middle_differential_serial'] ?? '') . '" '
+                                            . 'data-rear_diff="' . htmlspecialchars($row['rear_differential_serial'] ?? '') . '">Edit</button>';
+                                        echo '</td>';
                                         echo '</tr>';
                                     }
                                 } else {
@@ -264,6 +296,53 @@ if (isset($_GET['preview_role'])) {
                     </div>
                 </div>
             </main>
+        </div>
+    </div>
+    <!-- Edit Engine Modal -->
+    <div id="editEngineModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:10000; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.2); padding:24px 20px; min-width:360px; max-width:96vw;">
+            <h3 style="margin-bottom:12px; font-size:1.2rem; font-weight:700; color:#374151;">Edit Engine Info</h3>
+            <form id="editEngineForm">
+                <input type="hidden" name="equipment_id" id="edit_engine_equipment_id">
+                <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Engine</label>
+                        <input type="text" id="edit_engine_engine" name="engine" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Engine Serial #</label>
+                        <input type="text" id="edit_engine_serial" name="engine_serial_number" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Transmission</label>
+                        <input type="text" id="edit_transmission" name="transmission" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Trans Serial #</label>
+                        <input type="text" id="edit_trans_serial" name="trans_serial_number" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Transfer Case Serial</label>
+                        <input type="text" id="edit_transfer_case" name="transfer_case_serial" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Front Differential Serial</label>
+                        <input type="text" id="edit_front_diff" name="front_differential_serial" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Middle Differential Serial</label>
+                        <input type="text" id="edit_middle_diff" name="middle_differential_serial" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                    <div>
+                        <label style="font-weight:600;color:#374151;display:block;margin-bottom:4px;">Rear Differential Serial</label>
+                        <input type="text" id="edit_rear_diff" name="rear_differential_serial" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+                    </div>
+                </div>
+                <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:12px;">
+                    <button type="button" id="cancelEditEngineBtn" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:8px 16px;font-size:14px;cursor:pointer;">Cancel</button>
+                    <button type="submit" style="background:#43b77a;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:14px;cursor:pointer;">Save</button>
+                </div>
+            </form>
         </div>
     </div>
     <script>
@@ -318,6 +397,51 @@ if (isset($_GET['preview_role'])) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    });
+    // Edit Engine button logic
+    document.querySelectorAll('.edit-engine-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            document.getElementById('edit_engine_equipment_id').value = btn.getAttribute('data-equipment_id') || '';
+            document.getElementById('edit_engine_engine').value = btn.getAttribute('data-engine') || '';
+            document.getElementById('edit_engine_serial').value = btn.getAttribute('data-engine_serial_number') || '';
+            document.getElementById('edit_transmission').value = btn.getAttribute('data-transmission') || '';
+            document.getElementById('edit_trans_serial').value = btn.getAttribute('data-trans_serial_number') || '';
+            document.getElementById('edit_transfer_case').value = btn.getAttribute('data-transfer_case_serial') || '';
+            document.getElementById('edit_front_diff').value = btn.getAttribute('data-front_diff') || '';
+            document.getElementById('edit_middle_diff').value = btn.getAttribute('data-middle_diff') || '';
+            document.getElementById('edit_rear_diff').value = btn.getAttribute('data-rear_diff') || '';
+            document.getElementById('editEngineModal').style.display = 'flex';
+        });
+    });
+
+    document.getElementById('cancelEditEngineBtn').addEventListener('click', function(){
+        document.getElementById('editEngineModal').style.display = 'none';
+        document.getElementById('editEngineForm').reset();
+    });
+
+    document.getElementById('editEngineModal').addEventListener('click', function(e){
+        if (e.target === this) {
+            document.getElementById('editEngineModal').style.display = 'none';
+            document.getElementById('editEngineForm').reset();
+        }
+    });
+
+    document.getElementById('editEngineForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        var fd = new FormData(this);
+        fetch('../../api/update_equipment.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+        .then(function(res){
+            if (!res.ok || !res.json || !res.json.success) {
+                alert('Failed to update equipment');
+                return;
+            }
+            alert('Equipment updated');
+            document.getElementById('editEngineModal').style.display = 'none';
+            document.getElementById('editEngineForm').reset();
+            window.location.reload();
+        })
+        .catch(function(){ alert('Network error while updating'); });
     });
     document.getElementById('printTableBtn').addEventListener('click', function() {
         var table = document.querySelector('.engine-table-area');
