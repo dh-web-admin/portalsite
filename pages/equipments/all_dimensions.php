@@ -5,6 +5,40 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 	exit();
 }
 require_once __DIR__ . '/../../config/config.php';
+$dimensionUploads = [];
+if (isset($uploads['dimension'])) {
+	foreach ($uploads['dimension'] as $row) {
+		$fileUrl = $row['file_url'] ?? '';
+		$fileUrl = str_replace('\\', '/', $fileUrl);
+		$fileUrl = ltrim($fileUrl, '/');
+		$isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+		if ($isProduction) {
+			if (strpos($fileUrl, 'PortalSite/uploads/equipment/') === 0 || strpos($fileUrl, 'uploads/equipment/') === 0) {
+				$fileUrl = '/' . $fileUrl;
+			} else {
+				$fileUrl = '/uploads/equipment/' . $fileUrl;
+			}
+		} else {
+			if (strpos($fileUrl, 'PortalSite/uploads/equipment/') === 0) {
+				$fileUrl = '/' . $fileUrl;
+			} elseif (strpos($fileUrl, 'uploads/equipment/') === 0) {
+				$fileUrl = '/PortalSite/' . $fileUrl;
+			} else {
+				$fileUrl = '/PortalSite/uploads/equipment/' . $fileUrl;
+			}
+		}
+		$fileUrl = preg_replace('#/+#', '/', $fileUrl);
+		$ext = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
+		$isImage = in_array($ext, ['jpg','jpeg','png','gif','bmp','webp','svg']);
+		$dimensionUploads[] = [
+			'url' => $fileUrl,
+			'name' => basename($fileUrl),
+			'isImage' => $isImage,
+			'uploaded_at' => $row['uploaded_at'] ?? '',
+			'id' => $row['id'] ?? ''
+		];
+	}
+}
 ?>
 <style>
 	.dimension-table-area {
