@@ -330,6 +330,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var success = results.filter(r => r && r.success).length;
             var fail = results.length - success;
             var msgBox = document.getElementById('uploadStatusMsg');
+            // Always clear file input after upload
+            fileInput.value = '';
             if (msgBox) {
                 msgBox.style.display = 'block';
                 if (success > 0 && fail === 0) {
@@ -345,6 +347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             setTimeout(function(){ location.reload(); }, 1200);
         }).catch(function(err){
+            fileInput.value = '';
             var msgBox = document.getElementById('uploadStatusMsg');
             if (msgBox) {
                 msgBox.style.display = 'block';

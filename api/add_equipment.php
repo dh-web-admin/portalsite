@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$equipment_number = isset($_POST['equipment_number']) ? trim($_POST['equipment_number']) : '';
+$dhss_equipment_number = isset($_POST['dhss_equipment_number']) ? trim($_POST['dhss_equipment_number']) : '';
 $type = isset($_POST['type']) ? trim($_POST['type']) : '';
 $operating_condition = isset($_POST['operating_condition']) ? trim($_POST['operating_condition']) : '';
 $location = isset($_POST['location']) ? trim($_POST['location']) : '';
@@ -78,9 +78,9 @@ $air_filters = '';
 $warranty = '';
 $tires = '';
 
-if ($equipment_number === '' || $type === '') {
+if ($dhss_equipment_number === '' || $type === '') {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Equipment number and type are required']);
+    echo json_encode(['success' => false, 'message' => 'DHSS Equipment number and type are required']);
     exit();
 }
 
@@ -107,7 +107,8 @@ if ($warranty !== '') {
 }
 
 
-$stmt = $conn->prepare('INSERT INTO equipments (equipment_number, type, operating_condition, location, current_hours, oil_status) VALUES (?, ?, ?, ?, ?, ?)');
+
+$stmt = $conn->prepare('INSERT INTO equipments (dhss_equipment_number, type, operating_condition, location, current_hours, oil_status) VALUES (?, ?, ?, ?, ?, ?)');
 if (!$stmt) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database prepare failed']);
@@ -115,7 +116,7 @@ if (!$stmt) {
 }
 $stmt->bind_param(
     'ssssds',
-    $equipment_number,
+    $dhss_equipment_number,
     $type,
     $operating_condition,
     $location,
@@ -128,7 +129,7 @@ if (!$ok) {
     $stmt->close();
     if (stripos($err, 'Duplicate') !== false) {
         http_response_code(409);
-        echo json_encode(['success' => false, 'message' => 'Equipment number already exists']);
+        echo json_encode(['success' => false, 'message' => 'DHSS Equipment number already exists']);
         exit();
     }
     http_response_code(500);

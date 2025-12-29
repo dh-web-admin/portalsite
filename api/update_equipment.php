@@ -18,7 +18,7 @@ if ($equipmentId <= 0) {
 }
 
 $fields = [
-    'equipment_number',
+    'dhss_equipment_number',
     'type',
     'operating_condition',
     'location',
@@ -36,8 +36,7 @@ $fields = [
     'front_differential_serial',
     'middle_differential_serial',
     'rear_differential_serial',
-    'dhcst_equipment_number',
-    'dhss_equipment_number'
+    'dhcst_equipment_number'
 ];
 $set = [];
 $params = [];

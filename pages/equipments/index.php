@@ -33,9 +33,9 @@ $equipments = [];
 $equipmentsError = null;
 
 
-$sql = "SELECT equipment_id, equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires,
+$sql = "SELECT equipment_id, dhss_equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters, warranty, tires,
 	vin, vehicle_year, make, model, engine, engine_serial_number, transmission, trans_serial_number, transfer_case_serial,
-	front_differential_serial, middle_differential_serial, rear_differential_serial, dhcst_equipment_number, dhss_equipment_number
+	front_differential_serial, middle_differential_serial, rear_differential_serial, dhcst_equipment_number
 	FROM equipments
 	ORDER BY equipment_id ASC";
 
@@ -442,7 +442,7 @@ function eq_format_warranty($dateValue) {
 														$airState = eq_normalize_status($eq['air_filters'] ?? '');
 														$tiresState = eq_normalize_status($eq['tires'] ?? '');
 														$warranty = eq_format_warranty($eq['warranty'] ?? null);
-														$eqNumSort = strtolower(trim((string)($eq['equipment_number'] ?? '')));
+														$eqNumSort = strtolower(trim((string)($eq['dhss_equipment_number'] ?? '')));
 														$hoursSort = is_numeric($eq['current_hours'] ?? null) ? (float)$eq['current_hours'] : 0.0;
 													?>
 													<?php
@@ -455,38 +455,38 @@ function eq_format_warranty($dateValue) {
 														elseif ($val === 'red') $rowColor = 'equipment-row--red';
 														$rowFontRed = ($isRedEngine || $isRedOil) ? ' equipment-row--font-red' : '';
 													?>
-													   <tr
-														   class="<?php echo $rowColor . $rowFontRed; ?>"
-														   data-equipment-id="<?php echo (int)$eq['equipment_id']; ?>"
-														   data-equipment-number="<?php echo htmlspecialchars($eq['equipment_number'] ?? ''); ?>"
-														   data-type="<?php echo htmlspecialchars($eq['type'] ?? ''); ?>"
-														   data-operating-condition="<?php echo htmlspecialchars($eq['operating_condition'] ?? ''); ?>"
-														   data-location="<?php echo htmlspecialchars($eq['location'] ?? ''); ?>"
-														   data-current-hours="<?php echo htmlspecialchars($eq['current_hours'] ?? '0'); ?>"
-														   data-oil-status="<?php echo htmlspecialchars($eq['oil_status'] ?? ''); ?>"
-														   data-vin="<?php echo htmlspecialchars($eq['vin'] ?? ''); ?>"
-														   data-vehicle-year="<?php echo htmlspecialchars($eq['vehicle_year'] ?? ''); ?>"
-														   data-make="<?php echo htmlspecialchars($eq['make'] ?? ''); ?>"
-														   data-model="<?php echo htmlspecialchars($eq['model'] ?? ''); ?>"
-														   data-engine="<?php echo htmlspecialchars($eq['engine'] ?? ''); ?>"
-														   data-engine-serial-number="<?php echo htmlspecialchars($eq['engine_serial_number'] ?? ''); ?>"
-														   data-transmission="<?php echo htmlspecialchars($eq['transmission'] ?? ''); ?>"
-														   data-trans-serial-number="<?php echo htmlspecialchars($eq['trans_serial_number'] ?? ''); ?>"
-														   data-transfer-case-serial="<?php echo htmlspecialchars($eq['transfer_case_serial'] ?? ''); ?>"
-														   data-front-differential-serial="<?php echo htmlspecialchars($eq['front_differential_serial'] ?? ''); ?>"
-														   data-middle-differential-serial="<?php echo htmlspecialchars($eq['middle_differential_serial'] ?? ''); ?>"
-														   data-rear-differential-serial="<?php echo htmlspecialchars($eq['rear_differential_serial'] ?? ''); ?>"
-														   data-dhcst-equipment-number="<?php echo htmlspecialchars($eq['dhcst_equipment_number'] ?? ''); ?>"
-														   data-dhss-equipment-number="<?php echo htmlspecialchars($eq['dhss_equipment_number'] ?? ''); ?>"
-														   data-original-index="<?php echo (int)$eqIndex; ?>"
-														   data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
-														   data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
-														   data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
-														   data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
-													   >
+													<tr
+													   class="<?php echo $rowColor . $rowFontRed; ?>"
+													   data-equipment-id="<?php echo (int)$eq['equipment_id']; ?>"
+													   data-equipment-number="<?php echo htmlspecialchars($eq['dhss_equipment_number'] ?? ''); ?>"
+													   data-type="<?php echo htmlspecialchars($eq['type'] ?? ''); ?>"
+													   data-operating-condition="<?php echo htmlspecialchars($eq['operating_condition'] ?? ''); ?>"
+													   data-location="<?php echo htmlspecialchars($eq['location'] ?? ''); ?>"
+													   data-current-hours="<?php echo htmlspecialchars($eq['current_hours'] ?? '0'); ?>"
+													   data-oil-status="<?php echo htmlspecialchars($eq['oil_status'] ?? ''); ?>"
+													   data-vin="<?php echo htmlspecialchars($eq['vin'] ?? ''); ?>"
+													   data-vehicle-year="<?php echo htmlspecialchars($eq['vehicle_year'] ?? ''); ?>"
+													   data-make="<?php echo htmlspecialchars($eq['make'] ?? ''); ?>"
+													   data-model="<?php echo htmlspecialchars($eq['model'] ?? ''); ?>"
+													   data-engine="<?php echo htmlspecialchars($eq['engine'] ?? ''); ?>"
+													   data-engine-serial-number="<?php echo htmlspecialchars($eq['engine_serial_number'] ?? ''); ?>"
+													   data-transmission="<?php echo htmlspecialchars($eq['transmission'] ?? ''); ?>"
+													   data-trans-serial-number="<?php echo htmlspecialchars($eq['trans_serial_number'] ?? ''); ?>"
+													   data-transfer-case-serial="<?php echo htmlspecialchars($eq['transfer_case_serial'] ?? ''); ?>"
+													   data-front-differential-serial="<?php echo htmlspecialchars($eq['front_differential_serial'] ?? ''); ?>"
+													   data-middle-differential-serial="<?php echo htmlspecialchars($eq['middle_differential_serial'] ?? ''); ?>"
+													   data-rear-differential-serial="<?php echo htmlspecialchars($eq['rear_differential_serial'] ?? ''); ?>"
+													   data-dhcst-equipment-number="<?php echo htmlspecialchars($eq['dhcst_equipment_number'] ?? ''); ?>"
+													   data-dhss-equipment-number="<?php echo htmlspecialchars($eq['dhss_equipment_number'] ?? ''); ?>"
+													   data-original-index="<?php echo (int)$eqIndex; ?>"
+													   data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
+													   data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
+													   data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
+													   data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
+													>
 														<td>
 															<div class="equipment-number-cell">
-																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>"><?php echo htmlspecialchars((string)($eq['equipment_number'] ?? '')); ?></a>
+																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>"><?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?></a>
 																<span class="equipment-edit-icon" title="Edit equipment">Edit</span>
 															</div>
 														</td>
@@ -607,8 +607,8 @@ function eq_format_warranty($dateValue) {
 			<form id="newEquipmentForm" class="equipment-form" enctype="multipart/form-data">
 				<div class="equipment-form__grid">
 					<div class="equipment-form__field">
-						<label for="eq_equipment_number">Equipment #</label>
-						<input id="eq_equipment_number" name="equipment_number" type="text" required />
+						<label for="eq_dhss_equipment_number">Equipment # (DHSS)</label>
+						<input id="eq_dhss_equipment_number" name="dhss_equipment_number" type="text" required />
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_type">Type</label>
@@ -774,8 +774,8 @@ function eq_format_warranty($dateValue) {
 				   ?>
 				   <div class="equipment-form__grid">
 					   <div class="equipment-form__field">
-						   <label for="edit_equipment_number">Equipment #</label>
-						   <input id="edit_equipment_number" name="equipment_number" type="text" required />
+						<label for="edit_dhss_equipment_number">Equipment # (DHSS)</label>
+						<input id="edit_dhss_equipment_number" name="dhss_equipment_number" type="text" required />
 					   </div>
 					   <div class="equipment-form__field">
 						   <label for="edit_type">Type</label>
@@ -1441,33 +1441,7 @@ function eq_format_warranty($dateValue) {
 	</script>
 	<script src="../../assets/js/mobile-menu.js"></script>
 	<script>
-	// Sync DHSS Equipment # with Equipment # in Add and Edit modals
-	document.addEventListener('DOMContentLoaded', function() {
-		// Add modal
-		var eqNum = document.getElementById('eq_equipment_number');
-		var dhssNum = document.getElementById('eq_dhss_equipment_number');
-		if (eqNum && dhssNum) {
-			eqNum.addEventListener('input', function() {
-				dhssNum.value = eqNum.value;
-			});
-			// On modal open, also sync
-			eqNum.addEventListener('change', function() {
-				dhssNum.value = eqNum.value;
-			});
-		}
-		// Edit modal
-		var editEqNum = document.getElementById('edit_equipment_number');
-		var editDhssNum = document.getElementById('edit_dhss_equipment_number');
-		if (editEqNum && editDhssNum) {
-			editEqNum.addEventListener('input', function() {
-				editDhssNum.value = editEqNum.value;
-			});
-			// On modal open, also sync
-			editEqNum.addEventListener('change', function() {
-				editDhssNum.value = editEqNum.value;
-			});
-		}
-	});
+
 	</script>
 </body>
 </html>

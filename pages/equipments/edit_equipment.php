@@ -70,10 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="edit-form">
         <h2>Edit Equipment</h2>
         <form method="POST">
-            <label>DHCST Equipment number</label>
-            <input type="text" name="dhcst_equipment_number" value="<?php echo htmlspecialchars($equipment['dhcst_equipment_number'] ?? ''); ?>" />
             <label>DHSS Equipment number</label>
             <input type="text" name="dhss_equipment_number" value="<?php echo htmlspecialchars($equipment['dhss_equipment_number'] ?? ''); ?>" />
+            <label>DHCST Equipment number</label>
+            <input type="text" name="dhcst_equipment_number" value="<?php echo htmlspecialchars($equipment['dhcst_equipment_number'] ?? ''); ?>" />
             <label>Type</label>
             <input type="text" name="type" value="<?php echo htmlspecialchars($equipment['type'] ?? ''); ?>" />
             <label>Make</label>

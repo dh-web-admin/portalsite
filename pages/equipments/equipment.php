@@ -109,7 +109,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Equipment Details - <?php echo htmlspecialchars($equipment['dhcst_equipment_number'] ?? 'N/A'); ?></title>
+    <title>Equipment Details - <?php echo htmlspecialchars($equipment['dhss_equipment_number'] ?? 'N/A'); ?></title>
     <link rel="stylesheet" href="../../assets/css/base.css" />
     <link rel="stylesheet" href="../../assets/css/admin-layout.css" />
     <link rel="stylesheet" href="../../assets/css/dashboard.css" />

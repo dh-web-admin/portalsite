@@ -298,7 +298,10 @@ if (isset($_GET['preview_role'])) {
 								<span class="no-image">No image selected</span>
 							</div>
 							<input type="file" id="dimensionImageInput" accept="image/*" multiple style="display:none;" />
-							<button id="addImageBtn" disabled style="opacity:0.5;cursor:not-allowed;">Add Image</button>
+							<div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:8px;">
+								<button id="addImageBtn" disabled style="opacity:0.5;cursor:not-allowed;">Add Image</button>
+								<button id="uploadImagesBtn" style="display:none;">Upload Selected</button>
+							</div>
 						</div>
 					</div>
 						<script>
@@ -306,10 +309,14 @@ if (isset($_GET['preview_role'])) {
 						document.addEventListener('DOMContentLoaded', function() {
 							var tableBody = document.getElementById('dimensionTableBody');
 							var imageList = document.getElementById('dimensionImageList');
+
 							var addImageBtn = document.getElementById('addImageBtn');
+							var uploadImagesBtn = document.getElementById('uploadImagesBtn');
 							var imageInput = document.getElementById('dimensionImageInput');
 							var selectedRow = null;
 							var selectedEquipmentId = null;
+							var selectedFiles = [];
+
 
 							function fetchAndShowImages(equipmentId) {
 								imageList.innerHTML = '<span class="no-image">Loading...</span>';
@@ -346,11 +353,45 @@ if (isset($_GET['preview_role'])) {
 											imageList.innerHTML = '';
 											imageList.appendChild(msg);
 										}
+										// Always clear preview and hide upload button after refresh
+										clearSelectedPreviews();
 									})
 									.catch((err) => {
 										countMsg.textContent = '';
 										imageList.innerHTML = '<span class="no-image">No image available (fetch error)</span>';
 									});
+							}
+
+							function showSelectedPreviews(files) {
+								clearSelectedPreviews();
+								if (!files || files.length === 0) return;
+								var previewDiv = document.createElement('div');
+								previewDiv.id = 'dimensionImagePreviewList';
+								previewDiv.style.display = 'flex';
+								previewDiv.style.flexWrap = 'wrap';
+								previewDiv.style.gap = '8px';
+								Array.from(files).forEach(function(file) {
+									var reader = new FileReader();
+									var img = document.createElement('img');
+									img.style.maxWidth = '90px';
+									img.style.maxHeight = '90px';
+									img.style.border = '1px solid #ccc';
+									img.style.borderRadius = '6px';
+									img.style.objectFit = 'cover';
+									reader.onload = function(e) {
+										img.src = e.target.result;
+									};
+									reader.readAsDataURL(file);
+									previewDiv.appendChild(img);
+								});
+								imageList.insertBefore(previewDiv, imageList.firstChild);
+							}
+
+							function clearSelectedPreviews() {
+								var previewDiv = document.getElementById('dimensionImagePreviewList');
+								if (previewDiv) previewDiv.remove();
+								selectedFiles = [];
+								uploadImagesBtn.style.display = 'none';
 							}
 
 							// Always show image panel, even if no row is selected
@@ -381,6 +422,7 @@ if (isset($_GET['preview_role'])) {
 								}
 							});
 
+
 							addImageBtn.addEventListener('click', function() {
 								if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
 									return;
@@ -389,13 +431,22 @@ if (isset($_GET['preview_role'])) {
 								imageInput.click();
 							});
 
+
 							imageInput.addEventListener('change', function() {
 								if (!selectedEquipmentId || !imageInput.files.length) return;
-								var files = Array.from(imageInput.files);
-								var uploads = files.map(function(file) {
+								selectedFiles = Array.from(imageInput.files);
+								showSelectedPreviews(selectedFiles);
+								uploadImagesBtn.style.display = 'inline-block';
+							});
+
+							uploadImagesBtn.addEventListener('click', function() {
+								if (!selectedEquipmentId || !selectedFiles.length) return;
+								uploadImagesBtn.disabled = true;
+								addImageBtn.disabled = true;
+								addImageBtn.style.opacity = 0.5;
+								var uploads = selectedFiles.map(function(file) {
 									var formData = new FormData();
 									formData.append('equipment_id', selectedEquipmentId);
-									// field is always 'dimension' in backend now
 									formData.append('file', file);
 									return fetch('/PortalSite/api/add_equipment_upload.php', {
 										method: 'POST',
@@ -403,7 +454,6 @@ if (isset($_GET['preview_role'])) {
 									}).then(res => res.json());
 								});
 								Promise.all(uploads).then(function(results) {
-									// Show feedback for each upload
 									var msg = '';
 									var successCount = 0;
 									var errorCount = 0;
@@ -420,6 +470,9 @@ if (isset($_GET['preview_role'])) {
 									var countMsg = document.getElementById('dimensionImageCountMsg');
 									countMsg.textContent = msg;
 									fetchAndShowImages(selectedEquipmentId);
+									uploadImagesBtn.disabled = false;
+									addImageBtn.disabled = false;
+									addImageBtn.style.opacity = 1;
 								});
 							});
 						});
