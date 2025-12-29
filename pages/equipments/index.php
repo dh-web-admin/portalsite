@@ -844,10 +844,7 @@ function eq_format_warranty($dateValue) {
 							   <label for="edit_dhcst_equipment_number">DHCST Equipment #</label>
 							   <input id="edit_dhcst_equipment_number" name="dhcst_equipment_number" type="text" />
 						   </div>
-						   <div class="equipment-form__field">
-							   <label for="edit_dhss_equipment_number">DHSS Equipment #</label>
-							   <input id="edit_dhss_equipment_number" name="dhss_equipment_number" type="text" readonly style="background:#f3f4f6;" />
-						   </div>
+						   <!-- DHSS Equipment # field is shown above; avoid duplicate input here -->
 						   <div class="equipment-form__field">
 							   <label for="edit_vin">VIN Number</label>
 							   <input id="edit_vin" name="vin" type="text" />
