@@ -601,9 +601,9 @@ if (isset($_GET['preview_role'])) {
 				// Upload each file
 				var uploads = selectedFiles.map(function(file) {
 					var formData = new FormData();
-					formData.append('equipment_id', selectedEquipmentId);
-					formData.append('file', file);
-					formData.append('category', 'dimension');
+					   formData.append('equipment_id', selectedEquipmentId);
+					   formData.append('file', file);
+					   formData.append('field', 'dimension');
 					return fetch('/PortalSite/api/add_equipment_upload.php', {
 						method: 'POST',
 						body: formData
