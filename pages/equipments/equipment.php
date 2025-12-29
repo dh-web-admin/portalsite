@@ -1023,8 +1023,10 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                             <input id="edit_parts_fixed" name="parts_fixed" type="text" />
                                         </div>
                                         <div class="equipment-form__field">
-                                            <label for="edit_pictures">Pictures</label>
-                                            <input id="edit_pictures" name="pictures" type="text" />
+                                            <label for="edit_pictures_input">Pictures</label>
+                                            <input id="edit_pictures_input" name="pictures_files[]" type="file" accept="image/*" multiple />
+                                            <input type="hidden" id="edit_existing_pictures" name="existing_pictures" value="" />
+                                            <div id="edit_pictures_preview" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"></div>
                                         </div>
                                     </div>
                                     <div class="equipment-form__actions" style="margin-top:18px; justify-content: space-between;">
@@ -1222,7 +1224,34 @@ function openEditIssueModal(rowData) {
         document.getElementById('edit_date_repaired').value = formatDateTimeLocal(rowData.date_repaired);
         document.getElementById('edit_repair_mechanic').value = rowData.repair_mechanic || '';
         document.getElementById('edit_parts_fixed').value = rowData.parts_fixed || '';
-        document.getElementById('edit_pictures').value = rowData.pictures || '';
+        // Populate existing pictures list (store raw value and render thumbnails/links)
+        document.getElementById('edit_existing_pictures').value = rowData.pictures || '';
+        const previewDiv = document.getElementById('edit_pictures_preview');
+        if (previewDiv) {
+            previewDiv.innerHTML = '';
+            const pics = (rowData.pictures || '').toString();
+            if (pics.trim() !== '') {
+                // Assume comma-separated URLs
+                pics.split(',').map(s=>s.trim()).filter(Boolean).forEach(function(url){
+                    try {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.target = '_blank';
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.style.width = '80px';
+                        img.style.height = '60px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '6px';
+                        img.alt = 'pic';
+                        a.appendChild(img);
+                        previewDiv.appendChild(a);
+                    } catch (e) {
+                        // ignore invalid urls
+                    }
+                });
+            }
+        }
         
         // Ensure top fields are disabled/readonly
         document.getElementById('edit_date_reported').readOnly = true;
@@ -1512,15 +1541,44 @@ if (editIssueForm) {
             updateFd.append('date_repaired', document.getElementById('edit_date_repaired').value || '');
             updateFd.append('repair_mechanic', document.getElementById('edit_repair_mechanic').value || '');
             updateFd.append('parts_fixed', document.getElementById('edit_parts_fixed').value || '');
-            updateFd.append('pictures', document.getElementById('edit_pictures').value || '');
-            
+
+            // First, update the issue record
             fetch('../../api/update_equipment_issue.php', { method: 'POST', body: updateFd, credentials: 'same-origin' })
                 .then(r => r.json())
-                .then(res => {
+                .then(async res => {
                     if (!res.success) {
                         if (editIssueError) { editIssueError.textContent = res.message || 'Failed to update issue.'; editIssueError.style.display = 'block'; }
                         return;
                     }
+
+                    // After update, check for selected files to upload
+                    const fileInput = document.getElementById('edit_pictures_input');
+                    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                        const files = Array.from(fileInput.files);
+                        const fdUpload = new FormData();
+                        fdUpload.append('equipment_id', document.getElementById('edit_equipment_id').value || '');
+                        fdUpload.append('field', 'issue');
+                        // append as files[] so server handles multiple
+                        files.forEach(function(f){ fdUpload.append('files[]', f); });
+
+                        try {
+                            const uplResp = await fetch('../../api/add_equipment_upload.php', { method: 'POST', body: fdUpload, credentials: 'same-origin' });
+                            const uplJson = await uplResp.json();
+                            if (uplJson && uplJson.success && Array.isArray(uplJson.uploaded) && uplJson.uploaded.length > 0) {
+                                // Append uploaded URLs to pictures column for this issue
+                                const existing = document.getElementById('edit_existing_pictures').value || '';
+                                const combined = existing ? (existing + ',' + uplJson.uploaded.join(',')) : uplJson.uploaded.join(',');
+                                const fdFinal = new FormData();
+                                fdFinal.append('issue_id', issueId);
+                                fdFinal.append('pictures', combined);
+                                // send a quick update to add pictures to the issue
+                                await fetch('../../api/update_equipment_issue.php', { method: 'POST', body: fdFinal, credentials: 'same-origin' });
+                            }
+                        } catch (e) {
+                            console.error('Upload error', e);
+                        }
+                    }
+
                     closeEditIssueModalFn();
                     window.location.href = window.location.pathname + window.location.search;
                 })
