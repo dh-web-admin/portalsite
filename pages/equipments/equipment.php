@@ -589,11 +589,12 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 }
 .equipment-modal__dialog {
     background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 4px 32px #0002;
-    min-width: 520px;
-    max-width: 640px;
-    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(2,6,23,0.12);
+    min-width: 640px;
+    max-width: 980px;
+    width: calc(100% - 40px);
+    margin: 20px auto;
     max-height: calc(100vh - 40px);
     padding: 0;
     overflow: hidden;
@@ -636,9 +637,9 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 }
 .equipment-form__grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px 20px;
-    padding: 18px 20px 0 20px;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 14px 18px;
+    padding: 16px 20px 0 20px;
 }
 .equipment-form__field label {
     font-weight: 600;
@@ -955,7 +956,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                 </div>
                                 <form id="newIssueForm" class="equipment-form" autocomplete="off">
                                     <input type="hidden" id="issue_equipment_id" name="equipment_id" value="<?php echo (int)$equipmentId; ?>" />
-                                    <div class="equipment-form__grid" style="grid-template-columns: 1fr 1fr;">
+                                    <div class="equipment-form__grid" style="grid-template-columns: 1fr 1fr 1fr;">
                                         <div class="equipment-form__field">
                                             <label for="issue_date_reported">Date Reported</label>
                                             <input id="issue_date_reported" name="date_reported" type="datetime-local" required />
@@ -1008,28 +1009,40 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                     <input type="hidden" id="edit_equipment_id" name="equipment_id" value="<?php echo (int)$equipmentId; ?>" />
                                     <input type="hidden" id="edit_issue_id" name="issue_id" value="" />
                                     <input type="hidden" id="edit_original_date_reported" name="original_date_reported" value="" />
-                                    <div class="equipment-form__grid" style="grid-template-columns: 1fr 1fr;">
+                                    <input type="hidden" id="edit_original_operating_condition" name="original_operating_condition" value="" />
+                                    <div class="equipment-form__grid" style="grid-template-columns: repeat(3, minmax(220px,1fr));">
                                         <div class="equipment-form__field">
                                             <label for="edit_date_reported">Date Reported</label>
-                                            <input id="edit_date_reported" name="date_reported" type="datetime-local" required readonly />
+                                            <input id="edit_date_reported" name="date_reported" type="date" required readonly />
                                         </div>
                                         <div class="equipment-form__field">
                                             <label for="edit_reported_by">Reported by</label>
                                             <input id="edit_reported_by" name="reported_by" type="text" list="reportedByList" autocomplete="off" required readonly />
                                         </div>
-                                        <div class="equipment-form__field" style="grid-column: span 2;">
+                                        <div class="equipment-form__field">
+                                            <label for="edit_operating_condition">Operating Condition</label>
+                                            <select id="edit_operating_condition" name="operating_condition" disabled>
+                                                <option value="">Select...</option>
+                                                <option value="green">Fully operable</option>
+                                                <option value="yellow">minor issue|operable</option>
+                                                <option value="red">inoperable</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="equipment-form__field" style="grid-column: span 3;">
                                             <label for="edit_reported_issues">Reported Issues</label>
                                             <textarea id="edit_reported_issues" name="reported_issues" rows="3" style="width:100%;resize:vertical;" required readonly></textarea>
                                         </div>
-                                        <div class="equipment-form__field" style="grid-column: span 2;">
+                                        <div class="equipment-form__field" style="grid-column: span 3;">
                                             <label for="edit_equipment_location">Equipment Location</label>
                                             <input id="edit_equipment_location" name="equipment_location" type="text" required readonly />
                                         </div>
-                                        <div style="grid-column: span 2; width:100%;"><hr style="border:0;border-top:3px solid #334155;margin:12px 0 12px 0;"></div>
+                                        <div style="grid-column: span 3; width:100%;"><hr style="border:0;border-top:3px solid #334155;margin:12px 0 12px 0;"></div>
+
                                         <div class="equipment-form__field">
-                                            <label for="edit_operating_condition">Operating Condition</label>
-                                            <select id="edit_operating_condition" name="operating_condition" required>
-                                                <option value="">Select...</option>
+                                            <label for="edit_condition_after">Condition After Repair</label>
+                                            <select id="edit_condition_after" name="condition_after_repair">
+                                                <option value="">(leave blank to keep original)</option>
                                                 <option value="green">Fully operable</option>
                                                 <option value="yellow">minor issue|operable</option>
                                                 <option value="red">inoperable</option>
@@ -1037,7 +1050,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                         </div>
                                         <div class="equipment-form__field">
                                             <label for="edit_date_repaired">Date Repaired</label>
-                                            <input id="edit_date_repaired" name="date_repaired" type="datetime-local" />
+                                            <input id="edit_date_repaired" name="date_repaired" type="date" />
                                         </div>
                                         <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="edit_mechanic_diagnosis">Mechanic Diagnosis</label>
@@ -1261,6 +1274,9 @@ function openEditIssueModal(rowData) {
         document.getElementById('edit_reported_issues').value = rowData.reported_issues || '';
         document.getElementById('edit_equipment_location').value = rowData.equipment_location || '';
         document.getElementById('edit_operating_condition').value = rowData.operating_condition || '';
+        // store original operating condition so we can restore if user cancels edit
+        var origOp = document.getElementById('edit_original_operating_condition');
+        if (origOp) origOp.value = rowData.operating_condition || '';
         document.getElementById('edit_mechanic_diagnosis').value = rowData.mechanic_diagnosis || '';
         document.getElementById('edit_date_repaired').value = formatDateTimeLocal(rowData.date_repaired);
         document.getElementById('edit_repair_mechanic').value = rowData.repair_mechanic || '';
@@ -1299,6 +1315,9 @@ function openEditIssueModal(rowData) {
         document.getElementById('edit_reported_by').readOnly = true;
         document.getElementById('edit_reported_issues').readOnly = true;
         document.getElementById('edit_equipment_location').readOnly = true;
+        // Make operating condition display-only in the edit modal
+        var opSel = document.getElementById('edit_operating_condition');
+        if (opSel) opSel.disabled = true;
         
         // Reset Edit button text
         const editBtn = document.getElementById('editTopFieldsBtn');
@@ -1330,12 +1349,14 @@ if (editTopFieldsBtn) {
         const reportedIssues = document.getElementById('edit_reported_issues');
         const equipmentLocation = document.getElementById('edit_equipment_location');
         
+        var opSel = document.getElementById('edit_operating_condition');
         if (dateReported.readOnly) {
             // Enable editing
             dateReported.readOnly = false;
             reportedBy.readOnly = false;
             reportedIssues.readOnly = false;
             equipmentLocation.readOnly = false;
+            if (opSel) opSel.disabled = false;
             editTopFieldsBtn.textContent = 'Cancel Edit';
             
             // Update button text to indicate it will create a copy
@@ -1348,6 +1369,11 @@ if (editTopFieldsBtn) {
             reportedBy.readOnly = true;
             reportedIssues.readOnly = true;
             equipmentLocation.readOnly = true;
+            if (opSel) {
+                opSel.disabled = true;
+                var orig = document.getElementById('edit_original_operating_condition');
+                if (orig && orig.value !== undefined) opSel.value = orig.value;
+            }
             editTopFieldsBtn.textContent = 'Edit';
             
             // Restore original values from the form data
@@ -1367,15 +1393,12 @@ if (editTopFieldsBtn) {
 }
 
 function formatDateTimeLocal(dateStr) {
+    // Return date-only string YYYY-MM-DD for date inputs (no time)
     if (!dateStr) return '';
     try {
         const date = new Date(dateStr);
         const pad = n => n.toString().padStart(2, '0');
-        return date.getFullYear() + '-' + 
-               pad(date.getMonth()+1) + '-' + 
-               pad(date.getDate()) + 'T' + 
-               pad(date.getHours()) + ':' + 
-               pad(date.getMinutes());
+        return date.getFullYear() + '-' + pad(date.getMonth()+1) + '-' + pad(date.getDate());
     } catch (e) {
         return '';
     }
@@ -1582,6 +1605,11 @@ if (editIssueForm) {
             updateFd.append('date_repaired', document.getElementById('edit_date_repaired').value || '');
             updateFd.append('repair_mechanic', document.getElementById('edit_repair_mechanic').value || '');
             updateFd.append('parts_fixed', document.getElementById('edit_parts_fixed').value || '');
+            // Optional: condition after repair — if provided, send separately so it can update equipment condition without overwriting original issue condition
+            var afterCondEl = document.getElementById('edit_condition_after');
+            if (afterCondEl && afterCondEl.value) {
+                updateFd.append('condition_after_repair', afterCondEl.value);
+            }
 
             // First, update the issue record
             fetch('../../api/update_equipment_issue.php', { method: 'POST', body: updateFd, credentials: 'same-origin' })

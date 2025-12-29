@@ -44,4 +44,12 @@ $stmt2->bind_param('si', $operating_condition, $equipment_id);
 $stmt2->execute();
 $stmt2->close();
 
+// Optionally update main equipment table's location when equipment_location provided
+if (!empty($equipment_location) && $equipment_id > 0) {
+    $stmt3 = $conn->prepare('UPDATE equipments SET location = ? WHERE equipment_id = ?');
+    $stmt3->bind_param('si', $equipment_location, $equipment_id);
+    $stmt3->execute();
+    $stmt3->close();
+}
+
 echo json_encode(['success' => true]);
