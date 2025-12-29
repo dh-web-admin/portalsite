@@ -24,56 +24,50 @@ require_once __DIR__ . '/../../config/config.php';
 		overflow: hidden;
 		table-layout: fixed;
 	}
-	   .dimension-table thead th {
-		   width: 8.5%;
-		   max-width: 8.5%;
-		   min-width: 8.5%;
-		   text-align: center;
-		   vertical-align: middle;
-		   position: relative;
-		   font-size: 13px;
-		   font-weight: bold;
-		   padding: 2px 4px 2px 4px;
-		   border-bottom: 2px solid #d1d5db;
-		   z-index: 2;
-		   letter-spacing: 0.01em;
-		   white-space: pre-line;
-		   line-height: 1.05;
-		   word-break: break-word;
-		   color: #22223b;
-		   background: #f8fafc;
-		   border-right: 1px solid #e5e7eb;
-	   }
-	   .dimension-table thead th:last-child {
-		   border-right: none;
-	   }
-	   .dimension-table tbody td {
-		   width: 8.5%;
-		   max-width: 8.5%;
-		   min-width: 8.5%;
-		   text-align: center;
-		   vertical-align: middle;
-		   font-size: 13px;
-		   font-weight: 400;
-		   padding: 1px 4px 1px 4px;
-		   border-bottom: 1px solid #f1f1f1;
-		   background: #fff;
-		   line-height: 1.05;
-		   height: 20px;
-		   white-space: nowrap;
-	   }
-	   .dimension-table tbody tr:hover td,
-	   .dimension-table tbody tr:active td {
-		   background: #e0e7ff;
-		   transition: background 0.2s;
-		   height: 20px;
-	   }
-	   .dimension-table tbody tr:hover td,
-	   .dimension-table tbody tr:active td {
-		   background: #e0e7ff;
-		   transition: background 0.2s;
-		   height: 28px;
-	   }
+	.dimension-table thead th {
+		width: 8.5%;
+		max-width: 8.5%;
+		min-width: 8.5%;
+		text-align: center;
+		vertical-align: middle;
+		position: relative;
+		font-size: 13px;
+		font-weight: bold;
+		padding: 2px 4px 2px 4px;
+		border-bottom: 2px solid #d1d5db;
+		z-index: 2;
+		letter-spacing: 0.01em;
+		white-space: pre-line;
+		line-height: 1.05;
+		word-break: break-word;
+		color: #22223b;
+		background: #f8fafc;
+		border-right: 1px solid #e5e7eb;
+	}
+	.dimension-table thead th:last-child {
+		border-right: none;
+	}
+	.dimension-table tbody td {
+		width: 8.5%;
+		max-width: 8.5%;
+		min-width: 8.5%;
+		text-align: center;
+		vertical-align: middle;
+		font-size: 13px;
+		font-weight: 400;
+		padding: 1px 4px 1px 4px;
+		border-bottom: 1px solid #f1f1f1;
+		background: #fff;
+		line-height: 1.05;
+		height: 20px;
+		white-space: nowrap;
+	}
+	.dimension-table tbody tr:hover td,
+	.dimension-table tbody tr:active td {
+		background: #e0e7ff;
+		transition: background 0.2s;
+		height: 28px;
+	}
 	.dimension-table tbody td {
 		font-weight: 400;
 		border-bottom: 1px solid #f1f1f1;
@@ -89,31 +83,34 @@ require_once __DIR__ . '/../../config/config.php';
 	.dimension-table tbody tr:last-child td {
 		border-bottom: none;
 	}
-	   .edit-dimension-btn {
-		   visibility: hidden;
-		   background: #667eea;
-		   color: #fff;
-		   border: none;
-		   border-radius: 8px;
-		   padding: 8px 18px;
-		   font-size: 15px;
-		   font-weight: 700;
-		   cursor: pointer;
-		   box-shadow: 0 2px 8px #0002;
-		   transition: background 0.15s, transform 0.1s;
-		   margin: 0 auto;
-		   letter-spacing: 0.01em;
-		   outline: none;
-	   }
+	.dimension-table tbody tr.selected td {
+		background: #c7d2fe !important;
+	}
+	.edit-dimension-btn {
+		visibility: hidden;
+		background: #667eea;
+		color: #fff;
+		border: none;
+		border-radius: 8px;
+		padding: 8px 18px;
+		font-size: 15px;
+		font-weight: 700;
+		cursor: pointer;
+		box-shadow: 0 2px 8px #0002;
+		transition: background 0.15s, transform 0.1s;
+		margin: 0 auto;
+		letter-spacing: 0.01em;
+		outline: none;
+	}
 	.edit-dimension-btn:hover {
 		background: #3b4cca;
 		color: #fff;
 		transform: translateY(-1px) scale(1.04);
 		box-shadow: 0 4px 16px #0002;
 	}
-	   .dimension-table tbody tr:hover .edit-dimension-btn {
-		   visibility: visible;
-	   }
+	.dimension-table tbody tr:hover .edit-dimension-btn {
+		visibility: visible;
+	}
 	.edit-dimension-btn svg {
 		margin-right: 7px;
 		vertical-align: middle;
@@ -132,7 +129,8 @@ require_once __DIR__ . '/../../config/config.php';
 		border-radius: 10px;
 		box-shadow: 0 1px 4px #0001;
 		margin-bottom: 18px;
-		padding: 18px 0;
+		padding: 18px;
+		position: relative;
 	}
 	.dimension-image-list img {
 		width: 100%;
@@ -164,6 +162,16 @@ require_once __DIR__ . '/../../config/config.php';
 		margin-bottom: 0;
 		width: 90%;
 		display: block;
+		transition: all 0.2s ease;
+	}
+	#addImageBtn:hover:not(:disabled) {
+		background: #5a68d0;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(108, 122, 224, 0.3);
+	}
+	#addImageBtn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 	#dimensionImagePanel {
 		flex: 1 1 0;
@@ -179,7 +187,77 @@ require_once __DIR__ . '/../../config/config.php';
 		justify-content: flex-start;
 		min-height: 520px;
 	}
-	</style>
+	
+	/* Professional Upload Button Styling */
+	#uploadBtnContainer {
+		display: none;
+		width: 100%;
+		padding: 12px 0;
+		margin-bottom: 16px;
+		background: #667eea; /* Changed from gradient to solid color */
+		border-radius: 12px;
+		box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+		text-align: center;
+	}
+	
+	#uploadBtnContainer.visible {
+		display: block;
+	}
+	
+	#uploadImagesBtn {
+		background: #fff;
+		color: #667eea;
+		border: none;
+		border-radius: 8px;
+		padding: 12px 32px;
+		font-size: 16px;
+		font-weight: 700;
+		cursor: pointer;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+		transition: all 0.2s ease;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		font-size: 14px;
+	}
+	
+	#uploadImagesBtn:hover:not(:disabled) {
+		background: #f0f0f0;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+	}
+	
+	#uploadImagesBtn:active:not(:disabled) {
+		transform: translateY(0);
+	}
+	
+	#uploadImagesBtn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+		background: #e5e7eb;
+		color: #9ca3af;
+	}
+	
+	#dimensionImagePreviewList {
+		width: 100%;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		padding: 16px;
+		background: #f9fafb;
+		border-radius: 8px;
+		margin-bottom: 12px;
+		border: 2px dashed #d1d5db;
+	}
+	
+	#dimensionImagePreviewList img {
+		width: 100px;
+		height: 100px;
+		object-fit: cover;
+		border-radius: 8px;
+		border: 2px solid #667eea;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+</style>
 <?php
 require_once __DIR__ . '/../../session_init.php';
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
@@ -240,34 +318,30 @@ if (isset($_GET['preview_role'])) {
 							</button>
 						</div>
 					</div>
-					</style>
-					</style>
 					<div style="display: flex; flex-direction: row; gap: 40px; align-items: flex-start; min-height: 480px; width: 100%;">
 						<div class="dimension-table-area" style="flex: 2 1 0; min-width: 700px; max-width: 70vw;">
 							<table class="dimension-table">
-								   <thead>
-									   <tr>
-										   <th>DHCS<br>#</th>
-										   <th>DHSS<br>#</th>
-										   <th>Make</th>
-										   <th>Total<br>Height</th>
-										   <th>Ground<br>Clearance</th>
-										   <th>Total<br>Width</th>
-										   <th>Axle<br>Width</th>
-										   <th>Weight</th>
-										   <th>Length<br>to Back<br>of Rear<br>Tire</th>
-										   <th>Length<br>to Back<br>of Auger</th>
-										   <th>L.O.A.</th>
-									   </tr>
-								   </thead>
+								<thead>
+									<tr>
+										<th>DHCS<br>#</th>
+										<th>DHSS<br>#</th>
+										<th>Make</th>
+										<th>Total<br>Height</th>
+										<th>Ground<br>Clearance</th>
+										<th>Total<br>Width</th>
+										<th>Axle<br>Width</th>
+										<th>Weight</th>
+										<th>Length<br>to Back<br>of Rear<br>Tire</th>
+										<th>Length<br>to Back<br>of Auger</th>
+										<th>L.O.A.</th>
+									</tr>
+								</thead>
 								<tbody id="dimensionTableBody">
 									<?php
-									// Example: fetch from equipment and dimensions (replace with real join as needed)
 									$sql = "SELECT e.equipment_id AS main_equipment_id, e.dhcst_equipment_number, e.dhss_equipment_number, e.make, d.* FROM equipments e LEFT JOIN dimensions d ON e.equipment_id = d.equipment_id ORDER BY e.equipment_id DESC";
 									$result = $conn->query($sql);
 									if ($result && $result->num_rows > 0) {
 										while ($row = $result->fetch_assoc()) {
-											// Ensure equipment_id is available for selection
 											$equipment_id = isset($row['main_equipment_id']) ? (int)$row['main_equipment_id'] : 0;
 											echo '<tr data-equipment-id="' . $equipment_id . '" data-debug-eid="' . htmlspecialchars($row['main_equipment_id']) . '" data-photo="' . htmlspecialchars($row['photos'] ?? '') . '">';
 											echo '<td>' . htmlspecialchars($row['dhcst_equipment_number'] ?? '') . '</td>';
@@ -294,194 +368,265 @@ if (isset($_GET['preview_role'])) {
 							<div style="width:100%;text-align:center;margin-bottom:8px;">
 								<span id="dimensionImageCountMsg" style="color:#374151;font-weight:600;font-size:1.1rem;"></span>
 							</div>
+							
+							<!-- Upload Button Container -->
+							<div id="uploadBtnContainer">
+								<button id="uploadImagesBtn" disabled>
+									<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:8px;">
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+										<polyline points="17 8 12 3 7 8"></polyline>
+										<line x1="12" y1="3" x2="12" y2="15"></line>
+									</svg>
+									Upload Selected
+								</button>
+							</div>
+							
 							<div class="dimension-image-list" id="dimensionImageList" style="min-height: 520px; max-height: 800px;">
-								<span class="no-image">No image selected</span>
+								<span class="no-image">Select an equipment row to view images</span>
 							</div>
 							<input type="file" id="dimensionImageInput" accept="image/*" multiple style="display:none;" />
 							<div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:8px;">
 								<button id="addImageBtn" disabled style="opacity:0.5;cursor:not-allowed;">Add Image</button>
-								<button id="uploadImagesBtn" style="display:none;">Upload Selected</button>
 							</div>
 						</div>
 					</div>
-						<script>
-						// Make table rows selectable and show images for selected row
-						document.addEventListener('DOMContentLoaded', function() {
-							var tableBody = document.getElementById('dimensionTableBody');
-							var imageList = document.getElementById('dimensionImageList');
+					
+					<script>
+					document.addEventListener('DOMContentLoaded', function() {
+			// --- Dimension Cheat Sheet Image Upload Logic Refactored ---
+			// DOM references
+			var tableBody = document.getElementById('dimensionTableBody');
+			var imageList = document.getElementById('dimensionImageList');
+			var addImageBtn = document.getElementById('addImageBtn');
+			var uploadImagesBtn = document.getElementById('uploadImagesBtn');
+			var uploadBtnContainer = document.getElementById('uploadBtnContainer');
+			var imageInput = document.getElementById('dimensionImageInput');
+			var selectedRow = null;
+			var selectedEquipmentId = null;
+			var selectedFiles = [];
 
-							var addImageBtn = document.getElementById('addImageBtn');
-							var uploadImagesBtn = document.getElementById('uploadImagesBtn');
-							var imageInput = document.getElementById('dimensionImageInput');
-							var selectedRow = null;
-							var selectedEquipmentId = null;
-							var selectedFiles = [];
-
-
-							function fetchAndShowImages(equipmentId) {
-								imageList.innerHTML = '<span class="no-image">Loading...</span>';
-								var countMsg = document.getElementById('dimensionImageCountMsg');
-								countMsg.textContent = '';
-								fetch('/PortalSite/api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
-									.then(res => res.json())
-									.then(data => {
-										imageList.innerHTML = '';
-										if (data.success && data.uploads && data.uploads.dimension && data.uploads.dimension.length > 0) {
-											countMsg.textContent = data.uploads.dimension.length + ' image' + (data.uploads.dimension.length > 1 ? 's' : '') + ' added';
-											addImageBtn.textContent = 'Add More';
-											addImageBtn.classList.add('add-more');
-											data.uploads.dimension.forEach(function(upload) {
-												var img = document.createElement('img');
-												img.src = upload.file_url;
-												img.alt = 'Equipment Photo';
-												img.onerror = function() {
-													var errSpan = document.createElement('span');
-													errSpan.className = 'no-image';
-													errSpan.textContent = 'Error loading image';
-													img.replaceWith(errSpan);
-												};
-												imageList.appendChild(img);
-											});
-										} else {
-											countMsg.textContent = '';
-											addImageBtn.textContent = 'Add Image';
-											addImageBtn.classList.remove('add-more');
-											// Show friendly message if no images found
-											var msg = document.createElement('span');
-											msg.className = 'no-image';
-											msg.textContent = 'No image uploaded for this equipment.';
-											imageList.innerHTML = '';
-											imageList.appendChild(msg);
-										}
-										// Always clear preview and hide upload button after refresh
-										clearSelectedPreviews();
-									})
-									.catch((err) => {
-										countMsg.textContent = '';
-										imageList.innerHTML = '<span class="no-image">No image available (fetch error)</span>';
-									});
-							}
-
-							function showSelectedPreviews(files) {
-								clearSelectedPreviews();
-								if (!files || files.length === 0) return;
-								var previewDiv = document.createElement('div');
-								previewDiv.id = 'dimensionImagePreviewList';
-								previewDiv.style.display = 'flex';
-								previewDiv.style.flexWrap = 'wrap';
-								previewDiv.style.gap = '8px';
-								Array.from(files).forEach(function(file) {
-									var reader = new FileReader();
-									var img = document.createElement('img');
-									img.style.maxWidth = '90px';
-									img.style.maxHeight = '90px';
-									img.style.border = '1px solid #ccc';
-									img.style.borderRadius = '6px';
-									img.style.objectFit = 'cover';
-									reader.onload = function(e) {
-										img.src = e.target.result;
-									};
-									reader.readAsDataURL(file);
-									previewDiv.appendChild(img);
-								});
-								imageList.insertBefore(previewDiv, imageList.firstChild);
-							}
-
-							function clearSelectedPreviews() {
-								var previewDiv = document.getElementById('dimensionImagePreviewList');
-								if (previewDiv) previewDiv.remove();
-								selectedFiles = [];
-								uploadImagesBtn.style.display = 'none';
-							}
-
-							// Always show image panel, even if no row is selected
-							imageList.innerHTML = '<span class="no-image">No image selected</span>';
-
-							tableBody.addEventListener('click', function(e) {
-								var tr = e.target.closest('tr');
-								if (!tr) return;
-								// Remove selection from previous row
-								if (selectedRow) selectedRow.classList.remove('selected');
-								// Select new row
-								tr.classList.add('selected');
-								selectedRow = tr;
-								// Get equipment_id from data attribute
-								var equipmentId = tr.getAttribute('data-equipment-id');
-								selectedEquipmentId = equipmentId;
-								// Enable Add Image button if valid equipmentId
-								if (equipmentId && parseInt(equipmentId) > 0) {
-									addImageBtn.disabled = false;
-									addImageBtn.style.opacity = 1;
-									addImageBtn.style.cursor = '';
-									fetchAndShowImages(equipmentId);
-								} else {
-									addImageBtn.disabled = true;
-									addImageBtn.style.opacity = 0.5;
-									addImageBtn.style.cursor = 'not-allowed';
-									imageList.innerHTML = '<span class="no-image">No image available</span>';
-								}
+			// Fetch and display images for a given equipment
+			function fetchAndShowImages(equipmentId) {
+				imageList.innerHTML = '<span class="no-image">Loading...</span>';
+				var countMsg = document.getElementById('dimensionImageCountMsg');
+				countMsg.textContent = '';
+				// Always clear previews and selected files when switching equipment
+				clearSelectedPreviews();
+				selectedFiles = [];
+				uploadImagesBtn.disabled = true;
+				uploadBtnContainer.classList.remove('visible');
+				imageInput.value = '';
+				fetch('/PortalSite/api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
+					.then(res => res.json())
+					.then(data => {
+						imageList.innerHTML = '';
+						if (data.success && data.uploads && data.uploads.dimension && data.uploads.dimension.length > 0) {
+							countMsg.textContent = data.uploads.dimension.length + ' image' + (data.uploads.dimension.length > 1 ? 's' : '') + ' added';
+							addImageBtn.textContent = 'Add More';
+							addImageBtn.classList.add('add-more');
+							data.uploads.dimension.forEach(function(upload) {
+								var img = document.createElement('img');
+								img.src = upload.file_url;
+								img.alt = 'Equipment Photo';
+								img.onerror = function() {
+									var errSpan = document.createElement('span');
+									errSpan.className = 'no-image';
+									errSpan.textContent = 'Error loading image';
+									img.replaceWith(errSpan);
+								};
+								imageList.appendChild(img);
 							});
+						} else {
+							countMsg.textContent = '';
+							addImageBtn.textContent = 'Add Image';
+							addImageBtn.classList.remove('add-more');
+							var msg = document.createElement('span');
+							msg.className = 'no-image';
+							msg.textContent = 'No image uploaded for this equipment.';
+							imageList.appendChild(msg);
+						}
+					})
+					.catch((err) => {
+						console.error('Fetch error:', err);
+						countMsg.textContent = '';
+						imageList.innerHTML = '<span class="no-image">Error loading images</span>';
+					});
+			}
 
+			// Show image previews for selected files
+			function showSelectedPreviews(files) {
+				clearSelectedPreviews();
+				if (!files || files.length === 0) {
+					uploadBtnContainer.classList.remove('visible');
+					uploadImagesBtn.disabled = true;
+					return;
+				}
+				// Create a single preview container
+				var previewDiv = document.createElement('div');
+				previewDiv.id = 'dimensionImagePreviewList';
+				Array.from(files).forEach(function(file) {
+					var reader = new FileReader();
+					var img = document.createElement('img');
+					reader.onload = function(e) {
+						img.src = e.target.result;
+					};
+					reader.onerror = function(e) {
+						img.alt = 'Error loading preview';
+					};
+					reader.readAsDataURL(file);
+					previewDiv.appendChild(img);
+				});
+				// Insert preview at the top of the imageList
+				imageList.insertBefore(previewDiv, imageList.firstChild);
+				uploadBtnContainer.classList.add('visible');
+				uploadImagesBtn.disabled = false;
+			}
 
-							addImageBtn.addEventListener('click', function() {
-								if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
-									return;
-								}
-								imageInput.value = '';
-								imageInput.click();
-							});
+			// Remove preview container and reset file input
+			function clearSelectedPreviews() {
+				var previewDiv = document.getElementById('dimensionImagePreviewList');
+				if (previewDiv) previewDiv.remove();
+				uploadBtnContainer.classList.remove('visible');
+				uploadImagesBtn.disabled = true;
+				imageInput.value = '';
+			}
 
+			// Handle row selection in the table
+			tableBody.addEventListener('click', function(e) {
+				var tr = e.target.closest('tr');
+				if (!tr) return;
+				// Remove previous selection
+				if (selectedRow) selectedRow.classList.remove('selected');
+				tr.classList.add('selected');
+				selectedRow = tr;
+				var equipmentId = tr.getAttribute('data-equipment-id');
+				// Only allow valid equipmentId
+				if (equipmentId && parseInt(equipmentId) > 0) {
+					selectedEquipmentId = equipmentId;
+					addImageBtn.disabled = false;
+					addImageBtn.style.opacity = 1;
+					addImageBtn.style.cursor = 'pointer';
+					fetchAndShowImages(equipmentId);
+				} else {
+					selectedEquipmentId = null;
+					addImageBtn.disabled = true;
+					addImageBtn.style.opacity = 0.5;
+					addImageBtn.style.cursor = 'not-allowed';
+					imageList.innerHTML = '<span class="no-image">No valid equipment ID</span>';
+					clearSelectedPreviews();
+				}
+			});
 
-							imageInput.addEventListener('change', function() {
-								if (!selectedEquipmentId || !imageInput.files.length) return;
-								selectedFiles = Array.from(imageInput.files);
-								showSelectedPreviews(selectedFiles);
-								uploadImagesBtn.style.display = 'inline-block';
-							});
+			// Handle Add Image button click
+			addImageBtn.addEventListener('click', function() {
+				if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
+					alert('Please select an equipment row first.');
+					return;
+				}
+				// Open file picker
+				imageInput.value = '';
+				imageInput.click();
+			});
 
-							uploadImagesBtn.addEventListener('click', function() {
-								if (!selectedEquipmentId || !selectedFiles.length) return;
-								uploadImagesBtn.disabled = true;
-								addImageBtn.disabled = true;
-								addImageBtn.style.opacity = 0.5;
-								var uploads = selectedFiles.map(function(file) {
-									var formData = new FormData();
-									formData.append('equipment_id', selectedEquipmentId);
-									formData.append('file', file);
-									return fetch('/PortalSite/api/add_equipment_upload.php', {
-										method: 'POST',
-										body: formData
-									}).then(res => res.json());
-								});
-								Promise.all(uploads).then(function(results) {
-									var msg = '';
-									var successCount = 0;
-									var errorCount = 0;
-									results.forEach(function(r) {
-										if (r && r.success) successCount++;
-										else errorCount++;
-									});
-									if (successCount > 0) {
-										msg += successCount + ' image' + (successCount > 1 ? 's' : '') + ' uploaded successfully. ';
-									}
-									if (errorCount > 0) {
-										msg += errorCount + ' image' + (errorCount > 1 ? 's' : '') + ' failed to upload.';
-									}
-									var countMsg = document.getElementById('dimensionImageCountMsg');
-									countMsg.textContent = msg;
-									fetchAndShowImages(selectedEquipmentId);
-									uploadImagesBtn.disabled = false;
-									addImageBtn.disabled = false;
-									addImageBtn.style.opacity = 1;
-								});
-							});
-						});
-						</script>
-					<style>
-					.dimension-table tbody tr.selected td {
-						background: #c7d2fe !important;
+			// Handle file input change (new selection replaces previous)
+			imageInput.addEventListener('change', function(e) {
+				if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
+					alert('Please select an equipment row first.');
+					imageInput.value = '';
+					return;
+				}
+				if (!imageInput.files || imageInput.files.length === 0) {
+					clearSelectedPreviews();
+					selectedFiles = [];
+					return;
+				}
+				// Replace previous selection
+				selectedFiles = Array.from(imageInput.files);
+				showSelectedPreviews(selectedFiles);
+			});
+
+			// Handle Upload Selected button click
+			uploadImagesBtn.addEventListener('click', function(e) {
+				e.preventDefault();
+				// Validate equipment and files
+				if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
+					alert('Please select an equipment row from the table first.');
+					return;
+				}
+				if (!selectedFiles || selectedFiles.length === 0) {
+					alert('Please select images to upload first by clicking "Add Image".');
+					return;
+				}
+				// Disable buttons during upload
+				uploadImagesBtn.disabled = true;
+				addImageBtn.disabled = true;
+				addImageBtn.style.opacity = 0.5;
+				var countMsg = document.getElementById('dimensionImageCountMsg');
+				countMsg.textContent = 'Uploading ' + selectedFiles.length + ' image(s)...';
+				countMsg.style.color = '#667eea';
+				// Upload each file
+				var uploads = selectedFiles.map(function(file) {
+					var formData = new FormData();
+					formData.append('equipment_id', selectedEquipmentId);
+					formData.append('file', file);
+					formData.append('category', 'dimension');
+					return fetch('/PortalSite/api/add_equipment_upload.php', {
+						method: 'POST',
+						body: formData
+					})
+					.then(res => res.json())
+					.then(data => data)
+					.catch(err => ({ success: false, error: err.message }));
+				});
+				// Wait for all uploads
+				Promise.all(uploads).then(function(results) {
+					var successCount = 0;
+					var errorCount = 0;
+					var errorFiles = [];
+					results.forEach(function(r, idx) {
+						if (r && r.success) {
+							successCount++;
+						} else {
+							errorCount++;
+							errorFiles.push(selectedFiles[idx] ? selectedFiles[idx].name : 'Unknown');
+						}
+					});
+					var msg = '';
+					if (successCount > 0) {
+						msg += successCount + ' image' + (successCount > 1 ? 's' : '') + ' uploaded successfully!';
+						countMsg.style.color = '#10b981';
 					}
-					</style>
+					if (errorCount > 0) {
+						if (msg) msg += ' ';
+						msg += errorCount + ' image' + (errorCount > 1 ? 's' : '') + ' failed.';
+						if (errorFiles.length > 0) {
+							msg += ' Failed: ' + errorFiles.join(', ');
+						}
+						countMsg.style.color = '#ef4444';
+					}
+					countMsg.textContent = msg;
+					// After upload, clear previews and selectedFiles
+					clearSelectedPreviews();
+					selectedFiles = [];
+					// Refresh image list
+					fetchAndShowImages(selectedEquipmentId);
+					// Re-enable Add Image button after short delay
+					setTimeout(function() {
+						addImageBtn.disabled = false;
+						addImageBtn.style.opacity = 1;
+					}, 500);
+				}).catch(function(err) {
+					countMsg.textContent = 'Upload failed. Please try again.';
+					countMsg.style.color = '#ef4444';
+					uploadImagesBtn.disabled = false;
+					addImageBtn.disabled = false;
+					addImageBtn.style.opacity = 1;
+				});
+			});
+			// --- End Refactor ---
+					});
+					</script>
+					
 					<!-- Edit Dimension Modal -->
 					<div id="editDimensionModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:10000; align-items:center; justify-content:center;">
 						<div style="background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.2); padding:32px 28px; min-width:400px; max-width:96vw;">
@@ -498,8 +643,7 @@ if (isset($_GET['preview_role'])) {
 								<div style="margin-bottom:12px;"><label style="font-weight:600;color:#374151;margin-bottom:4px;display:block;">Weight</label><input type="text" name="weight" id="edit_weight" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #d1d5db;font-size:15px;"></div>
 								<div style="margin-bottom:12px;"><label style="font-weight:600;color:#374151;margin-bottom:4px;display:block;">Length to Back of Rear Tire</label><input type="text" name="length_rear_tire" id="edit_length_rear_tire" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #d1d5db;font-size:15px;"></div>
 								<div style="margin-bottom:12px;"><label style="font-weight:600;color:#374151;margin-bottom:4px;display:block;">Length to Back of Auger</label><input type="text" name="length_auger" id="edit_length_auger" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #d1d5db;font-size:15px;"></div>
-								<div style="margin-bottom:12px;"><label style="font-weight:600;color:#374151;margin-bottom:4px;display:block;">L.O.A.</label><input type="text" name="loa" id="edit_loa" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #d1d5db;font-size:15px;"></div>
-								<div style="margin-bottom:18px;"><label style="font-weight:600;color:#374151;margin-bottom:4px;display:block;">Photos</label><input type="text" name="photos" id="edit_photos" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #d1d5db;font-size:15px;"></div>
+								<div style="margin-bottom:18px;"><label style="font-weight:600;color:#374151;margin-bottom:4px;display:block;">L.O.A.</label><input type="text" name="loa" id="edit_loa" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #d1d5db;font-size:15px;"></div>
 								<div style="display:flex;gap:16px;justify-content:flex-end;">
 									<button type="button" id="cancelEditDimensionBtn" style="background:#e5e7eb;color:#374151;border:none;border-radius:6px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.15s;">Cancel</button>
 									<button type="submit" style="background:#43b77a;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.15s;">Save</button>

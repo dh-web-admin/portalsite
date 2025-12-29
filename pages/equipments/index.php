@@ -1183,7 +1183,7 @@ function eq_format_warranty($dateValue) {
 
 
 				document.getElementById('edit_equipment_id').value = equipmentId || '';
-				document.getElementById('edit_equipment_number').value = equipmentNumber || '';
+				document.getElementById('edit_dhss_equipment_number').value = equipmentNumber || '';
 				document.getElementById('edit_type').value = type || '';
 				document.getElementById('edit_operating_condition').value = operatingCondition || '';
 				document.getElementById('edit_location').value = location || '';
@@ -1191,11 +1191,8 @@ function eq_format_warranty($dateValue) {
 				document.getElementById('edit_oil_status').value = oilStatus || '';
 				// DHCST and DHSS Equipment Number
 				var dhcst = row.getAttribute('data-dhcst-equipment-number') || '';
-				var dhss = row.getAttribute('data-dhss-equipment-number') || '';
 				var dhcstInput = document.getElementById('edit_dhcst_equipment_number');
-				var dhssInput = document.getElementById('edit_dhss_equipment_number');
 				if (dhcstInput) dhcstInput.value = dhcst;
-				if (dhssInput) dhssInput.value = dhss;
 
 				// Additional Details fields (clear by default)
 				var additionalFields = [
@@ -1257,7 +1254,7 @@ function eq_format_warranty($dateValue) {
 				editModal.classList.add('is-open');
 				editModal.setAttribute('aria-hidden','false');
 				if (editErrBox) { editErrBox.style.display = 'none'; editErrBox.textContent = ''; }
-				var first = document.getElementById('edit_equipment_number');
+				var first = document.getElementById('edit_dhss_equipment_number');
 				if (first) first.focus();
 			}
 

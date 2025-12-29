@@ -233,7 +233,7 @@ if (isset($_GET['preview_role'])) {
                             </thead>
                             <tbody>
                                 <?php
-                                $sql = "SELECT dhcst_equipment_number, dhss_equipment_number, type, vin, vehicle_year, make, model, engine, engine_serial_number, transmission, trans_serial_number, transfer_case_serial, front_differential_serial, middle_differential_serial, rear_differential_serial FROM equipments ORDER BY equipment_id DESC";
+                                $sql = "SELECT dhcst_equipment_number, dhss_equipment_number, type, vin, vehicle_year, make, model, engine, engine_serial_number, transmission, trans_serial_number, transfer_case_serial, front_differential_serial, middle_differential_serial, rear_differential_serial FROM equipments ORDER BY equipment_id ASC";
                                 $result = $conn->query($sql);
                                 if ($result && $result->num_rows > 0) {
                                     while ($row = $result->fetch_assoc()) {
