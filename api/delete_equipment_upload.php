@@ -32,7 +32,8 @@ if (!$row) {
 $fileUrl = $row['file_url'];
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 if ($isProduction) {
-    $filePath = '/uploads/equipment/' . basename($fileUrl);
+    // On Railway, uploads are at /app/PortalSite/uploads/equipment/ (absolute path)
+    $filePath = '/app/PortalSite/uploads/equipment/' . basename($fileUrl);
 } else {
     $filePath = __DIR__ . '/../uploads/equipment/' . basename($fileUrl);
 }
@@ -44,6 +45,8 @@ $success = $stmt->execute();
 $stmt->close();
 
 // Delete file from disk (ignore errors)
-@unlink($filePath);
+if (file_exists($filePath)) {
+    @unlink($filePath);
+}
 
 echo json_encode(['success' => $success]);
