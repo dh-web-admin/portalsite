@@ -667,12 +667,7 @@ function eq_format_warranty($dateValue) {
 						<label for="eq_warranty">Warranty</label>
 						<input id="eq_warranty" name="warranty" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
 					</div>
-					<div class="equipment-form__field" style="display:flex;align-items:end;gap:8px;">
-						<div style="flex:1;">
-							<label for="eq_dhcst_equipment_number">DHCST Equipment #</label>
-							<input id="eq_dhcst_equipment_number" name="dhcst_equipment_number" type="text" />
-						</div>
-					</div>
+					<!-- DHCST and DHSS Equipment # moved to Additional Details -->
 					<hr style="grid-column:1/-1;margin:18px 0 8px 0;border:0;border-top:1.5px solid #e5e7eb;background:none;">
 					<div style="display:flex;justify-content:flex-end;align-items:center;grid-column:1/-1;margin-bottom:8px;">
 						<button type="button" id="showAdditionalDetailsBtn" style="height:38px;display:flex;align-items:center;gap:4px;padding:0 14px;border-radius:8px;border:1px solid #e5e7eb;background:#f3f4f6;font-weight:600;cursor:pointer;">
@@ -681,6 +676,14 @@ function eq_format_warranty($dateValue) {
 						</button>
 					</div>
 					<div id="additionalDetailsFields" style="display:none;grid-column:1/-1;gap:24px;">
+						<div class="equipment-form__field">
+							<label for="eq_dhcst_equipment_number">DHCST Equipment #</label>
+							<input id="eq_dhcst_equipment_number" name="dhcst_equipment_number" type="text" />
+						</div>
+						<div class="equipment-form__field">
+							<label for="eq_dhss_equipment_number">DHSS Equipment #</label>
+							<input id="eq_dhss_equipment_number" name="dhss_equipment_number" type="text" readonly style="background:#f3f4f6;" />
+						</div>
 						<div class="equipment-form__field">
 							<label for="eq_vin">VIN Number</label>
 							<input id="eq_vin" name="vin" type="text" />
@@ -828,6 +831,7 @@ function eq_format_warranty($dateValue) {
 						   </label>
 						   <div class="equipment-upload-preview" data-field="tires"></div>
 					   </div>
+					   <!-- DHCST and DHSS Equipment # moved to Additional Details -->
 					   <hr style="grid-column:1/-1;margin:18px 0 8px 0;border:0;border-top:1.5px solid #e5e7eb;background:none;">
 					   <div style="display:flex;justify-content:flex-end;align-items:center;grid-column:1/-1;margin-bottom:8px;">
 						   <button type="button" id="showEditAdditionalDetailsBtn" style="height:38px;display:flex;align-items:center;gap:4px;padding:0 14px;border-radius:8px;border:1px solid #e5e7eb;background:#f3f4f6;font-weight:600;cursor:pointer;">
@@ -836,6 +840,14 @@ function eq_format_warranty($dateValue) {
 						   </button>
 					   </div>
 					   <div id="editAdditionalDetailsFields" style="display:none;grid-column:1/-1;gap:24px;">
+						   <div class="equipment-form__field">
+							   <label for="edit_dhcst_equipment_number">DHCST Equipment #</label>
+							   <input id="edit_dhcst_equipment_number" name="dhcst_equipment_number" type="text" />
+						   </div>
+						   <div class="equipment-form__field">
+							   <label for="edit_dhss_equipment_number">DHSS Equipment #</label>
+							   <input id="edit_dhss_equipment_number" name="dhss_equipment_number" type="text" readonly style="background:#f3f4f6;" />
+						   </div>
 						   <div class="equipment-form__field">
 							   <label for="edit_vin">VIN Number</label>
 							   <input id="edit_vin" name="vin" type="text" />
@@ -1428,6 +1440,35 @@ function eq_format_warranty($dateValue) {
 	})();
 	</script>
 	<script src="../../assets/js/mobile-menu.js"></script>
+	<script>
+	// Sync DHSS Equipment # with Equipment # in Add and Edit modals
+	document.addEventListener('DOMContentLoaded', function() {
+		// Add modal
+		var eqNum = document.getElementById('eq_equipment_number');
+		var dhssNum = document.getElementById('eq_dhss_equipment_number');
+		if (eqNum && dhssNum) {
+			eqNum.addEventListener('input', function() {
+				dhssNum.value = eqNum.value;
+			});
+			// On modal open, also sync
+			eqNum.addEventListener('change', function() {
+				dhssNum.value = eqNum.value;
+			});
+		}
+		// Edit modal
+		var editEqNum = document.getElementById('edit_equipment_number');
+		var editDhssNum = document.getElementById('edit_dhss_equipment_number');
+		if (editEqNum && editDhssNum) {
+			editEqNum.addEventListener('input', function() {
+				editDhssNum.value = editEqNum.value;
+			});
+			// On modal open, also sync
+			editEqNum.addEventListener('change', function() {
+				editDhssNum.value = editEqNum.value;
+			});
+		}
+	});
+	</script>
 </body>
 </html>
 <style>

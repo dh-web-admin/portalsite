@@ -165,10 +165,12 @@ $fileCount = count($fileList);
                     </div>
                     <button id="uploadFilterBtn" class="download-print-btn" style="margin-bottom:12px;">
                         <span class="icon" aria-hidden="true" style="display:inline-flex;align-items:center;">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                            <!-- Up arrow for upload -->
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/></svg>
                         </span>
                         <span>Upload</span>
                     </button>
+                    <div id="uploadStatusMsg" style="margin:8px 0 0 0;font-weight:600;color:#22c55e;display:none;"></div>
                     <input type="file" id="filterFileInput" multiple style="display:none;" />
                     <ul id="filterFileList" class="file-list" style="list-style:none;padding:0;margin:0;min-height:40px;">
                         <?php if ($fileCount > 0): ?>
@@ -257,19 +259,38 @@ document.addEventListener('DOMContentLoaded', function() {
             var fileId = item.getAttribute('data-file-id');
             var fileName = item.querySelector('span').textContent.trim();
             if (confirm('Are you sure you want to delete "' + fileName + '"? This cannot be undone.')) {
-                fetch('/PortalSite/api/delete_equipment_upload.php', {
+                fetch('../../api/delete_equipment_upload.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'id=' + encodeURIComponent(fileId)
                 })
                 .then(r => r.json())
                 .then(res => {
+                    var msgBox = document.getElementById('uploadStatusMsg');
                     if (res.success) {
                         item.remove();
                         previewWindow.innerHTML = '<span class="no-image">No file selected</span>';
                         previewCountMsg.textContent = '';
+                        if (msgBox) {
+                            msgBox.style.display = 'block';
+                            msgBox.textContent = 'File deleted.';
+                            msgBox.style.color = '#22c55e';
+                        }
                     } else {
-                        alert('Delete failed: ' + (res.error || 'Unknown error'));
+                        if (msgBox) {
+                            msgBox.style.display = 'block';
+                            msgBox.textContent = 'Delete failed: ' + (res.error || 'Unknown error');
+                            msgBox.style.color = '#dc2626';
+                        } else {
+                            alert('Delete failed: ' + (res.error || 'Unknown error'));
+                        }
+                    }
+                }).catch(function(err){
+                    var msgBox = document.getElementById('uploadStatusMsg');
+                    if (msgBox) {
+                        msgBox.style.display = 'block';
+                        msgBox.textContent = 'Delete failed: ' + (err && err.message ? err.message : 'Network error');
+                        msgBox.style.color = '#dc2626';
                     }
                 });
             }
@@ -291,13 +312,34 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('equipment_id', equipmentId);
             formData.append('file', file);
             formData.append('field', 'warranty');
-            return fetch('/PortalSite/api/add_equipment_upload.php', { method:'POST', body:formData }).then(r => r.json());
+            // Use relative path for API endpoint
+            return fetch('../../api/add_equipment_upload.php', { method:'POST', body:formData }).then(r => r.json());
         });
         Promise.all(uploads).then(results => {
             var success = results.filter(r => r && r.success).length;
             var fail = results.length - success;
-            alert(success + ' uploaded.' + (fail > 0 ? ' ' + fail + ' failed.' : ''));
-            location.reload();
+            var msgBox = document.getElementById('uploadStatusMsg');
+            if (msgBox) {
+                msgBox.style.display = 'block';
+                if (success > 0 && fail === 0) {
+                    msgBox.textContent = success + ' file(s) uploaded successfully!';
+                    msgBox.style.color = '#22c55e';
+                } else if (success > 0 && fail > 0) {
+                    msgBox.textContent = success + ' uploaded, ' + fail + ' failed.';
+                    msgBox.style.color = '#eab308';
+                } else {
+                    msgBox.textContent = 'Upload failed.';
+                    msgBox.style.color = '#dc2626';
+                }
+            }
+            setTimeout(function(){ location.reload(); }, 1200);
+        }).catch(function(err){
+            var msgBox = document.getElementById('uploadStatusMsg');
+            if (msgBox) {
+                msgBox.style.display = 'block';
+                msgBox.textContent = 'Upload failed: ' + (err && err.message ? err.message : 'Network error');
+                msgBox.style.color = '#dc2626';
+            }
         });
     });
     document.getElementById('downloadFilterBtn').addEventListener('click', function() {
