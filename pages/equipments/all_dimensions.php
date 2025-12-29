@@ -474,10 +474,19 @@ if (isset($_GET['preview_role'])) {
 							uploadBtnContainer.classList.remove('visible');
 							imageInput.value = '';
 							fetch('/PortalSite/api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
-								.then(res => res.json())
+								.then(function(res){
+									return res.text().then(function(text){
+										try {
+											return JSON.parse(text);
+										} catch (err) {
+											console.error('get_equipment_uploads: invalid JSON response', text);
+											return { success: false, error: 'Invalid JSON response', raw: text };
+										}
+									});
+								})
 								.then(data => {
 									imageList.innerHTML = '';
-									if (data.success && data.uploads && data.uploads.dimension && data.uploads.dimension.length > 0) {
+									if (data && data.success && data.uploads && data.uploads.dimension && data.uploads.dimension.length > 0) {
 										countMsg.textContent = data.uploads.dimension.length + ' image' + (data.uploads.dimension.length > 1 ? 's' : '') + ' added';
 										addImageBtn.textContent = 'Add More';
 										addImageBtn.classList.add('add-more');
@@ -618,8 +627,19 @@ if (isset($_GET['preview_role'])) {
 								return fetch('/PortalSite/api/add_equipment_upload.php', {
 									method: 'POST',
 									body: formData
-								})
-								.then(r => r.json());
+								}).then(function(res){
+									return res.text().then(function(text){
+										try {
+											return JSON.parse(text);
+										} catch (err) {
+											console.error('add_equipment_upload: invalid JSON response', text);
+											return { success: false, error: 'Invalid JSON response', raw: text };
+										}
+									});
+								}).catch(function(err){
+									console.error('Network error during upload', err);
+									return { success: false, error: 'Network error', raw: err && err.message ? err.message : String(err) };
+								});
 							});
 							Promise.all(uploads).then(function(results) {
 								var success = results.filter(r => r && r.success).length;
