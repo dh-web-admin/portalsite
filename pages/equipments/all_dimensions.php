@@ -427,237 +427,250 @@ if (isset($_GET['preview_role'])) {
 					
 					<script>
 					document.addEventListener('DOMContentLoaded', function() {
-			// --- Dimension Cheat Sheet Image Upload Logic Refactored ---
-			// DOM references
-			var tableBody = document.getElementById('dimensionTableBody');
-			var imageList = document.getElementById('dimensionImageList');
-			var addImageBtn = document.getElementById('addImageBtn');
-			var uploadImagesBtn = document.getElementById('uploadImagesBtn');
-			var uploadBtnContainer = document.getElementById('uploadBtnContainer');
-			var imageInput = document.getElementById('dimensionImageInput');
-			var selectedRow = null;
-			var selectedEquipmentId = null;
-			var selectedFiles = [];
+						// --- Dimension Cheat Sheet Image Upload Logic Improved ---
+						// DOM references
+						var tableBody = document.getElementById('dimensionTableBody');
+						var imageList = document.getElementById('dimensionImageList');
+						var addImageBtn = document.getElementById('addImageBtn');
+						var uploadImagesBtn = document.getElementById('uploadImagesBtn');
+						var uploadBtnContainer = document.getElementById('uploadBtnContainer');
+						var imageInput = document.getElementById('dimensionImageInput');
+						var countMsg = document.getElementById('dimensionImageCountMsg');
+						var selectedRow = null;
+						var selectedEquipmentId = null;
+						var selectedFiles = [];
 
-			// Fetch and display images for a given equipment
-			function fetchAndShowImages(equipmentId) {
-				imageList.innerHTML = '<span class="no-image">Loading...</span>';
-				var countMsg = document.getElementById('dimensionImageCountMsg');
-				countMsg.textContent = '';
-				// Always clear previews and selected files when switching equipment
-				clearSelectedPreviews();
-				selectedFiles = [];
-				uploadImagesBtn.disabled = true;
-				uploadBtnContainer.classList.remove('visible');
-				imageInput.value = '';
-				fetch('/PortalSite/api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
-					.then(res => res.json())
-					.then(data => {
-						imageList.innerHTML = '';
-						if (data.success && data.uploads && data.uploads.dimension && data.uploads.dimension.length > 0) {
-							countMsg.textContent = data.uploads.dimension.length + ' image' + (data.uploads.dimension.length > 1 ? 's' : '') + ' added';
-							addImageBtn.textContent = 'Add More';
-							addImageBtn.classList.add('add-more');
-							data.uploads.dimension.forEach(function(upload) {
-								var img = document.createElement('img');
-								img.src = upload.file_url;
-								img.alt = 'Equipment Photo';
-								img.onerror = function() {
-									var errSpan = document.createElement('span');
-									errSpan.className = 'no-image';
-									errSpan.textContent = 'Error loading image';
-									img.replaceWith(errSpan);
-								};
-								imageList.appendChild(img);
-							});
-						} else {
+						// Helper: Normalize image URL for local/production
+						function normalizeImageUrl(url) {
+							url = url.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '/');
+							// Production: /uploads/equipment/...
+							// Local: /PortalSite/uploads/equipment/...
+							if (window.location.pathname.indexOf('/PortalSite/') === 0) {
+								if (url.indexOf('/PortalSite/uploads/equipment/') === 0) return url;
+								if (url.indexOf('/uploads/equipment/') === 0) return '/PortalSite' + url;
+							} else {
+								if (url.indexOf('/uploads/equipment/') === 0) return url;
+								if (url.indexOf('/PortalSite/uploads/equipment/') === 0) return url.replace('/PortalSite', '');
+							}
+							// Fallback: ensure at least /uploads/equipment/...
+							if (url.indexOf('uploads/equipment/') !== -1) {
+								return url.indexOf('/') === 0 ? url : '/' + url;
+							}
+							return url;
+						}
+
+						// Fetch and display images for a given equipment
+						function fetchAndShowImages(equipmentId) {
+							imageList.innerHTML = '<span class="no-image">Loading...</span>';
 							countMsg.textContent = '';
-							addImageBtn.textContent = 'Add Image';
-							addImageBtn.classList.remove('add-more');
-							var msg = document.createElement('span');
-							msg.className = 'no-image';
-							msg.textContent = 'No image uploaded for this equipment.';
-							imageList.appendChild(msg);
+							clearSelectedPreviews();
+							selectedFiles = [];
+							uploadImagesBtn.disabled = true;
+							uploadBtnContainer.classList.remove('visible');
+							imageInput.value = '';
+							fetch('/PortalSite/api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
+								.then(res => res.json())
+								.then(data => {
+									imageList.innerHTML = '';
+									if (data.success && data.uploads && data.uploads.dimension && data.uploads.dimension.length > 0) {
+										countMsg.textContent = data.uploads.dimension.length + ' image' + (data.uploads.dimension.length > 1 ? 's' : '') + ' added';
+										addImageBtn.textContent = 'Add More';
+										addImageBtn.classList.add('add-more');
+										data.uploads.dimension.forEach(function(upload) {
+											var img = document.createElement('img');
+											img.src = normalizeImageUrl(upload.file_url);
+											img.alt = 'Equipment Photo';
+											img.onerror = function() {
+												var errSpan = document.createElement('span');
+												errSpan.className = 'no-image';
+												errSpan.textContent = 'Error loading image';
+												img.replaceWith(errSpan);
+											};
+											imageList.appendChild(img);
+										});
+									} else {
+										countMsg.textContent = '';
+										addImageBtn.textContent = 'Add Image';
+										addImageBtn.classList.remove('add-more');
+										var msg = document.createElement('span');
+										msg.className = 'no-image';
+										msg.textContent = 'No image uploaded for this equipment.';
+										imageList.appendChild(msg);
+									}
+								})
+								.catch((err) => {
+									console.error('Fetch error:', err);
+									countMsg.textContent = '';
+									imageList.innerHTML = '<span class="no-image">Error loading images</span>';
+								});
 						}
-					})
-					.catch((err) => {
-						console.error('Fetch error:', err);
-						countMsg.textContent = '';
-						imageList.innerHTML = '<span class="no-image">Error loading images</span>';
-					});
-			}
 
-			// Show image previews for selected files
-			function showSelectedPreviews(files) {
-				clearSelectedPreviews();
-				if (!files || files.length === 0) {
-					uploadBtnContainer.classList.remove('visible');
-					uploadImagesBtn.disabled = true;
-					return;
-				}
-				// Create a single preview container
-				var previewDiv = document.createElement('div');
-				previewDiv.id = 'dimensionImagePreviewList';
-				Array.from(files).forEach(function(file) {
-					var reader = new FileReader();
-					var img = document.createElement('img');
-					reader.onload = function(e) {
-						img.src = e.target.result;
-					};
-					reader.onerror = function(e) {
-						img.alt = 'Error loading preview';
-					};
-					reader.readAsDataURL(file);
-					previewDiv.appendChild(img);
-				});
-				// Insert preview at the top of the imageList
-				imageList.insertBefore(previewDiv, imageList.firstChild);
-				uploadBtnContainer.classList.add('visible');
-				uploadImagesBtn.disabled = false;
-			}
-
-			// Remove preview container and reset file input
-			function clearSelectedPreviews() {
-				var previewDiv = document.getElementById('dimensionImagePreviewList');
-				if (previewDiv) previewDiv.remove();
-				uploadBtnContainer.classList.remove('visible');
-				uploadImagesBtn.disabled = true;
-				imageInput.value = '';
-			}
-
-			// Handle row selection in the table
-			tableBody.addEventListener('click', function(e) {
-				var tr = e.target.closest('tr');
-				if (!tr) return;
-				// Remove previous selection
-				if (selectedRow) selectedRow.classList.remove('selected');
-				tr.classList.add('selected');
-				selectedRow = tr;
-				var equipmentId = tr.getAttribute('data-equipment-id');
-				// Only allow valid equipmentId
-				if (equipmentId && parseInt(equipmentId) > 0) {
-					selectedEquipmentId = equipmentId;
-					addImageBtn.disabled = false;
-					addImageBtn.style.opacity = 1;
-					addImageBtn.style.cursor = 'pointer';
-					fetchAndShowImages(equipmentId);
-				} else {
-					selectedEquipmentId = null;
-					addImageBtn.disabled = true;
-					addImageBtn.style.opacity = 0.5;
-					addImageBtn.style.cursor = 'not-allowed';
-					imageList.innerHTML = '<span class="no-image">No valid equipment ID</span>';
-					clearSelectedPreviews();
-				}
-			});
-
-			// Handle Add Image button click
-			addImageBtn.addEventListener('click', function() {
-				if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
-					alert('Please select an equipment row first.');
-					return;
-				}
-				// Open file picker
-				imageInput.value = '';
-				imageInput.click();
-			});
-
-			// Handle file input change (new selection replaces previous)
-			imageInput.addEventListener('change', function(e) {
-				if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
-					alert('Please select an equipment row first.');
-					imageInput.value = '';
-					return;
-				}
-				if (!imageInput.files || imageInput.files.length === 0) {
-					clearSelectedPreviews();
-					selectedFiles = [];
-					return;
-				}
-				// Replace previous selection
-				selectedFiles = Array.from(imageInput.files);
-				showSelectedPreviews(selectedFiles);
-			});
-
-			// Handle Upload Selected button click
-			uploadImagesBtn.addEventListener('click', function(e) {
-				e.preventDefault();
-				// Validate equipment and files
-				if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
-					alert('Please select an equipment row from the table first.');
-					return;
-				}
-				if (!selectedFiles || selectedFiles.length === 0) {
-					alert('Please select images to upload first by clicking "Add Image".');
-					return;
-				}
-				// Disable buttons during upload
-				uploadImagesBtn.disabled = true;
-				addImageBtn.disabled = true;
-				addImageBtn.style.opacity = 0.5;
-				var countMsg = document.getElementById('dimensionImageCountMsg');
-				countMsg.textContent = 'Uploading ' + selectedFiles.length + ' image(s)...';
-				countMsg.style.color = '#667eea';
-				// Upload each file
-				var uploads = selectedFiles.map(function(file) {
-					var formData = new FormData();
-					   formData.append('equipment_id', selectedEquipmentId);
-					   formData.append('file', file);
-					   formData.append('field', 'dimension');
-					return fetch('/PortalSite/api/add_equipment_upload.php', {
-						method: 'POST',
-						body: formData
-					})
-					.then(res => res.json())
-					.then(data => data)
-					.catch(err => ({ success: false, error: err.message }));
-				});
-				// Wait for all uploads
-				Promise.all(uploads).then(function(results) {
-					var successCount = 0;
-					var errorCount = 0;
-					var errorFiles = [];
-					results.forEach(function(r, idx) {
-						if (r && r.success) {
-							successCount++;
-						} else {
-							errorCount++;
-							errorFiles.push(selectedFiles[idx] ? selectedFiles[idx].name : 'Unknown');
+						// Show image previews for selected files
+						function showSelectedPreviews(files) {
+							clearSelectedPreviews();
+							if (!files || files.length === 0) {
+								uploadBtnContainer.classList.remove('visible');
+								uploadImagesBtn.disabled = true;
+								return;
+							}
+							var previewDiv = document.createElement('div');
+							previewDiv.id = 'dimensionImagePreviewList';
+							Array.from(files).forEach(function(file) {
+								var reader = new FileReader();
+								var img = document.createElement('img');
+								reader.onload = function(e) {
+									img.src = e.target.result;
+								};
+								reader.onerror = function(e) {
+									img.alt = 'Error loading preview';
+								};
+								reader.readAsDataURL(file);
+								previewDiv.appendChild(img);
+							});
+							imageList.insertBefore(previewDiv, imageList.firstChild);
+							uploadBtnContainer.classList.add('visible');
+							uploadImagesBtn.disabled = false;
 						}
-					});
-					var msg = '';
-					if (successCount > 0) {
-						msg += successCount + ' image' + (successCount > 1 ? 's' : '') + ' uploaded successfully!';
-						countMsg.style.color = '#10b981';
-					}
-					if (errorCount > 0) {
-						if (msg) msg += ' ';
-						msg += errorCount + ' image' + (errorCount > 1 ? 's' : '') + ' failed.';
-						if (errorFiles.length > 0) {
-							msg += ' Failed: ' + errorFiles.join(', ');
+
+						// Remove preview container and reset file input
+						function clearSelectedPreviews() {
+							var previewDiv = document.getElementById('dimensionImagePreviewList');
+							if (previewDiv) previewDiv.remove();
+							uploadBtnContainer.classList.remove('visible');
+							uploadImagesBtn.disabled = true;
+							imageInput.value = '';
 						}
-						countMsg.style.color = '#ef4444';
-					}
-					countMsg.textContent = msg;
-					// After upload, clear previews and selectedFiles
-					clearSelectedPreviews();
-					selectedFiles = [];
-					// Refresh image list
-					fetchAndShowImages(selectedEquipmentId);
-					// Re-enable Add Image button after short delay
-					setTimeout(function() {
-						addImageBtn.disabled = false;
-						addImageBtn.style.opacity = 1;
-					}, 500);
-				}).catch(function(err) {
-					countMsg.textContent = 'Upload failed. Please try again.';
-					countMsg.style.color = '#ef4444';
-					uploadImagesBtn.disabled = false;
-					addImageBtn.disabled = false;
-					addImageBtn.style.opacity = 1;
-				});
-			});
-			// --- End Refactor ---
+
+						// Handle row selection in the table
+						tableBody.addEventListener('click', function(e) {
+							var tr = e.target.closest('tr');
+							if (!tr) return;
+							if (selectedRow) selectedRow.classList.remove('selected');
+							tr.classList.add('selected');
+							selectedRow = tr;
+							var equipmentId = tr.getAttribute('data-equipment-id');
+							if (equipmentId && parseInt(equipmentId) > 0) {
+								selectedEquipmentId = equipmentId;
+								addImageBtn.disabled = false;
+								addImageBtn.style.opacity = 1;
+								addImageBtn.style.cursor = 'pointer';
+								fetchAndShowImages(equipmentId);
+							} else {
+								selectedEquipmentId = null;
+								addImageBtn.disabled = true;
+								addImageBtn.style.opacity = 0.5;
+								addImageBtn.style.cursor = 'not-allowed';
+								imageList.innerHTML = '<span class="no-image">No valid equipment ID</span>';
+								clearSelectedPreviews();
+							}
+						});
+
+						// Handle Add Image button click
+						addImageBtn.addEventListener('click', function() {
+							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
+								alert('Please select an equipment row first.');
+								return;
+							}
+							imageInput.value = '';
+							imageInput.click();
+						});
+
+						// Handle file input change (new selection replaces previous)
+						imageInput.addEventListener('change', function(e) {
+							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
+								alert('Please select an equipment row first.');
+								imageInput.value = '';
+								return;
+							}
+							if (!imageInput.files || imageInput.files.length === 0) {
+								clearSelectedPreviews();
+								selectedFiles = [];
+								return;
+							}
+							selectedFiles = Array.from(imageInput.files);
+							showSelectedPreviews(selectedFiles);
+						});
+
+						// Handle Upload Selected button click
+						uploadImagesBtn.addEventListener('click', function(e) {
+							e.preventDefault();
+							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
+								alert('Please select an equipment row from the table first.');
+								return;
+							}
+							if (!selectedFiles || selectedFiles.length === 0) {
+								alert('Please select images to upload first by clicking "Add Image".');
+								return;
+							}
+							uploadImagesBtn.disabled = true;
+							addImageBtn.disabled = true;
+							addImageBtn.style.opacity = 0.5;
+							countMsg.textContent = 'Uploading ' + selectedFiles.length + ' image(s)...';
+							countMsg.style.color = '#667eea';
+
+							// Upload each file and show per-file status
+							var uploads = selectedFiles.map(function(file) {
+								var formData = new FormData();
+								formData.append('equipment_id', selectedEquipmentId);
+								formData.append('file', file);
+								formData.append('field', 'dimension');
+								return fetch('/PortalSite/api/add_equipment_upload.php', {
+									method: 'POST',
+									body: formData
+								})
+								.then(res => res.json())
+								.then(data => {
+									if (data.success) {
+										return { success: true, file: file.name };
+									} else {
+										return { success: false, file: file.name, error: (data.errors ? data.errors.join(', ') : 'Unknown error') };
+									}
+								})
+								.catch(err => ({ success: false, file: file.name, error: err.message }));
+							});
+
+							Promise.all(uploads).then(function(results) {
+								var successCount = 0;
+								var errorCount = 0;
+								var errorFiles = [];
+								var successFiles = [];
+								results.forEach(function(r) {
+									if (r.success) {
+										successCount++;
+										successFiles.push(r.file);
+									} else {
+										errorCount++;
+										errorFiles.push(r.file + (r.error ? ' (' + r.error + ')' : ''));
+									}
+								});
+								var msg = '';
+								if (successCount > 0) {
+									msg += successCount + ' image' + (successCount > 1 ? 's' : '') + ' uploaded successfully: ' + successFiles.join(', ') + '.';
+									countMsg.style.color = '#10b981';
+								}
+								if (errorCount > 0) {
+									if (msg) msg += ' ';
+									msg += errorCount + ' image' + (errorCount > 1 ? 's' : '') + ' failed: ' + errorFiles.join(', ') + '.';
+									countMsg.style.color = '#ef4444';
+								}
+								countMsg.textContent = msg;
+								clearSelectedPreviews();
+								selectedFiles = [];
+								// Refresh image list to show new uploads
+								fetchAndShowImages(selectedEquipmentId);
+								setTimeout(function() {
+									addImageBtn.disabled = false;
+									addImageBtn.style.opacity = 1;
+								}, 500);
+							}).catch(function(err) {
+								countMsg.textContent = 'Upload failed. Please try again.';
+								countMsg.style.color = '#ef4444';
+								uploadImagesBtn.disabled = false;
+								addImageBtn.disabled = false;
+								addImageBtn.style.opacity = 1;
+							});
+						});
+						// --- End Improved Logic ---
 					});
 					</script>
 					
