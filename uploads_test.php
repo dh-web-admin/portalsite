@@ -2,7 +2,7 @@
 // uploads_test.php
 // Place this file in your PortalSite root and open in browser
 
-$dir = __DIR__ . '/uploads/equipment/';
+$dir = __DIR__ . '/PortalSite/uploads/equipment/';
 
 if (!is_dir($dir)) {
     echo "<b>Directory does not exist:</b> $dir";
