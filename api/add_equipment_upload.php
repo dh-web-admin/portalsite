@@ -110,8 +110,29 @@ foreach ($files as $file) {
     // Prevent duplicate DB insert for the same file in a single request
     if (isset($seenFiles[$fileUrl])) continue;
     $seenFiles[$fileUrl] = true;
-    if (is_uploaded_file($file['tmp_name']) && move_uploaded_file($file['tmp_name'], $targetPath)) {
-        log_upload_debug("File uploaded: $targetPath for equipment_id=$equipment_id, field=$field");
+    $moved = false;
+    if (is_uploaded_file($file['tmp_name'])) {
+        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+            $moved = true;
+            log_upload_debug("File moved (move_uploaded_file): $targetPath for equipment_id=$equipment_id, field=$field");
+        } else {
+            // Try fallback copy (some container setups disallow move_uploaded_file)
+            if (@copy($file['tmp_name'], $targetPath)) {
+                $moved = true;
+                @unlink($file['tmp_name']);
+                log_upload_debug("File copied (fallback): $targetPath for equipment_id=$equipment_id, field=$field");
+            } else {
+                $errInfo = error_get_last();
+                log_upload_debug("move_uploaded_file failed and copy fallback failed for tmp:" . $file['tmp_name'] . ' target:' . $targetPath . ' err:' . json_encode($errInfo));
+            }
+        }
+        if ($moved) {
+            // Ensure reasonable permissions
+            @chmod($targetPath, 0644);
+        }
+    }
+
+    if ($moved) {
         $stmt = $conn->prepare('INSERT INTO equipment_uploads (equipment_id, field, file_url, uploaded_at) VALUES (?, ?, ?, NOW())');
         if (!$stmt) {
             log_upload_debug("DB prepare failed: " . $conn->error);
