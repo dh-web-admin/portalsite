@@ -77,11 +77,16 @@ if (!is_dir($uploadDir)) {
 $successCount = 0;
 $errors = [];
 $uploadedFiles = [];
+
+$seenFiles = [];
 foreach ($files as $file) {
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     $baseName = $field . '_' . uniqid() . '.' . $ext;
     $fileUrl = $fileUrlPrefix . $baseName;
     $targetPath = $uploadDir . $baseName;
+    // Prevent duplicate DB insert for the same file in a single request
+    if (isset($seenFiles[$fileUrl])) continue;
+    $seenFiles[$fileUrl] = true;
     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
         log_upload_debug("File uploaded: $targetPath for equipment_id=$equipment_id, field=$field");
         $stmt = $conn->prepare('INSERT INTO equipment_uploads (equipment_id, field, file_url, uploaded_at) VALUES (?, ?, ?, NOW())');
@@ -99,7 +104,6 @@ foreach ($files as $file) {
         }
         $stmt->close();
         log_upload_debug("DB insert success for $fileUrl");
-        // For production, the file is in /tmp but should be served from /uploads/equipment/ (handled by web server or CDN)
         $uploadedFiles[] = $fileUrl;
         $successCount++;
     } else {
