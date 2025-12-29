@@ -20,27 +20,26 @@ $uploads = [
 ];
 // Detect environment (same as config.php)
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
-$filePrefix = $isProduction ? '/uploads/equipment/' : '/PortalSite/uploads/equipment/';
 while ($row = $res->fetch_assoc()) {
     $f = $row['field'];
-    // Only prefix if not already present
     if (isset($row['file_url'])) {
         $url = str_replace('\\', '/', $row['file_url']);
+        $url = ltrim($url, '/');
+        // Normalize for production
         if ($isProduction) {
-            if (strpos($url, '/uploads/equipment/') === 0) {
-                $row['file_url'] = $url;
+            if (strpos($url, 'uploads/equipment/') === 0) {
+                $row['file_url'] = '/' . $url;
             } else {
-                $row['file_url'] = '/uploads/equipment/' . ltrim($url, '/');
+                $row['file_url'] = '/uploads/equipment/' . $url;
             }
         } else {
-            if (strpos($url, '/PortalSite/uploads/equipment/') === 0) {
-                $row['file_url'] = $url;
-            } else if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
+            // Local: always prefix with /PortalSite/
+            if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
                 $row['file_url'] = '/' . $url;
             } else if (strpos($url, 'uploads/equipment/') === 0) {
                 $row['file_url'] = '/PortalSite/' . $url;
             } else {
-                $row['file_url'] = '/PortalSite/uploads/equipment/' . ltrim($url, '/');
+                $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
             }
         }
     }
