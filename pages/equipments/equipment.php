@@ -398,6 +398,35 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 .equipment-action-btn:active {
   transform: scale(0.98);
 }
+
+/* View pictures button styling */
+.view-pictures-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #4b5257; /* lighter gray */
+    color: #e6e8ea;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 12px; /* reduced font size for smaller button */
+    cursor: pointer;
+    box-shadow: none;
+    transition: transform .08s ease, background .12s ease, opacity .12s ease;
+}
+.view-pictures-btn:hover {
+    transform: translateY(-1px);
+    background: #565c61; /* slightly darker on hover */
+}
+.view-pictures-btn:active {
+    transform: translateY(0);
+    filter: brightness(0.97);
+}
+.view-pictures-btn[disabled] {
+    opacity: 0.6;
+    cursor: default;
+}
 .equipment-action-btn--primary {
   background: #e0e7ef;
   border-color: #cbd5e1;
@@ -1147,7 +1176,19 @@ if (count($allRows) > 0) {
         echo '<td>' . htmlspecialchars($row['date_repaired'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['repair_mechanic'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['parts_fixed'] ?? '') . '</td>';
-        echo '<td>' . htmlspecialchars($row['pictures'] ?? '') . '</td>';
+        // Pictures column: show 'View pictures' button when pictures exist
+        $picsRaw = $row['pictures'] ?? '';
+        $picsArr = [];
+        if (trim((string)$picsRaw) !== '') {
+            $tmp = array_filter(array_map('trim', explode(',', $picsRaw)));
+            foreach ($tmp as $p) if ($p !== '') $picsArr[] = $p;
+        }
+        if (count($picsArr) > 0) {
+            $picsJson = htmlspecialchars(json_encode(array_values($picsArr)), ENT_QUOTES, 'UTF-8');
+            echo '<td><button class="view-pictures-btn" data-issue-id="' . htmlspecialchars($row['id']) . '" data-pictures="' . $picsJson . '">View pictures</button></td>';
+        } else {
+            echo '<td></td>';
+        }
         echo '</tr>';
     }
 } else {
@@ -1602,6 +1643,63 @@ if (editIssueForm) {
             usersGroup.classList.toggle('open');
         });
     }
+})();
+</script>
+<!-- Pictures viewer modal (full-viewport image) -->
+<div id="picturesModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:12000; align-items:center; justify-content:center;">
+    <div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+        <img id="picturesModalImg" src="" alt="" style="max-width:100vw; max-height:100vh; width:auto; height:auto; object-fit:contain; display:block;" />
+
+        <button id="picturesPrev" style="position:absolute; left:18px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:#fff; border:none; width:56px; height:56px; border-radius:28px; cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center;">◀</button>
+        <button id="picturesNext" style="position:absolute; right:18px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:#fff; border:none; width:56px; height:56px; border-radius:28px; cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center;">▶</button>
+
+        <button id="picturesClose" aria-label="Close pictures" style="position:absolute; right:18px; top:18px; background:rgba(0,0,0,0.6); color:#fff; border:none; padding:10px 12px; border-radius:20px; cursor:pointer; font-size:18px; z-index:13000;">✕</button>
+    </div>
+</div>
+
+<script>
+// Pictures modal functionality
+(function(){
+    var modal = document.getElementById('picturesModal');
+    var imgEl = document.getElementById('picturesModalImg');
+    var prevBtn = document.getElementById('picturesPrev');
+    var nextBtn = document.getElementById('picturesNext');
+    var closeBtn = document.getElementById('picturesClose');
+    var currentList = [];
+    var currentIndex = 0;
+
+    function showIndex(i) {
+        if (!currentList || currentList.length === 0) return;
+        if (i < 0) i = 0;
+        if (i >= currentList.length) i = currentList.length - 1;
+        currentIndex = i;
+        imgEl.src = currentList[currentIndex];
+    }
+
+    document.querySelectorAll('.view-pictures-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            var picsData = btn.getAttribute('data-pictures') || '[]';
+            try { currentList = JSON.parse(picsData); } catch(e){ currentList = []; }
+            if (!Array.isArray(currentList) || currentList.length === 0) return;
+            // Normalize possible relative URLs stored in DB
+            currentList = currentList.map(function(u){
+                if (!u) return null;
+                u = String(u).trim();
+                if (/^https?:\/\//i.test(u) || u.startsWith('/')) return u;
+                // Prepend app root path for local/prod consistency
+                return '/PortalSite/' + u.replace(/^\/+/, '');
+            }).filter(function(x){ return !!x; });
+            showIndex(0);
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        });
+    });
+
+    prevBtn.addEventListener('click', function(){ showIndex(currentIndex - 1); });
+    nextBtn.addEventListener('click', function(){ showIndex(currentIndex + 1); });
+    closeBtn.addEventListener('click', function(){ modal.style.display='none'; document.body.style.overflow=''; imgEl.src=''; currentList=[]; });
+    modal.addEventListener('click', function(e){ if (e.target === modal) { modal.style.display='none'; document.body.style.overflow=''; imgEl.src=''; currentList=[]; } });
+    document.addEventListener('keydown', function(e){ if (modal.style.display === 'flex') { if (e.key === 'ArrowLeft') showIndex(currentIndex - 1); if (e.key === 'ArrowRight') showIndex(currentIndex + 1); if (e.key === 'Escape') { modal.style.display='none'; document.body.style.overflow=''; imgEl.src=''; currentList=[]; } } });
 })();
 </script>
 <script src="../../assets/js/mobile-menu.js"></script>
