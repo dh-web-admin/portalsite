@@ -27,6 +27,29 @@ if (!can_access($role, 'equipments')) {
 	exit();
 }
 
+// Hide admin-only UI elements for non-admin users
+if (!is_admin()) {
+		echo <<<'HTML'
+<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
+<script>
+(function(){
+	var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
+	function hideIfMatch(el){
+		var text=(el.innerText||el.value||'').trim();
+		var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
+		if(!text && !title) return;
+		var combined = (text + ' ' + title).trim();
+		for(var i=0;i<patterns.length;i++){ if(patterns[i].test(combined)){ el.style.display='none'; return; } }
+	}
+	document.addEventListener('DOMContentLoaded', function(){
+		var els=document.querySelectorAll('a,button,input[type=button],input[type=submit]');
+		els.forEach(hideIfMatch);
+	});
+})();
+</script>
+HTML;
+}
+
 
 // Fetch equipment rows
 $equipments = [];
@@ -487,7 +510,7 @@ function eq_format_warranty($dateValue) {
 														<td>
 															<div class="equipment-number-cell">
 																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>"><?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?></a>
-																<span class="equipment-edit-icon" title="Edit equipment">Edit</span>
+																<span class="equipment-edit-icon admin-only" title="Edit equipment">Edit</span>
 															</div>
 														</td>
 														<td><?php echo htmlspecialchars((string)($eq['type'] ?? '')); ?></td>

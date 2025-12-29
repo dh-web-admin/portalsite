@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/../../session_init.php';
 require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../partials/permissions.php';
 $equipment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+if (!is_admin()) { echo "Forbidden."; exit(); }
 if ($equipment_id <= 0) { echo "Invalid equipment ID."; exit; }
 $stmt = $conn->prepare("SELECT id, equipment_id, field, file_url, uploaded_at FROM equipment_uploads WHERE equipment_id = ? ORDER BY uploaded_at DESC");
 $stmt->bind_param('i', $equipment_id);

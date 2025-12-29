@@ -8,6 +8,7 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 }
 
 require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../partials/permissions.php';
 
 // Get user role for sidebar
 $email = $_SESSION['email'];
@@ -34,6 +35,33 @@ if (isset($_GET['preview_role'])) {
 }
 
 // Handle save changes POST request (move this block to the top to avoid headers already sent)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !is_admin()) {
+    http_response_code(403);
+    echo '<div style="color:red;margin-bottom:16px;">Forbidden.</div>';
+    exit();
+}
+// Hide admin-only UI elements for non-admin users
+if (!is_admin()) {
+        echo <<<'HTML'
+<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
+<script>
+(function(){
+    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
+    function hideIfMatch(el){
+        var text=(el.innerText||el.value||'').trim();
+        var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
+        if(!text && !title) return;
+        var combined = (text + ' ' + title).trim();
+        for(var i=0;i<patterns.length;i++){ if(patterns[i].test(combined)){ el.style.display='none'; return; } }
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        var els=document.querySelectorAll('a,button,input[type=button],input[type=submit]');
+        els.forEach(hideIfMatch);
+    });
+})();
+</script>
+HTML;
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && isset($_POST['equipment_id'])) {
     $fields = [
         'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
@@ -944,7 +972,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
     </div>
 
                         <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 8px;">
-                            <button id="new-issue-btn" style="padding: 8px 18px; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 700; font-size: 15px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.07); cursor: pointer; transition: background 0.2s;">New Issue</button>
+                            <button id="new-issue-btn" class="admin-only" style="padding: 8px 18px; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 700; font-size: 15px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.07); cursor: pointer; transition: background 0.2s;">New Issue</button>
                         </div>
                         
                         <!-- New Issue Modal -->

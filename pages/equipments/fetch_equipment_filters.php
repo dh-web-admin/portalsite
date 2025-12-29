@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../config/config.php';
 header('Content-Type: application/json');
 $equipment_id = isset($_GET['equipment_id']) ? (int)$_GET['equipment_id'] : 0;
 $out = [];
+require_once __DIR__ . '/../../partials/permissions.php';
 if ($equipment_id > 0) {
     $sql = "SELECT ef.filter_id, fn.filter_name, ef.filter_date, ef.hours, ef.part_number, ef.make
             FROM equipment_filters ef

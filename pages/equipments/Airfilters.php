@@ -176,6 +176,8 @@ $fileCount = count($fileList);
                     <div style="background:#e0e7ff;padding:16px 24px;border-radius:12px;font-weight:600;font-size:1.2rem;color:#374151;margin-bottom:18px;">
                         <?php echo $fileCount; ?> item<?php echo $fileCount !== 1 ? 's' : ''; ?> available for equipment #<?php echo $equipment_id; ?>
                     </div>
+                    <?php include __DIR__ . '/../../partials/permissions.php'; ?>
+                    <?php if (is_admin()): ?>
                     <button id="uploadFilterBtn" class="download-print-btn" style="margin-bottom:12px;">
                         <span class="icon" aria-hidden="true" style="display:inline-flex;align-items:center;">
                             <!-- Up arrow for upload -->
@@ -183,6 +185,7 @@ $fileCount = count($fileList);
                         </span>
                         <span>Upload</span>
                     </button>
+                    <?php endif; ?>
                     <div id="uploadStatusMsg" style="margin:8px 0 0 0;font-weight:600;color:#22c55e;display:none;"></div>
                     <input type="file" id="filterFileInput" multiple style="display:none;" />
                     <ul id="filterFileList" class="file-list" style="list-style:none;padding:0;margin:0;min-height:40px;">
@@ -190,7 +193,7 @@ $fileCount = count($fileList);
                             <?php foreach ($fileList as $file): ?>
                                 <li class="filter-file-item" data-file-url="<?php echo htmlspecialchars($file['url']); ?>" data-file-id="<?php echo $file['id']; ?>" style="padding:12px 0;border-bottom:1px solid #f1f1f1;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
                                     <span>📄 <?php echo htmlspecialchars($file['name']); ?></span>
-                                    <button class="delete-upload-btn" style="margin-left:18px;padding:4px 12px;border-radius:6px;background:#f87171;color:#fff;border:none;font-size:13px;cursor:pointer;">Delete</button>
+                                    <button class="delete-upload-btn admin-only" style="margin-left:18px;padding:4px 12px;border-radius:6px;background:#f87171;color:#fff;border:none;font-size:13px;cursor:pointer;">Delete</button>
                                 </li>
 
                             <?php endforeach; ?>

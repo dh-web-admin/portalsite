@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 header('Content-Type: application/json');
+require_once __DIR__ . '/../../partials/permissions.php';
 $out = [];
 $res = $conn->query('SELECT filter_id, filter_name FROM filter_names ORDER BY filter_id ASC');
 if ($res) {
