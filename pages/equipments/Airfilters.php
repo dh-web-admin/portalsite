@@ -51,13 +51,13 @@ $fileStmt->close();
 $fileList = [];
 $fileList = [];
 foreach ($uploads as $row) {
-    $fileUrl = $row['file_url'];
+    $fileUrl = $row['file_url'] ?? '';
     if (!$fileUrl) continue;
     $fileUrl = str_replace('\\', '/', $fileUrl);
     $fileUrl = ltrim($fileUrl, '/');
     $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
     if ($isProduction) {
-        if (strpos($fileUrl, 'uploads/equipment/') === 0) {
+        if (strpos($fileUrl, 'PortalSite/uploads/equipment/') === 0 || strpos($fileUrl, 'uploads/equipment/') === 0) {
             $fileUrl = '/' . $fileUrl;
         } else {
             $fileUrl = '/uploads/equipment/' . $fileUrl;
@@ -65,12 +65,14 @@ foreach ($uploads as $row) {
     } else {
         if (strpos($fileUrl, 'PortalSite/uploads/equipment/') === 0) {
             $fileUrl = '/' . $fileUrl;
-        } else if (strpos($fileUrl, 'uploads/equipment/') === 0) {
+        } elseif (strpos($fileUrl, 'uploads/equipment/') === 0) {
             $fileUrl = '/PortalSite/' . $fileUrl;
         } else {
             $fileUrl = '/PortalSite/uploads/equipment/' . $fileUrl;
         }
     }
+    // Ensure single leading slash and no double slashes
+    $fileUrl = preg_replace('#/+#', '/', $fileUrl);
     $ext = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
     $isImage = in_array($ext, ['jpg','jpeg','png','gif','bmp','webp','svg']);
     $fileList[] = [
