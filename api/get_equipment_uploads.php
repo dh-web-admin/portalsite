@@ -25,13 +25,15 @@ while ($row = $res->fetch_assoc()) {
     if (isset($row['file_url'])) {
         $url = str_replace('\\', '/', $row['file_url']);
         $url = ltrim($url, '/');
-        // Remove any leading PortalSite/uploads/equipment/ or uploads/equipment/
+        // Remove any leading /PortalSite/uploads/equipment/ or uploads/equipment/
         if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
             $url = substr($url, strlen('PortalSite/uploads/equipment/'));
         } elseif (strpos($url, 'uploads/equipment/') === 0) {
             $url = substr($url, strlen('uploads/equipment/'));
         }
         $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
+        // Prevent double slashes
+        $row['file_url'] = preg_replace('#/+#','/',$row['file_url']);
     }
     if (isset($uploads[$f])) $uploads[$f][] = $row;
 }
