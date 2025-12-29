@@ -9,28 +9,27 @@ if (!is_dir($dir)) {
     exit;
 }
 
-$files = scandir($dir);
-if (!$files) {
-    echo "<b>Could not read directory:</b> $dir";
-    exit;
+
+// Recursively list all files in the uploads volume
+function listFilesRecursive($baseDir, $baseWeb) {
+    $results = [];
+    $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($baseDir, FilesystemIterator::SKIP_DOTS));
+    foreach ($rii as $file) {
+        if ($file->isDir()) continue;
+        $relPath = ltrim(str_replace($baseDir, '', $file->getPathname()), '/\\');
+        $webPath = $baseWeb . str_replace(DIRECTORY_SEPARATOR, '/', $relPath);
+        $results[] = [
+            'name' => $relPath,
+            'exists' => $file->isFile(),
+            'readable' => $file->isReadable(),
+            'size' => $file->getSize(),
+            'webPath' => $webPath
+        ];
+    }
+    return $results;
 }
 
-$results = [];
-foreach ($files as $file) {
-    if ($file === '.' || $file === '..') continue;
-    $path = $dir . $file;
-    $webPath = '/PortalSite/uploads/equipment/' . $file;
-    $exists = file_exists($path);
-    $readable = is_readable($path);
-    $size = $exists ? filesize($path) : 0;
-    $results[] = [
-        'name' => $file,
-        'exists' => $exists,
-        'readable' => $readable,
-        'size' => $size,
-        'webPath' => $webPath
-    ];
-}
+$results = listFilesRecursive($dir, '/PortalSite/uploads/equipment/');
 ?>
 <!DOCTYPE html>
 <html><head><title>Uploads Directory Test</title></head><body>
