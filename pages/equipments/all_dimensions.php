@@ -427,8 +427,6 @@ if (isset($_GET['preview_role'])) {
 					
 					<script>
 					document.addEventListener('DOMContentLoaded', function() {
-						// --- Dimension Cheat Sheet Image Upload Logic Improved ---
-						// DOM references
 						var tableBody = document.getElementById('dimensionTableBody');
 						var imageList = document.getElementById('dimensionImageList');
 						var addImageBtn = document.getElementById('addImageBtn');
@@ -440,11 +438,8 @@ if (isset($_GET['preview_role'])) {
 						var selectedEquipmentId = null;
 						var selectedFiles = [];
 
-						// Helper: Normalize image URL for local/production
 						function normalizeImageUrl(url) {
 							url = url.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '/');
-							// Production: /uploads/equipment/...
-							// Local: /PortalSite/uploads/equipment/...
 							if (window.location.pathname.indexOf('/PortalSite/') === 0) {
 								if (url.indexOf('/PortalSite/uploads/equipment/') === 0) return url;
 								if (url.indexOf('/uploads/equipment/') === 0) return '/PortalSite' + url;
@@ -452,14 +447,12 @@ if (isset($_GET['preview_role'])) {
 								if (url.indexOf('/uploads/equipment/') === 0) return url;
 								if (url.indexOf('/PortalSite/uploads/equipment/') === 0) return url.replace('/PortalSite', '');
 							}
-							// Fallback: ensure at least /uploads/equipment/...
 							if (url.indexOf('uploads/equipment/') !== -1) {
 								return url.indexOf('/') === 0 ? url : '/' + url;
 							}
 							return url;
 						}
 
-						// Fetch and display images for a given equipment
 						function fetchAndShowImages(equipmentId) {
 							imageList.innerHTML = '<span class="no-image">Loading...</span>';
 							countMsg.textContent = '';
@@ -505,7 +498,6 @@ if (isset($_GET['preview_role'])) {
 								});
 						}
 
-						// Show image previews for selected files
 						function showSelectedPreviews(files) {
 							clearSelectedPreviews();
 							if (!files || files.length === 0) {
@@ -532,7 +524,6 @@ if (isset($_GET['preview_role'])) {
 							uploadImagesBtn.disabled = false;
 						}
 
-						// Remove preview container and reset file input
 						function clearSelectedPreviews() {
 							var previewDiv = document.getElementById('dimensionImagePreviewList');
 							if (previewDiv) previewDiv.remove();
@@ -541,7 +532,6 @@ if (isset($_GET['preview_role'])) {
 							imageInput.value = '';
 						}
 
-						// Handle row selection in the table
 						tableBody.addEventListener('click', function(e) {
 							var tr = e.target.closest('tr');
 							if (!tr) return;
@@ -565,7 +555,6 @@ if (isset($_GET['preview_role'])) {
 							}
 						});
 
-						// Handle Add Image button click
 						addImageBtn.addEventListener('click', function() {
 							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
 								alert('Please select an equipment row first.');
@@ -575,7 +564,6 @@ if (isset($_GET['preview_role'])) {
 							imageInput.click();
 						});
 
-						// Handle file input change (new selection replaces previous)
 						imageInput.addEventListener('change', function(e) {
 							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
 								alert('Please select an equipment row first.');
@@ -591,7 +579,6 @@ if (isset($_GET['preview_role'])) {
 							showSelectedPreviews(selectedFiles);
 						});
 
-						// Handle Upload Selected button click
 						uploadImagesBtn.addEventListener('click', function(e) {
 							e.preventDefault();
 							if (!selectedEquipmentId || parseInt(selectedEquipmentId) <= 0) {
@@ -607,8 +594,6 @@ if (isset($_GET['preview_role'])) {
 							addImageBtn.style.opacity = 0.5;
 							countMsg.textContent = 'Uploading ' + selectedFiles.length + ' image(s)...';
 							countMsg.style.color = '#667eea';
-
-							// Upload each file and show per-file status
 							var uploads = selectedFiles.map(function(file) {
 								var formData = new FormData();
 								formData.append('equipment_id', selectedEquipmentId);
@@ -618,57 +603,31 @@ if (isset($_GET['preview_role'])) {
 									method: 'POST',
 									body: formData
 								})
-								.then(res => res.json())
-								.then(data => {
-									if (data.success) {
-										return { success: true, file: file.name };
-									} else {
-										return { success: false, file: file.name, error: (data.errors ? data.errors.join(', ') : 'Unknown error') };
-									}
-								})
-								.catch(err => ({ success: false, file: file.name, error: err.message }));
+								.then(r => r.json());
 							});
-
 							Promise.all(uploads).then(function(results) {
-								var successCount = 0;
-								var errorCount = 0;
-								var errorFiles = [];
-								var successFiles = [];
-								results.forEach(function(r) {
-									if (r.success) {
-										successCount++;
-										successFiles.push(r.file);
-									} else {
-										errorCount++;
-										errorFiles.push(r.file + (r.error ? ' (' + r.error + ')' : ''));
-									}
-								});
-								var msg = '';
-								if (successCount > 0) {
-									msg += successCount + ' image' + (successCount > 1 ? 's' : '') + ' uploaded successfully: ' + successFiles.join(', ') + '.';
-									countMsg.style.color = '#10b981';
+								var success = results.filter(r => r && r.success).length;
+								var fail = results.length - success;
+								countMsg.style.display = 'block';
+								if (success > 0 && fail === 0) {
+									countMsg.textContent = success + ' image(s) uploaded successfully!';
+									countMsg.style.color = '#22c55e';
+								} else if (success > 0 && fail > 0) {
+									countMsg.textContent = success + ' uploaded, ' + fail + ' failed.';
+									countMsg.style.color = '#eab308';
+								} else {
+									countMsg.textContent = 'Upload failed.';
+									countMsg.style.color = '#dc2626';
 								}
-								if (errorCount > 0) {
-									if (msg) msg += ' ';
-									msg += errorCount + ' image' + (errorCount > 1 ? 's' : '') + ' failed: ' + errorFiles.join(', ') + '.';
-									countMsg.style.color = '#ef4444';
-								}
-								countMsg.textContent = msg;
-								clearSelectedPreviews();
-								selectedFiles = [];
-								// Refresh image list to show new uploads
-								fetchAndShowImages(selectedEquipmentId);
-								setTimeout(function() {
-									addImageBtn.disabled = false;
-									addImageBtn.style.opacity = 1;
-								}, 500);
-							}).catch(function(err) {
-								countMsg.textContent = 'Upload failed. Please try again.';
-								countMsg.style.color = '#ef4444';
-								uploadImagesBtn.disabled = false;
-								addImageBtn.disabled = false;
-								addImageBtn.style.opacity = 1;
+								imageInput.value = '';
+								setTimeout(function(){ location.reload(); }, 1200);
+							}).catch(function(err){
+								imageInput.value = '';
+								countMsg.textContent = 'Upload failed: ' + (err && err.message ? err.message : 'Network error');
+								countMsg.style.color = '#dc2626';
 							});
+						});
+					});
 						});
 						// --- End Improved Logic ---
 					});
