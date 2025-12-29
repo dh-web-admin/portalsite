@@ -60,13 +60,15 @@ if (empty($files)) {
 
 
 // Use Railway volume mount in production
+
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 if ($isProduction) {
-    $uploadDir = '/uploads/equipment/';
-    $fileUrlPrefix = '/uploads/equipment/';
+    // Use the actual volume mount path in Railway
+    $uploadDir = '/app/PortalSite/uploads/equipment/';
+    $fileUrlPrefix = '/PortalSite/uploads/equipment/';
 } else {
     $uploadDir = __DIR__ . '/../uploads/equipment/';
-    $fileUrlPrefix = 'uploads/equipment/';
+    $fileUrlPrefix = '/PortalSite/uploads/equipment/';
 }
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
