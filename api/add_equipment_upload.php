@@ -3,21 +3,28 @@
 // Debug log function
 function log_upload_debug($msg) {
     $logfile = __DIR__ . '/../uploads/equipment/upload_debug.log';
-    file_put_contents($logfile, date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND);
+    @file_put_contents($logfile, date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND);
 }
 
 require_once __DIR__ . '/../config/config.php';
-header('Content-Type: application/json');
+
+// Do not expose PHP warnings in the JSON response
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
+header('Content-Type: application/json; charset=utf-8');
+
+// Start with a clean output buffer to avoid accidental output corrupting JSON
+while (ob_get_level()) { ob_end_clean(); }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['error' => 'Method not allowed']);
+    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
     exit;
 }
 
 if (!isset($_POST['equipment_id'])) {
     http_response_code(400);
-    echo json_encode(['error' => 'Missing equipment_id']);
+    echo json_encode(['success' => false, 'error' => 'Missing equipment_id']);
     exit;
 }
 
@@ -63,15 +70,29 @@ if (empty($files)) {
 
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 if ($isProduction) {
-    // Use the actual volume mount path in Railway
+    // Use the Railway volume mount path in production
     $uploadDir = '/app/PortalSite/uploads/equipment/';
     $fileUrlPrefix = '/PortalSite/uploads/equipment/';
 } else {
     $uploadDir = __DIR__ . '/../uploads/equipment/';
     $fileUrlPrefix = '/PortalSite/uploads/equipment/';
 }
+
+// Ensure upload directory exists and is writable
 if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0777, true);
+    if (!@mkdir($uploadDir, 0777, true)) {
+        $err = error_get_last();
+        log_upload_debug('Failed to create uploadDir: ' . $uploadDir . ' err: ' . json_encode($err));
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => 'Unable to create upload directory', 'dir' => $uploadDir, 'details' => $err]);
+        exit;
+    }
+}
+if (!is_writable($uploadDir)) {
+    log_upload_debug('Upload directory not writable: ' . $uploadDir);
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Upload directory not writable', 'dir' => $uploadDir]);
+    exit;
 }
 
 $successCount = 0;
@@ -82,12 +103,14 @@ $seenFiles = [];
 foreach ($files as $file) {
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     $baseName = $field . '_' . uniqid() . '.' . $ext;
+    // Ensure filename is safe
+    $baseName = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $baseName);
     $fileUrl = $fileUrlPrefix . $baseName;
-    $targetPath = $uploadDir . $baseName;
+    $targetPath = rtrim($uploadDir, '/') . '/' . $baseName;
     // Prevent duplicate DB insert for the same file in a single request
     if (isset($seenFiles[$fileUrl])) continue;
     $seenFiles[$fileUrl] = true;
-    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+    if (is_uploaded_file($file['tmp_name']) && move_uploaded_file($file['tmp_name'], $targetPath)) {
         log_upload_debug("File uploaded: $targetPath for equipment_id=$equipment_id, field=$field");
         $stmt = $conn->prepare('INSERT INTO equipment_uploads (equipment_id, field, file_url, uploaded_at) VALUES (?, ?, ?, NOW())');
         if (!$stmt) {
@@ -107,8 +130,9 @@ foreach ($files as $file) {
         $uploadedFiles[] = $fileUrl;
         $successCount++;
     } else {
-        log_upload_debug("Failed to move uploaded file: $targetPath");
-        $errors[] = 'Failed to move uploaded file: ' . $file['name'];
+        $errInfo = error_get_last();
+        log_upload_debug("Failed to move uploaded file: $targetPath tmp:" . $file['tmp_name'] . ' err:' . json_encode($errInfo));
+        $errors[] = 'Failed to move uploaded file: ' . $file['name'] . ' - ' . ($errInfo['message'] ?? 'unknown');
     }
 }
 
