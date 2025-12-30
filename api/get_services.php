@@ -18,9 +18,15 @@ if ($tableCheck->num_rows === 0) {
   exit;
 }
 
-// Fetch all services
-$result = $conn->query('SELECT name FROM services ORDER BY name ASC');
+// Decide whether services table has a display_order column
 $services = [];
+$colCheck = $conn->query("SHOW COLUMNS FROM `services` LIKE 'display_order'");
+if ($colCheck && $colCheck->num_rows > 0) {
+  // use stored display order, falling back to name
+  $result = $conn->query('SELECT name FROM services ORDER BY COALESCE(display_order, 999999), name ASC');
+} else {
+  $result = $conn->query('SELECT name FROM services ORDER BY name ASC');
+}
 
 if ($result && $result->num_rows > 0) {
   while ($row = $result->fetch_assoc()) {
