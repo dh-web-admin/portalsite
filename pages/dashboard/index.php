@@ -45,7 +45,6 @@ $allPages = [
     'forms' => 'Forms',
     'manuals' => 'Manuals',
     'videos' => 'Videos',
-    'coordinate_entry' => 'Coordinate Entry',
     'maps' => 'Maps'
 ];
 
@@ -68,13 +67,13 @@ switch ($role) {
         $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
         break;
     case 'guest':
-        // Guests only see the Coordinate Entry tile
-        $allowedPages = ['coordinate_entry'];
+        // Guests see no tiles by default
+        $allowedPages = [];
         $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
         break;
     case 'data_entry':
-        // Data-entry users only see maps and coordinate entry
-        $allowedPages = ['maps', 'coordinate_entry'];
+        // Data-entry users only see maps
+        $allowedPages = ['maps'];
         $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
         break;
     case 'admin':
@@ -125,13 +124,7 @@ switch ($role) {
                                 continue;
                             }
 
-                            // Coordinate entry should only be visible to admins, developers and project managers
-                            if ($page === 'coordinate_entry') {
-                                $allowedForCoords = ['admin', 'developer', 'projectmanager', 'data_entry'];
-                                if (!in_array($role, $allowedForCoords)) {
-                                    continue;
-                                }
-                            }
+                            // (Coordinate Entry removed from dashboard)
                         ?>
                         <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/') . $previewParam); ?>" class="tile">
                             <h2><?php echo htmlspecialchars($title); ?></h2>
