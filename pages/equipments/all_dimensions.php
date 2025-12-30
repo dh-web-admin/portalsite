@@ -395,7 +395,7 @@ if (isset($_GET['preview_role'])) {
 								</thead>
 								<tbody id="dimensionTableBody">
 									<?php
-									$sql = "SELECT e.equipment_id AS main_equipment_id, e.dhcst_equipment_number, e.dhss_equipment_number, e.make, d.* FROM equipments e LEFT JOIN dimensions d ON e.equipment_id = d.equipment_id ORDER BY e.equipment_id DESC";
+									$sql = "SELECT e.equipment_id AS main_equipment_id, e.dhcst_equipment_number, e.dhss_equipment_number, e.make, d.* FROM equipments e LEFT JOIN dimensions d ON e.equipment_id = d.equipment_id ORDER BY e.equipment_id ASC";
 									$result = $conn->query($sql);
 									if ($result && $result->num_rows > 0) {
 										$tempId = 1;

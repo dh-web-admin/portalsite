@@ -545,7 +545,7 @@ function eq_format_warranty($dateValue) {
 															<?php if ($val === '' || !isset($oilSvgMap[$val])): ?>
 																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">
+																<a class="oil-status-link" href="oil_status.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">
 																	<img src="images/<?php echo htmlspecialchars($oilSvgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> oil" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
