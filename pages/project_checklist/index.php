@@ -458,8 +458,91 @@ try {
       });
 
       // NOTE: rename is handled by the edit-menu (see separate script)
-
       // delete action moved into the edit-menu; click handled there
+      // --- Edit menu handling (open, rename, delete, status changes)
+      (function(){
+        var editMenu = document.getElementById('editMenu');
+        if (!editMenu) return;
+        var input = editMenu.querySelector('input[name="edit_name"]');
+        var btnRename = document.getElementById('editMenuRename');
+        var btnDelete = document.getElementById('editMenuDelete');
+        var btnCancelProject = document.getElementById('editMenuCancelProject');
+        var btnComplete = document.getElementById('editMenuCompleteProject');
+        var btnContinue = document.getElementById('editMenuContinueProject');
+        var table = document.querySelector('.project-table');
+
+        function openMenuFor(btn, projectId){
+          if (!projectId) return;
+          var tr = table.querySelector('tbody tr[data-project-id="' + projectId + '"]');
+          editMenu.dataset.projectId = projectId;
+          input.value = tr ? (tr.querySelector('.project-title') ? tr.querySelector('.project-title').textContent.trim() : '') : '';
+          editMenu.style.display = 'block';
+          editMenu.setAttribute('aria-hidden','false');
+          // Position next to button if possible
+          try{
+            var rect = btn.getBoundingClientRect();
+            editMenu.style.position = 'absolute';
+            editMenu.style.left = (rect.right + window.pageXOffset + 8) + 'px';
+            editMenu.style.top = (rect.top + window.pageYOffset) + 'px';
+          }catch(e){ /* ignore positioning errors */ }
+        }
+
+        // Open when clicking the edit icon
+        table.addEventListener('click', function(e){
+          var btn = e.target.closest('.edit-btn');
+          if (!btn) return;
+          e.preventDefault();
+          var pid = btn.getAttribute('data-project-id');
+          openMenuFor(btn, pid);
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', function(e){
+          if (!editMenu) return;
+          if (editMenu.contains(e.target)) return;
+          if (e.target.closest && e.target.closest('.edit-btn')) return;
+          editMenu.style.display = 'none';
+          editMenu.setAttribute('aria-hidden','true');
+        });
+
+        // Rename action
+        if (btnRename) btnRename.addEventListener('click', function(){
+          var pid = editMenu.dataset.projectId;
+          var newName = (input.value || '').trim();
+          if (!pid || newName === '') { alert('Please enter a project name'); return; }
+          var fd = new FormData(); fd.append('project_id', pid); fd.append('new_name', newName);
+          fetch('../../api/rename_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(json){ if (json && json.success) { window.location.reload(); } else { alert((json && json.message) ? json.message : 'Rename failed'); } })
+            .catch(function(){ alert('Rename failed'); });
+        });
+
+        // Delete action
+        if (btnDelete) btnDelete.addEventListener('click', function(){
+          var pid = editMenu.dataset.projectId;
+          if (!pid) return;
+          if (!confirm('Delete this project? This action cannot be undone.')) return;
+          var fd = new FormData(); fd.append('project_id', pid);
+          fetch('../../api/delete_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(json){ if (json && json.success) { window.location.reload(); } else { alert((json && json.message) ? json.message : 'Delete failed'); } })
+            .catch(function(){ alert('Delete failed'); });
+        });
+
+        // Helper to set status via update_project_cell.php
+        function setStatus(pid, statusValue){
+          if (!pid) return;
+          var fd = new FormData(); fd.append('project_id', pid); fd.append('column', 'Status'); fd.append('value', statusValue);
+          fetch('../../api/update_project_cell.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(json){ if (json && json.success) { window.location.reload(); } else { alert((json && json.message) ? json.message : 'Failed to update status'); } })
+            .catch(function(){ alert('Failed to update status'); });
+        }
+
+        if (btnCancelProject) btnCancelProject.addEventListener('click', function(){ var pid = editMenu.dataset.projectId; if (!pid) return; if (!confirm('Mark project as Cancelled?')) return; setStatus(pid, 'Cancelled'); });
+        if (btnComplete) btnComplete.addEventListener('click', function(){ var pid = editMenu.dataset.projectId; if (!pid) return; setStatus(pid, 'Completed'); });
+        if (btnContinue) btnContinue.addEventListener('click', function(){ var pid = editMenu.dataset.projectId; if (!pid) return; setStatus(pid, 'Ongoing'); });
+      })();
     })();
       var usersToggle = document.getElementById('usersToggle');
       var usersGroup = document.getElementById('usersGroup');
