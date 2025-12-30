@@ -821,12 +821,13 @@ CREATE TABLE users (
 
 ---
 
-**Last Updated**: November 6, 2025
+**Last Updated**: December 30, 2025
 **Version**: 2.0 - Reorganized pages into individual folders with dedicated CSS files
 **Maintained by**: Samip Kafle / dh-web-admin
 
 .Value `
-  - Failure: Back to `login.php` with error message
+
+- Failure: Back to `login.php` with error message
 - Database: Queries `users` table
 - Security: Prepared statements, password hashing
 
@@ -1518,13 +1519,14 @@ CREATE TABLE users (
 
 ---
 
-**Last Updated**: November 6, 2025
+**Last Updated**: December 30, 2025
 **Version**: 2.0 - Reorganized pages into individual folders with dedicated CSS files
 **Maintained by**: Samip Kafle / dh-web-admin
 
 .Value `
-  - Users (admin only): `../admin/user_list.php`, `../admin/register_new.php`, `../admin/remove_user.php`
-  - Logout: `../auth/logout.php`
+
+- Users (admin only): `../admin/user_list.php`, `../admin/register_new.php`, `../admin/remove_user.php`
+- Logout: `../auth/logout.php`
 - **JavaScript**: Toggle functionality for expandable sections
 - **CSS Classes**: `.side-nav`, `.nav-btn`, `.nav-group`, `.logout-btn`
 
@@ -1791,9 +1793,6 @@ CREATE TABLE users (
 
 ---
 
-**Last Updated**: November 6, 2025
+**Last Updated**: December 30, 2025
 **Version**: 2.0 - Reorganized pages into individual folders with dedicated CSS files
 **Maintained by**: Samip Kafle / dh-web-admin
-
-
-
