@@ -643,6 +643,14 @@ if (!can_access($role, 'maps')) {
         var ribbon = document.getElementById('mapRibbon');
         if (!ribbon) return;
 
+        // localStorage helpers for ribbon order fallback
+        function saveRibbonOrderLocal(order) {
+          try { localStorage.setItem('supplierRibbonOrder', JSON.stringify(order)); } catch (e) { console.warn('Failed to save ribbon order locally', e); }
+        }
+        function loadRibbonOrderLocal() {
+          try { var v = localStorage.getItem('supplierRibbonOrder'); return v ? JSON.parse(v) : null; } catch (e) { return null; }
+        }
+
         fetch('../../api/get_services.php', {
           method: 'GET',
           credentials: 'same-origin'
@@ -660,6 +668,15 @@ if (!can_access($role, 'maps')) {
             // Remove only buttons that do not match the current services list
             var existingBtns = Array.from(ribbon.querySelectorAll('.map-ribbon-btn'));
             var existingNames = existingBtns.map(function(btn){ return btn.getAttribute('data-map'); });
+
+            // If user reordered locally previously, prefer that order as a client-side fallback
+            var localOrder = loadRibbonOrderLocal();
+            if (Array.isArray(localOrder) && localOrder.length > 0) {
+              // filter localOrder to services present and then append any missing services
+              var ordered = localOrder.filter(function(n){ return services.indexOf(n) !== -1; });
+              services.forEach(function(s){ if (ordered.indexOf(s) === -1) ordered.push(s); });
+              services = ordered;
+            }
 
             services.forEach(function(serviceName, index) {
               if (!existingNames.includes(serviceName)) {
@@ -701,11 +718,14 @@ if (!can_access($role, 'maps')) {
 
                 btn.addEventListener('drop', function(e){
                   e.preventDefault();
-                  // Best-effort: send new order to server (endpoint optional)
                   try {
                     var order = Array.from(ribbon.querySelectorAll('.map-ribbon-btn')).map(function(b){ return b.getAttribute('data-map'); });
-                    fetch('../../api/update_service_order.php', { method: 'POST', credentials: 'same-origin', body: new URLSearchParams({ order: JSON.stringify(order) }) }).catch(function(){ /* ignore */ });
-                  } catch (ex) { /* ignore */ }
+                    // Try save to server; if it fails, persist locally so refresh preserves order for this browser
+                    fetch('../../api/update_service_order.php', { method: 'POST', credentials: 'same-origin', body: new URLSearchParams({ order: JSON.stringify(order) }) })
+                      .then(function(res){ if (!res.ok) throw new Error('Server returned ' + res.status); return res.json(); })
+                      .then(function(json){ if (json && json.success) { try { localStorage.removeItem('supplierRibbonOrder'); } catch(e){} } else { saveRibbonOrderLocal(order); } })
+                      .catch(function(err){ console.warn('Persisting ribbon order to server failed, saving locally', err); saveRibbonOrderLocal(order); });
+                  } catch (ex) { console.warn('Error handling drop', ex); }
                 });
 
                 btn.addEventListener('click', function(){
