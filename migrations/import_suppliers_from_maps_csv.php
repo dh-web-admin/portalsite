@@ -4,10 +4,44 @@
 
 require_once __DIR__ . '/../config/config.php';
 
+// Default relative path
 $csvPath = __DIR__ . '/../pages/maps/maps.csv';
 
-if (!file_exists($csvPath)) {
-    echo "CSV file not found: $csvPath\n";
+// If a csv path is provided via query (web) or argv (cli), prefer that
+if (PHP_SAPI !== 'cli' && !empty($_GET['csv'])) {
+    $csvPath = $_GET['csv'];
+}
+if (PHP_SAPI === 'cli' && isset($argv) && count($argv) > 1) {
+    // allow: php script.php path/to/maps.csv
+    $csvPath = $argv[1];
+}
+
+// Try a set of sensible fallbacks so the script works from web or CLI
+$candidates = [];
+$candidates[] = $csvPath;
+$candidates[] = __DIR__ . '/../../pages/maps/maps.csv';
+$candidates[] = __DIR__ . '/../public/pages/maps/maps.csv';
+if (!empty($_SERVER['DOCUMENT_ROOT'])) {
+    $candidates[] = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/pages/maps/maps.csv';
+}
+$candidates[] = getcwd() . '/pages/maps/maps.csv';
+
+$found = null;
+foreach ($candidates as $c) {
+    if ($c === null) continue;
+    $real = realpath($c);
+    if ($real && file_exists($real)) { $found = $real; break; }
+    // allow non-realpath relative paths from web context
+    if (file_exists($c)) { $found = $c; break; }
+}
+
+if ($found !== null) {
+    $csvPath = $found;
+} else {
+    echo "CSV file not found. Tried:\n";
+    foreach ($candidates as $c) { if ($c) echo " - $c\n"; }
+    echo "Provide a path via CLI: php migrations/import_suppliers_from_maps_csv.php /full/path/maps.csv\n";
+    echo "Or via web: /migrations/import_suppliers_from_maps_csv.php?csv=/full/path/maps.csv\n";
     exit(1);
 }
 
