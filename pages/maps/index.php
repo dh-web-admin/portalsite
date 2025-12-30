@@ -668,10 +668,45 @@ if (!can_access($role, 'maps')) {
                 btn.setAttribute('data-map', serviceName);
                 btn.textContent = serviceName.charAt(0).toUpperCase() + serviceName.slice(1).replace(/-/g, ' ');
 
+                // Make ribbon items draggable (client-side reorder)
+                btn.setAttribute('draggable', 'true');
+                btn.style.cursor = 'grab';
+
                 // First button is active by default if none are active
                 if (index === 0 && !ribbon.querySelector('.map-ribbon-btn.active')) {
                   btn.classList.add('active');
                 }
+
+                // Drag handlers
+                btn.addEventListener('dragstart', function(e){
+                  window._draggedRibbonItem = this;
+                  this.classList.add('dragging');
+                  try { e.dataTransfer.setData('text/plain', this.getAttribute('data-map')); } catch (ex) {}
+                });
+                btn.addEventListener('dragend', function(){
+                  this.classList.remove('dragging');
+                  window._draggedRibbonItem = null;
+                });
+
+                btn.addEventListener('dragover', function(e){
+                  e.preventDefault();
+                  var dragged = window._draggedRibbonItem;
+                  if (!dragged || dragged === this) return;
+                  var rect = this.getBoundingClientRect();
+                  var after = (e.clientX - rect.left) > (rect.width / 2);
+                  var parent = this.parentNode;
+                  if (after && this.nextSibling !== dragged) parent.insertBefore(dragged, this.nextSibling);
+                  else if (!after && parent.firstChild !== dragged) parent.insertBefore(dragged, this);
+                });
+
+                btn.addEventListener('drop', function(e){
+                  e.preventDefault();
+                  // Best-effort: send new order to server (endpoint optional)
+                  try {
+                    var order = Array.from(ribbon.querySelectorAll('.map-ribbon-btn')).map(function(b){ return b.getAttribute('data-map'); });
+                    fetch('../../api/update_service_order.php', { method: 'POST', credentials: 'same-origin', body: new URLSearchParams({ order: JSON.stringify(order) }) }).catch(function(){ /* ignore */ });
+                  } catch (ex) { /* ignore */ }
+                });
 
                 btn.addEventListener('click', function(){
                   var selectedService = this.getAttribute('data-map');
