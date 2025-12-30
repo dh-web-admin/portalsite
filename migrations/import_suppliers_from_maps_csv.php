@@ -13,21 +13,7 @@ if (PHP_SAPI !== 'cli' && !empty($_GET['csv'])) {
 }
 if (PHP_SAPI === 'cli' && isset($argv) && count($argv) > 1) {
     // allow: php script.php path/to/maps.csv
-    $csvPath = $argv[1];
-}
-
-// Try a set of sensible fallbacks so the script works from web or CLI
-$candidates = [];
-$candidates[] = $csvPath;
-$candidates[] = __DIR__ . '/../../pages/maps/maps.csv';
-$candidates[] = __DIR__ . '/../public/pages/maps/maps.csv';
-if (!empty($_SERVER['DOCUMENT_ROOT'])) {
-    $candidates[] = rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/pages/maps/maps.csv';
-}
-$candidates[] = getcwd() . '/pages/maps/maps.csv';
-
-$found = null;
-foreach ($candidates as $c) {
+    $found = null;
     if ($c === null) continue;
     $real = realpath($c);
     if ($real && file_exists($real)) { $found = $real; break; }
@@ -36,28 +22,60 @@ foreach ($candidates as $c) {
 }
 
 if ($found !== null) {
-    $csvPath = $found;
-} else {
-    echo "CSV file not found. Tried:\n";
-    foreach ($candidates as $c) { if ($c) echo " - $c\n"; }
-    echo "Provide a path via CLI: php migrations/import_suppliers_from_maps_csv.php /full/path/maps.csv\n";
-    echo "Or via web: /migrations/import_suppliers_from_maps_csv.php?csv=/full/path/maps.csv\n";
+    if ($found !== null) {
+        $csvPath = $found;
+    }
+
+    // Helper to download a URL into an in-memory stream
+    $downloadToStream = function($url) {
+        $opts = ['http' => ['method' => 'GET', 'header' => "User-Agent: PortalSite-Importer/1.0\r\n", 'timeout' => 15]];
+        $context = stream_context_create($opts);
+        $content = @file_get_contents($url, false, $context);
+        if ($content === false || $content === '') return false;
+        $stream = fopen('php://temp', 'r+');
+        if ($stream === false) return false;
+        fwrite($stream, $content);
+        rewind($stream);
+        return $stream;
+    };
+
+    // If local file not found, try downloading from configurable URL or GitHub raw
+    $handle = false;
+    if ($found !== null) {
+        $handle = @fopen($csvPath, 'r');
+    } else {
+        // candidate download URLs
+        $downloadCandidates = [];
+        // allow explicit CSV URL via query or CLI
+        if (PHP_SAPI !== 'cli' && !empty($_GET['csv'])) $downloadCandidates[] = $_GET['csv'];
+        if (PHP_SAPI === 'cli' && isset($argv) && count($argv) > 1 && preg_match('#^https?://#', $argv[1])) $downloadCandidates[] = $argv[1];
+        // allow env var to specify fallback
+        if (!empty(getenv('IMPORT_MAPS_CSV_URL'))) $downloadCandidates[] = getenv('IMPORT_MAPS_CSV_URL');
+        // default to GitHub raw for this repo
+        $downloadCandidates[] = 'https://raw.githubusercontent.com/dh-web-admin/portalsite/main/pages/maps/maps.csv';
+
+        foreach ($downloadCandidates as $url) {
+            if (empty($url)) continue;
+            if (!preg_match('#^https?://#', $url)) continue;
+            $s = $downloadToStream($url);
+            if ($s !== false) { $handle = $s; $csvPath = $url; break; }
+        }
+    }
+
+    if ($handle === false) {
+        echo "CSV file not found. Tried:\n";
+        foreach ($candidates as $c) { if ($c) echo " - $c\n"; }
+        echo "Also attempted to download from URLs (if available).\n";
+        echo "Provide a path via CLI: php migrations/import_suppliers_from_maps_csv.php /full/path/maps.csv\n";
+        echo "Or via web: /migrations/import_suppliers_from_maps_csv.php?csv=/full/path/maps/maps.csv\n";
+        exit(1);
+    }
+
+    if (!isset($conn) || !$conn) {
     exit(1);
 }
 
-if (!isset($conn) || !$conn) {
-    echo "Database connection \$conn not available from config.php\n";
-    exit(1);
-}
-
-echo "Importing CSV into `suppliers` from: $csvPath\n";
-
-$handle = fopen($csvPath, 'r');
-if ($handle === false) {
-    echo "Failed to open CSV file.\n";
-    exit(1);
-}
-
+    echo "Importing CSV into `suppliers` from: $csvPath\n";
 // Read header
 $header = fgetcsv($handle);
 if ($header === false) {
