@@ -68,9 +68,9 @@ $err = null;
 if (!$ok) { $err = $stmt->error; $stmt->close(); json_exit(['success'=>false,'message'=>'Update failed: '.$err], 500); }
 $stmt->close();
 
+// Fetch updated row
 $qr = $conn->query('SELECT * FROM equipment_oil_parts WHERE id=' . intval($id) . ' LIMIT 1');
- $row = $qr ? $qr->fetch_assoc() : null;
-json_exit(['success'=>true,'row'=>$row], 200);
+$row = $qr ? $qr->fetch_assoc() : null;
 
 // After update, if part belongs to an equipment, recalc equipment oil_status
 if ($row && isset($row['equipment_id'])) {
@@ -100,5 +100,7 @@ if ($row && isset($row['equipment_id'])) {
         $stmt3->close();
     }
 }
+
+json_exit(['success'=>true,'row'=>$row], 200);
 
 ?>

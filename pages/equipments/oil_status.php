@@ -306,437 +306,415 @@ try {
 	</div>
 
 	<script>
-		// Initial data emitted from server
-		var INITIAL_EQUIPMENTS = <?php echo json_encode($equipments ?: []); ?>;
-		var INITIAL_PARTS = <?php echo json_encode($partsByEquip ?: new stdClass()); ?>;
-		// build a list of existing part names for reuse across equipments
-		var EXISTING_PART_NAMES = (function(){
-			var out = [];
-			try {
-				var keys = Object.keys(INITIAL_PARTS || {});
-				keys.forEach(function(k){
-					var arr = INITIAL_PARTS[k] || [];
-					arr.forEach(function(p){ if (p && p.part) out.push(p.part); });
-				});
-			} catch(e){}
-			// unique
-			return out.filter(function(v,i,a){ return v && a.indexOf(v) === i; });
-		})();
-		var CURRENT_EQUIPMENT_ID = null;
+	// Initial data emitted from server
+	var INITIAL_EQUIPMENTS = <?php echo json_encode($equipments ?: []); ?>;
+	var INITIAL_PARTS = <?php echo json_encode($partsByEquip ?: new stdClass()); ?>;
+	// build a list of existing part names for reuse across equipments
+	var EXISTING_PART_NAMES = (function(){
+		var out = [];
+		try {
+			var keys = Object.keys(INITIAL_PARTS || {});
+			keys.forEach(function(k){
+				var arr = INITIAL_PARTS[k] || [];
+				arr.forEach(function(p){ if (p && p.part) out.push(p.part); });
+			});
+		} catch(e){}
+		// unique
+		return out.filter(function(v,i,a){ return v && a.indexOf(v) === i; });
+	})();
+	var CURRENT_EQUIPMENT_ID = null;
 
-		function formatCell(v){ return v === null || v === undefined || v === '' ? '—' : String(v); }
+	function formatCell(v){ return v === null || v === undefined || v === '' ? '—' : String(v); }
 
-		// Compute API base (handles installations under a subpath)
-		var API_BASE = (function(){
-			try {
-				var p = location.pathname || '/';
-				var idx = p.indexOf('/pages/');
-				if (idx !== -1) return location.origin + p.slice(0, idx) + '/';
-				// fallback to site root
-				return location.origin + '/';
-			} catch (e) { return location.origin + '/'; }
-		})();
+	// Compute API base (handles installations under a subpath)
+	var API_BASE = (function(){
+		try {
+			var p = location.pathname || '/';
+			var idx = p.indexOf('/pages/');
+			if (idx !== -1) return location.origin + p.slice(0, idx) + '/';
+			// fallback to site root
+			return location.origin + '/';
+		} catch (e) { return location.origin + '/'; }
+	})();
 
-		// Render parts rows for equipment id
-		function renderPartsFor(equipmentId){
-			var tbody = document.getElementById('partsTbody');
+	// Render parts rows for equipment id
+	function renderPartsFor(equipmentId){
+		var tbody = document.getElementById('partsTbody');
+		tbody.innerHTML = '';
+		var parts = INITIAL_PARTS && INITIAL_PARTS[equipmentId] ? INITIAL_PARTS[equipmentId] : [];
+		var equip = INITIAL_EQUIPMENTS.find(function(x){ return Number(x.equipment_id) === Number(equipmentId); }) || null;
+		CURRENT_EQUIPMENT_ID = equipmentId;
+		var currentHours = equip ? formatCell(equip.current_hours) : '—';
+		
+		// DECLARE alerts arrays at the start
+		var warnAlerts = [];
+		var urgentAlerts = [];
+		
+		if (!parts.length){
+			// leave table body empty when there are no parts for this equipment
 			tbody.innerHTML = '';
-			var parts = INITIAL_PARTS && INITIAL_PARTS[equipmentId] ? INITIAL_PARTS[equipmentId] : [];
-			var equip = INITIAL_EQUIPMENTS.find(function(x){ return Number(x.equipment_id) === Number(equipmentId); }) || null;
-			CURRENT_EQUIPMENT_ID = equipmentId;
-			var currentHours = equip ? formatCell(equip.current_hours) : '—';
-			if (!parts.length){
-				// leave table body empty when there are no parts for this equipment
-				tbody.innerHTML = '';
-				// update selected info (hours only) even when no parts
-				try {
-					var info = document.getElementById('selectedInfo');
-					info.innerHTML = '<div class="hours-bubble">Current hours: ' + currentHours + '</div>';
-				} catch (e) {}
-				// ensure heading still updates even if there are no parts
-				try { updateHeading(equip, equipmentId); } catch (e) {}
-					try { renderFluidsFor(equipmentId); } catch(e) {}
-				return;
-			}
-				parts.forEach(function(p){
-				var tr = document.createElement('tr');
-				var resetAt = p.reset_at ? p.reset_at : '';
-				tr.innerHTML = '<td>' + formatCell(p.part) + '</td>' +
-							   '<td>' + formatCell(p.approx_capacity) + '</td>' +
-							   '<td>' + formatCell(p.fluid_type) + '</td>' +
-							   '<td>' + formatCell(p.weight) + '</td>' +
-							   '<td>' + formatCell(p.mfg) + '</td>' +
-							   '<td>' + formatCell(p.supplier) + '</td>' +
-							   '<td>' + formatCell(p.unit_cost) + '</td>' +
-							   '<td>' + formatCell(p.unit) + '</td>' +
-							   '<td>' + formatCell(p.total) + '</td>' +
-							   '<td>' + formatCell(p.notes) + '</td>' +
-							   '<td style="text-align:left;">' +
-							   '<button type="button" class="parts-action-btn" data-partid="' + (p.id || '') + '" onclick="openEditModal(' + (p.id || 0) + ', ' + equipmentId + ')">Edit</button>' +
-							   '</td>';
-				tbody.appendChild(tr);
-
-				// collect alerts while rendering rows
-				if (typeof conditionPct !== 'undefined') {
-					if (conditionPct <= 0) {
-						(urgentAlerts = urgentAlerts || []).push(formatCell(p.fluid_type) || 'Fluid');
-					} else if (conditionPct < 20) {
-						(warnAlerts = warnAlerts || []).push(formatCell(p.fluid_type) || 'Fluid');
-					}
-				}
-			});
-
-			// Render alerts above fluids table
+			// update selected info (hours only) even when no parts
 			try {
-				var alertsEl = document.getElementById('fluidsAlerts');
-				if (alertsEl) {
-					alertsEl.innerHTML = '';
-					if (urgentAlerts && urgentAlerts.length) {
-						urgentAlerts.forEach(function(name){
-							var d = document.createElement('div'); d.className = 'fluid-alert urgent'; d.textContent = 'Change ' + name + ' now.'; alertsEl.appendChild(d);
-						});
-					} else if (warnAlerts && warnAlerts.length) {
-						warnAlerts.forEach(function(name){
-							var d = document.createElement('div'); d.className = 'fluid-alert warn'; d.textContent = 'Change ' + name + ' soon.'; alertsEl.appendChild(d);
-						});
-					} else {
-						// no alerts
-						alertsEl.innerHTML = '';
-					}
-				}
-			} catch(e) { console.error('Alert render error', e); }
-				// update selected info bubble (outside panel) and heading
-				try {
-					var info = document.getElementById('selectedInfo');
-					var hours = currentHours;
-					info.innerHTML = '<div class="hours-bubble">Current hours: ' + hours + '</div>';
-				} catch (e) {}
-				try {
-					updateHeading(equip, equipmentId);
-				} catch (e) {}
-					// render bottom fluids table for selected equipment
-					try { renderFluidsFor(equipmentId); } catch (e) {}
-		}
-
-		// Build equipment ribbon
-		function buildRibbon(){
-			var ribbon = document.getElementById('equipmentRibbon');
-			ribbon.innerHTML = '';
-			if (!INITIAL_EQUIPMENTS || !INITIAL_EQUIPMENTS.length) {
-				var note = document.createElement('div'); note.style.color='#64748b'; note.textContent='No equipments found'; ribbon.appendChild(note); return;
-			}
-			INITIAL_EQUIPMENTS.forEach(function(eq, idx){
-				var chip = document.createElement('button');
-				chip.className = 'equipment-chip';
-				chip.setAttribute('type','button');
-				chip.setAttribute('aria-pressed','false');
-				chip.style.whiteSpace = 'nowrap';
-				chip.dataset.eid = eq.equipment_id;
-				chip.textContent = (eq.number && eq.number !== '') ? eq.number : ('#' + eq.equipment_id);
-				chip.addEventListener('click', function(){
-					var prev = document.querySelector('.equipment-chip.is-selected');
-					if (prev) { prev.classList.remove('is-selected'); prev.setAttribute('aria-pressed','false'); }
-					chip.classList.add('is-selected');
-					chip.setAttribute('aria-pressed','true');
-					renderPartsFor(eq.equipment_id);
-				});
-				ribbon.appendChild(chip);
-			});
-			// Select an equipment: prefer id from URL, otherwise default to first
-			var first = ribbon.querySelector('.equipment-chip');
-			try {
-				var params = (new URLSearchParams(location.search));
-				var requested = params.get('id') || params.get('equipment_id') || null;
-				var selectedChip = null;
-				if (requested) {
-					// try to match dataset.eid (string compare)
-					selectedChip = ribbon.querySelector('.equipment-chip[data-eid="' + requested + '"]');
-				}
-				if (selectedChip) {
-					selectedChip.click();
-					// ensure heading updates for the selected equipment
-					var eq = INITIAL_EQUIPMENTS.find(function(x){ return String(x.equipment_id) === String(requested); });
-					if (eq) setTimeout(function(){ updateHeading(eq, eq.equipment_id); }, 50);
-				} else if (first) {
-					first.click();
-					// also set heading for the first equipment
-					if (INITIAL_EQUIPMENTS && INITIAL_EQUIPMENTS.length) setTimeout(function(){ updateHeading(INITIAL_EQUIPMENTS[0], INITIAL_EQUIPMENTS[0].equipment_id); }, 50);
-				}
+				var info = document.getElementById('selectedInfo');
+				info.innerHTML = '<div class="hours-bubble">Current hours: ' + currentHours + '</div>';
 			} catch (e) {}
+			// ensure heading still updates even if there are no parts
+			try { updateHeading(equip, equipmentId); } catch (e) {}
+			try { renderFluidsFor(equipmentId); } catch(e) {}
+			return;
 		}
-
-		// Update page heading based on equipment object (or id)
-		function updateHeading(equip, equipmentId) {
-			var heading = document.getElementById('equipmentHeading');
-			var subtitle = document.getElementById('equipmentSubtitle');
-			if (!heading) return;
-			var label = '';
-			if (equip) {
-				label = (equip.number && equip.number !== '') ? equip.number : ('#' + equip.equipment_id);
-				if (equip.type) label += ' | ' + equip.type;
-			} else if (equipmentId) {
-				label = '#' + equipmentId;
-			}
-			if (label && label !== '') {
-				heading.textContent = label;
-			} else {
-				heading.textContent = '';
-			}
-			if (subtitle) subtitle.textContent = 'Fluid Reference Sheet';
-		}
-
-		// Populate datalist for existing parts
-		function renderExistingPartsDatalist(){
-			var dl = document.getElementById('existingPartsList'); if (!dl) return;
-			dl.innerHTML = '';
-			(EXISTING_PART_NAMES || []).forEach(function(name){
-				var opt = document.createElement('option'); opt.value = name; dl.appendChild(opt);
-			});
-		}
-
-		// Render bottom fluids table (read-only) showing remaining life and condition
-		function renderFluidsFor(equipmentId){
-			var tbody = document.getElementById('fluidsTbody'); if (!tbody) return;
-			tbody.innerHTML = '';
-			var parts = INITIAL_PARTS && INITIAL_PARTS[equipmentId] ? INITIAL_PARTS[equipmentId] : [];
-			var equip = INITIAL_EQUIPMENTS.find(function(x){ return Number(x.equipment_id) === Number(equipmentId); }) || { current_hours:0 };
-			// clear alerts element first
-			var alertsEl = document.getElementById('fluidsAlerts'); if (alertsEl) alertsEl.innerHTML = '';
-			if (!parts.length){ tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b">No fluids found for this equipment.</td></tr>'; return; }
-			var warnAlerts = [];
-			var urgentAlerts = [];
-			parts.forEach(function(p){
-				var tr = document.createElement('tr');
-				var partCurrent = parseFloat(p.current_hours) || 0;
-				var equipCurrent = parseFloat(equip.current_hours) || 0;
-				// Hours since last reset: equipment.current_hours - part.current_hours
-				var diff = (equipCurrent - partCurrent);
-				if (isNaN(diff) || diff < 0) diff = 0;
-				var oilLife = parseFloat(p.oil_life) || 0;
-				var conditionPct = 100;
-				if (oilLife > 0) {
-					var usedPercent = (diff / oilLife) * 100;
-					conditionPct = Math.max(0, Math.min(100, Math.round(100 - usedPercent)));
-				}
-				tr.innerHTML = '<td>' + formatCell(p.fluid_type) + '</td>' +
-				               '<td>' + formatCell(diff.toFixed(2)) + '</td>' +
-				               '<td>' + formatCell(oilLife) + '</td>' +
-						'<td>' + conditionPct + '%' + '</td>' +
-						'<td style="text-align:left;"><button type="button" class="parts-action-btn" onclick="resetPartHours(' + (p.id || 0) + ')">Reset</button></td>';
-				tbody.appendChild(tr);
-				// collect alerts
-				if (conditionPct <= 0) urgentAlerts.push(p.fluid_type || 'Fluid');
-				else if (conditionPct < 20) warnAlerts.push(p.fluid_type || 'Fluid');
-			});
-			// render alerts: urgent first
-			if (alertsEl) {
-				if (urgentAlerts.length) {
-					urgentAlerts.forEach(function(name){
-						var d = document.createElement('div'); d.className = 'fluid-alert urgent'; d.textContent = 'Change ' + name + ' now.'; alertsEl.appendChild(d);
-					});
-				} else if (warnAlerts.length) {
-					warnAlerts.forEach(function(name){
-						var d = document.createElement('div'); d.className = 'fluid-alert warn'; d.textContent = 'Change ' + name + ' soon.'; alertsEl.appendChild(d);
-					});
-				}
-			}
-		}
-
-		function resetPartHours(partId){
-			if (!confirm('Reset this part\'s hours to current equipment hours?')) return;
-			var fd = new FormData(); fd.append('id', partId);
-			fetch(API_BASE + 'api/reset_equipment_oil_part_hours.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-			.then(function(r){ return r.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text, status:r.status }; } }); })
-			.then(function(json){
-				if (!json || !json.success) throw new Error((json && json.message) ? json.message : 'Reset failed');
-				var updated = json.row;
-				// update part in INITIAL_PARTS
-				for (var k in INITIAL_PARTS){ if (!INITIAL_PARTS.hasOwnProperty(k)) continue; INITIAL_PARTS[k] = INITIAL_PARTS[k].map(function(it){ return Number(it.id) === Number(updated.id) ? updated : it; }); }
-				renderPartsFor(CURRENT_EQUIPMENT_ID);
-			})
-			.catch(function(err){ console.error('Reset error', err); if (err && err.type === 'parse') { alert('Error resetting part: invalid JSON response from server.'); console.error('Raw response:', err.text); } else alert('Error resetting part: ' + (err && err.message ? err.message : 'unknown')); });
-		}
-
-		function openAddForm(){
-			renderExistingPartsDatalist();
-			var modal = document.getElementById('addModal');
-			if (modal) modal.style.display = 'flex';
-			var partEl = document.getElementById('partInput'); if (partEl) partEl.focus();
-		}
-
-		function closeAddForm(){
-			var modal = document.getElementById('addModal'); if (modal) modal.style.display = 'none';
-			// clear inputs
-							['partInput','approxCapacityInput','fluidTypeInput','weightInput','mfgInput','supplierInput','unitCostInput','unitInput','totalInput','notesInput','oilLifeInput'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
-		}
-
-		function submitAddPart(){
-			var btn = document.getElementById('submitAddPart'); btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Saving...';
-			var data = new FormData();
-			// allow creating parts without selecting an equipment; use 0 as fallback
-			data.append('equipment_id', CURRENT_EQUIPMENT_ID || 0);
-			var partVal = document.getElementById('partInput').value.trim();
-			data.append('part', partVal);
-			data.append('approx_capacity', document.getElementById('approxCapacityInput').value);
-			data.append('fluid_type', document.getElementById('fluidTypeInput').value);
-			data.append('weight', document.getElementById('weightInput').value);
-			data.append('mfg', document.getElementById('mfgInput').value);
-			data.append('supplier', document.getElementById('supplierInput').value);
-			data.append('unit_cost', document.getElementById('unitCostInput').value);
-			data.append('unit', document.getElementById('unitInput').value);
-			data.append('total', document.getElementById('totalInput').value);
-			data.append('notes', document.getElementById('notesInput').value);
-						data.append('oil_life', document.getElementById('oilLifeInput').value || 0);
-
-			fetch(API_BASE + 'api/add_equipment_oil_part.php', { method: 'POST', body: data, credentials: 'same-origin' })
-			.then(function(r){
-				return r.text().then(function(text){
-					try { return JSON.parse(text); }
-					catch (err) { throw { type: 'parse', text: text, status: r.status }; }
-				});
-			})
-			.then(function(json){
-				if (!json || !json.success){ throw new Error((json && json.message) ? json.message : 'Save failed'); }
-				// Add to INITIAL_PARTS for current equipment
-				INITIAL_PARTS[CURRENT_EQUIPMENT_ID] = INITIAL_PARTS[CURRENT_EQUIPMENT_ID] || [];
-				INITIAL_PARTS[CURRENT_EQUIPMENT_ID].push(json.row);
-				// add to existing names if missing
-				if (EXISTING_PART_NAMES.indexOf(json.row.part) === -1){ EXISTING_PART_NAMES.push(json.row.part); }
-				closeAddForm();
-				renderPartsFor(CURRENT_EQUIPMENT_ID);
-				btn.disabled = false; btn.textContent = orig;
-				// ensure datalist updated
-				renderExistingPartsDatalist();
-			})
-			.catch(function(err){
-				console.error('Add part error', err);
-				if (err && err.type === 'parse') {
-					// server returned non-JSON (likely PHP warning/html) — show raw text
-					alert('Error adding part: invalid JSON response from server. See console for raw response.');
-					console.error('Raw response:', err.text);
-				} else {
-					alert('Error adding part: ' + (err && err.message ? err.message : 'unknown'));
-				}
-				btn.disabled = false; btn.textContent = orig;
-			});
-		}
-
-		// --- Edit modal support ---
-		function openEditModal(partId, equipmentId){
-			// find part object in INITIAL_PARTS
-			var parts = INITIAL_PARTS && INITIAL_PARTS[equipmentId] ? INITIAL_PARTS[equipmentId] : [];
-			var p = parts.find(function(x){ return Number(x.id) === Number(partId); }) || null;
-			if (!p) { alert('Part not found'); return; }
-			// populate fields
-			document.getElementById('editPartId').value = p.id;
-			document.getElementById('editPartName').value = p.part || '';
-			document.getElementById('editApproxCapacity').value = p.approx_capacity || '';
-			document.getElementById('editFluidType').value = p.fluid_type || '';
-			document.getElementById('editWeight').value = p.weight || '';
-			document.getElementById('editMfg').value = p.mfg || '';
-			document.getElementById('editSupplier').value = p.supplier || '';
-			document.getElementById('editUnitCost').value = p.unit_cost || '';
-			document.getElementById('editUnit').value = p.unit || '';
-			document.getElementById('editTotal').value = p.total || '';
-			document.getElementById('editNotes').value = p.notes || '';
-			document.getElementById('editOilLife').value = (p.oil_life !== undefined && p.oil_life !== null) ? p.oil_life : '';
-			// show modal
-			document.getElementById('editModal').style.display = 'flex';
-		}
-
-		function closeEditModal(){ document.getElementById('editModal').style.display = 'none'; }
-
-		function submitEditPart(){
-			var id = document.getElementById('editPartId').value;
-			if (!id) return alert('Invalid part id');
-			var data = new FormData();
-			data.append('id', id);
-			data.append('part', document.getElementById('editPartName').value);
-			data.append('approx_capacity', document.getElementById('editApproxCapacity').value);
-			data.append('fluid_type', document.getElementById('editFluidType').value);
-			data.append('weight', document.getElementById('editWeight').value);
-			data.append('mfg', document.getElementById('editMfg').value);
-			data.append('supplier', document.getElementById('editSupplier').value);
-			data.append('unit_cost', document.getElementById('editUnitCost').value);
-			data.append('unit', document.getElementById('editUnit').value);
-			data.append('total', document.getElementById('editTotal').value);
-			data.append('notes', document.getElementById('editNotes').value);
-						data.append('oil_life', document.getElementById('editOilLife').value || 0);
-			fetch(API_BASE + 'api/update_equipment_oil_part.php', { method: 'POST', body: data, credentials: 'same-origin' })
-			.then(function(r){
-				return r.text().then(function(text){
-					try { return JSON.parse(text); }
-					catch (err) { throw { type: 'parse', text: text, status: r.status }; }
-				});
-			})
-			.then(function(json){
-				if (!json || !json.success) throw new Error((json && json.message) ? json.message : 'Update failed');
-				// update in INITIAL_PARTS
-				var updated = json.row;
-				for (var k in INITIAL_PARTS){ if (!INITIAL_PARTS.hasOwnProperty(k)) continue; INITIAL_PARTS[k] = INITIAL_PARTS[k].map(function(it){ return Number(it.id) === Number(updated.id) ? updated : it; }); }
-				closeEditModal();
-				// re-render current equipment
-				renderPartsFor(CURRENT_EQUIPMENT_ID);
-			})
-			.catch(function(err){
-				console.error('Update error', err);
-				if (err && err.type === 'parse'){
-					alert('Error updating part: invalid JSON response from server. See console for raw response.');
-					console.error('Raw response:', err.text);
-				} else {
-					alert('Error updating part: ' + (err && err.message ? err.message : 'unknown'));
-				}
-			});
-		}
-
-		function submitDeletePart(){
-			var id = document.getElementById('editPartId').value;
-			if (!id) return alert('Invalid part id');
-			if (!confirm('Delete this part? This action cannot be undone.')) return;
-			var fd = new FormData(); fd.append('id', id);
-			fetch(API_BASE + 'api/delete_equipment_oil_part.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-			.then(function(r){ return r.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text, status:r.status }; } }); })
-			.then(function(json){
-				if (!json || !json.success) throw new Error((json && json.message) ? json.message : 'Delete failed');
-				// remove from INITIAL_PARTS
-				for (var k in INITIAL_PARTS){ if (!INITIAL_PARTS.hasOwnProperty(k)) continue; INITIAL_PARTS[k] = INITIAL_PARTS[k].filter(function(it){ return Number(it.id) !== Number(id); }); }
-				closeEditModal();
-				renderPartsFor(CURRENT_EQUIPMENT_ID);
-			})
-			.catch(function(err){
-				console.error('Delete error', err);
-				if (err && err.type === 'parse') { alert('Error deleting part: invalid JSON response from server. See console.'); console.error('Raw response:', err.text); }
-				else alert('Error deleting part: ' + (err && err.message ? err.message : 'unknown'));
-			});
-		}
-
-		// Back button behavior
-		(function(){
-			var btn = document.getElementById('backBtn');
-			if (!btn) return;
-			btn.addEventListener('click', function(){
-				try {
-					var ref = document.referrer || '';
-					if (ref && ref.indexOf(location.origin) === 0) { history.back(); return; }
-				} catch (e) {}
-				window.location.href = 'index.php' + '<?php echo isset($previewParam) ? $previewParam : ""; ?>';
-			});
-		})();
-
-		// Kick off
-		document.addEventListener('DOMContentLoaded', function(){
-			buildRibbon();
-			// wire up add part UI (modal)
-			var showBtn = document.getElementById('showAddPartBtn'); if (showBtn) showBtn.addEventListener('click', function(){ renderExistingPartsDatalist(); document.getElementById('addModal').style.display='flex'; document.getElementById('partInput').focus(); });
-			var cancelBtn = document.getElementById('cancelAddPart'); if (cancelBtn) cancelBtn.addEventListener('click', function(){ document.getElementById('addModal').style.display='none'; });
-			var submitBtn = document.getElementById('submitAddPart'); if (submitBtn) submitBtn.addEventListener('click', submitAddPart);
-			var cancelEditBtn = document.getElementById('cancelEditPartBtn'); if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
-			var submitEditBtn = document.getElementById('submitEditPartBtn'); if (submitEditBtn) submitEditBtn.addEventListener('click', submitEditPart);
-			var deleteEditBtn = document.getElementById('deleteEditPartBtn'); if (deleteEditBtn) deleteEditBtn.addEventListener('click', submitDeletePart);
-			// ensure datalist initially populated
-			renderExistingPartsDatalist();
+		
+		parts.forEach(function(p){
+			var tr = document.createElement('tr');
+			var resetAt = p.reset_at ? p.reset_at : '';
+			tr.innerHTML = '<td>' + formatCell(p.part) + '</td>' +
+						   '<td>' + formatCell(p.approx_capacity) + '</td>' +
+						   '<td>' + formatCell(p.fluid_type) + '</td>' +
+						   '<td>' + formatCell(p.weight) + '</td>' +
+						   '<td>' + formatCell(p.mfg) + '</td>' +
+						   '<td>' + formatCell(p.supplier) + '</td>' +
+						   '<td>' + formatCell(p.unit_cost) + '</td>' +
+						   '<td>' + formatCell(p.unit) + '</td>' +
+						   '<td>' + formatCell(p.total) + '</td>' +
+						   '<td>' + formatCell(p.notes) + '</td>' +
+						   '<td style="text-align:left;">' +
+						   '<button type="button" class="parts-action-btn" data-partid="' + (p.id || '') + '" onclick="openEditModal(' + (p.id || 0) + ', ' + equipmentId + ')">Edit</button>' +
+						   '</td>';
+			tbody.appendChild(tr);
 		});
-	</script>
+
+		// Update selected info bubble (outside panel) and heading
+		try {
+			var info = document.getElementById('selectedInfo');
+			var hours = currentHours;
+			info.innerHTML = '<div class="hours-bubble">Current hours: ' + hours + '</div>';
+		} catch (e) {}
+		try {
+			updateHeading(equip, equipmentId);
+		} catch (e) {}
+		// render bottom fluids table for selected equipment
+		try { renderFluidsFor(equipmentId); } catch (e) {}
+	}
+
+	// Build equipment ribbon
+	function buildRibbon(){
+		var ribbon = document.getElementById('equipmentRibbon');
+		ribbon.innerHTML = '';
+		if (!INITIAL_EQUIPMENTS || !INITIAL_EQUIPMENTS.length) {
+			var note = document.createElement('div'); note.style.color='#64748b'; note.textContent='No equipments found'; ribbon.appendChild(note); return;
+		}
+		INITIAL_EQUIPMENTS.forEach(function(eq, idx){
+			var chip = document.createElement('button');
+			chip.className = 'equipment-chip';
+			chip.setAttribute('type','button');
+			chip.setAttribute('aria-pressed','false');
+			chip.style.whiteSpace = 'nowrap';
+			chip.dataset.eid = eq.equipment_id;
+			chip.textContent = (eq.number && eq.number !== '') ? eq.number : ('#' + eq.equipment_id);
+			chip.addEventListener('click', function(){
+				var prev = document.querySelector('.equipment-chip.is-selected');
+				if (prev) { prev.classList.remove('is-selected'); prev.setAttribute('aria-pressed','false'); }
+				chip.classList.add('is-selected');
+				chip.setAttribute('aria-pressed','true');
+				renderPartsFor(eq.equipment_id);
+			});
+			ribbon.appendChild(chip);
+		});
+		// Select an equipment: prefer id from URL, otherwise default to first
+		var first = ribbon.querySelector('.equipment-chip');
+		try {
+			var params = (new URLSearchParams(location.search));
+			var requested = params.get('id') || params.get('equipment_id') || null;
+			var selectedChip = null;
+			if (requested) {
+				// try to match dataset.eid (string compare)
+				selectedChip = ribbon.querySelector('.equipment-chip[data-eid="' + requested + '"]');
+			}
+			if (selectedChip) {
+				selectedChip.click();
+				// ensure heading updates for the selected equipment
+				var eq = INITIAL_EQUIPMENTS.find(function(x){ return String(x.equipment_id) === String(requested); });
+				if (eq) setTimeout(function(){ updateHeading(eq, eq.equipment_id); }, 50);
+			} else if (first) {
+				first.click();
+				// also set heading for the first equipment
+				if (INITIAL_EQUIPMENTS && INITIAL_EQUIPMENTS.length) setTimeout(function(){ updateHeading(INITIAL_EQUIPMENTS[0], INITIAL_EQUIPMENTS[0].equipment_id); }, 50);
+			}
+		} catch (e) {}
+	}
+
+	// Update page heading based on equipment object (or id)
+	function updateHeading(equip, equipmentId) {
+		var heading = document.getElementById('equipmentHeading');
+		var subtitle = document.getElementById('equipmentSubtitle');
+		if (!heading) return;
+		var label = '';
+		if (equip) {
+			label = (equip.number && equip.number !== '') ? equip.number : ('#' + equip.equipment_id);
+			if (equip.type) label += ' | ' + equip.type;
+		} else if (equipmentId) {
+			label = '#' + equipmentId;
+		}
+		if (label && label !== '') {
+			heading.textContent = label;
+		} else {
+			heading.textContent = '';
+		}
+		if (subtitle) subtitle.textContent = 'Fluid Reference Sheet';
+	}
+
+	// Populate datalist for existing parts
+	function renderExistingPartsDatalist(){
+		var dl = document.getElementById('existingPartsList'); if (!dl) return;
+		dl.innerHTML = '';
+		(EXISTING_PART_NAMES || []).forEach(function(name){
+			var opt = document.createElement('option'); opt.value = name; dl.appendChild(opt);
+		});
+	}
+
+	// Render bottom fluids table (read-only) showing remaining life and condition
+	function renderFluidsFor(equipmentId){
+		var tbody = document.getElementById('fluidsTbody'); if (!tbody) return;
+		tbody.innerHTML = '';
+		var parts = INITIAL_PARTS && INITIAL_PARTS[equipmentId] ? INITIAL_PARTS[equipmentId] : [];
+		var equip = INITIAL_EQUIPMENTS.find(function(x){ return Number(x.equipment_id) === Number(equipmentId); }) || { current_hours:0 };
+		// clear alerts element first
+		var alertsEl = document.getElementById('fluidsAlerts'); if (alertsEl) alertsEl.innerHTML = '';
+		if (!parts.length){ tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b">No fluids found for this equipment.</td></tr>'; return; }
+		var warnAlerts = [];
+		var urgentAlerts = [];
+		parts.forEach(function(p){
+			var tr = document.createElement('tr');
+			var partCurrent = parseFloat(p.current_hours) || 0;
+			var equipCurrent = parseFloat(equip.current_hours) || 0;
+			// Hours since last reset: equipment.current_hours - part.current_hours
+			var diff = (equipCurrent - partCurrent);
+			if (isNaN(diff) || diff < 0) diff = 0;
+			var oilLife = parseFloat(p.oil_life) || 0;
+			var conditionPct = 100;
+			if (oilLife > 0) {
+				var usedPercent = (diff / oilLife) * 100;
+				conditionPct = Math.max(0, Math.min(100, Math.round(100 - usedPercent)));
+			}
+			tr.innerHTML = '<td>' + formatCell(p.fluid_type) + '</td>' +
+			               '<td>' + formatCell(diff.toFixed(2)) + '</td>' +
+			               '<td>' + formatCell(oilLife) + '</td>' +
+					'<td>' + conditionPct + '%' + '</td>' +
+					'<td style="text-align:left;"><button type="button" class="parts-action-btn" onclick="resetPartHours(' + (p.id || 0) + ')">Reset</button></td>';
+			tbody.appendChild(tr);
+			// collect alerts
+			if (conditionPct <= 0) urgentAlerts.push(p.fluid_type || 'Fluid');
+			else if (conditionPct < 20) warnAlerts.push(p.fluid_type || 'Fluid');
+		});
+		// render alerts: urgent first
+		if (alertsEl) {
+			if (urgentAlerts.length) {
+				urgentAlerts.forEach(function(name){
+					var d = document.createElement('div'); d.className = 'fluid-alert urgent'; d.textContent = 'Change ' + name + ' now.'; alertsEl.appendChild(d);
+				});
+			} else if (warnAlerts.length) {
+				warnAlerts.forEach(function(name){
+					var d = document.createElement('div'); d.className = 'fluid-alert warn'; d.textContent = 'Change ' + name + ' soon.'; alertsEl.appendChild(d);
+				});
+			}
+		}
+	}
+
+	function resetPartHours(partId){
+		if (!confirm('Reset this part\'s hours to current equipment hours?')) return;
+		var fd = new FormData(); fd.append('id', partId);
+		fetch(API_BASE + 'api/reset_equipment_oil_part_hours.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+		.then(function(r){ return r.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text, status:r.status }; } }); })
+		.then(function(json){
+			if (!json || !json.success) throw new Error((json && json.message) ? json.message : 'Reset failed');
+			var updated = json.row;
+			// update part in INITIAL_PARTS
+			for (var k in INITIAL_PARTS){ if (!INITIAL_PARTS.hasOwnProperty(k)) continue; INITIAL_PARTS[k] = INITIAL_PARTS[k].map(function(it){ return Number(it.id) === Number(updated.id) ? updated : it; }); }
+			renderPartsFor(CURRENT_EQUIPMENT_ID);
+		})
+		.catch(function(err){ console.error('Reset error', err); if (err && err.type === 'parse') { alert('Error resetting part: invalid JSON response from server.'); console.error('Raw response:', err.text); } else alert('Error resetting part: ' + (err && err.message ? err.message : 'unknown')); });
+	}
+
+	function openAddForm(){
+		renderExistingPartsDatalist();
+		var modal = document.getElementById('addModal');
+		if (modal) modal.style.display = 'flex';
+		var partEl = document.getElementById('partInput'); if (partEl) partEl.focus();
+	}
+
+	function closeAddForm(){
+		var modal = document.getElementById('addModal'); if (modal) modal.style.display = 'none';
+		// clear inputs
+		['partInput','approxCapacityInput','fluidTypeInput','weightInput','mfgInput','supplierInput','unitCostInput','unitInput','totalInput','notesInput','oilLifeInput'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
+	}
+
+	function submitAddPart(){
+		var btn = document.getElementById('submitAddPart'); btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Saving...';
+		var data = new FormData();
+		// allow creating parts without selecting an equipment; use 0 as fallback
+		data.append('equipment_id', CURRENT_EQUIPMENT_ID || 0);
+		var partVal = document.getElementById('partInput').value.trim();
+		data.append('part', partVal);
+		data.append('approx_capacity', document.getElementById('approxCapacityInput').value);
+		data.append('fluid_type', document.getElementById('fluidTypeInput').value);
+		data.append('weight', document.getElementById('weightInput').value);
+		data.append('mfg', document.getElementById('mfgInput').value);
+		data.append('supplier', document.getElementById('supplierInput').value);
+		data.append('unit_cost', document.getElementById('unitCostInput').value);
+		data.append('unit', document.getElementById('unitInput').value);
+		data.append('total', document.getElementById('totalInput').value);
+		data.append('notes', document.getElementById('notesInput').value);
+		data.append('oil_life', document.getElementById('oilLifeInput').value || 0);
+
+		fetch(API_BASE + 'api/add_equipment_oil_part.php', { method: 'POST', body: data, credentials: 'same-origin' })
+		.then(function(r){
+			return r.text().then(function(text){
+				try { return JSON.parse(text); }
+				catch (err) { throw { type: 'parse', text: text, status: r.status }; }
+			});
+		})
+		.then(function(json){
+			if (!json || !json.success){ throw new Error((json && json.message) ? json.message : 'Save failed'); }
+			// Add to INITIAL_PARTS for current equipment
+			INITIAL_PARTS[CURRENT_EQUIPMENT_ID] = INITIAL_PARTS[CURRENT_EQUIPMENT_ID] || [];
+			INITIAL_PARTS[CURRENT_EQUIPMENT_ID].push(json.row);
+			// add to existing names if missing
+			if (EXISTING_PART_NAMES.indexOf(json.row.part) === -1){ EXISTING_PART_NAMES.push(json.row.part); }
+			closeAddForm();
+			renderPartsFor(CURRENT_EQUIPMENT_ID);
+			btn.disabled = false; btn.textContent = orig;
+			// ensure datalist updated
+			renderExistingPartsDatalist();
+		})
+		.catch(function(err){
+			console.error('Add part error', err);
+			if (err && err.type === 'parse') {
+				// server returned non-JSON (likely PHP warning/html) — show raw text
+				alert('Error adding part: invalid JSON response from server. See console for raw response.');
+				console.error('Raw response:', err.text);
+			} else {
+				alert('Error adding part: ' + (err && err.message ? err.message : 'unknown'));
+			}
+			btn.disabled = false; btn.textContent = orig;
+		});
+	}
+
+	// --- Edit modal support ---
+	function openEditModal(partId, equipmentId){
+		// find part object in INITIAL_PARTS
+		var parts = INITIAL_PARTS && INITIAL_PARTS[equipmentId] ? INITIAL_PARTS[equipmentId] : [];
+		var p = parts.find(function(x){ return Number(x.id) === Number(partId); }) || null;
+		if (!p) { alert('Part not found'); return; }
+		// populate fields
+		document.getElementById('editPartId').value = p.id;
+		document.getElementById('editPartName').value = p.part || '';
+		document.getElementById('editApproxCapacity').value = p.approx_capacity || '';
+		document.getElementById('editFluidType').value = p.fluid_type || '';
+		document.getElementById('editWeight').value = p.weight || '';
+		document.getElementById('editMfg').value = p.mfg || '';
+		document.getElementById('editSupplier').value = p.supplier || '';
+		document.getElementById('editUnitCost').value = p.unit_cost || '';
+		document.getElementById('editUnit').value = p.unit || '';
+		document.getElementById('editTotal').value = p.total || '';
+		document.getElementById('editNotes').value = p.notes || '';
+		document.getElementById('editOilLife').value = (p.oil_life !== undefined && p.oil_life !== null) ? p.oil_life : '';
+		// show modal
+		document.getElementById('editModal').style.display = 'flex';
+	}
+
+	function closeEditModal(){ document.getElementById('editModal').style.display = 'none'; }
+
+	function submitEditPart(){
+		var id = document.getElementById('editPartId').value;
+		if (!id) return alert('Invalid part id');
+		var data = new FormData();
+		data.append('id', id);
+		data.append('part', document.getElementById('editPartName').value);
+		data.append('approx_capacity', document.getElementById('editApproxCapacity').value);
+		data.append('fluid_type', document.getElementById('editFluidType').value);
+		data.append('weight', document.getElementById('editWeight').value);
+		data.append('mfg', document.getElementById('editMfg').value);
+		data.append('supplier', document.getElementById('editSupplier').value);
+		data.append('unit_cost', document.getElementById('editUnitCost').value);
+		data.append('unit', document.getElementById('editUnit').value);
+		data.append('total', document.getElementById('editTotal').value);
+		data.append('notes', document.getElementById('editNotes').value);
+		data.append('oil_life', document.getElementById('editOilLife').value || 0);
+		fetch(API_BASE + 'api/update_equipment_oil_part.php', { method: 'POST', body: data, credentials: 'same-origin' })
+		.then(function(r){
+			return r.text().then(function(text){
+				try { return JSON.parse(text); }
+				catch (err) { throw { type: 'parse', text: text, status: r.status }; }
+			});
+		})
+		.then(function(json){
+			if (!json || !json.success) throw new Error((json && json.message) ? json.message : 'Update failed');
+			// update in INITIAL_PARTS
+			var updated = json.row;
+			for (var k in INITIAL_PARTS){ if (!INITIAL_PARTS.hasOwnProperty(k)) continue; INITIAL_PARTS[k] = INITIAL_PARTS[k].map(function(it){ return Number(it.id) === Number(updated.id) ? updated : it; }); }
+			closeEditModal();
+			// re-render current equipment
+			renderPartsFor(CURRENT_EQUIPMENT_ID);
+		})
+		.catch(function(err){
+			console.error('Update error', err);
+			if (err && err.type === 'parse'){
+				alert('Error updating part: invalid JSON response from server. See console for raw response.');
+				console.error('Raw response:', err.text);
+			} else {
+				alert('Error updating part: ' + (err && err.message ? err.message : 'unknown'));
+			}
+		});
+	}
+
+	function submitDeletePart(){
+		var id = document.getElementById('editPartId').value;
+		if (!id) return alert('Invalid part id');
+		if (!confirm('Delete this part? This action cannot be undone.')) return;
+		var fd = new FormData(); fd.append('id', id);
+		fetch(API_BASE + 'api/delete_equipment_oil_part.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+		.then(function(r){ return r.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text, status:r.status }; } }); })
+		.then(function(json){
+			if (!json || !json.success) throw new Error((json && json.message) ? json.message : 'Delete failed');
+			// remove from INITIAL_PARTS
+			for (var k in INITIAL_PARTS){ if (!INITIAL_PARTS.hasOwnProperty(k)) continue; INITIAL_PARTS[k] = INITIAL_PARTS[k].filter(function(it){ return Number(it.id) !== Number(id); }); }
+			closeEditModal();
+			renderPartsFor(CURRENT_EQUIPMENT_ID);
+		})
+		.catch(function(err){
+			console.error('Delete error', err);
+			if (err && err.type === 'parse') { alert('Error deleting part: invalid JSON response from server. See console.'); console.error('Raw response:', err.text); }
+			else alert('Error deleting part: ' + (err && err.message ? err.message : 'unknown'));
+		});
+	}
+
+	// Back button behavior
+	(function(){
+		var btn = document.getElementById('backBtn');
+		if (!btn) return;
+		btn.addEventListener('click', function(){
+			try {
+				var ref = document.referrer || '';
+				if (ref && ref.indexOf(location.origin) === 0) { history.back(); return; }
+			} catch (e) {}
+			window.location.href = 'index.php' + '<?php echo isset($previewParam) ? $previewParam : ""; ?>';
+		});
+	})();
+
+	// Kick off
+	document.addEventListener('DOMContentLoaded', function(){
+		buildRibbon();
+		// wire up add part UI (modal)
+		var showBtn = document.getElementById('showAddPartBtn'); if (showBtn) showBtn.addEventListener('click', function(){ renderExistingPartsDatalist(); document.getElementById('addModal').style.display='flex'; document.getElementById('partInput').focus(); });
+		var cancelBtn = document.getElementById('cancelAddPart'); if (cancelBtn) cancelBtn.addEventListener('click', function(){ document.getElementById('addModal').style.display='none'; });
+		var submitBtn = document.getElementById('submitAddPart'); if (submitBtn) submitBtn.addEventListener('click', submitAddPart);
+		var cancelEditBtn = document.getElementById('cancelEditPartBtn'); if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+		var submitEditBtn = document.getElementById('submitEditPartBtn'); if (submitEditBtn) submitEditBtn.addEventListener('click', submitEditPart);
+		var deleteEditBtn = document.getElementById('deleteEditPartBtn'); if (deleteEditBtn) deleteEditBtn.addEventListener('click', submitDeletePart);
+		// ensure datalist initially populated
+		renderExistingPartsDatalist();
+	});
+</script>
 </body>
 </html>
 
