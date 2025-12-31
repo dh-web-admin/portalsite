@@ -71,16 +71,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $equipment_id = isset($_POST['equipment_id']) ? intval($_POST['equipment_id']) : 0;
 $part = isset($_POST['part']) ? trim($_POST['part']) : '';
-$approx_capacity = isset($_POST['approx_capacity']) ? trim($_POST['approx_capacity']) : null;
-$fluid_type = isset($_POST['fluid_type']) ? trim($_POST['fluid_type']) : null;
-$oil_life = isset($_POST['oil_life']) ? trim($_POST['oil_life']) : 0;
-$weight = isset($_POST['weight']) ? trim($_POST['weight']) : null;
-$mfg = isset($_POST['mfg']) ? trim($_POST['mfg']) : null;
-$supplier = isset($_POST['supplier']) ? trim($_POST['supplier']) : null;
-$unit_cost = isset($_POST['unit_cost']) ? trim($_POST['unit_cost']) : null;
-$unit = isset($_POST['unit']) ? trim($_POST['unit']) : null;
-$total = isset($_POST['total']) ? trim($_POST['total']) : null;
-$notes = isset($_POST['notes']) ? trim($_POST['notes']) : null;
+
+// Helper function to convert empty strings to null for numeric fields
+function empty_to_null($val) {
+    $trimmed = is_string($val) ? trim($val) : $val;
+    return ($trimmed === '' || $trimmed === null) ? null : $trimmed;
+}
+
+$approx_capacity = empty_to_null($_POST['approx_capacity'] ?? '');
+$fluid_type = empty_to_null($_POST['fluid_type'] ?? '');
+$oil_life = empty_to_null($_POST['oil_life'] ?? '');
+$weight = empty_to_null($_POST['weight'] ?? '');
+$mfg = empty_to_null($_POST['mfg'] ?? '');
+$supplier = empty_to_null($_POST['supplier'] ?? '');
+$unit_cost = empty_to_null($_POST['unit_cost'] ?? '');
+$unit = empty_to_null($_POST['unit'] ?? '');
+$total = empty_to_null($_POST['total'] ?? '');
+$notes = empty_to_null($_POST['notes'] ?? '');
 
 // Accept any values as-is (no validation) per UI request; allow equipment_id=0 and empty fields
 
@@ -93,20 +100,13 @@ if ($equipment_id && $qr = $conn->query('SELECT COALESCE(current_hours,0) AS ch 
     $qr->free();
 }
 
-// normalize numeric inputs to avoid strict SQL errors in production (empty string -> 0)
-$unit_cost = ($unit_cost === null || $unit_cost === '') ? 0 : (is_numeric($unit_cost) ? floatval($unit_cost) : 0);
-$total = ($total === null || $total === '') ? 0 : (is_numeric($total) ? floatval($total) : 0);
-$oil_life = ($oil_life === null || $oil_life === '') ? 0 : (is_numeric($oil_life) ? floatval($oil_life) : 0);
-
-
 $stmt = $conn->prepare('INSERT INTO equipment_oil_parts (equipment_id, part, approx_capacity, fluid_type, weight, mfg, supplier, unit_cost, unit, total, notes, current_hours, oil_life, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 if (!$stmt) {
     json_exit_add(['success' => false, 'message' => 'DB prepare failed'], 500);
 }
-if (!$stmt) {
-    json_exit_add(['success' => false, 'message' => 'DB prepare failed'], 500);
-}
-$stmt->bind_param('issssssssssddss', $equipment_id, $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $equipment_hours, $oil_life, $now, $now);
+
+// Changed bind_param types: use 's' for nullable numeric fields instead of 'd'
+$stmt->bind_param('issssssssssssss', $equipment_id, $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $equipment_hours, $oil_life, $now, $now);
 $ok = $stmt->execute();
 $err = null;
 if (!$ok) {
@@ -137,13 +137,6 @@ $row = [
     'updated_at' => $now
 ];
 
-json_exit_add(['success' => true, 'row' => $row], 200);
-
-} catch (Throwable $e) {
-    error_log('[add_equipment_oil_part] EXCEPTION: ' . $e->getMessage() . '\n' . $e->getTraceAsString());
-    json_exit_add(['success' => false, 'message' => 'Server exception: ' . $e->getMessage()], 500);
-}
-
 // After insertion, recalculate equipment oil_status based on parts
 if ($equipment_id) {
     $eq_hours = 0;
@@ -173,4 +166,10 @@ if ($equipment_id) {
     }
 }
 
+json_exit_add(['success' => true, 'row' => $row], 200);
+
+} catch (Throwable $e) {
+    error_log('[add_equipment_oil_part] EXCEPTION: ' . $e->getMessage() . '\n' . $e->getTraceAsString());
+    json_exit_add(['success' => false, 'message' => 'Server exception: ' . $e->getMessage()], 500);
+}
 ?>
