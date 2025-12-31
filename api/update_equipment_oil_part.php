@@ -21,6 +21,24 @@ function json_exit($arr, $status = 200){
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../partials/permissions.php';
 
+// convert warnings/notices to exceptions so we can return JSON
+set_error_handler(function($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) return false;
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+// shutdown handler for fatal errors
+register_shutdown_function(function(){
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        if (ob_get_length()) ob_end_clean();
+        http_response_code(500);
+        $payload = ['success' => false, 'message' => 'Internal server error', 'fatal' => $err['message'], 'file' => $err['file'], 'line' => $err['line']];
+        error_log('[update_equipment_oil_part] FATAL: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+        echo json_encode($payload);
+    }
+});
+
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     json_exit(['success' => false, 'message' => 'Unauthorized'], 401);
 }
@@ -60,13 +78,22 @@ $total = isset($_POST['total']) ? trim($_POST['total']) : null;
 $notes = isset($_POST['notes']) ? trim($_POST['notes']) : null;
 
 $now = date('Y-m-d H:i:s');
-$stmt = $conn->prepare('UPDATE equipment_oil_parts SET part=?, approx_capacity=?, fluid_type=?, weight=?, mfg=?, supplier=?, unit_cost=?, unit=?, total=?, notes=?, oil_life=?, updated_at=? WHERE id=?');
-if (!$stmt) { json_exit(['success'=>false,'message'=>'DB prepare failed'], 500); }
-$stmt->bind_param('ssssssssssdsi', $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $oil_life, $now, $id);
-$ok = $stmt->execute();
-$err = null;
-if (!$ok) { $err = $stmt->error; $stmt->close(); json_exit(['success'=>false,'message'=>'Update failed: '.$err], 500); }
-$stmt->close();
+// Normalize numeric inputs to avoid strict SQL errors (DECIMAL columns reject empty strings)
+$unit_cost = ($unit_cost !== null && $unit_cost !== '' && is_numeric($unit_cost)) ? $unit_cost : 0;
+$total = ($total !== null && $total !== '' && is_numeric($total)) ? $total : 0;
+$oil_life = ($oil_life !== null && $oil_life !== '' && is_numeric($oil_life)) ? (float)$oil_life : 0;
+
+try {
+    $stmt = $conn->prepare('UPDATE equipment_oil_parts SET part=?, approx_capacity=?, fluid_type=?, weight=?, mfg=?, supplier=?, unit_cost=?, unit=?, total=?, notes=?, oil_life=?, updated_at=? WHERE id=?');
+    if (!$stmt) { throw new Exception('DB prepare failed: ' . $conn->error); }
+    $stmt->bind_param('ssssssssssdsi', $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $oil_life, $now, $id);
+    $ok = $stmt->execute();
+    if (!$ok) { $e = $stmt->error; $stmt->close(); throw new Exception('Update failed: ' . $e); }
+    $stmt->close();
+} catch (Exception $ex) {
+    error_log('[update_equipment_oil_part] Exception: ' . $ex->getMessage());
+    json_exit(['success' => false, 'message' => 'Update failed', 'error' => $ex->getMessage()], 500);
+}
 
 // Fetch updated row
 $qr = $conn->query('SELECT * FROM equipment_oil_parts WHERE id=' . intval($id) . ' LIMIT 1');
