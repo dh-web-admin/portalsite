@@ -27,6 +27,11 @@ register_shutdown_function(function(){
         echo json_encode($payload);
     }
 });
+
+// Quick diagnostic log for production: record that API was invoked and POST keys
+error_log('[add_equipment_oil_part] invoked. POST keys: ' . implode(',', array_keys($_POST ?? [])));
+
+try {
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
 // mark API context so permissions partial won't emit UI scripts/styles
@@ -127,6 +132,11 @@ $row = [
 ];
 
 json_exit_add(['success' => true, 'row' => $row], 200);
+
+} catch (Throwable $e) {
+    error_log('[add_equipment_oil_part] EXCEPTION: ' . $e->getMessage() . '\n' . $e->getTraceAsString());
+    json_exit_add(['success' => false, 'message' => 'Server exception: ' . $e->getMessage()], 500);
+}
 
 // After insertion, recalculate equipment oil_status based on parts
 if ($equipment_id) {
