@@ -356,7 +356,7 @@ try {
 			// update selected info (hours only) even when no parts
 			try {
 				var info = document.getElementById('selectedInfo');
-				info.innerHTML = '<div class="hours-bubble">Current hours: ' + currentHours + '</div>';
+				info.innerHTML = '<div class="hours-bubble">Current equipment hours: ' + currentHours + '</div>';
 			} catch (e) {}
 			// ensure heading still updates even if there are no parts
 			try { updateHeading(equip, equipmentId); } catch (e) {}
@@ -387,7 +387,7 @@ try {
 		try {
 			var info = document.getElementById('selectedInfo');
 			var hours = currentHours;
-			info.innerHTML = '<div class="hours-bubble">Current hours: ' + hours + '</div>';
+			info.innerHTML = '<div class="hours-bubble">Current equipment hours: ' + hours + '</div>';
 		} catch (e) {}
 		try {
 			updateHeading(equip, equipmentId);
