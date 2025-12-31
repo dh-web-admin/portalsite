@@ -108,7 +108,8 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 if (!function_exists('is_admin')) {
     // defensive no-op if helper isn't available for some reason
 } else {
-    if (!is_admin()) {
+    // Only emit the UI-hide stylesheet/script for normal pages (not API endpoints)
+    if (!defined('IS_API') && !is_admin()) {
         echo "<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn, .equipment-edit-icon { display: none !important; }</style>";
         echo "<script>(function(){var patterns=[/\\bedit\\b/i,/\\bupload\\b/i,/\\bdelete\\b/i,/\\badd\\b/i,/\\bremove\\b/i];function hideIfMatch(el){var text=(el.innerText||el.value||'').trim();var title=(el.getAttribute&& (el.getAttribute('title')||el.getAttribute('aria-label')))||'';if(!text&& !title) return;var combined=(text+' '+title).trim();for(var i=0;i<patterns.length;i++){if(patterns[i].test(combined)){el.style.display='none';return;}}}document.addEventListener('DOMContentLoaded',function(){var els=document.querySelectorAll('a,button,span,input[type=button],input[type=submit]');els.forEach(hideIfMatch);});})();</script>";
     }

@@ -71,6 +71,53 @@ try {
 			$equipments[] = $row;
 		}
 		$res->free();
+
+						// Dynamically compute oil status per equipment from equipment_oil_parts
+						try {
+							// collect ids
+							$ids = array_map(function($r){ return (int)($r['equipment_id'] ?? 0); }, $equipments);
+							$ids = array_filter($ids);
+							if (count($ids) > 0) {
+								$in = implode(',', array_map('intval', $ids));
+								$partsByEquip = [];
+								$qr = $conn->query("SELECT * FROM equipment_oil_parts WHERE equipment_id IN (" . $in . ") ORDER BY id ASC");
+								if ($qr) {
+									while ($p = $qr->fetch_assoc()) {
+										$eid = (int)($p['equipment_id'] ?? 0);
+										if (!isset($partsByEquip[$eid])) $partsByEquip[$eid] = [];
+										$partsByEquip[$eid][] = $p;
+									}
+									$qr->free();
+								}
+								// For each equipment, compute worst oil condition across its parts
+								foreach ($equipments as &$eq) {
+									$eid = (int)($eq['equipment_id'] ?? 0);
+									$parts = $partsByEquip[$eid] ?? [];
+									// if no parts, leave existing oil_status as-is
+									if (count($parts) === 0) continue;
+									$equipCurrent = is_numeric($eq['current_hours'] ?? null) ? floatval($eq['current_hours']) : 0.0;
+									$worst = 'green';
+									foreach ($parts as $p) {
+										$partCurrent = is_numeric($p['current_hours'] ?? null) ? floatval($p['current_hours']) : 0.0;
+										$diff = $equipCurrent - $partCurrent;
+										if (!is_numeric($diff) || $diff < 0) $diff = 0;
+										$oilLife = is_numeric($p['oil_life'] ?? null) ? floatval($p['oil_life']) : 0.0;
+										$conditionPct = 100;
+										if ($oilLife > 0) {
+											$usedPercent = ($diff / $oilLife) * 100;
+											$conditionPct = max(0, min(100, (int)round(100 - $usedPercent)));
+										}
+										if ($conditionPct <= 0) { $worst = 'red'; break; }
+										if ($conditionPct < 20 && $worst !== 'red') { $worst = 'yellow'; }
+									}
+									// override oil_status for display
+									$eq['oil_status'] = $worst;
+								}
+								unset($eq);
+							}
+						} catch (Throwable $e) {
+							// ignore dynamic status errors and leave DB value
+						}
 		// Custom sort: red engine (operating_condition) or oil_status first, then yellow, then green, then others
 		usort($equipments, function($a, $b) {
 			$getStatus = function($row) {
@@ -533,8 +580,9 @@ function eq_format_warranty($dateValue) {
 														</td>
 														<td><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></td>
 														<td><span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span></td>
-														<td>
-															<?php $val = trim((string)($eq['oil_status'] ?? '')); ?>
+														<?php $val = trim((string)($eq['oil_status'] ?? ''));
+															$oilHref = 'oil_status.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''); ?>
+														<td <?php if ($val !== '' ) { echo 'onclick="window.location=\'' . htmlspecialchars($oilHref, ENT_QUOTES) . '\';" style="cursor:pointer;"'; } ?>>
 															<?php
 															$oilSvgMap = [
 																'green' => 'greenoil.svg',
@@ -812,24 +860,7 @@ function eq_format_warranty($dateValue) {
 						   <label for="edit_location">Location</label>
 						   <input id="edit_location" name="location" type="text" />
 					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_operating_condition">Operating Condition</label>
-						   <select id="edit_operating_condition" name="operating_condition">
-							   <option value="">Select...</option>
-							   <option value="green">Green</option>
-							   <option value="yellow">Yellow</option>
-							   <option value="red">Red</option>
-						   </select>
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_oil_status">Oil Status</label>
-						   <select id="edit_oil_status" name="oil_status">
-							   <option value="">Select...</option>
-							   <option value="green">Green</option>
-							   <option value="yellow">Yellow</option>
-							   <option value="red">Red</option>
-						   </select>
-					   </div>
+					   <!-- Operating Condition and Oil Status removed from Edit modal per request -->
 					   <div class="equipment-form__field">
 						   <label for="edit_air_filters">Air Filters</label>
 						   <label class="equipment-file-label add-more-btn" id="air_filters_file_label" for="edit_air_filters">
@@ -1205,10 +1236,9 @@ function eq_format_warranty($dateValue) {
 				document.getElementById('edit_equipment_id').value = equipmentId || '';
 				document.getElementById('edit_dhss_equipment_number').value = equipmentNumber || '';
 				document.getElementById('edit_type').value = type || '';
-				document.getElementById('edit_operating_condition').value = operatingCondition || '';
 				document.getElementById('edit_location').value = location || '';
 				document.getElementById('edit_current_hours').value = currentHours || '0';
-				document.getElementById('edit_oil_status').value = oilStatus || '';
+				// Operating condition and oil status fields removed from edit modal
 				// DHCST and DHSS Equipment Number
 				var dhcst = row.getAttribute('data-dhcst-equipment-number') || '';
 				var dhcstInput = document.getElementById('edit_dhcst_equipment_number');
