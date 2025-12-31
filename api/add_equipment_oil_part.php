@@ -93,6 +93,12 @@ if ($equipment_id && $qr = $conn->query('SELECT COALESCE(current_hours,0) AS ch 
     $qr->free();
 }
 
+// normalize numeric inputs to avoid strict SQL errors in production (empty string -> 0)
+$unit_cost = ($unit_cost === null || $unit_cost === '') ? 0 : (is_numeric($unit_cost) ? floatval($unit_cost) : 0);
+$total = ($total === null || $total === '') ? 0 : (is_numeric($total) ? floatval($total) : 0);
+$oil_life = ($oil_life === null || $oil_life === '') ? 0 : (is_numeric($oil_life) ? floatval($oil_life) : 0);
+
+
 $stmt = $conn->prepare('INSERT INTO equipment_oil_parts (equipment_id, part, approx_capacity, fluid_type, weight, mfg, supplier, unit_cost, unit, total, notes, current_hours, oil_life, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 if (!$stmt) {
     json_exit_add(['success' => false, 'message' => 'DB prepare failed'], 500);
