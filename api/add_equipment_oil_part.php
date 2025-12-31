@@ -6,6 +6,27 @@ ini_set('display_startup_errors', 0);
 ini_set('log_errors', 1);
 // capture unexpected output and return as JSON 'raw' field
 ob_start();
+
+// Convert warnings/notices to exceptions so we can return JSON
+set_error_handler(function($severity, $message, $file, $line) {
+    // Respect error_reporting level
+    if (!(error_reporting() & $severity)) return false;
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+// Shutdown handler to catch fatal errors and return JSON instead of blank 500
+register_shutdown_function(function(){
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        // clear any buffering
+        if (ob_get_length()) ob_end_clean();
+        http_response_code(500);
+        $payload = ['success' => false, 'message' => 'Internal server error', 'fatal' => $err['message'], 'file' => $err['file'], 'line' => $err['line']];
+        // Log full error for server operators
+        error_log("[add_equipment_oil_part] FATAL: " . $err['message'] . " in " . $err['file'] . ":" . $err['line']);
+        echo json_encode($payload);
+    }
+});
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
 // mark API context so permissions partial won't emit UI scripts/styles
