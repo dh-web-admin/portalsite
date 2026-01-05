@@ -499,7 +499,11 @@ if (isset($_GET['preview_role'])) {
 							uploadImagesBtn.disabled = true;
 							uploadBtnContainer.classList.remove('visible');
 							imageInput.value = '';
-							fetch('/PortalSite/api/get_equipment_uploads.php?equipment_id=' + encodeURIComponent(equipmentId))
+							// Use relative path that works in both local and production
+							var apiUrl = window.location.pathname.includes('/PortalSite/') 
+								? '/PortalSite/api/get_equipment_uploads.php' 
+								: '/api/get_equipment_uploads.php';
+							fetch(apiUrl + '?equipment_id=' + encodeURIComponent(equipmentId))
 								.then(function(res){
 									return res.text().then(function(text){
 										try {
