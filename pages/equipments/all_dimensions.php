@@ -9,11 +9,13 @@ require_once __DIR__ . '/../../partials/permissions.php';
 // Hide admin-only UI elements for non-admin users
 if (!is_admin()) {
 		echo <<<'HTML'
-<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
+<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
 <script>
 (function(){
 	var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
 	function hideIfMatch(el){
+		// Skip the uploadImagesBtn - it's controlled by JavaScript logic
+		if (el.id === 'uploadImagesBtn' || el.id === 'uploadBtnContainer') return;
 		var text=(el.innerText||el.value||'').trim();
 		var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
 		if(!text && !title) return;
