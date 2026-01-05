@@ -25,6 +25,13 @@ if (!can_access($role, 'equipments')) {
     exit();
 }
 
+// Hide admin-only UI elements for non-admin users
+if (!is_admin()) {
+    echo <<<'HTML'
+<style>.admin-only { display: none !important; }</style>
+HTML;
+}
+
 $previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : '';
 
 $equipments = [];
@@ -167,7 +174,7 @@ $filterNames = array_values(array_unique($filterNames));
                         <div class="oil-status-panel" id="filtersPanel">
                             <div id="filterAlerts" style="margin-bottom:10px;"></div>
                             <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:8px;">
-                                <button id="showAddFilterBtn" type="button">+ Add Filter</button>
+                                <button id="showAddFilterBtn" type="button" class="admin-only">Add Filter</button>
                             </div>
                             <div id="filtersContainer">
                                 <table id="filtersTable">
@@ -236,6 +243,7 @@ $filterNames = array_values(array_unique($filterNames));
         var INITIAL_EQUIPMENTS = <?php echo json_encode($equipments ?: []); ?>;
         var INITIAL_FILTERS = <?php echo json_encode($filtersByEquip ?: new stdClass()); ?>;
         var EXISTING_FILTER_NAMES = <?php echo json_encode($filterNames ?: []); ?>;
+        var IS_ADMIN = <?php echo is_admin() ? 'true' : 'false'; ?>;
         var CURRENT_EQUIPMENT_ID = null;
 
         function formatCell(value) {
@@ -297,13 +305,15 @@ $filterNames = array_values(array_unique($filterNames));
                     }
                 }
                 var tr = document.createElement('tr');
-                tr.innerHTML = '<td><div class="filter-name-cell"><span>' + formatCell(filter.filter_name) + '</span><button type="button" class="parts-action-btn" onclick="openEditFilterModal(' + (filter.filter_id || 0) + ',' + equipmentId + ')">Edit</button></div></td>' +
+                var editBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" onclick="openEditFilterModal(' + (filter.filter_id || 0) + ',' + equipmentId + ')">Edit</button>' : '';
+                var resetBtn = IS_ADMIN ? '<button type="button" class="filters-reset-btn" onclick="resetFilter(' + (filter.filter_id || 0) + ',' + equipmentId + ')">Reset</button>' : '';
+                tr.innerHTML = '<td><div class="filter-name-cell"><span>' + formatCell(filter.filter_name) + '</span>' + editBtn + '</div></td>' +
                     '<td>' + formatCell(filter.make) + '</td>' +
                     '<td>' + formatCell(filter.part_number) + '</td>' +
                     '<td>' + (metrics.hoursSince ? metrics.hoursSince.toFixed(1) : '0.0') + '</td>' +
                     '<td>' + (metrics.life ? metrics.life : '—') + '</td>' +
                     '<td>' + conditionText + '</td>' +
-                    '<td><button type="button" class="filters-reset-btn" onclick="resetFilter(' + (filter.filter_id || 0) + ',' + equipmentId + ')">Reset</button></td>';
+                    '<td>' + resetBtn + '</td>';
                 tbody.appendChild(tr);
             });
             updateHeading(equipment, equipmentId);

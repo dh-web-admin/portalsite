@@ -1,5 +1,7 @@
 
 <?php
+define('IS_API', true);
+
 // Debug log function
 function log_upload_debug($msg) {
     $logfile = __DIR__ . '/../uploads/equipment/upload_debug.log';

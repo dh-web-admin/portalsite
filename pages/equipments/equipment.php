@@ -117,6 +117,20 @@ if ($equipmentId <= 0) {
     exit();
 }
 
+// Fetch all equipments for the ribbon selector
+$allEquipments = [];
+try {
+    $eqRes = $conn->query("SELECT equipment_id, COALESCE(dhss_equipment_number, '') AS number, COALESCE(type, '') AS type FROM equipments ORDER BY equipment_id ASC");
+    if ($eqRes) {
+        while ($row = $eqRes->fetch_assoc()) {
+            $allEquipments[] = $row;
+        }
+        $eqRes->free();
+    }
+} catch (Throwable $e) {
+    // silently ignore if equipment list fetch fails
+}
+
 // Fetch equipment details
 $stmt = $conn->prepare('SELECT * FROM equipments WHERE equipment_id = ? LIMIT 1');
 $stmt->bind_param('i', $equipmentId);
@@ -294,6 +308,7 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
     font-size: 12px;
     min-width: 0;
     box-sizing: border-box;
+    margin-bottom: 100px;
 }
 
 .equipment-history-table th {
@@ -1757,6 +1772,54 @@ if (editIssueForm) {
     modal.addEventListener('click', function(e){ if (e.target === modal) { modal.style.display='none'; document.body.style.overflow=''; imgEl.src=''; currentList=[]; } });
     document.addEventListener('keydown', function(e){ if (modal.style.display === 'flex') { if (e.key === 'ArrowLeft') showIndex(currentIndex - 1); if (e.key === 'ArrowRight') showIndex(currentIndex + 1); if (e.key === 'Escape') { modal.style.display='none'; document.body.style.overflow=''; imgEl.src=''; currentList=[]; } } });
 })();
+</script>
+
+<!-- Bottom centered equipment selector ribbon -->
+<div id="equipmentRibbon" style="position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:999;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:999px;box-shadow:0 6px 20px rgba(2,6,23,0.08);display:flex;gap:8px;align-items:center;max-width:95%;overflow:auto;">
+    <!-- chips inserted here -->
+</div>
+
+<style>
+    .equipment-chip { padding:10px 14px; border-radius:999px; border:1px solid rgba(226,232,240,0.9); background:#f8fafc; cursor:pointer; font-size:14px; box-shadow:0 6px 18px rgba(2,6,23,0.05); color:#0f172a; transition:all .15s ease; }
+    .equipment-chip:hover { transform:translateY(-2px); box-shadow:0 10px 26px rgba(2,6,23,0.08); }
+    .equipment-chip.is-selected { background:#2563eb; color:#fff; border-color:#1e40af; transform:translateY(-6px); box-shadow:0 14px 34px rgba(37,99,235,0.22); }
+</style>
+
+<script>
+    var INITIAL_EQUIPMENTS = <?php echo json_encode($allEquipments ?: []); ?>;
+    var CURRENT_EQUIPMENT_ID = <?php echo $equipmentId; ?>;
+
+    function buildRibbon() {
+        var ribbon = document.getElementById('equipmentRibbon');
+        if (!ribbon) return;
+        ribbon.innerHTML = '';
+        if (!INITIAL_EQUIPMENTS || !INITIAL_EQUIPMENTS.length) {
+            var note = document.createElement('div'); note.style.color='#64748b'; note.textContent='No equipments found'; ribbon.appendChild(note); return;
+        }
+        INITIAL_EQUIPMENTS.forEach(function(eq){
+            var chip = document.createElement('button');
+            chip.className = 'equipment-chip';
+            chip.type = 'button';
+            chip.style.whiteSpace = 'nowrap';
+            chip.dataset.eid = eq.equipment_id;
+            chip.textContent = (eq.number && eq.number !== '') ? eq.number : ('#' + eq.equipment_id);
+            chip.addEventListener('click', function(){
+                var prev = document.querySelector('.equipment-chip.is-selected');
+                if (prev) { prev.classList.remove('is-selected'); }
+                chip.classList.add('is-selected');
+                var previewParam = (new URLSearchParams(location.search)).get('preview_role');
+                var url = 'equipment.php?id=' + eq.equipment_id;
+                if (previewParam) { url += '&preview_role=' + encodeURIComponent(previewParam); }
+                window.location.href = url;
+            });
+            ribbon.appendChild(chip);
+        });
+        // Mark current equipment as selected
+        var currentChip = ribbon.querySelector('.equipment-chip[data-eid="' + CURRENT_EQUIPMENT_ID + '"]');
+        if (currentChip) { currentChip.classList.add('is-selected'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', buildRibbon);
 </script>
 <script src="../../assets/js/mobile-menu.js"></script>
 </body>

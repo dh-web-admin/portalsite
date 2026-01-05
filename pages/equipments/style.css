@@ -310,7 +310,7 @@ a.equipment-ribbon__item:active {
   position: sticky;
   top: 0;
   z-index: 2;
-  text-align: center;
+  text-align: left;
   padding: 10px 12px;
   font-weight: 700;
   color: #0f172a;
@@ -322,10 +322,10 @@ a.equipment-ribbon__item:active {
 .equip-th {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   max-width: 100%;
-  margin: 0 auto;
+  margin: 0;
 }
 
 .equip-th__label {
@@ -423,7 +423,7 @@ a.equipment-ribbon__item:active {
 
 .equipment-empty {
   padding: 24px 14px;
-  text-align: center;
+  text-align: left;
   color: #475569;
   font-weight: 700;
 }
@@ -432,7 +432,17 @@ a.equipment-ribbon__item:active {
 .project-table.equipment-table th,
 .project-table.equipment-table td {
   width: 11.1111%;
-  text-align: center;
+  text-align: left !important;
+}
+
+.project-table.equipment-table td img {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.project-table.equipment-table td a {
+  text-align: left;
+  display: inline-block;
 }
 
 /* Remove bubble/pill styling inside table cells */

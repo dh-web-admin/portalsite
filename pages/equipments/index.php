@@ -631,9 +631,15 @@ function eq_format_warranty($dateValue) {
 													>
 														<td>
 															<div class="equipment-number-cell">
-																<button type="button" class="equipment-number equipment-open-edit" title="Edit equipment">
-																	<?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?>
-																</button>
+																<?php if (is_admin()): ?>
+																	<button type="button" class="equipment-number equipment-open-edit" title="Edit equipment">
+																		<?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?>
+																	</button>
+																<?php else: ?>
+																	<span class="equipment-number">
+																		<?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?>
+																	</span>
+																<?php endif; ?>
 																<span class="equipment-edit-icon admin-only" title="Edit equipment">Edit</span>
 															</div>
 														</td>

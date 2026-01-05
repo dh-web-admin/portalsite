@@ -25,6 +25,13 @@ if (!can_access($role, 'equipments')) {
 		exit();
 }
 
+// Hide admin-only UI elements for non-admin users
+if (!is_admin()) {
+	echo <<<'HTML'
+<style>.admin-only { display: none !important; }</style>
+HTML;
+}
+
 // Fetch equipments (id, display number, current_hours)
 $equipments = [];
 $equipErr = null;
@@ -309,6 +316,7 @@ try {
 	// Initial data emitted from server
 	var INITIAL_EQUIPMENTS = <?php echo json_encode($equipments ?: []); ?>;
 	var INITIAL_PARTS = <?php echo json_encode($partsByEquip ?: new stdClass()); ?>;
+	var IS_ADMIN = <?php echo is_admin() ? 'true' : 'false'; ?>;
 	// build a list of existing part names for reuse across equipments
 	var EXISTING_PART_NAMES = (function(){
 		var out = [];
@@ -367,6 +375,7 @@ try {
 		parts.forEach(function(p){
 			var tr = document.createElement('tr');
 			var resetAt = p.reset_at ? p.reset_at : '';
+			var editBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" data-partid="' + (p.id || '') + '" onclick="openEditModal(' + (p.id || 0) + ', ' + equipmentId + ')">Edit</button>' : '';
 			tr.innerHTML = '<td>' + formatCell(p.part) + '</td>' +
 						   '<td>' + formatCell(p.approx_capacity) + '</td>' +
 						   '<td>' + formatCell(p.fluid_type) + '</td>' +
@@ -377,9 +386,7 @@ try {
 						   '<td>' + formatCell(p.unit) + '</td>' +
 						   '<td>' + formatCell(p.total) + '</td>' +
 						   '<td>' + formatCell(p.notes) + '</td>' +
-						   '<td style="text-align:left;">' +
-						   '<button type="button" class="parts-action-btn" data-partid="' + (p.id || '') + '" onclick="openEditModal(' + (p.id || 0) + ', ' + equipmentId + ')">Edit</button>' +
-						   '</td>';
+						   '<td style="text-align:left;">' + editBtn + '</td>';
 			tbody.appendChild(tr);
 		});
 
@@ -496,11 +503,12 @@ try {
 				var usedPercent = (diff / oilLife) * 100;
 				conditionPct = Math.max(0, Math.min(100, Math.round(100 - usedPercent)));
 			}
+			var resetBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" onclick="resetPartHours(' + (p.id || 0) + ')">Reset</button>' : '';
 			tr.innerHTML = '<td>' + formatCell(p.fluid_type) + '</td>' +
 			               '<td>' + formatCell(diff.toFixed(2)) + '</td>' +
 			               '<td>' + formatCell(oilLife) + '</td>' +
 					'<td>' + conditionPct + '%' + '</td>' +
-					'<td style="text-align:left;"><button type="button" class="parts-action-btn" onclick="resetPartHours(' + (p.id || 0) + ')">Reset</button></td>';
+					'<td style="text-align:left;">' + resetBtn + '</td>';
 			tbody.appendChild(tr);
 			// collect alerts
 			if (conditionPct <= 0) urgentAlerts.push(p.fluid_type || 'Fluid');
