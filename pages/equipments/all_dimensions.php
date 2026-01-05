@@ -264,6 +264,7 @@ if (isset($uploads['dimension'])) {
 	}
 	
 	#uploadImagesBtn {
+		display: inline-block !important;
 		background: #fff;
 		color: #667eea;
 		border: none;
