@@ -72,7 +72,7 @@ if (empty($files)) {
 
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 if ($isProduction) {
-    // Use the Railway volume mount path in production
+    // Volume is mounted at /app/PortalSite/uploads, equipment is subdirectory
     $uploadDir = '/app/PortalSite/uploads/equipment/';
     $fileUrlPrefix = '/PortalSite/uploads/equipment/';
 } else {
@@ -82,6 +82,8 @@ if ($isProduction) {
 
 // Ensure upload directory exists and is writable
 if (!is_dir($uploadDir)) {
+    log_upload_debug('Upload directory does not exist, attempting to create: ' . $uploadDir);
+    // Create with recursive flag
     if (!@mkdir($uploadDir, 0777, true)) {
         $err = error_get_last();
         log_upload_debug('Failed to create uploadDir: ' . $uploadDir . ' err: ' . json_encode($err));
@@ -89,6 +91,7 @@ if (!is_dir($uploadDir)) {
         echo json_encode(['success' => false, 'error' => 'Unable to create upload directory', 'dir' => $uploadDir, 'details' => $err]);
         exit;
     }
+    log_upload_debug('Successfully created directory: ' . $uploadDir);
 }
 if (!is_writable($uploadDir)) {
     log_upload_debug('Upload directory not writable: ' . $uploadDir);
