@@ -74,7 +74,7 @@ $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 if ($isProduction) {
     // Use the Railway volume mount path in production
     $uploadDir = '/app/PortalSite/uploads/equipment/';
-    $fileUrlPrefix = '/PortalSite/uploads/equipment/';
+    $fileUrlPrefix = '/uploads/equipment/';
 } else {
     $uploadDir = __DIR__ . '/../uploads/equipment/';
     $fileUrlPrefix = '/PortalSite/uploads/equipment/';
