@@ -522,12 +522,15 @@ if (isset($_GET['preview_role'])) {
 										addImageBtn.classList.add('add-more');
 										data.uploads.dimension.forEach(function(upload) {
 											var img = document.createElement('img');
-											img.src = normalizeImageUrl(upload.file_url);
+											var normalizedUrl = normalizeImageUrl(upload.file_url);
+											console.log('Original URL:', upload.file_url, '-> Normalized:', normalizedUrl);
+											img.src = normalizedUrl;
 											img.alt = 'Equipment Photo';
 											img.onerror = function() {
+												console.error('Failed to load image:', normalizedUrl);
 												var errSpan = document.createElement('span');
 												errSpan.className = 'no-image';
-												errSpan.textContent = 'Error loading image';
+												errSpan.textContent = 'Error loading image: ' + upload.file_url;
 												img.replaceWith(errSpan);
 											};
 											imageList.appendChild(img);

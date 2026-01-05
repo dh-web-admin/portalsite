@@ -31,7 +31,12 @@ while ($row = $res->fetch_assoc()) {
         } elseif (strpos($url, 'uploads/equipment/') === 0) {
             $url = substr($url, strlen('uploads/equipment/'));
         }
-        $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
+        // Return correct path based on environment
+        if ($isProduction) {
+            $row['file_url'] = '/uploads/equipment/' . $url;
+        } else {
+            $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
+        }
         // Prevent double slashes
         $row['file_url'] = preg_replace('#/+#','/',$row['file_url']);
     }
