@@ -650,7 +650,11 @@ if (isset($_GET['preview_role'])) {
 								formData.append('equipment_id', selectedEquipmentId);
 								formData.append('file', file);
 								formData.append('field', 'dimension');
-								return fetch('/PortalSite/api/add_equipment_upload.php', {
+								// Use relative path that works in both local and production
+								var apiUrl = window.location.pathname.includes('/PortalSite/') 
+									? '/PortalSite/api/add_equipment_upload.php' 
+									: '/api/add_equipment_upload.php';
+								return fetch(apiUrl, {
 									method: 'POST',
 									body: formData
 								}).then(function(res){
@@ -671,6 +675,12 @@ if (isset($_GET['preview_role'])) {
 								var success = results.filter(r => r && r.success).length;
 								var fail = results.length - success;
 								countMsg.style.display = 'block';
+								
+								// Log failed results for debugging
+								if (fail > 0) {
+									console.log('Upload failures:', results.filter(r => !r || !r.success));
+								}
+								
 								if (success > 0 && fail === 0) {
 									countMsg.textContent = success + ' image(s) uploaded successfully!';
 									countMsg.style.color = '#22c55e';
@@ -678,7 +688,15 @@ if (isset($_GET['preview_role'])) {
 									countMsg.textContent = success + ' uploaded, ' + fail + ' failed.';
 									countMsg.style.color = '#eab308';
 								} else {
-									countMsg.textContent = 'Upload failed.';
+									// Show specific error if available
+									var errorMsg = 'Upload failed.';
+									if (results.length > 0 && results[0] && results[0].error) {
+										errorMsg = 'Upload failed: ' + results[0].error;
+									} else if (results.length > 0 && results[0] && results[0].raw) {
+										console.error('Raw error response:', results[0].raw);
+										errorMsg = 'Upload failed. Check console for details.';
+									}
+									countMsg.textContent = errorMsg;
 									countMsg.style.color = '#dc2626';
 								}
 								imageInput.value = '';
