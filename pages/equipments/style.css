@@ -394,6 +394,13 @@ a.equipment-ribbon__item:active {
   white-space: nowrap;
 }
 
+.project-table.equipment-table td.airfilters-cell,
+.project-table.equipment-table td.airfilters-cell * {
+  overflow: visible;
+  text-overflow: initial;
+  white-space: normal;
+}
+
 .project-table.equipment-table thead th {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -564,6 +571,7 @@ a.equipment-ribbon__item:active {
   font-weight: inherit;
   font-size: inherit;
   letter-spacing: normal;
+  cursor: pointer;
 }
 
 .equipment-hours {

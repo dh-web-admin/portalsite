@@ -1,4 +1,5 @@
 <?php
+define('IS_API', true);
 // Debug: Log errors to a file for troubleshooting
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../uploads/equipment/upload_debug.log');
@@ -63,20 +64,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $dhss_equipment_number = isset($_POST['dhss_equipment_number']) ? trim($_POST['dhss_equipment_number']) : '';
+$equipment_number = $dhss_equipment_number;
 $type = isset($_POST['type']) ? trim($_POST['type']) : '';
 $operating_condition = isset($_POST['operating_condition']) ? trim($_POST['operating_condition']) : '';
 $location = isset($_POST['location']) ? trim($_POST['location']) : '';
 $current_hours_raw = isset($_POST['current_hours']) ? trim($_POST['current_hours']) : '';
 $oil_status = isset($_POST['oil_status']) ? trim($_POST['oil_status']) : '';
+$air_filters = isset($_POST['air_filters']) ? strtolower(trim($_POST['air_filters'])) : '';
+if (!in_array($air_filters, ['green','yellow','red'], true)) {
+    $air_filters = '';
+}
 
-// File upload fields
-$air_filters_file = $_FILES['air_filters'] ?? null;
+// File upload field
 $warranty_file = $_FILES['warranty'] ?? null;
-$tires_file = $_FILES['tires'] ?? null;
-
-$air_filters = '';
-$warranty = '';
-$tires = '';
 
 if ($dhss_equipment_number === '' || $type === '') {
     http_response_code(400);
@@ -94,34 +94,22 @@ if ($current_hours_raw !== '') {
     $current_hours = floatval($current_hours_raw);
 }
 
-$warrantyParam = null;
-if ($warranty !== '') {
-    // Expect YYYY-MM-DD
-    $ts = strtotime($warranty);
-    if ($ts === false) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Warranty date is invalid']);
-        exit();
-    }
-    $warrantyParam = date('Y-m-d', $ts);
-}
-
-
-
-$stmt = $conn->prepare('INSERT INTO equipments (dhss_equipment_number, type, operating_condition, location, current_hours, oil_status) VALUES (?, ?, ?, ?, ?, ?)');
+$stmt = $conn->prepare('INSERT INTO equipments (equipment_number, dhss_equipment_number, type, operating_condition, location, current_hours, oil_status, air_filters) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 if (!$stmt) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database prepare failed']);
     exit();
 }
 $stmt->bind_param(
-    'ssssds',
+    'sssssdss',
+    $equipment_number,
     $dhss_equipment_number,
     $type,
     $operating_condition,
     $location,
     $current_hours,
-    $oil_status
+    $oil_status,
+    $air_filters
 );
 $ok = $stmt->execute();
 if (!$ok) {
@@ -169,9 +157,7 @@ function handle_upload($file, $equipment_id, $field, $conn, $upload_dir) {
     return null;
 }
 
-handle_upload($air_filters_file, $insertId, 'air_filters', $conn, $upload_dir);
 handle_upload($warranty_file, $insertId, 'warranty', $conn, $upload_dir);
-handle_upload($tires_file, $insertId, 'tires', $conn, $upload_dir);
 
 echo json_encode(['success' => true, 'equipment_id' => $insertId]);
 exit();

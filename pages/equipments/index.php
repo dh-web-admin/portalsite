@@ -118,6 +118,82 @@ try {
 						} catch (Throwable $e) {
 							// ignore dynamic status errors and leave DB value
 						}
+
+						// Dynamically compute air filter status based on filter life/usage
+						try {
+							$filterIds = array_map(function($r){ return (int)($r['equipment_id'] ?? 0); }, $equipments);
+							$filterIds = array_filter($filterIds);
+							if (count($filterIds) > 0) {
+								$in = implode(',', array_map('intval', $filterIds));
+								$filtersByEquip = [];
+								$airFilterUpdates = [];
+								$qrFilters = $conn->query("SELECT equipment_id, hours, filter_life FROM filter_info WHERE equipment_id IN (" . $in . ") ORDER BY filter_id ASC");
+								if ($qrFilters) {
+									while ($f = $qrFilters->fetch_assoc()) {
+										$eid = (int)($f['equipment_id'] ?? 0);
+										if (!isset($filtersByEquip[$eid])) $filtersByEquip[$eid] = [];
+										$filtersByEquip[$eid][] = $f;
+									}
+									$qrFilters->free();
+								}
+								foreach ($equipments as &$eq) {
+									$eid = (int)($eq['equipment_id'] ?? 0);
+									$filters = $filtersByEquip[$eid] ?? [];
+									if (count($filters) === 0) continue;
+									$equipHours = is_numeric($eq['current_hours'] ?? null) ? (float)$eq['current_hours'] : 0.0;
+									$worstCondition = null;
+									foreach ($filters as $filterRow) {
+										$life = is_numeric($filterRow['filter_life'] ?? null) ? (float)$filterRow['filter_life'] : 0.0;
+										if ($life <= 0) continue;
+										$lastReset = is_numeric($filterRow['hours'] ?? null) ? (float)$filterRow['hours'] : 0.0;
+										$hoursSince = $equipHours - $lastReset;
+										if (!is_numeric($hoursSince) || $hoursSince < 0) $hoursSince = 0.0;
+										$usedPercent = ($hoursSince / $life) * 100.0;
+										$conditionPct = max(0, min(100, (int)round(100 - $usedPercent)));
+										if ($worstCondition === null || $conditionPct < $worstCondition) {
+											$worstCondition = $conditionPct;
+										}
+									}
+									if ($worstCondition !== null) {
+										$eq['air_filters_condition_pct'] = $worstCondition;
+										if ($worstCondition <= 0) {
+											$computedStatus = 'red';
+										} elseif ($worstCondition < 20) {
+											$computedStatus = 'yellow';
+										} else {
+											$computedStatus = 'green';
+										}
+										$eq['air_filters_status'] = $computedStatus;
+										if (($eq['air_filters'] ?? null) !== $computedStatus) {
+											$airFilterUpdates[] = [
+												'status' => $computedStatus,
+												'id' => $eid
+											];
+										}
+										$eq['air_filters'] = $computedStatus;
+									}
+								}
+								unset($eq);
+								if (!empty($airFilterUpdates)) {
+									try {
+										$stmtUpdateAir = $conn->prepare('UPDATE equipments SET air_filters = ? WHERE equipment_id = ?');
+										if ($stmtUpdateAir) {
+											foreach ($airFilterUpdates as $upd) {
+												$statusVal = $upd['status'];
+												$idVal = $upd['id'];
+												$stmtUpdateAir->bind_param('si', $statusVal, $idVal);
+												$stmtUpdateAir->execute();
+											}
+											$stmtUpdateAir->close();
+										}
+									} catch (Throwable $inner) {
+										// swallow persistence issues; UI still shows computed values
+									}
+								}
+							}
+						} catch (Throwable $e) {
+							// ignore filter aggregation issues silently
+						}
 		// Custom sort: red engine (operating_condition) or oil_status first, then yellow, then green, then others
 		usort($equipments, function($a, $b) {
 			$getStatus = function($row) {
@@ -509,7 +585,6 @@ function eq_format_warranty($dateValue) {
 													<?php
 														$opState = eq_normalize_status($eq['operating_condition'] ?? '');
 														$oilState = eq_normalize_status($eq['oil_status'] ?? '');
-														$airState = eq_normalize_status($eq['air_filters'] ?? '');
 														$tiresState = eq_normalize_status($eq['tires'] ?? '');
 														$warranty = eq_format_warranty($eq['warranty'] ?? null);
 														$eqNumSort = strtolower(trim((string)($eq['dhss_equipment_number'] ?? '')));
@@ -556,7 +631,9 @@ function eq_format_warranty($dateValue) {
 													>
 														<td>
 															<div class="equipment-number-cell">
-																<a class="equipment-number" href="equipment.php?id=<?php echo (int)($eq['equipment_id'] ?? 0); ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>"><?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?></a>
+																<button type="button" class="equipment-number equipment-open-edit" title="Edit equipment">
+																	<?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?>
+																</button>
 																<span class="equipment-edit-icon admin-only" title="Edit equipment">Edit</span>
 															</div>
 														</td>
@@ -598,22 +675,23 @@ function eq_format_warranty($dateValue) {
 																</a>
 															<?php endif; ?>
 														</td>
-														<td>
-															<?php
-															$airFiles = 0;
-															$stmtAir = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'air_filters'");
-															$stmtAir->bind_param('i', $eq['equipment_id']);
-															$stmtAir->execute();
-															$resAir = $stmtAir->get_result();
-															if ($rowAir = $resAir->fetch_assoc()) {
-																$airFiles = (int)$rowAir['cnt'];
-															}
-															$stmtAir->close();
-															?>
-															<?php if ($airFiles > 0): ?>
-																<a href="Airfilters.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Air Filters</a>
+														<?php
+														$filterCondition = isset($eq['air_filters_condition_pct']) ? (float)$eq['air_filters_condition_pct'] : null;
+														$filterStatus = $eq['air_filters_status'] ?? ($eq['air_filters'] ?? null);
+														$filterHref = 'Airfilters.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : '');
+														$filterSvgMap = [
+															'green' => 'greenfilter.svg',
+															'yellow' => 'yellowfilter.svg',
+															'red' => 'redfilter.svg'
+														];
+														?>
+														<td class="airfilters-cell" <?php if ($filterStatus !== null && isset($filterSvgMap[$filterStatus])) { echo 'onclick="window.location=\'' . htmlspecialchars($filterHref, ENT_QUOTES) . '\';" style="cursor:pointer;"'; } ?>>
+															<?php if ($filterStatus === null || !isset($filterSvgMap[$filterStatus])): ?>
+																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<span style="color:#bbb !important;">Not available</span>
+																<a class="airfilters-status-link" href="Airfilters.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" title="Air filters condition: <?php echo htmlspecialchars((string)$filterCondition); ?>%">
+																	<img src="images/<?php echo htmlspecialchars($filterSvgMap[$filterStatus]); ?>" alt="<?php echo htmlspecialchars($filterStatus); ?> air filter" style="height:28px;vertical-align:middle;" />
+																</a>
 															<?php endif; ?>
 														</td>
 														<td>
@@ -727,12 +805,13 @@ function eq_format_warranty($dateValue) {
 						</select>
 					</div>
 					<div class="equipment-form__field">
-						<label for="eq_air_filters">Air Filters</label>
-						<input id="eq_air_filters" name="air_filters" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
-					</div>
-					<div class="equipment-form__field">
-						<label for="eq_tires">Tires</label>
-						<input id="eq_tires" name="tires" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+						<label for="eq_air_filters_status">Air Filter Status</label>
+						<select id="eq_air_filters_status" name="air_filters">
+							<option value="">Select...</option>
+							<option value="green">Green</option>
+							<option value="yellow">Yellow</option>
+							<option value="red">Red</option>
+						</select>
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_warranty">Warranty</label>
@@ -752,8 +831,8 @@ function eq_format_warranty($dateValue) {
 							<input id="eq_dhcst_equipment_number" name="dhcst_equipment_number" type="text" />
 						</div>
 						<div class="equipment-form__field">
-							<label for="eq_dhss_equipment_number">DHSS Equipment #</label>
-							<input id="eq_dhss_equipment_number" name="dhss_equipment_number" type="text" readonly style="background:#f3f4f6;" />
+							<label for="eq_dhss_equipment_number_display">DHSS Equipment #</label>
+							<input id="eq_dhss_equipment_number_display" type="text" readonly disabled style="background:#f3f4f6;" />
 						</div>
 						<div class="equipment-form__field">
 							<label for="eq_vin">VIN Number</label>
@@ -826,10 +905,8 @@ function eq_format_warranty($dateValue) {
 				   <?php
 				   // Prepare to show previews of uploaded files for the selected equipment in the edit modal
 				   $editUploads = [
-					   'air_filters' => [],
-					   'warranty' => [],
-					   'tires' => []
-				   ];
+				   	   'warranty' => []
+				   	];
 				   if (isset($_GET['edit_id']) && is_numeric($_GET['edit_id'])) {
 					   $eid = (int)$_GET['edit_id'];
 					   $stmt = $conn->prepare("SELECT field, file_url, id FROM equipment_uploads WHERE equipment_id = ?");
@@ -844,47 +921,31 @@ function eq_format_warranty($dateValue) {
 				   }
 				   ?>
 				   <div class="equipment-form__grid">
-					   <div class="equipment-form__field">
-						<label for="edit_dhss_equipment_number">Equipment # (DHSS)</label>
-						<input id="edit_dhss_equipment_number" name="dhss_equipment_number" type="text" required />
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_type">Type</label>
-						   <input id="edit_type" name="type" type="text" required />
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_current_hours">Current Hours</label>
-						   <input id="edit_current_hours" name="current_hours" type="number" step="0.1" min="0" />
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_location">Location</label>
-						   <input id="edit_location" name="location" type="text" />
-					   </div>
-					   <!-- Operating Condition and Oil Status removed from Edit modal per request -->
-					   <div class="equipment-form__field">
-						   <label for="edit_air_filters">Air Filters</label>
-						   <label class="equipment-file-label add-more-btn" id="air_filters_file_label" for="edit_air_filters">
-							   Add More
-							   <input id="edit_air_filters" name="air_filters[]" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple style="display:none;" />
-						   </label>
-						   <div class="equipment-upload-preview" data-field="air_filters"></div>
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_warranty">Warranty</label>
-						   <label class="equipment-file-label add-more-btn" id="warranty_file_label" for="edit_warranty">
-							   Add More
-							   <input id="edit_warranty" name="warranty[]" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple style="display:none;" />
-						   </label>
-						   <div class="equipment-upload-preview" data-field="warranty"></div>
-					   </div>
-					   <div class="equipment-form__field">
-						   <label for="edit_tires">Tires</label>
-						   <label class="equipment-file-label add-more-btn" id="tires_file_label" for="edit_tires">
-							   Add More
-							   <input id="edit_tires" name="tires[]" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple style="display:none;" />
-						   </label>
-						   <div class="equipment-upload-preview" data-field="tires"></div>
-					   </div>
+				   	   <div class="equipment-form__field">
+					<label for="edit_dhss_equipment_number">Equipment # (DHSS)</label>
+					<input id="edit_dhss_equipment_number" name="dhss_equipment_number" type="text" required />
+				   	   </div>
+				   	   <div class="equipment-form__field">
+				   	   	   <label for="edit_type">Type</label>
+				   	   	   <input id="edit_type" name="type" type="text" required />
+				   	   </div>
+				   	   <div class="equipment-form__field">
+				   	   	   <label for="edit_current_hours">Current Hours</label>
+				   	   	   <input id="edit_current_hours" name="current_hours" type="number" step="0.1" min="0" />
+				   	   </div>
+				   	   <div class="equipment-form__field">
+				   	   	   <label for="edit_location">Location</label>
+				   	   	   <input id="edit_location" name="location" type="text" />
+				   	   </div>
+				   	   <!-- Operating Condition and Oil Status removed from Edit modal per request -->
+				   	   <div class="equipment-form__field">
+				   	   	   <label for="edit_warranty">Warranty</label>
+				   	   	   <label class="equipment-file-label add-more-btn" id="warranty_file_label" for="edit_warranty">
+				   	   	   	   Add More
+				   	   	   	   <input id="edit_warranty" name="warranty[]" type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" multiple style="display:none;" />
+				   	   	   </label>
+				   	   	   <div class="equipment-upload-preview" data-field="warranty"></div>
+				   	   </div>
 					   <!-- DHCST and DHSS Equipment # moved to Additional Details -->
 					   <hr style="grid-column:1/-1;margin:18px 0 8px 0;border:0;border-top:1.5px solid #e5e7eb;background:none;">
 					   <div style="display:flex;justify-content:flex-end;align-items:center;grid-column:1/-1;margin-bottom:8px;">
@@ -1189,6 +1250,21 @@ function eq_format_warranty($dateValue) {
 			if (newModal) newModal.addEventListener('click', function(e){ if (e.target === newModal) closeNewModal(); });
 			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && newModal && newModal.classList.contains('is-open')) closeNewModal(); });
 
+			var dhssPrimary = document.getElementById('eq_dhss_equipment_number');
+			var dhssDisplay = document.getElementById('eq_dhss_equipment_number_display');
+			function syncDhssDisplay(){
+				if (!dhssPrimary || !dhssDisplay) return;
+				dhssDisplay.value = dhssPrimary.value;
+			}
+			if (dhssPrimary && dhssDisplay) {
+				dhssPrimary.addEventListener('input', syncDhssDisplay);
+				dhssPrimary.addEventListener('change', syncDhssDisplay);
+				syncDhssDisplay();
+			}
+			if (newForm && dhssDisplay) {
+				newForm.addEventListener('reset', function(){ dhssDisplay.value = ''; });
+			}
+
 			if (newForm) newForm.addEventListener('submit', function(e){
 				e.preventDefault();
 				if (saveNewBtn) { saveNewBtn.disabled = true; saveNewBtn.textContent = 'Saving...'; }
@@ -1265,7 +1341,7 @@ function eq_format_warranty($dateValue) {
 				});
 
 				// Clear previous previews
-				['air_filters','warranty','tires'].forEach(function(field){
+				['warranty'].forEach(function(field){
 					var preview = document.querySelector('.equipment-upload-preview[data-field="'+field+'"]');
 					if (preview) preview.innerHTML = '';
 				});
@@ -1276,7 +1352,7 @@ function eq_format_warranty($dateValue) {
 					.then(function(r){ return r.json(); })
 					.then(function(data){
 						if (!data.success) return;
-						   ['air_filters','warranty','tires'].forEach(function(field){
+						   ['warranty'].forEach(function(field){
 							   var preview = document.querySelector('.equipment-upload-preview[data-field="'+field+'"]');
 							   var label = document.getElementById(field + '_file_label');
 							   if (preview) {
@@ -1316,8 +1392,17 @@ function eq_format_warranty($dateValue) {
 				if (editErrBox) { editErrBox.style.display = 'none'; editErrBox.textContent = ''; }
 			}
 
-			// Attach click handlers to edit icons
+			// Attach click handlers to first-column buttons and edit icons
 			document.addEventListener('click', function(e){
+				if (e.target.classList.contains('equipment-open-edit')) {
+					var rowBtn = e.target.closest('tr');
+					if (rowBtn && rowBtn.getAttribute('data-equipment-id')) {
+						e.preventDefault();
+						e.stopPropagation();
+						openEditModal(rowBtn);
+						return;
+					}
+				}
 				if (e.target.classList.contains('equipment-edit-icon')) {
 					var row = e.target.closest('tr');
 					if (row && row.getAttribute('data-equipment-id')) {
@@ -1420,8 +1505,8 @@ function eq_format_warranty($dateValue) {
 					usersGroup.classList.toggle('open');
 				});
 			}
-		// Equipment Uploads: Air Filters, Warranty, Tires (Edit Modal)
-		['air_filters','warranty','tires'].forEach(function(field){
+		// Equipment Uploads: Warranty (Edit Modal)
+		['warranty'].forEach(function(field){
 			var input = document.getElementById('edit_' + field);
 			var label = document.getElementById(field + '_file_label');
 			var preview = document.querySelector('.equipment-upload-preview[data-field="'+field+'"]');
