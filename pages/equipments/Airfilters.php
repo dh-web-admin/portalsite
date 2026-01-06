@@ -70,7 +70,28 @@ function ensure_filter_life_column($conn) {
     }
 }
 
+function ensure_filter_hours_column($conn) {
+    static $ensuredHours = false;
+    if ($ensuredHours) {
+        return;
+    }
+    try {
+        $check = $conn->query("SHOW COLUMNS FROM filter_info LIKE 'filter_hours'");
+        $hasColumn = $check && $check->num_rows > 0;
+        if ($check) {
+            $check->close();
+        }
+        if (!$hasColumn) {
+            $conn->query("ALTER TABLE filter_info ADD COLUMN filter_hours DECIMAL(10,1) NULL AFTER filter_life");
+        }
+        $ensuredHours = true;
+    } catch (Throwable $e) {
+        error_log('[airfilters] Unable to ensure filter_hours column: ' . $e->getMessage());
+    }
+}
+
 ensure_filter_life_column($conn);
+ensure_filter_hours_column($conn);
 
 $filtersByEquip = [];
 $filterNames = [];
@@ -118,7 +139,7 @@ $filterNames = array_values(array_unique($filterNames));
     <style>
         .oil-status-panel { padding:12px; background:#fff; border:1px solid #e6eef6; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.04); margin-top:22px; box-sizing:border-box; }
         #filtersPanel { margin-bottom:90px; }
-        .panel-wrapper { max-width:1200px; margin-left:auto; margin-right:auto; position:relative; }
+        .panel-wrapper { max-width:1350px; margin-left:auto; margin-right:auto; position:relative; }
         .panel-wrapper.wide { max-width:1600px; }
         .equipment-back-btn-wrapper--top-left { margin-top:18px; margin-bottom:18px; }
         .equipment-back-btn { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; background:#2563eb; color:#fff; text-decoration:none; border-radius:8px; font-weight:600; font-size:14px; border:none; cursor:pointer; transition:background 0.2s ease, transform 0.1s ease; }
@@ -129,6 +150,8 @@ $filterNames = array_values(array_unique($filterNames));
         .oil-page-heading .subtitle { margin-top:6px; color:#6b7280; font-size:14px; }
         #filtersContainer { margin-top:10px; padding:0 6px; }
         #filtersTable { width:100%; border-collapse:collapse; }
+        #filtersTable th:first-child,
+        #filtersTable td:first-child { width:220px; }
         #filtersTable th, #filtersTable td { padding:10px 12px; text-align:left; white-space:normal; word-wrap:break-word; word-break:break-word; }
         #filtersTable thead th { border-bottom:1px solid #e2e8f0; font-size:13px; color:#475569; text-transform:uppercase; letter-spacing:0.05em; }
         #filtersTable tbody tr { border-bottom:1px solid #edf2f7; }
@@ -184,6 +207,8 @@ $filterNames = array_values(array_unique($filterNames));
                                             <th>Filter</th>
                                             <th>Make</th>
                                             <th>Part Number</th>
+                                            <th>Last Changed</th>
+                                            <th>Last reset hour</th>
                                             <th>Current Hours</th>
                                             <th>Filter Life</th>
                                             <th>Condition</th>
@@ -191,7 +216,7 @@ $filterNames = array_values(array_unique($filterNames));
                                         </tr>
                                     </thead>
                                     <tbody id="filtersTbody">
-                                        <tr><td colspan="7" style="color:#64748b">Select an equipment below to view filters.</td></tr>
+                                        <tr><td colspan="9" style="color:#64748b">Select an equipment below to view filters.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -290,7 +315,7 @@ $filterNames = array_values(array_unique($filterNames));
             var warnAlerts = [];
             var urgentAlerts = [];
             if (!filters.length) {
-                tbody.innerHTML = '<tr><td colspan="7" style="color:#64748b">No filters for this equipment yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="color:#64748b">No filters for this equipment yet.</td></tr>';
                 updateHeading(equipment, equipmentId);
                 setSelectedInfo(currentHours);
                 updateFilterAlerts([], []);
@@ -298,6 +323,8 @@ $filterNames = array_values(array_unique($filterNames));
             }
             filters.forEach(function(filter){
                 var metrics = computeFilterMetrics(filter, equipment);
+                var resetHours = parseFloat(filter.hours);
+                var resetHoursDisplay = (!isNaN(resetHours) && resetHours >= 0) ? resetHours.toFixed(1) : '—';
                 var conditionText = metrics.condition === null ? '—' : metrics.condition + '%';
                 if (metrics.condition !== null) {
                     if (metrics.condition <= 0) {
@@ -312,6 +339,8 @@ $filterNames = array_values(array_unique($filterNames));
                 tr.innerHTML = '<td><div class="filter-name-cell"><span>' + formatCell(filter.filter_name) + '</span>' + editBtn + '</div></td>' +
                     '<td>' + formatCell(filter.make) + '</td>' +
                     '<td>' + formatCell(filter.part_number) + '</td>' +
+                    '<td>' + formatCell(filter.filter_date) + '</td>' +
+                    '<td>' + resetHoursDisplay + '</td>' +
                     '<td>' + (metrics.hoursSince ? metrics.hoursSince.toFixed(1) : '0.0') + '</td>' +
                     '<td>' + (metrics.life ? metrics.life : '—') + '</td>' +
                     '<td>' + conditionText + '</td>' +

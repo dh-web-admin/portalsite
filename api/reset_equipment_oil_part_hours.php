@@ -57,7 +57,7 @@ if ($equipment_id) {
 }
 
 $now = date('Y-m-d H:i:s');
-$stmt = $conn->prepare('UPDATE equipment_oil_parts SET current_hours=?, reset_at=?, updated_at=? WHERE id=?');
+$stmt = $conn->prepare('UPDATE equipment_oil_parts SET current_hours=?, reset_at=?, oil_hours=0, updated_at=? WHERE id=?');
 if (!$stmt) json_exit_r(['success'=>false,'message'=>'DB prepare failed'], 500);
 $stmt->bind_param('dssi', $equip_hours, $now, $now, $id);
 $ok = $stmt->execute();

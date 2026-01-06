@@ -83,10 +83,34 @@ $unit_cost = ($unit_cost !== null && $unit_cost !== '' && is_numeric($unit_cost)
 $total = ($total !== null && $total !== '' && is_numeric($total)) ? $total : 0;
 $oil_life = ($oil_life !== null && $oil_life !== '' && is_numeric($oil_life)) ? (float)$oil_life : 0;
 
+// Look up equipment and current_hours so we can persist oil_hours
+$equipment_id = 0;
+$part_current_hours = 0.0;
+if ($meta = $conn->query('SELECT equipment_id, current_hours FROM equipment_oil_parts WHERE id=' . intval($id) . ' LIMIT 1')) {
+    $metaRow = $meta->fetch_assoc();
+    if ($metaRow) {
+        $equipment_id = isset($metaRow['equipment_id']) ? (int)$metaRow['equipment_id'] : 0;
+        $part_current_hours = isset($metaRow['current_hours']) ? (float)$metaRow['current_hours'] : 0.0;
+    }
+    $meta->free();
+}
+
+$oil_hours = 0.0;
+if ($equipment_id > 0) {
+    $eq_hours = 0.0;
+    if ($q = $conn->query('SELECT COALESCE(current_hours,0) AS ch FROM equipments WHERE equipment_id=' . intval($equipment_id) . ' LIMIT 1')) {
+        $er = $q->fetch_assoc();
+        if ($er && isset($er['ch'])) { $eq_hours = (float)$er['ch']; }
+        $q->free();
+    }
+    $oil_hours = $eq_hours - $part_current_hours;
+    if (!is_numeric($oil_hours) || $oil_hours < 0) { $oil_hours = 0.0; }
+}
+
 try {
-    $stmt = $conn->prepare('UPDATE equipment_oil_parts SET part=?, approx_capacity=?, fluid_type=?, weight=?, mfg=?, supplier=?, unit_cost=?, unit=?, total=?, notes=?, oil_life=?, updated_at=? WHERE id=?');
+    $stmt = $conn->prepare('UPDATE equipment_oil_parts SET part=?, approx_capacity=?, fluid_type=?, weight=?, mfg=?, supplier=?, unit_cost=?, unit=?, total=?, notes=?, oil_life=?, oil_hours=?, updated_at=? WHERE id=?');
     if (!$stmt) { throw new Exception('DB prepare failed: ' . $conn->error); }
-    $stmt->bind_param('ssssssssssdsi', $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $oil_life, $now, $id);
+    $stmt->bind_param('ssssssssssddsi', $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $oil_life, $oil_hours, $now, $id);
     $ok = $stmt->execute();
     if (!$ok) { $e = $stmt->error; $stmt->close(); throw new Exception('Update failed: ' . $e); }
     $stmt->close();

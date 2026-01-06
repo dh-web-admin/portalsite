@@ -99,14 +99,16 @@ if ($equipment_id && $qr = $conn->query('SELECT COALESCE(current_hours,0) AS ch 
     $equipment_hours = isset($rrow['ch']) ? $rrow['ch'] : 0;
     $qr->free();
 }
+// Persist oil_hours as the derived hours since last reset (starts at 0 on creation)
+$oil_hours = 0.0;
 
-$stmt = $conn->prepare('INSERT INTO equipment_oil_parts (equipment_id, part, approx_capacity, fluid_type, weight, mfg, supplier, unit_cost, unit, total, notes, current_hours, oil_life, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+$stmt = $conn->prepare('INSERT INTO equipment_oil_parts (equipment_id, part, approx_capacity, fluid_type, weight, mfg, supplier, unit_cost, unit, total, notes, current_hours, oil_life, oil_hours, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 if (!$stmt) {
     json_exit_add(['success' => false, 'message' => 'DB prepare failed'], 500);
 }
 
 // Changed bind_param types: use 's' for nullable numeric fields instead of 'd'
-$stmt->bind_param('issssssssssssss', $equipment_id, $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $equipment_hours, $oil_life, $now, $now);
+$stmt->bind_param('issssssssssssdds', $equipment_id, $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $equipment_hours, $oil_life, $oil_hours, $now, $now);
 $ok = $stmt->execute();
 $err = null;
 if (!$ok) {
@@ -132,6 +134,7 @@ $row = [
     'notes' => $notes,
     'current_hours' => $equipment_hours,
     'oil_life' => $oil_life,
+    'oil_hours' => $oil_hours,
     'reset_at' => null,
     'created_at' => $now,
     'updated_at' => $now

@@ -227,13 +227,15 @@ try {
 										<tr>
 											<th>Fluid Type</th>
 											<th>Current Hours</th>
-											<th>Fluid Life</th>
-											<th>Condition</th>
-											<th style="width:110px;text-align:left;"></th>
+												<th>Last Changed</th>
+												<th>Last reset hour</th>
+												<th>Fluid Life</th>
+												<th>Condition</th>
+												<th style="width:110px;text-align:left;"></th>
 										</tr>
 										</thead>
 										<tbody id="fluidsTbody">
-											<tr><td colspan="5" style="color:#64748b">Select an equipment below to view fluid status.</td></tr>
+											<tr><td colspan="7" style="color:#64748b">Select an equipment below to view fluid status.</td></tr>
 										</tbody>
 										</table>
 									</div>
@@ -487,15 +489,16 @@ try {
 		var equip = INITIAL_EQUIPMENTS.find(function(x){ return Number(x.equipment_id) === Number(equipmentId); }) || { current_hours:0 };
 		// clear alerts element first
 		var alertsEl = document.getElementById('fluidsAlerts'); if (alertsEl) alertsEl.innerHTML = '';
-		if (!parts.length){ tbody.innerHTML = '<tr><td colspan="5" style="color:#64748b">No fluids found for this equipment.</td></tr>'; return; }
+		if (!parts.length){ tbody.innerHTML = '<tr><td colspan="7" style="color:#64748b">No fluids found for this equipment.</td></tr>'; return; }
 		var warnAlerts = [];
 		var urgentAlerts = [];
 		parts.forEach(function(p){
 			var tr = document.createElement('tr');
-			var partCurrent = parseFloat(p.current_hours) || 0;
-			var equipCurrent = parseFloat(equip.current_hours) || 0;
-			// Hours since last reset: equipment.current_hours - part.current_hours
-			var diff = (equipCurrent - partCurrent);
+				var stored = parseFloat(p.oil_hours);
+				var partCurrent = parseFloat(p.current_hours) || 0;
+				var equipCurrent = parseFloat(equip.current_hours) || 0;
+				// Hours since last reset: prefer persisted oil_hours, fallback to live difference
+				var diff = !isNaN(stored) ? stored : (equipCurrent - partCurrent);
 			if (isNaN(diff) || diff < 0) diff = 0;
 			var oilLife = parseFloat(p.oil_life) || 0;
 			var conditionPct = 100;
@@ -503,12 +506,15 @@ try {
 				var usedPercent = (diff / oilLife) * 100;
 				conditionPct = Math.max(0, Math.min(100, Math.round(100 - usedPercent)));
 			}
-			var resetBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" onclick="resetPartHours(' + (p.id || 0) + ')">Reset</button>' : '';
-			tr.innerHTML = '<td>' + formatCell(p.fluid_type) + '</td>' +
-			               '<td>' + formatCell(diff.toFixed(2)) + '</td>' +
-			               '<td>' + formatCell(oilLife) + '</td>' +
-					'<td>' + conditionPct + '%' + '</td>' +
-					'<td style="text-align:left;">' + resetBtn + '</td>';
+				var resetBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" onclick="resetPartHours(' + (p.id || 0) + ')">Reset</button>' : '';
+				var lastChanged = p.reset_at ? String(p.reset_at).split(' ')[0] : '';
+				tr.innerHTML = '<td>' + formatCell(p.fluid_type) + '</td>' +
+				               '<td>' + formatCell(diff.toFixed(2)) + '</td>' +
+				               '<td>' + formatCell(lastChanged) + '</td>' +
+				               '<td>' + formatCell(partCurrent.toFixed(2)) + '</td>' +
+				               '<td>' + formatCell(oilLife) + '</td>' +
+						'<td>' + conditionPct + '%' + '</td>' +
+						'<td style="text-align:left;">' + resetBtn + '</td>';
 			tbody.appendChild(tr);
 			// collect alerts
 			if (conditionPct <= 0) urgentAlerts.push(p.fluid_type || 'Fluid');
