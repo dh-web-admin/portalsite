@@ -91,7 +91,7 @@ $stmt = $conn->prepare($sql);
 if (!$stmt) {
     json_exit_update_filter(['success' => false, 'error' => 'Prepare failed: ' . $conn->error], 500);
 }
-$stmt->bind_param('isssssi', $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make, $filter_id);
+$stmt->bind_param('ssssssi', $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make, $filter_id);
 $ok = $stmt->execute();
 if (!$ok) {
     $err = $stmt->error;
