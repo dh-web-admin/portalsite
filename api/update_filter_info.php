@@ -5,6 +5,23 @@ ini_set('display_startup_errors', 0);
 ini_set('log_errors', 1);
 ob_start();
 
+// Gracefully surface fatal errors as JSON so the client gets a useful message instead of an empty 500 body
+register_shutdown_function(function(){
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
+        http_response_code(500);
+        $payload = [
+            'success' => false,
+            'error' => 'Server error: ' . $err['message']
+        ];
+        $buffer = ob_get_clean();
+        if ($buffer && trim($buffer) !== '') {
+            $payload['raw'] = $buffer;
+        }
+        echo json_encode($payload);
+    }
+});
+
 require_once __DIR__ . '/../session_init.php';
 if (!defined('IS_API')) define('IS_API', true);
 require_once __DIR__ . '/../config/config.php';
