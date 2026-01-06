@@ -5,6 +5,26 @@ ini_set('display_startup_errors', 0);
 ini_set('log_errors', 1);
 ob_start();
 
+function ensure_filter_hours_column($conn) {
+    static $ensuredHours = false;
+    if ($ensuredHours) {
+        return;
+    }
+    try {
+        $check = $conn->query("SHOW COLUMNS FROM filter_info LIKE 'filter_hours'");
+        $hasColumn = $check && $check->num_rows > 0;
+        if ($check) {
+            $check->close();
+        }
+        if (!$hasColumn) {
+            $conn->query("ALTER TABLE filter_info ADD COLUMN filter_hours DECIMAL(10,1) NULL AFTER filter_life");
+        }
+        $ensuredHours = true;
+    } catch (Throwable $e) {
+        error_log('[add_filter_info] Unable to ensure filter_hours column: ' . $e->getMessage());
+    }
+}
+
 require_once __DIR__ . '/../session_init.php';
 if (!defined('IS_API')) define('IS_API', true);
 require_once __DIR__ . '/../config/config.php';
@@ -86,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 ensure_filter_life_column($conn);
+ensure_filter_hours_column($conn);
 
 $equipment_id = isset($_POST['equipment_id']) ? (int) $_POST['equipment_id'] : 0;
 $filter_name = isset($_POST['filter_name']) ? trim((string) $_POST['filter_name']) : '';
@@ -110,12 +131,16 @@ if ($hours_input === '') {
 $hours_param = $hours_input === '' ? '' : $hours_input;
 $filter_life_param = $filter_life_input === '' ? '' : $filter_life_input;
 
-$sql = 'INSERT INTO filter_info (equipment_id, filter_name, filter_date, hours, filter_life, part_number, make) VALUES (?, ?, ?, NULLIF(?, ""), NULLIF(?, ""), ?, ?)';
+$equipment_hours = fetch_equipment_hours($conn, $equipment_id);
+$base_hours = $hours_input === '' ? 0.0 : (float) $hours_input;
+$filter_hours_val = max(0, $equipment_hours - $base_hours);
+
+$sql = 'INSERT INTO filter_info (equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours) VALUES (?, ?, ?, NULLIF(?, ""), NULLIF(?, ""), ?, ?, ?)';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     json_exit_add_filter(['success' => false, 'error' => 'Failed to prepare statement'], 500);
 }
-$stmt->bind_param('issssss', $equipment_id, $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make);
+$stmt->bind_param('issssssd', $equipment_id, $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make, $filter_hours_val);
 $ok = $stmt->execute();
 $insertId = $stmt->insert_id;
 if (!$ok) {
@@ -126,7 +151,7 @@ if (!$ok) {
 $stmt->close();
 
 $row = null;
-if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make FROM filter_info WHERE filter_id = ? LIMIT 1')) {
+if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours FROM filter_info WHERE filter_id = ? LIMIT 1')) {
     $rowStmt->bind_param('i', $insertId);
     $rowStmt->execute();
     $res = $rowStmt->get_result();

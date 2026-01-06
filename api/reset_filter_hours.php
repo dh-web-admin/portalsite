@@ -5,6 +5,26 @@ ini_set('display_startup_errors', 0);
 ini_set('log_errors', 1);
 ob_start();
 
+function ensure_filter_hours_column($conn) {
+    static $ensuredHours = false;
+    if ($ensuredHours) {
+        return;
+    }
+    try {
+        $check = $conn->query("SHOW COLUMNS FROM filter_info LIKE 'filter_hours'");
+        $hasColumn = $check && $check->num_rows > 0;
+        if ($check) {
+            $check->close();
+        }
+        if (!$hasColumn) {
+            $conn->query("ALTER TABLE filter_info ADD COLUMN filter_hours DECIMAL(10,1) NULL AFTER filter_life");
+        }
+        $ensuredHours = true;
+    } catch (Throwable $e) {
+        error_log('[reset_filter_hours] Unable to ensure filter_hours column: ' . $e->getMessage());
+    }
+}
+
 require_once __DIR__ . '/../session_init.php';
 if (!defined('IS_API')) define('IS_API', true);
 require_once __DIR__ . '/../config/config.php';
@@ -65,6 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_exit_reset_filter(['success' => false, 'error' => 'Invalid request method'], 405);
 }
 
+ensure_filter_hours_column($conn);
+
 $filter_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 if ($filter_id <= 0) {
     json_exit_reset_filter(['success' => false, 'error' => 'Invalid filter id'], 400);
@@ -87,7 +109,7 @@ $equipment_id = isset($row['equipment_id']) ? (int) $row['equipment_id'] : 0;
 $hours = fetch_equipment_hours($conn, $equipment_id);
 $today = date('Y-m-d');
 
-if (!$update = $conn->prepare('UPDATE filter_info SET hours = ?, filter_date = ? WHERE filter_id = ?')) {
+if (!$update = $conn->prepare('UPDATE filter_info SET hours = ?, filter_date = ?, filter_hours = 0 WHERE filter_id = ?')) {
     json_exit_reset_filter(['success' => false, 'error' => 'Unable to update filter'], 500);
 }
 $update->bind_param('dsi', $hours, $today, $filter_id);
@@ -100,7 +122,7 @@ if (!$ok) {
 $update->close();
 
 $latest = null;
-if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make FROM filter_info WHERE filter_id = ? LIMIT 1')) {
+if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours FROM filter_info WHERE filter_id = ? LIMIT 1')) {
     $rowStmt->bind_param('i', $filter_id);
     $rowStmt->execute();
     $res = $rowStmt->get_result();

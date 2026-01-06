@@ -75,7 +75,7 @@ ensure_filter_life_column($conn);
 $filtersByEquip = [];
 $filterNames = [];
 try {
-    $sql = "SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make FROM filter_info ORDER BY equipment_id ASC, filter_name ASC";
+    $sql = "SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours FROM filter_info ORDER BY equipment_id ASC, filter_name ASC";
     $res = $conn->query($sql);
     if ($res) {
         while ($row = $res->fetch_assoc()) {
@@ -91,7 +91,8 @@ try {
                 'hours' => $row['hours'],
                 'filter_life' => $row['filter_life'],
                 'part_number' => $row['part_number'] ?? '',
-                'make' => $row['make'] ?? ''
+                'make' => $row['make'] ?? '',
+                'filter_hours' => $row['filter_hours'] ?? null
             ];
             if (!empty($row['filter_name'])) {
                 $filterNames[] = $row['filter_name'];
@@ -267,7 +268,8 @@ $filterNames = array_values(array_unique($filterNames));
             var eqHours = equipment ? parseFloat(equipment.current_hours) || 0 : 0;
             var lastReset = parseFloat(filter.hours) || 0;
             var life = parseFloat(filter.filter_life) || 0;
-            var hoursSince = eqHours - lastReset;
+            var stored = parseFloat(filter.filter_hours);
+            var hoursSince = !isNaN(stored) ? stored : (eqHours - lastReset);
             if (isNaN(hoursSince) || hoursSince < 0) { hoursSince = 0; }
             var condition = null;
             if (life > 0) {

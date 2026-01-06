@@ -5,6 +5,26 @@ ini_set('display_startup_errors', 0);
 ini_set('log_errors', 1);
 ob_start();
 
+function ensure_filter_hours_column($conn) {
+    static $ensuredHours = false;
+    if ($ensuredHours) {
+        return;
+    }
+    try {
+        $check = $conn->query("SHOW COLUMNS FROM filter_info LIKE 'filter_hours'");
+        $hasColumn = $check && $check->num_rows > 0;
+        if ($check) {
+            $check->close();
+        }
+        if (!$hasColumn) {
+            $conn->query("ALTER TABLE filter_info ADD COLUMN filter_hours DECIMAL(10,1) NULL AFTER filter_life");
+        }
+        $ensuredHours = true;
+    } catch (Throwable $e) {
+        error_log('[update_filter_info] Unable to ensure filter_hours column: ' . $e->getMessage());
+    }
+}
+
 // Gracefully surface fatal errors as JSON so the client gets a useful message instead of an empty 500 body
 register_shutdown_function(function(){
     $err = error_get_last();
@@ -83,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 ensure_filter_life_column($conn);
+ensure_filter_hours_column($conn);
 
 $filter_id = isset($_POST['filter_id']) ? intval($_POST['filter_id']) : 0;
 $filter_name = isset($_POST['filter_name']) ? trim((string) $_POST['filter_name']) : '';
@@ -96,19 +117,42 @@ if ($filter_id <= 0) {
     json_exit_update_filter(['success' => false, 'error' => 'Missing filter_id.'], 400);
 }
 
-if ($filter_date === '') {
-    $filter_date = null;
-}
-
+$filter_date = $filter_date === '' ? null : $filter_date;
 $hours_param = $hours_input === '' ? '' : $hours_input;
 $filter_life_param = $filter_life_input === '' ? '' : $filter_life_input;
 
-$sql = 'UPDATE filter_info SET filter_name = ?, filter_date = ?, hours = NULLIF(?, ""), filter_life = NULLIF(?, ""), part_number = ?, make = ? WHERE filter_id = ?';
+// Look up equipment to calculate persisted filter_hours
+$equipment_id = 0;
+if ($lookup = $conn->prepare('SELECT equipment_id FROM filter_info WHERE filter_id = ? LIMIT 1')) {
+    $lookup->bind_param('i', $filter_id);
+    $lookup->execute();
+    $res = $lookup->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $equipment_id = $row ? (int) ($row['equipment_id'] ?? 0) : 0;
+    $lookup->close();
+}
+
+$equipment_hours = 0.0;
+if ($equipment_id > 0 && ($hStmt = $conn->prepare('SELECT COALESCE(current_hours,0) AS ch FROM equipments WHERE equipment_id = ? LIMIT 1'))) {
+    $hStmt->bind_param('i', $equipment_id);
+    $hStmt->execute();
+    $r = $hStmt->get_result();
+    if ($r) {
+        $hr = $r->fetch_assoc();
+        if ($hr && isset($hr['ch'])) { $equipment_hours = (float) $hr['ch']; }
+    }
+    $hStmt->close();
+}
+
+$base_hours = $hours_input === '' ? 0.0 : (float) $hours_input;
+$filter_hours_val = max(0, $equipment_hours - $base_hours);
+
+$sql = 'UPDATE filter_info SET filter_name = ?, filter_date = ?, hours = NULLIF(?, ""), filter_life = NULLIF(?, ""), part_number = ?, make = ?, filter_hours = ? WHERE filter_id = ?';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     json_exit_update_filter(['success' => false, 'error' => 'Prepare failed: ' . $conn->error], 500);
 }
-$stmt->bind_param('ssssssi', $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make, $filter_id);
+$stmt->bind_param('ssssssdi', $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make, $filter_hours_val, $filter_id);
 $ok = $stmt->execute();
 if (!$ok) {
     $err = $stmt->error;
@@ -118,7 +162,7 @@ if (!$ok) {
 $stmt->close();
 
 $row = null;
-if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make FROM filter_info WHERE filter_id = ? LIMIT 1')) {
+if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours FROM filter_info WHERE filter_id = ? LIMIT 1')) {
     $rowStmt->bind_param('i', $filter_id);
     $rowStmt->execute();
     $res = $rowStmt->get_result();
