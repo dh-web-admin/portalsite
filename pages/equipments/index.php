@@ -1,29 +1,11 @@
 <?php
 require_once __DIR__ . '/../../session_init.php';
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../partials/permissions.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 	header('Location: /auth/login.php');
-	exit();
-}
-
-// Include database configuration
-require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../partials/permissions.php';
-
-// Get user role for sidebar
-$email = $_SESSION['email'];
-$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
-$stmt->bind_param('s', $email);
-$stmt->execute();
-$res = $stmt->get_result();
-$user = $res ? $res->fetch_assoc() : null;
-$role = $user ? $user['role'] : 'laborer';
-$stmt->close();
-
-// Enforce access control for this page
-if (!can_access($role, 'equipments')) {
-	header('Location: /pages/dashboard/');
 	exit();
 }
 
@@ -297,11 +279,33 @@ function eq_format_warranty($dateValue) {
 		.equipment-number-cell:hover .equipment-edit-icon {
 			opacity: 1;
 		}
+		.equipment-hours { cursor: pointer; }
+		.equipment-hours-cell, .equipment-inline-cell { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+		.hours-edit-icon, .cell-edit-icon { opacity: 0; transition: opacity 0.2s, transform 0.2s; cursor: pointer; font-size: 12px; color: #667eea; padding: 4px 6px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(102, 126, 234, 0.4); background: rgba(102, 126, 234, 0.08); }
+		.equipment-hours-cell:hover .hours-edit-icon, .equipment-inline-cell:hover .cell-edit-icon { opacity: 1; }
+		.hours-edit-icon:hover, .cell-edit-icon:hover { background: rgba(102, 126, 234, 0.18); transform: scale(1.05); }
+		.warranty-cell { position: relative; display: inline-flex; align-items: center; gap: 10px; }
+		.warranty-add-btn { opacity: 0; transition: opacity 0.2s, transform 0.2s; cursor: pointer; font-size: 12px; color: #2563eb; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(37, 99, 235, 0.35); background: rgba(37, 99, 235, 0.08); font-weight: 700; }
+		.warranty-cell:hover .warranty-add-btn { opacity: 1; }
+		.warranty-add-btn:hover { background: rgba(37, 99, 235, 0.16); transform: scale(1.03); }
+
+		/* Type / Location modals */
+		.type-modal__dialog, .location-modal__dialog { max-width: 420px; }
+		.type-modal__header { background: #2563eb; }
+		.location-modal__header { background: #0ea5e9; }
+		.inline-modal__form { padding: 24px 28px; }
+		.inline-modal__grid { display: flex; flex-direction: column; gap: 14px; }
 		
 		.equipment-edit-icon:hover {
 			background: rgba(102, 126, 234, 0.1);
 			transform: scale(1.1);
 		}
+
+		/* Hours quick-edit modal */
+		.hours-modal__dialog { max-width: 420px; }
+		.hours-modal__header { background: #475569; }
+		.hours-modal__form { padding: 24px 28px; }
+		.hours-modal__grid { display: flex; flex-direction: column; gap: 14px; }
 		
 		/* Fix modal overlay and dialog clickability */
 		.equipment-modal {
@@ -628,6 +632,7 @@ function eq_format_warranty($dateValue) {
 													   data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
 													   data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
 													   data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
+													   data-warranty-href="<?php echo htmlspecialchars('Warranty.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''), ENT_QUOTES); ?>"
 													>
 														<td>
 															<div class="equipment-number-cell">
@@ -643,7 +648,12 @@ function eq_format_warranty($dateValue) {
 																<span class="equipment-edit-icon admin-only" title="Edit equipment">Edit</span>
 															</div>
 														</td>
-														<td><?php echo htmlspecialchars((string)($eq['type'] ?? '')); ?></td>
+														<td>
+															<div class="equipment-inline-cell">
+																<span><?php echo htmlspecialchars((string)($eq['type'] ?? '')); ?></span>
+																<span class="cell-edit-icon cell-edit-type admin-only" title="Edit type">Edit</span>
+															</div>
+														</td>
 														<td>
 															<?php $val = trim((string)($eq['operating_condition'] ?? '')); ?>
 															<?php
@@ -661,8 +671,18 @@ function eq_format_warranty($dateValue) {
 																</a>
 															<?php endif; ?>
 														</td>
-														<td><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></td>
-														<td><span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span></td>
+														<td>
+															<div class="equipment-inline-cell">
+																<span><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></span>
+																<span class="cell-edit-icon cell-edit-location admin-only" title="Edit location">Edit</span>
+															</div>
+														</td>
+														<td>
+															<div class="equipment-hours-cell">
+																<span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span>
+																<span class="hours-edit-icon admin-only" title="Edit hours">Edit</span>
+															</div>
+														</td>
 														<?php $val = trim((string)($eq['oil_status'] ?? ''));
 															$oilHref = 'oil_status.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''); ?>
 														<td <?php if ($val !== '' ) { echo 'onclick="window.location=\'' . htmlspecialchars($oilHref, ENT_QUOTES) . '\';" style="cursor:pointer;"'; } ?>>
@@ -700,41 +720,36 @@ function eq_format_warranty($dateValue) {
 																</a>
 															<?php endif; ?>
 														</td>
-														<td>
-															<?php
-															$tiresFiles = 0;
-															$stmtTires = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'tires'");
-															$stmtTires->bind_param('i', $eq['equipment_id']);
-															$stmtTires->execute();
-															$resTires = $stmtTires->get_result();
-															if ($rowTires = $resTires->fetch_assoc()) {
-																$tiresFiles = (int)$rowTires['cnt'];
-															}
-															$stmtTires->close();
-															?>
-															<?php if ($tiresFiles > 0): ?>
-																<a href="Tires.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Tires</a>
-															<?php else: ?>
-																<span style="color:#bbb !important;">Not available</span>
-															<?php endif; ?>
+														<td style="text-align:center;">
+															<?php $tiresHref = 'Tires.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''); ?>
+															<a href="<?php echo htmlspecialchars($tiresHref, ENT_QUOTES); ?>" title="View tires" style="display:inline-block;">
+																<img src="images/tires.svg" alt="Tires" style="height:28px;vertical-align:middle;" />
+															</a>
 														</td>
 														<td>
-															<?php
-															$warrantyFiles = 0;
-															$stmtWarranty = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'warranty'");
-															$stmtWarranty->bind_param('i', $eq['equipment_id']);
-															$stmtWarranty->execute();
-															$resWarranty = $stmtWarranty->get_result();
-															if ($rowWarranty = $resWarranty->fetch_assoc()) {
-																$warrantyFiles = (int)$rowWarranty['cnt'];
-															}
-															$stmtWarranty->close();
-															?>
-															<?php if ($warrantyFiles > 0): ?>
-																<a href="Warranty.php?id=<?php echo (int)$eq['equipment_id']; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>
-															<?php else: ?>
-																<span style="color:#bbb !important;">Not available</span>
-															<?php endif; ?>
+															<div class="warranty-cell">
+																<?php
+																$warrantyFiles = 0;
+																$stmtWarranty = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'warranty'");
+																$stmtWarranty->bind_param('i', $eq['equipment_id']);
+																$stmtWarranty->execute();
+																$resWarranty = $stmtWarranty->get_result();
+																if ($rowWarranty = $resWarranty->fetch_assoc()) {
+																	$warrantyFiles = (int)$rowWarranty['cnt'];
+																}
+																$stmtWarranty->close();
+																?>
+																<span class="warranty-display">
+																	<?php if ($warrantyFiles > 0): ?>
+																		<a href="Warranty.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>
+																	<?php else: ?>
+																		<span style="color:#bbb !important;">Not available</span>
+																	<?php endif; ?>
+																</span>
+																<?php if (is_admin()): ?>
+																	<button type="button" class="warranty-add-btn" title="Upload warranty">Add</button>
+																<?php endif; ?>
+															</div>
 														</td>
 													</tr>
 													<?php $eqIndex++; ?>
@@ -1022,6 +1037,102 @@ function eq_format_warranty($dateValue) {
 					   <button id="saveEditEquipment" class="equipment-btn" type="submit">Update Equipment</button>
 				   </div>
 				<div id="editEquipmentError" class="equipment-form__error" role="alert" style="display:none;"></div>
+			</form>
+		</div>
+	</div>
+
+	<!-- Edit Hours Modal -->
+	<div id="hoursModal" class="equipment-modal" aria-hidden="true">
+		<div class="equipment-modal__dialog hours-modal__dialog" role="dialog" aria-modal="true" aria-label="Edit equipment hours">
+			<div class="equipment-modal__header hours-modal__header">
+				<h3 class="equipment-modal__title">Edit Current Hours</h3>
+				<button id="closeHoursModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+			</div>
+			<form id="hoursForm" class="equipment-form hours-modal__form">
+				<input type="hidden" id="hours_equipment_id" name="equipment_id" />
+				<div class="hours-modal__grid">
+					<label class="equipment-form__field">
+						<span style="font-weight:700;color:#374151;margin-bottom:6px;">Current Hours</span>
+						<input id="hours_value" name="current_hours" type="number" step="0.1" min="0" required />
+					</label>
+				</div>
+				<div class="equipment-form__actions" style="padding-top:8px;">
+					<button id="cancelHoursEdit" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+					<button id="saveHoursBtn" class="equipment-btn" type="submit">Save</button>
+				</div>
+				<div id="hoursError" class="equipment-form__error" role="alert" style="display:none;"></div>
+			</form>
+		</div>
+	</div>
+
+	<!-- Edit Type Modal -->
+	<div id="typeModal" class="equipment-modal" aria-hidden="true">
+		<div class="equipment-modal__dialog type-modal__dialog" role="dialog" aria-modal="true" aria-label="Edit equipment type">
+			<div class="equipment-modal__header type-modal__header">
+				<h3 class="equipment-modal__title">Edit Type</h3>
+				<button id="closeTypeModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+			</div>
+			<form id="typeForm" class="equipment-form inline-modal__form">
+				<input type="hidden" id="type_equipment_id" name="equipment_id" />
+				<div class="inline-modal__grid">
+					<label class="equipment-form__field">
+						<span style="font-weight:700;color:#374151;margin-bottom:6px;">Type</span>
+						<input id="type_value" name="type" type="text" required />
+					</label>
+				</div>
+				<div class="equipment-form__actions" style="padding-top:8px;">
+					<button id="cancelTypeEdit" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+					<button id="saveTypeBtn" class="equipment-btn" type="submit">Save</button>
+				</div>
+				<div id="typeError" class="equipment-form__error" role="alert" style="display:none;"></div>
+			</form>
+		</div>
+	</div>
+
+	<!-- Edit Location Modal -->
+	<div id="locationModal" class="equipment-modal" aria-hidden="true">
+		<div class="equipment-modal__dialog location-modal__dialog" role="dialog" aria-modal="true" aria-label="Edit equipment location">
+			<div class="equipment-modal__header location-modal__header">
+				<h3 class="equipment-modal__title">Edit Location</h3>
+				<button id="closeLocationModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+			</div>
+			<form id="locationForm" class="equipment-form inline-modal__form">
+				<input type="hidden" id="location_equipment_id" name="equipment_id" />
+				<div class="inline-modal__grid">
+					<label class="equipment-form__field">
+						<span style="font-weight:700;color:#374151;margin-bottom:6px;">Location</span>
+						<input id="location_value" name="location" type="text" required />
+					</label>
+				</div>
+				<div class="equipment-form__actions" style="padding-top:8px;">
+					<button id="cancelLocationEdit" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+					<button id="saveLocationBtn" class="equipment-btn" type="submit">Save</button>
+				</div>
+				<div id="locationError" class="equipment-form__error" role="alert" style="display:none;"></div>
+			</form>
+		</div>
+	</div>
+
+	<!-- Add Warranty Modal -->
+	<div id="warrantyModal" class="equipment-modal" aria-hidden="true">
+		<div class="equipment-modal__dialog" role="dialog" aria-modal="true" aria-label="Add warranty">
+			<div class="equipment-modal__header" style="background:#0ea5e9;">
+				<h3 class="equipment-modal__title">Add Warranty</h3>
+				<button id="closeWarrantyModal" class="equipment-icon-btn" type="button" aria-label="Close">×</button>
+			</div>
+			<form id="warrantyForm" class="equipment-form" enctype="multipart/form-data">
+				<input type="hidden" id="warranty_equipment_id" name="equipment_id" />
+				<div class="equipment-form__grid" style="grid-template-columns:1fr;">
+					<div class="equipment-form__field">
+						<label for="warranty_files">Upload Files</label>
+						<input id="warranty_files" name="files[]" type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" />
+					</div>
+				</div>
+				<div class="equipment-form__actions">
+					<button id="cancelWarranty" class="equipment-btn equipment-btn--secondary" type="button">Cancel</button>
+					<button id="saveWarranty" class="equipment-btn" type="submit">Upload</button>
+				</div>
+				<div id="warrantyError" class="equipment-form__error" role="alert" style="display:none;"></div>
 			</form>
 		</div>
 	</div>
@@ -1417,6 +1528,334 @@ function eq_format_warranty($dateValue) {
 						openEditModal(row);
 					}
 				}
+			});
+
+			// Hours quick-edit
+			var hoursModal = document.getElementById('hoursModal');
+			var closeHoursBtn = document.getElementById('closeHoursModal');
+			var cancelHoursBtn = document.getElementById('cancelHoursEdit');
+			var hoursForm = document.getElementById('hoursForm');
+			var hoursInput = document.getElementById('hours_value');
+			var hoursEquipmentId = document.getElementById('hours_equipment_id');
+			var hoursErrBox = document.getElementById('hoursError');
+			var saveHoursBtn = document.getElementById('saveHoursBtn');
+
+			var typeModal = document.getElementById('typeModal');
+			var closeTypeBtn = document.getElementById('closeTypeModal');
+			var cancelTypeBtn = document.getElementById('cancelTypeEdit');
+			var typeForm = document.getElementById('typeForm');
+			var typeInput = document.getElementById('type_value');
+			var typeEquipmentId = document.getElementById('type_equipment_id');
+			var typeErrBox = document.getElementById('typeError');
+			var saveTypeBtn = document.getElementById('saveTypeBtn');
+
+			var locationModal = document.getElementById('locationModal');
+			var closeLocationBtn = document.getElementById('closeLocationModal');
+			var cancelLocationBtn = document.getElementById('cancelLocationEdit');
+			var locationForm = document.getElementById('locationForm');
+			var locationInput = document.getElementById('location_value');
+			var locationEquipmentId = document.getElementById('location_equipment_id');
+			var locationErrBox = document.getElementById('locationError');
+			var saveLocationBtn = document.getElementById('saveLocationBtn');
+
+			var warrantyModal = document.getElementById('warrantyModal');
+			var closeWarrantyBtn = document.getElementById('closeWarrantyModal');
+			var cancelWarrantyBtn = document.getElementById('cancelWarranty');
+			var warrantyForm = document.getElementById('warrantyForm');
+			var warrantyEquipmentId = document.getElementById('warranty_equipment_id');
+			var warrantyFilesInput = document.getElementById('warranty_files');
+			var warrantyErrBox = document.getElementById('warrantyError');
+			var saveWarrantyBtn = document.getElementById('saveWarranty');
+			var activeWarrantyDisplay = null;
+
+			function openHoursModal(row){
+				if (!hoursModal || !row) return;
+				hoursModal.classList.add('is-open');
+				hoursModal.setAttribute('aria-hidden','false');
+				var eqId = row.getAttribute('data-equipment-id') || '';
+				var currentHours = row.getAttribute('data-current-hours') || '0';
+				hoursEquipmentId.value = eqId;
+				hoursInput.value = currentHours;
+				if (hoursErrBox) { hoursErrBox.style.display = 'none'; hoursErrBox.textContent = ''; }
+				if (hoursInput) hoursInput.focus();
+			}
+
+			function closeHoursModal(){
+				if (!hoursModal) return;
+				hoursModal.classList.remove('is-open');
+				hoursModal.setAttribute('aria-hidden','true');
+				if (hoursForm) hoursForm.reset();
+				if (hoursErrBox) { hoursErrBox.style.display = 'none'; hoursErrBox.textContent = ''; }
+			}
+
+			function openTypeModal(row){
+				if (!typeModal || !row) return;
+				typeModal.classList.add('is-open');
+				typeModal.setAttribute('aria-hidden','false');
+				var eqId = row.getAttribute('data-equipment-id') || '';
+				var typeVal = row.getAttribute('data-type') || '';
+				typeEquipmentId.value = eqId;
+				typeInput.value = typeVal;
+				if (typeErrBox) { typeErrBox.style.display = 'none'; typeErrBox.textContent = ''; }
+				if (typeInput) typeInput.focus();
+			}
+
+			function closeTypeModal(){
+				if (!typeModal) return;
+				typeModal.classList.remove('is-open');
+				typeModal.setAttribute('aria-hidden','true');
+				if (typeForm) typeForm.reset();
+				if (typeErrBox) { typeErrBox.style.display = 'none'; typeErrBox.textContent = ''; }
+			}
+
+			function openLocationModal(row){
+				if (!locationModal || !row) return;
+				locationModal.classList.add('is-open');
+				locationModal.setAttribute('aria-hidden','false');
+				var eqId = row.getAttribute('data-equipment-id') || '';
+				var locVal = row.getAttribute('data-location') || '';
+				locationEquipmentId.value = eqId;
+				locationInput.value = locVal;
+				if (locationErrBox) { locationErrBox.style.display = 'none'; locationErrBox.textContent = ''; }
+				if (locationInput) locationInput.focus();
+			}
+
+			function openWarrantyModal(row, displayEl){
+				if (!warrantyModal || !row) return;
+				warrantyModal.classList.add('is-open');
+				warrantyModal.setAttribute('aria-hidden','false');
+				var eqId = row.getAttribute('data-equipment-id') || '';
+				warrantyEquipmentId.value = eqId;
+				activeWarrantyDisplay = displayEl || null;
+				if (warrantyErrBox) { warrantyErrBox.style.display = 'none'; warrantyErrBox.textContent = ''; }
+				if (warrantyFilesInput) warrantyFilesInput.value = '';
+			}
+
+			function closeWarrantyModal(){
+				if (!warrantyModal) return;
+				warrantyModal.classList.remove('is-open');
+				warrantyModal.setAttribute('aria-hidden','true');
+				if (warrantyForm) warrantyForm.reset();
+				if (warrantyErrBox) { warrantyErrBox.style.display = 'none'; warrantyErrBox.textContent = ''; }
+				activeWarrantyDisplay = null;
+			}
+
+			function closeLocationModal(){
+				if (!locationModal) return;
+				locationModal.classList.remove('is-open');
+				locationModal.setAttribute('aria-hidden','true');
+				if (locationForm) locationForm.reset();
+				if (locationErrBox) { locationErrBox.style.display = 'none'; locationErrBox.textContent = ''; }
+			}
+
+			document.addEventListener('click', function(e){
+				var hoursEl = e.target.closest('.equipment-hours');
+				if (hoursEl) {
+					var row = hoursEl.closest('tr[data-equipment-id]');
+					if (row) {
+						e.preventDefault();
+						e.stopPropagation();
+						openHoursModal(row);
+					}
+				}
+				if (e.target.classList.contains('hours-edit-icon')) {
+					var hRow = e.target.closest('tr[data-equipment-id]');
+					if (hRow) {
+						e.preventDefault();
+						e.stopPropagation();
+						openHoursModal(hRow);
+					}
+				}
+				if (e.target.classList.contains('cell-edit-type')) {
+					var tRow = e.target.closest('tr[data-equipment-id]');
+					if (tRow) {
+						e.preventDefault();
+						e.stopPropagation();
+						openTypeModal(tRow);
+					}
+				}
+				if (e.target.classList.contains('cell-edit-location')) {
+					var lRow = e.target.closest('tr[data-equipment-id]');
+					if (lRow) {
+						e.preventDefault();
+						e.stopPropagation();
+						openLocationModal(lRow);
+					}
+				}
+				if (e.target.classList.contains('warranty-add-btn')) {
+					var wRow = e.target.closest('tr[data-equipment-id]');
+					if (wRow) {
+						e.preventDefault();
+						e.stopPropagation();
+						var displayEl = e.target.closest('.warranty-cell') ? e.target.closest('.warranty-cell').querySelector('.warranty-display') : null;
+						openWarrantyModal(wRow, displayEl);
+					}
+				}
+			});
+
+			if (closeHoursBtn) closeHoursBtn.addEventListener('click', function(){ closeHoursModal(); });
+			if (cancelHoursBtn) cancelHoursBtn.addEventListener('click', function(){ closeHoursModal(); });
+			if (hoursModal) hoursModal.addEventListener('click', function(e){ if (e.target === hoursModal) closeHoursModal(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && hoursModal && hoursModal.classList.contains('is-open')) closeHoursModal(); });
+
+			if (closeTypeBtn) closeTypeBtn.addEventListener('click', function(){ closeTypeModal(); });
+			if (cancelTypeBtn) cancelTypeBtn.addEventListener('click', function(){ closeTypeModal(); });
+			if (typeModal) typeModal.addEventListener('click', function(e){ if (e.target === typeModal) closeTypeModal(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && typeModal && typeModal.classList.contains('is-open')) closeTypeModal(); });
+
+			if (closeLocationBtn) closeLocationBtn.addEventListener('click', function(){ closeLocationModal(); });
+			if (cancelLocationBtn) cancelLocationBtn.addEventListener('click', function(){ closeLocationModal(); });
+			if (locationModal) locationModal.addEventListener('click', function(e){ if (e.target === locationModal) closeLocationModal(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && locationModal && locationModal.classList.contains('is-open')) closeLocationModal(); });
+
+			if (closeWarrantyBtn) closeWarrantyBtn.addEventListener('click', function(){ closeWarrantyModal(); });
+			if (cancelWarrantyBtn) cancelWarrantyBtn.addEventListener('click', function(){ closeWarrantyModal(); });
+			if (warrantyModal) warrantyModal.addEventListener('click', function(e){ if (e.target === warrantyModal) closeWarrantyModal(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && warrantyModal && warrantyModal.classList.contains('is-open')) closeWarrantyModal(); });
+
+			if (hoursForm) hoursForm.addEventListener('submit', function(e){
+				e.preventDefault();
+				if (!hoursEquipmentId || !hoursEquipmentId.value) return;
+				if (saveHoursBtn) { saveHoursBtn.disabled = true; saveHoursBtn.textContent = 'Saving...'; }
+				if (hoursErrBox) { hoursErrBox.style.display = 'none'; hoursErrBox.textContent = ''; }
+
+				var fd = new FormData();
+				fd.append('equipment_id', hoursEquipmentId.value);
+				fd.append('current_hours', hoursInput.value);
+
+				fetch('../../api/update_equipment.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+					.then(function(res){
+						if (!res.ok || !res.json || !res.json.success) {
+							var msg = (res.json && res.json.message) ? res.json.message : 'Failed to update hours';
+							if (hoursErrBox) { hoursErrBox.textContent = msg; hoursErrBox.style.display = 'block'; }
+							return;
+						}
+						var row = document.querySelector('tr[data-equipment-id="' + hoursEquipmentId.value + '"]');
+						if (row) {
+							row.setAttribute('data-current-hours', hoursInput.value);
+							row.setAttribute('data-sort-current-hours', hoursInput.value);
+							var cell = row.querySelector('.equipment-hours');
+							if (cell) cell.textContent = hoursInput.value;
+						}
+						showSiteNotification('Hours updated successfully!', 'success');
+						closeHoursModal();
+					})
+					.catch(function(){
+						if (hoursErrBox) { hoursErrBox.textContent = 'Network error while updating hours'; hoursErrBox.style.display = 'block'; }
+					})
+					.finally(function(){
+						if (saveHoursBtn) { saveHoursBtn.disabled = false; saveHoursBtn.textContent = 'Save'; }
+					});
+			});
+
+			if (typeForm) typeForm.addEventListener('submit', function(e){
+				e.preventDefault();
+				if (!typeEquipmentId || !typeEquipmentId.value) return;
+				if (saveTypeBtn) { saveTypeBtn.disabled = true; saveTypeBtn.textContent = 'Saving...'; }
+				if (typeErrBox) { typeErrBox.style.display = 'none'; typeErrBox.textContent = ''; }
+
+				var fd = new FormData();
+				fd.append('equipment_id', typeEquipmentId.value);
+				fd.append('type', typeInput.value);
+
+				fetch('../../api/update_equipment.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+					.then(function(res){
+						if (!res.ok || !res.json || !res.json.success) {
+							var msg = (res.json && res.json.message) ? res.json.message : 'Failed to update type';
+							if (typeErrBox) { typeErrBox.textContent = msg; typeErrBox.style.display = 'block'; }
+							return;
+						}
+						var row = document.querySelector('tr[data-equipment-id="' + typeEquipmentId.value + '"]');
+						if (row) {
+							row.setAttribute('data-type', typeInput.value);
+							var cell = row.querySelector('.equipment-inline-cell span');
+							if (cell) cell.textContent = typeInput.value;
+						}
+						showSiteNotification('Type updated successfully!', 'success');
+						closeTypeModal();
+					})
+					.catch(function(){
+						if (typeErrBox) { typeErrBox.textContent = 'Network error while updating type'; typeErrBox.style.display = 'block'; }
+					})
+					.finally(function(){
+						if (saveTypeBtn) { saveTypeBtn.disabled = false; saveTypeBtn.textContent = 'Save'; }
+					});
+			});
+
+			if (locationForm) locationForm.addEventListener('submit', function(e){
+				e.preventDefault();
+				if (!locationEquipmentId || !locationEquipmentId.value) return;
+				if (saveLocationBtn) { saveLocationBtn.disabled = true; saveLocationBtn.textContent = 'Saving...'; }
+				if (locationErrBox) { locationErrBox.style.display = 'none'; locationErrBox.textContent = ''; }
+
+				var fd = new FormData();
+				fd.append('equipment_id', locationEquipmentId.value);
+				fd.append('location', locationInput.value);
+
+				fetch('../../api/update_equipment.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+					.then(function(res){
+						if (!res.ok || !res.json || !res.json.success) {
+							var msg = (res.json && res.json.message) ? res.json.message : 'Failed to update location';
+							if (locationErrBox) { locationErrBox.textContent = msg; locationErrBox.style.display = 'block'; }
+							return;
+						}
+						var row = document.querySelector('tr[data-equipment-id="' + locationEquipmentId.value + '"]');
+						if (row) {
+							row.setAttribute('data-location', locationInput.value);
+							var cell = row.querySelector('td:nth-child(4) .equipment-inline-cell span');
+							if (cell) cell.textContent = locationInput.value;
+						}
+						showSiteNotification('Location updated successfully!', 'success');
+						closeLocationModal();
+					})
+					.catch(function(){
+						if (locationErrBox) { locationErrBox.textContent = 'Network error while updating location'; locationErrBox.style.display = 'block'; }
+					})
+					.finally(function(){
+						if (saveLocationBtn) { saveLocationBtn.disabled = false; saveLocationBtn.textContent = 'Save'; }
+					});
+			});
+
+			if (warrantyForm) warrantyForm.addEventListener('submit', function(e){
+				e.preventDefault();
+				if (!warrantyEquipmentId || !warrantyEquipmentId.value) return;
+				if (!warrantyFilesInput || warrantyFilesInput.files.length === 0) {
+					if (warrantyErrBox) { warrantyErrBox.textContent = 'Please select at least one file.'; warrantyErrBox.style.display = 'block'; }
+					return;
+				}
+				if (saveWarrantyBtn) { saveWarrantyBtn.disabled = true; saveWarrantyBtn.textContent = 'Uploading...'; }
+				if (warrantyErrBox) { warrantyErrBox.style.display = 'none'; warrantyErrBox.textContent = ''; }
+
+				var fd = new FormData();
+				fd.append('equipment_id', warrantyEquipmentId.value);
+				fd.append('field', 'warranty');
+				Array.prototype.forEach.call(warrantyFilesInput.files, function(file){ fd.append('files[]', file); });
+
+				fetch('../../api/add_equipment_upload.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+					.then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+					.then(function(res){
+						if (!res.ok || !res.json || !res.json.success) {
+							var msg = (res.json && (res.json.error || res.json.errors && res.json.errors.join('; '))) ? (res.json.error || res.json.errors.join('; ')) : 'Failed to upload warranty';
+							if (warrantyErrBox) { warrantyErrBox.textContent = msg; warrantyErrBox.style.display = 'block'; }
+							return;
+						}
+						if (activeWarrantyDisplay) {
+							var row = activeWarrantyDisplay.closest('tr[data-equipment-id]');
+							var href = row ? (row.getAttribute('data-warranty-href') || '#') : '#';
+							activeWarrantyDisplay.innerHTML = '<a href="' + href + '" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>';
+						}
+						showSiteNotification('Warranty uploaded successfully!', 'success');
+						closeWarrantyModal();
+					})
+					.catch(function(){
+						if (warrantyErrBox) { warrantyErrBox.textContent = 'Network error while uploading warranty'; warrantyErrBox.style.display = 'block'; }
+					})
+					.finally(function(){
+						if (saveWarrantyBtn) { saveWarrantyBtn.disabled = false; saveWarrantyBtn.textContent = 'Upload'; }
+					});
 			});
 
 			if (closeEditBtn) closeEditBtn.addEventListener('click', function(){ closeEditModal(); });
