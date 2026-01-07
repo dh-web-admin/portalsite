@@ -153,8 +153,8 @@ if (isset($_GET['preview_role'])) {
                                 <div style="max-height:60vh; overflow:auto;">
                                     <ul id="equipmentList" style="list-style:none; padding:0; margin:0;">
 <?php
-// Fetch equipments list
-$eqStmt = $conn->prepare('SELECT equipment_id, dhss_equipment_number, dhcst_equipment_number, type FROM equipments ORDER BY dhss_equipment_number ASC');
+// Fetch equipments list (oldest first by insertion id)
+$eqStmt = $conn->prepare('SELECT equipment_id, dhss_equipment_number, dhcst_equipment_number, type FROM equipments ORDER BY equipment_id ASC');
 $eqStmt->execute();
 $eqRes = $eqStmt->get_result();
 $firstId = 0;
