@@ -57,29 +57,36 @@ if (!$res) {
 }
 $uploads = $res->fetch_all(MYSQLI_ASSOC);
 $fileStmt->close();
-$fileList = [];
+
+// Build file list, skipping any records whose files no longer exist on disk
 $fileList = [];
 foreach ($uploads as $row) {
-    $fileUrl = $row['file_url'] ?? '';
-    if (!$fileUrl) continue;
-    $fileUrl = str_replace('\\', '/', $fileUrl);
-    $fileUrl = ltrim($fileUrl, '/');
+    $dbUrl = $row['file_url'] ?? '';
+    if (!$dbUrl) continue;
+
+    // Normalize slashes
+    $dbUrl = str_replace('\\', '/', $dbUrl);
+    $dbUrl = ltrim($dbUrl, '/');
+
+    // Resolve filesystem path by filename only (handles legacy prefixes)
+    $filename = basename($dbUrl);
     $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
-    if ($isProduction) {
-        if (strpos($fileUrl, 'PortalSite/uploads/equipment/') === 0 || strpos($fileUrl, 'uploads/equipment/') === 0) {
-            $fileUrl = '/' . $fileUrl;
-        } else {
-            $fileUrl = '/uploads/equipment/' . $fileUrl;
-        }
-    } else {
-        if (strpos($fileUrl, 'PortalSite/uploads/equipment/') === 0) {
-            $fileUrl = '/' . $fileUrl;
-        } elseif (strpos($fileUrl, 'uploads/equipment/') === 0) {
-            $fileUrl = '/PortalSite/' . $fileUrl;
-        } else {
-            $fileUrl = '/PortalSite/uploads/equipment/' . $fileUrl;
-        }
+    $filePath = $isProduction
+        ? '/app/PortalSite/uploads/equipment/' . $filename
+        : __DIR__ . '/../../uploads/equipment/' . $filename;
+
+    if (!file_exists($filePath)) {
+        // Skip orphaned DB rows where the physical file is missing
+        continue;
     }
+
+    // Build URL used by the browser
+    if ($isProduction) {
+        $fileUrl = '/PortalSite/uploads/equipment/' . $filename;
+    } else {
+        $fileUrl = '/PortalSite/uploads/equipment/' . $filename;
+    }
+
     // Ensure single leading slash and no double slashes
     $fileUrl = preg_replace('#/+#', '/', $fileUrl);
     $ext = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
