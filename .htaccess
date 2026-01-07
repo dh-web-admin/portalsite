@@ -8,9 +8,16 @@ RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Don't rewrite files or directories
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
+# --- Static uploads: always serve directly, never rewrite ---
+# Allow both production (/uploads/...) and local XAMPP (/PortalSite/uploads/...).
+RewriteCond %{REQUEST_URI} ^/uploads/ [OR]
+RewriteCond %{REQUEST_URI} ^/PortalSite/uploads/
+RewriteRule ^ - [L]
+
+# If the requested path is an actual file or directory, serve it as-is.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
 # Security: Block access to sensitive files
 <FilesMatch "^(config\.php|\.git|\.env)">

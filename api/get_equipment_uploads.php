@@ -14,29 +14,39 @@ $stmt->execute();
 $res = $stmt->get_result();
 $uploads = [
     'air_filters' => [],
-    'warranty' => [],
-    'tires' => [],
-    'dimension' => []
+    'warranty'   => [],
+    'tires'      => [],
+    'dimension'  => []
 ];
+
 // Detect environment (same as config.php)
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+// Base URL that the browser should use for images
+$publicBase = $isProduction ? '/uploads/equipment/' : '/PortalSite/uploads/equipment/';
+
 while ($row = $res->fetch_assoc()) {
     $f = $row['field'];
-    if (isset($row['file_url'])) {
-        $url = str_replace('\\', '/', $row['file_url']);
-        $url = ltrim($url, '/');
-        // Remove any leading /PortalSite/uploads/equipment/ or uploads/equipment/
-        if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
-            $url = substr($url, strlen('PortalSite/uploads/equipment/'));
-        } elseif (strpos($url, 'uploads/equipment/') === 0) {
-            $url = substr($url, strlen('uploads/equipment/'));
-        }
-        // Always use /PortalSite/uploads/equipment/ for both environments
-        $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
-        // Prevent double slashes
-        $row['file_url'] = preg_replace('#/+#','/',$row['file_url']);
+    if (!isset($uploads[$f])) {
+        // Ignore unknown fields
+        continue;
     }
-    if (isset($uploads[$f])) $uploads[$f][] = $row;
+
+    $raw = isset($row['file_url']) ? trim($row['file_url']) : '';
+    if ($raw === '') {
+        continue;
+    }
+
+    // Normalise legacy values and extract just the filename.
+    $raw = str_replace('\\', '/', $raw);
+    $raw = ltrim($raw, '/');
+    $filename = basename($raw);
+    if ($filename === '' || $filename === '.' || $filename === '..') {
+        continue;
+    }
+
+    // Build the environment-correct public URL for the frontend.
+    $row['file_url'] = preg_replace('#/+#', '/', $publicBase . $filename);
+    $uploads[$f][] = $row;
 }
 $stmt->close();
 
