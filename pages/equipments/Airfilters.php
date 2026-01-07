@@ -293,8 +293,8 @@ $filterNames = array_values(array_unique($filterNames));
             var eqHours = equipment ? parseFloat(equipment.current_hours) || 0 : 0;
             var lastReset = parseFloat(filter.hours) || 0;
             var life = parseFloat(filter.filter_life) || 0;
-            var stored = parseFloat(filter.filter_hours);
-            var hoursSince = !isNaN(stored) ? stored : (eqHours - lastReset);
+            // Always derive current filter hours as equipment current hours minus last reset hour
+            var hoursSince = eqHours - lastReset;
             if (isNaN(hoursSince) || hoursSince < 0) { hoursSince = 0; }
             var condition = null;
             if (life > 0) {

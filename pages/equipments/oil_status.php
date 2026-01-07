@@ -494,11 +494,10 @@ try {
 		var urgentAlerts = [];
 		parts.forEach(function(p){
 			var tr = document.createElement('tr');
-				var stored = parseFloat(p.oil_hours);
 				var partCurrent = parseFloat(p.current_hours) || 0;
 				var equipCurrent = parseFloat(equip.current_hours) || 0;
-				// Hours since last reset: prefer persisted oil_hours, fallback to live difference
-				var diff = !isNaN(stored) ? stored : (equipCurrent - partCurrent);
+				// Hours since last reset: always derived from equipment current hours minus last reset hour
+				var diff = equipCurrent - partCurrent;
 			if (isNaN(diff) || diff < 0) diff = 0;
 			var oilLife = parseFloat(p.oil_life) || 0;
 			var conditionPct = 100;
