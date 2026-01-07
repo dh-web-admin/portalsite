@@ -18,25 +18,40 @@ $uploads = [
     'tires' => [],
     'dimension' => []
 ];
+
 // Detect environment (same as config.php)
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 while ($row = $res->fetch_assoc()) {
     $f = $row['field'];
-    if (isset($row['file_url'])) {
-        $url = str_replace('\\', '/', $row['file_url']);
-        $url = ltrim($url, '/');
-        // Remove any leading /PortalSite/uploads/equipment/ or uploads/equipment/
-        if (strpos($url, 'PortalSite/uploads/equipment/') === 0) {
-            $url = substr($url, strlen('PortalSite/uploads/equipment/'));
-        } elseif (strpos($url, 'uploads/equipment/') === 0) {
-            $url = substr($url, strlen('uploads/equipment/'));
-        }
-        // Always use /PortalSite/uploads/equipment/ for both environments
-        $row['file_url'] = '/PortalSite/uploads/equipment/' . $url;
-        // Prevent double slashes
-        $row['file_url'] = preg_replace('#/+#','/',$row['file_url']);
+    if (!isset($row['file_url'])) {
+        continue;
     }
-    if (isset($uploads[$f])) $uploads[$f][] = $row;
+
+    // Normalize DB URL and resolve to a concrete filename
+    $dbUrl = str_replace('\\', '/', $row['file_url']);
+    $dbUrl = ltrim($dbUrl, '/');
+    $filename = basename($dbUrl);
+    if ($filename === '') {
+        continue;
+    }
+
+    // Resolve physical path in uploads/equipment (same as add_equipment_upload.php)
+    $filePath = $isProduction
+        ? '/app/PortalSite/uploads/equipment/' . $filename
+        : __DIR__ . '/../uploads/equipment/' . $filename;
+
+    if (!file_exists($filePath)) {
+        // Skip orphaned rows where the file no longer exists
+        continue;
+    }
+
+    // Always expose URLs in the same format used by issue pictures
+    $url = '/PortalSite/uploads/equipment/' . $filename;
+    $row['file_url'] = preg_replace('#/+#', '/', $url);
+
+    if (isset($uploads[$f])) {
+        $uploads[$f][] = $row;
+    }
 }
 $stmt->close();
 
