@@ -490,27 +490,31 @@ if (isset($_GET['preview_role'])) {
 						}
 
 						function normalizeImageUrl(url) {
-							// Accept any legacy DB format and emit env-correct public URL.
-							// Examples of possible incoming values:
-							//  1) "/PortalSite/uploads/equipment/file.png"
-							//  2) "/uploads/equipment/file.png"
-							//  3) "PortalSite/uploads/equipment/file.png"
-							//  4) "uploads/equipment/file.png"
-							//  5) "file.png"
-							if (!url) return '';
-							var original = String(url);
-							// Normalise slashes
-							url = original.replace(/\\/g, '/');
-							// Extract just the filename, ignoring any prefix
-							var parts = url.split('/');
-							var filename = parts[parts.length - 1] || '';
-							if (!filename) return '';
-							// Detect local vs production based on path prefix
-							var isLocal = window.location.pathname.indexOf('/PortalSite/') === 0;
-							var base = isLocal ? '/PortalSite/uploads/equipment/' : '/uploads/equipment/';
-							var normalized = (base + filename).replace(/\/+/g, '/');
-							console.log('normalizeImageUrl:', original, '->', normalized);
-							return normalized;
+							url = url.replace(/\\/g, '/').replace(/\/+/g, '/');
+							// Remove leading slashes for processing
+							var cleanUrl = url.replace(/^\/+/, '');
+							// Detect if we're in a /PortalSite/ subdirectory
+							var isInPortalSite = window.location.pathname.indexOf('/PortalSite/') === 0;
+							// Ensure URL starts with the proper base path
+							if (isInPortalSite) {
+								// We're at /PortalSite/... so URLs should be /PortalSite/uploads/...
+								if (cleanUrl.indexOf('PortalSite/uploads/equipment/') === 0) {
+									return '/' + cleanUrl;
+								} else if (cleanUrl.indexOf('uploads/equipment/') === 0) {
+									return '/PortalSite/' + cleanUrl;
+								} else {
+									return '/PortalSite/uploads/equipment/' + cleanUrl;
+								}
+							} else {
+								// We're at production (/) so URLs should be /uploads/...
+								if (cleanUrl.indexOf('PortalSite/uploads/equipment/') === 0) {
+									return '/' + cleanUrl.replace('PortalSite/', '');
+								} else if (cleanUrl.indexOf('uploads/equipment/') === 0) {
+									return '/' + cleanUrl;
+								} else {
+									return '/uploads/equipment/' + cleanUrl;
+								}
+							}
 						}
 
 						function fetchAndShowImages(equipmentId) {

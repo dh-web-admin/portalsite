@@ -2,20 +2,7 @@
 <?php
 define('IS_API', true);
 
-/*
- * NOTE: Existing rows in equipment_uploads may contain older prefixes
- * such as "/PortalSite/uploads/equipment/...". To migrate them to the
- * canonical form used by this API ("uploads/equipment/..."), you can run
- * a one-time SQL like:
- *
- *   UPDATE equipment_uploads
- *   SET file_url = REPLACE(file_url, '/PortalSite/uploads/equipment/', 'uploads/equipment/')
- *   WHERE file_url LIKE '/PortalSite/uploads/equipment/%';
- *
- * Repeat as needed for other legacy variants (e.g. 'PortalSite/uploads/equipment/').
- */
-
-// Debug log function (local file inside repo; not on volume)
+// Debug log function
 function log_upload_debug($msg) {
     $logfile = __DIR__ . '/../uploads/equipment/upload_debug.log';
     @file_put_contents($logfile, date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND);
@@ -81,22 +68,17 @@ if (empty($files)) {
 }
 
 
-// Use Railway volume mount in production.
-// Filesystem path is environment-specific, but DB paths are canonical
-// so they work in both prod ("/uploads/…") and local ("/PortalSite/uploads/…").
+// Use Railway volume mount in production
 
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 if ($isProduction) {
-    // On Railway the persistent volume is mounted under /app/PortalSite/uploads/equipment/
+    // Volume is mounted at /app/PortalSite/uploads, equipment is subdirectory
     $uploadDir = '/app/PortalSite/uploads/equipment/';
+    $fileUrlPrefix = '/PortalSite/uploads/equipment/';
 } else {
-    // Local XAMPP keeps uploads under the project directory
     $uploadDir = __DIR__ . '/../uploads/equipment/';
+    $fileUrlPrefix = '/PortalSite/uploads/equipment/';
 }
-
-// Canonical value stored in equipment_uploads.file_url (no /PortalSite prefix)
-// Example stored value: "uploads/equipment/abc123.png" for both environments.
-$dbUrlPrefix = 'uploads/equipment/';
 
 // Ensure upload directory exists and is writable
 if (!is_dir($uploadDir)) {
@@ -128,8 +110,7 @@ foreach ($files as $file) {
     $baseName = $field . '_' . uniqid() . '.' . $ext;
     // Ensure filename is safe
     $baseName = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $baseName);
-    // What we store in DB and return in JSON (canonical form)
-    $fileUrl = $dbUrlPrefix . $baseName;
+    $fileUrl = $fileUrlPrefix . $baseName;
     $targetPath = rtrim($uploadDir, '/') . '/' . $baseName;
     // Prevent duplicate DB insert for the same file in a single request
     if (isset($seenFiles[$fileUrl])) continue;
