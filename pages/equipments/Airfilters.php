@@ -171,6 +171,8 @@ $filterNames = array_values(array_unique($filterNames));
         .parts-delete-btn { background:#ef4444; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
         .parts-delete-btn:hover { transform:translateY(-2px); }
         #showAddFilterBtn { background:#111827; color:#fff; border:none; padding:8px 14px; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.06); cursor:pointer; }
+        #changeFilterBtn { background:#111827; color:#fff; border:none; padding:8px 14px; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.06); cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
+        #changeFilterBtn:hover { transform:translateY(-3px); box-shadow:0 10px 26px rgba(2,6,23,0.08); }
         .filter-name-cell { display:flex; align-items:center; justify-content:space-between; gap:12px; }
         #filterAlerts .filter-alert { padding:10px 14px; border-radius:8px; margin-bottom:8px; font-weight:600; }
         #filterAlerts .filter-alert.warn { background:linear-gradient(90deg,#fff7ed,#fffaf0); color:#92400e; border:1px solid #fcd34d; }
@@ -197,8 +199,9 @@ $filterNames = array_values(array_unique($filterNames));
                     <div class="panel-wrapper">
                         <div class="oil-status-panel" id="filtersPanel">
                             <div id="filterAlerts" style="margin-bottom:10px;"></div>
-                            <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:8px;">
+                            <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:8px;gap:8px;">
                                 <button id="showAddFilterBtn" type="button" class="admin-only">Add Filter</button>
+                                <button id="changeFilterBtn" type="button">Change Air Filter</button>
                             </div>
                             <div id="filtersContainer">
                                 <table id="filtersTable">
@@ -212,11 +215,10 @@ $filterNames = array_values(array_unique($filterNames));
                                             <th>Current Hours</th>
                                             <th>Filter Life</th>
                                             <th>Condition</th>
-                                            <th style="width:110px;">Reset</th>
                                         </tr>
                                     </thead>
                                     <tbody id="filtersTbody">
-                                        <tr><td colspan="9" style="color:#64748b">Select an equipment below to view filters.</td></tr>
+                                        <tr><td colspan="8" style="color:#64748b">Select an equipment below to view filters.</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -259,6 +261,52 @@ $filterNames = array_values(array_unique($filterNames));
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Change Air Filter Modal -->
+                        <div id="changeFilterModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1300;">
+                            <div style="background:#fff;padding:18px;border-radius:10px;min-width:520px;max-width:95%;box-shadow:0 16px 48px rgba(2,6,23,0.3);">
+                                <h3 id="changeFilterTitle" style="margin:0 0 8px 0;">Change Air Filter</h3>
+                                <div style="margin-bottom:10px;font-size:13px;color:#4b5563;">
+                                    Equipment #: <span id="changeFilterEquipmentLabel" style="font-weight:700;color:#0f172a;"></span>
+                                </div>
+                                <div style="display:flex;flex-direction:column;gap:10px;">
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        <div style="flex:1 1 200px;">
+                                            <label for="changeFilterSelect" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Filter</label>
+                                            <select id="changeFilterSelect" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#f9fafb;"></select>
+                                        </div>
+                                        <div style="flex:1 1 200px;">
+                                            <label for="changeFilterMakeInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Make</label>
+                                            <input id="changeFilterMakeInput" type="text" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+                                        </div>
+                                        <div style="flex:1 1 200px;">
+                                            <label for="changeFilterPartInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Part Number</label>
+                                            <input id="changeFilterPartInput" type="text" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        <div style="flex:1 1 200px;">
+                                            <label for="changeFilterDateInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Change Date</label>
+                                            <input id="changeFilterDateInput" type="date" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+                                        </div>
+                                        <div style="flex:1 1 200px;">
+                                            <label for="changeFilterHoursInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Equipment hour</label>
+                                            <input id="changeFilterHoursInput" type="number" step="0.1" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        <div style="flex:1 1 260px;">
+                                            <label for="changeFilterByInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Changed by</label>
+                                            <input id="changeFilterByInput" type="text" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+                                        <button id="changeFilterSaveBtn" type="button" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
+                                        <button id="changeFilterCancelBtn" type="button" class="btn btn-ghost" style="padding:8px 14px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div id="equipmentRibbon" style="position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:999;background:rgba(255,255,255,0.96);padding:8px 12px;border-radius:999px;box-shadow:0 6px 20px rgba(2,6,23,0.08);display:flex;gap:8px;align-items:center;max-width:95%;overflow:auto;"></div>
                 </div>
@@ -271,6 +319,7 @@ $filterNames = array_values(array_unique($filterNames));
         var EXISTING_FILTER_NAMES = <?php echo json_encode($filterNames ?: []); ?>;
         var IS_ADMIN = <?php echo is_admin() ? 'true' : 'false'; ?>;
         var CURRENT_EQUIPMENT_ID = null;
+        var CURRENT_USER_NAME = <?php echo json_encode($_SESSION['name'] ?? ''); ?>;
 
         function formatCell(value) {
             return value === null || value === undefined || value === '' ? '—' : String(value);
@@ -315,7 +364,7 @@ $filterNames = array_values(array_unique($filterNames));
             var warnAlerts = [];
             var urgentAlerts = [];
             if (!filters.length) {
-                tbody.innerHTML = '<tr><td colspan="9" style="color:#64748b">No filters for this equipment yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="color:#64748b">No filters for this equipment yet.</td></tr>';
                 updateHeading(equipment, equipmentId);
                 setSelectedInfo(currentHours);
                 updateFilterAlerts([], []);
@@ -335,7 +384,6 @@ $filterNames = array_values(array_unique($filterNames));
                 }
                 var tr = document.createElement('tr');
                 var editBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" onclick="openEditFilterModal(' + (filter.filter_id || 0) + ',' + equipmentId + ')">Edit</button>' : '';
-                var resetBtn = IS_ADMIN ? '<button type="button" class="filters-reset-btn" onclick="resetFilter(' + (filter.filter_id || 0) + ',' + equipmentId + ')">Reset</button>' : '';
                 tr.innerHTML = '<td><div class="filter-name-cell"><span>' + formatCell(filter.filter_name) + '</span>' + editBtn + '</div></td>' +
                     '<td>' + formatCell(filter.make) + '</td>' +
                     '<td>' + formatCell(filter.part_number) + '</td>' +
@@ -343,8 +391,7 @@ $filterNames = array_values(array_unique($filterNames));
                     '<td>' + resetHoursDisplay + '</td>' +
                     '<td>' + (metrics.hoursSince ? metrics.hoursSince.toFixed(1) : '0.0') + '</td>' +
                     '<td>' + (metrics.life ? metrics.life : '—') + '</td>' +
-                    '<td>' + conditionText + '</td>' +
-                    '<td>' + resetBtn + '</td>';
+                    '<td>' + conditionText + '</td>';
                 tbody.appendChild(tr);
             });
             updateHeading(equipment, equipmentId);
@@ -589,32 +636,151 @@ $filterNames = array_values(array_unique($filterNames));
                 });
         }
 
-        function resetFilter(filterId, equipmentId) {
-            if (!filterId) return;
-            if (!confirm('Reset this filter to the equipment\'s current hours?')) return;
-            var data = new FormData();
-            data.append('id', filterId);
-            fetch(API_BASE + 'api/reset_filter_hours.php', { method:'POST', body:data, credentials:'same-origin' })
-                .then(function(resp){ return resp.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text }; } }); })
+        // Change Air Filter modal logic
+        function openChangeFilterModal() {
+            if (!CURRENT_EQUIPMENT_ID) {
+                alert('Select an equipment first.');
+                return;
+            }
+            var modal = document.getElementById('changeFilterModal');
+            if (!modal) return;
+
+            var equip = getEquipmentById(CURRENT_EQUIPMENT_ID);
+            var label = '';
+            if (equip) {
+                label = (equip.number && equip.number !== '') ? equip.number : ('#' + equip.equipment_id);
+                if (equip.type) { label += ' | ' + equip.type; }
+            } else {
+                label = '#' + CURRENT_EQUIPMENT_ID;
+            }
+            var equipLabelEl = document.getElementById('changeFilterEquipmentLabel');
+            if (equipLabelEl) equipLabelEl.textContent = label;
+
+            var filters = (INITIAL_FILTERS && INITIAL_FILTERS[CURRENT_EQUIPMENT_ID]) ? INITIAL_FILTERS[CURRENT_EQUIPMENT_ID] : [];
+            var sel = document.getElementById('changeFilterSelect');
+            var makeInput = document.getElementById('changeFilterMakeInput');
+            var partInput = document.getElementById('changeFilterPartInput');
+
+            if (sel) {
+                sel.innerHTML = '';
+                var ph = document.createElement('option');
+                ph.value = '';
+                ph.textContent = 'Select filter...';
+                sel.appendChild(ph);
+                filters.forEach(function(f) {
+                    var opt = document.createElement('option');
+                    opt.value = f.filter_id || '';
+                    opt.textContent = f.filter_name || '(Unnamed filter)';
+                    opt.setAttribute('data-make', f.make || '');
+                    opt.setAttribute('data-part-number', f.part_number || '');
+                    sel.appendChild(opt);
+                });
+            }
+
+            if (sel && makeInput && partInput) {
+                sel.onchange = function() {
+                    var o = sel.options[sel.selectedIndex];
+                    if (!o) return;
+                    makeInput.value = o.getAttribute('data-make') || '';
+                    partInput.value = o.getAttribute('data-part-number') || '';
+                };
+            }
+
+            var dateInput = document.getElementById('changeFilterDateInput');
+            if (dateInput) {
+                var today = new Date();
+                dateInput.value = today.toISOString().slice(0, 10);
+            }
+
+            var hoursInput = document.getElementById('changeFilterHoursInput');
+            if (hoursInput) {
+                var h = equip && equip.current_hours != null ? equip.current_hours : '';
+                hoursInput.value = h;
+            }
+
+            var byInput = document.getElementById('changeFilterByInput');
+            if (byInput) {
+                byInput.value = CURRENT_USER_NAME || '';
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeChangeFilterModal() {
+            var modal = document.getElementById('changeFilterModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function submitChangeFilter() {
+            if (!CURRENT_EQUIPMENT_ID) {
+                alert('Select an equipment first.');
+                return;
+            }
+            var filterSel = document.getElementById('changeFilterSelect');
+            var makeInput = document.getElementById('changeFilterMakeInput');
+            var partInput = document.getElementById('changeFilterPartInput');
+            var dateInput = document.getElementById('changeFilterDateInput');
+            var hoursInput = document.getElementById('changeFilterHoursInput');
+            var byInput = document.getElementById('changeFilterByInput');
+
+            if (!filterSel || !dateInput || !hoursInput) {
+                alert('Form is not ready.');
+                return;
+            }
+
+            var filterId = filterSel.value;
+            var filterLabel = filterSel.options[filterSel.selectedIndex] ? filterSel.options[filterSel.selectedIndex].textContent : '';
+            var makeVal = makeInput ? makeInput.value.trim() : '';
+            var partVal = partInput ? partInput.value.trim() : '';
+            var changeDate = dateInput.value;
+            var hoursVal = hoursInput.value;
+            var changedByVal = byInput ? byInput.value.trim() : '';
+
+            if (!filterId) { alert('Please choose a filter.'); return; }
+            if (!changeDate) { alert('Please choose a change date.'); return; }
+            if (!hoursVal) { alert('Please enter equipment hours.'); return; }
+
+            var btn = document.getElementById('changeFilterSaveBtn');
+            if (!btn) return;
+            btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Saving...';
+
+            var fd = new FormData();
+            fd.append('equipment_id', CURRENT_EQUIPMENT_ID);
+            fd.append('filter_id', filterId);
+            fd.append('filter_name', filterLabel);
+            fd.append('make', makeVal);
+            fd.append('part_number', partVal);
+            fd.append('change_date', changeDate);
+            fd.append('equipment_hours', hoursVal);
+            fd.append('changed_by', changedByVal);
+
+            fetch(API_BASE + 'api/add_filter_report.php', { method:'POST', body:fd, credentials:'same-origin' })
+                .then(function(r){ return r.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text, status:r.status }; } }); })
                 .then(function(json){
-                    if (!json || !json.success) { throw new Error((json && json.error) ? json.error : 'Reset failed'); }
-                    if (json.row) {
+                    if (!json || !json.success) throw new Error((json && (json.error || json.message)) || 'Save failed');
+                    var updated = json.row;
+                    if (updated && updated.filter_id) {
                         for (var key in INITIAL_FILTERS) {
                             if (!INITIAL_FILTERS.hasOwnProperty(key)) continue;
-                            INITIAL_FILTERS[key] = INITIAL_FILTERS[key].map(function(item){ return Number(item.filter_id) === Number(json.row.filter_id) ? json.row : item; });
+                            INITIAL_FILTERS[key] = INITIAL_FILTERS[key].map(function(item){
+                                return Number(item.filter_id) === Number(updated.filter_id) ? updated : item;
+                            });
                         }
                     }
-                    if (equipmentId) { renderFiltersFor(equipmentId); }
+                    closeChangeFilterModal();
+                    if (CURRENT_EQUIPMENT_ID) {
+                        renderFiltersFor(CURRENT_EQUIPMENT_ID);
+                    }
                 })
                 .catch(function(err){
-                    console.error('Reset filter error', err);
                     if (err && err.type === 'parse') {
-                        alert('Error resetting filter: invalid server response.');
+                        alert('Error saving filter change: invalid server response from server.');
                         console.error('Raw response:', err.text);
                     } else {
-                        alert('Error resetting filter: ' + (err && err.message ? err.message : 'Unknown error'));
+                        alert('Error saving filter change: ' + (err && err.message ? err.message : 'unknown'));
                     }
-                });
+                })
+                .finally(function(){ btn.disabled = false; btn.textContent = orig; });
         }
 
         document.addEventListener('DOMContentLoaded', function(){
@@ -643,6 +809,12 @@ $filterNames = array_values(array_unique($filterNames));
             if (submitEdit) { submitEdit.addEventListener('click', submitEditFilter); }
             var deleteBtn = document.getElementById('deleteFilterBtn');
             if (deleteBtn) { deleteBtn.addEventListener('click', submitDeleteFilter); }
+            var changeBtn = document.getElementById('changeFilterBtn');
+            if (changeBtn) { changeBtn.addEventListener('click', openChangeFilterModal); }
+            var changeCancel = document.getElementById('changeFilterCancelBtn');
+            if (changeCancel) { changeCancel.addEventListener('click', closeChangeFilterModal); }
+            var changeSave = document.getElementById('changeFilterSaveBtn');
+            if (changeSave) { changeSave.addEventListener('click', submitChangeFilter); }
             var addModal = document.getElementById('addFilterModal');
             if (addModal) {
                 addModal.addEventListener('click', function(evt){ if (evt.target === addModal) { closeAddFilterModal(); } });
@@ -651,10 +823,15 @@ $filterNames = array_values(array_unique($filterNames));
             if (editModal) {
                 editModal.addEventListener('click', function(evt){ if (evt.target === editModal) { closeEditFilterModal(); } });
             }
+            var changeModal = document.getElementById('changeFilterModal');
+            if (changeModal) {
+                changeModal.addEventListener('click', function(evt){ if (evt.target === changeModal) { closeChangeFilterModal(); } });
+            }
             document.addEventListener('keydown', function(evt){
                 if (evt.key === 'Escape') {
                     closeAddFilterModal();
                     closeEditFilterModal();
+                    closeChangeFilterModal();
                 }
             });
             renderExistingFiltersDatalist();

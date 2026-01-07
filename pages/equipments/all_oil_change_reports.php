@@ -103,8 +103,22 @@ if (isset($_GET['preview_role'])) {
     .equipment-card { background: #ffffff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
     .equipment-card-title { font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 10px; text-transform: uppercase; }
     .equipment-history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .equipment-history-table th { padding: 10px; text-align: left; background: #f8fafc; border-bottom: 2px solid #e5e7eb; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; }
-    .equipment-history-table td { padding: 10px; border-bottom: 1px solid #eef2f7; }
+    .equipment-history-table th,
+    .equipment-history-table td {
+        padding: 10px;
+        text-align: left;
+    }
+    .equipment-history-table th {
+        background: #f8fafc;
+        border-bottom: 2px solid #e5e7eb;
+        font-size: 11px;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+    }
+    .equipment-history-table td {
+        border-bottom: 1px solid #eef2f7;
+    }
     /* Top scrollbar for wide tables */
     .history-table-area { overflow-x: auto; }
     .history-table-scroll-x {
