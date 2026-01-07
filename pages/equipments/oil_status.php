@@ -126,6 +126,8 @@ try {
 		/* Parts action button styles (no gradients) */
 		#showAddPartBtn { background:#111827; color:#fff; border:none; padding:8px 12px; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.06); cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
 		#showAddPartBtn:hover { transform:translateY(-3px); box-shadow:0 10px 26px rgba(2,6,23,0.08); }
+		#changeFluidBtn { background:#111827; color:#fff; border:none; padding:8px 12px; border-radius:8px; box-shadow:0 6px 18px rgba(2,6,23,0.06); cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; }
+		#changeFluidBtn:hover { transform:translateY(-3px); box-shadow:0 10px 26px rgba(2,6,23,0.08); }
 		/* smaller action button for table rows */
 		.parts-action-btn { background:#f3f4f6; color:#0f172a; border:1px solid #e6eef6; padding:6px 10px; border-radius:6px; font-size:13px; cursor:pointer; box-shadow:none; transition:background .12s ease, transform .12s ease; }
 		.parts-action-btn:hover { background:#e6eef6; transform:translateY(-2px); }
@@ -222,16 +224,19 @@ try {
 									<!-- Alerts for low/urgent fluid conditions -->
 									<div id="fluidsAlerts" style="margin-bottom:10px;"></div>
 									<div class="oil-status-panel" id="fluidsPanel">
+										<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:8px;">
+											<button id="changeFluidBtn" type="button" class="btn" style="padding:8px 12px;border-radius:8px;">Change Fluid</button>
+										</div>
 										<table id="fluidsTable" style="width:100%;">
 										<thead>
 										<tr>
-											<th>Fluid Type</th>
+												<th style="text-align:left;">Part</th>
+												<th>Fluid Type</th>
 											<th>Current Hours</th>
 												<th>Last Changed</th>
 												<th>Last reset hour</th>
 												<th>Fluid Life</th>
 												<th>Condition</th>
-												<th style="width:110px;text-align:left;"></th>
 										</tr>
 										</thead>
 										<tbody id="fluidsTbody">
@@ -303,6 +308,48 @@ try {
 										</div>
 									</div>
 								</div>
+
+								<!-- Change Fluid Modal -->
+								<div id="changeFluidModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1300;">
+									<div style="background:#fff;padding:18px;border-radius:10px;min-width:520px;max-width:95%;box-shadow:0 16px 48px rgba(2,6,23,0.3);">
+										<h3 id="changeFluidTitle" style="margin:0 0 8px 0;">Change Fluid</h3>
+										<div style="margin-bottom:10px;font-size:13px;color:#4b5563;">
+											Equipment #: <span id="changeFluidEquipmentLabel" style="font-weight:700;color:#0f172a;"></span>
+										</div>
+										<div style="display:flex;flex-direction:column;gap:10px;">
+											<div style="display:flex;gap:10px;flex-wrap:wrap;">
+												<div style="flex:1 1 200px;">
+													<label for="changePartSelect" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Part</label>
+													<select id="changePartSelect" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#f9fafb;"></select>
+												</div>
+												<div style="flex:1 1 200px;">
+													<label for="changeFluidTypeSelect" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Fluid Type</label>
+													<select id="changeFluidTypeSelect" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#f9fafb;"></select>
+												</div>
+											</div>
+											<div style="display:flex;gap:10px;flex-wrap:wrap;">
+												<div style="flex:1 1 200px;">
+													<label for="changeDateInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Fluid change date</label>
+													<input id="changeDateInput" type="date" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+												</div>
+												<div style="flex:1 1 200px;">
+													<label for="changeHoursInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Equipment hours</label>
+													<input id="changeHoursInput" type="number" step="0.1" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+												</div>
+											</div>
+											<div style="display:flex;gap:10px;flex-wrap:wrap;">
+												<div style="flex:1 1 260px;">
+													<label for="changeByInput" style="display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px;">Changed by</label>
+													<input id="changeByInput" type="text" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;" />
+												</div>
+											</div>
+											<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+												<button id="changeFluidSaveBtn" type="button" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
+												<button id="changeFluidCancelBtn" type="button" class="btn btn-ghost" style="padding:8px 14px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;">Cancel</button>
+											</div>
+										</div>
+									</div>
+								</div>
 					</div>
 
 					<!-- Bottom centered equipment selector ribbon -->
@@ -319,6 +366,7 @@ try {
 	var INITIAL_EQUIPMENTS = <?php echo json_encode($equipments ?: []); ?>;
 	var INITIAL_PARTS = <?php echo json_encode($partsByEquip ?: new stdClass()); ?>;
 	var IS_ADMIN = <?php echo is_admin() ? 'true' : 'false'; ?>;
+	var CURRENT_USER_NAME = <?php echo json_encode($_SESSION['name'] ?? ''); ?>;
 	// build a list of existing part names for reuse across equipments
 	var EXISTING_PART_NAMES = (function(){
 		var out = [];
@@ -505,15 +553,14 @@ try {
 				var usedPercent = (diff / oilLife) * 100;
 				conditionPct = Math.max(0, Math.min(100, Math.round(100 - usedPercent)));
 			}
-				var resetBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" onclick="resetPartHours(' + (p.id || 0) + ')">Reset</button>' : '';
 				var lastChanged = p.reset_at ? String(p.reset_at).split(' ')[0] : '';
-				tr.innerHTML = '<td>' + formatCell(p.fluid_type) + '</td>' +
+			tr.innerHTML = '<td style="text-align:left;">' + formatCell(p.part) + '</td>' +
+			               '<td>' + formatCell(p.fluid_type) + '</td>' +
 				               '<td>' + formatCell(diff.toFixed(2)) + '</td>' +
 				               '<td>' + formatCell(lastChanged) + '</td>' +
 				               '<td>' + formatCell(partCurrent.toFixed(2)) + '</td>' +
 				               '<td>' + formatCell(oilLife) + '</td>' +
-						'<td>' + conditionPct + '%' + '</td>' +
-						'<td style="text-align:left;">' + resetBtn + '</td>';
+					'<td>' + conditionPct + '%' + '</td>';
 			tbody.appendChild(tr);
 			// collect alerts
 			if (conditionPct <= 0) urgentAlerts.push(p.fluid_type || 'Fluid');
@@ -546,6 +593,162 @@ try {
 			renderPartsFor(CURRENT_EQUIPMENT_ID);
 		})
 		.catch(function(err){ console.error('Reset error', err); if (err && err.type === 'parse') { alert('Error resetting part: invalid JSON response from server.'); console.error('Raw response:', err.text); } else alert('Error resetting part: ' + (err && err.message ? err.message : 'unknown')); });
+	}
+
+	function openChangeFluidModal(){
+		if (!CURRENT_EQUIPMENT_ID) {
+			alert('Select an equipment first.');
+			return;
+		}
+		var modal = document.getElementById('changeFluidModal');
+		if (!modal) return;
+		var equip = INITIAL_EQUIPMENTS.find(function(x){ return Number(x.equipment_id) === Number(CURRENT_EQUIPMENT_ID); }) || null;
+		var label = '';
+		if (equip) {
+			label = (equip.number && equip.number !== '') ? equip.number : ('#' + equip.equipment_id);
+			if (equip.type) label += ' | ' + equip.type;
+		} else {
+			label = '#' + CURRENT_EQUIPMENT_ID;
+		}
+		var equipLabelEl = document.getElementById('changeFluidEquipmentLabel');
+		if (equipLabelEl) equipLabelEl.textContent = label;
+
+		var parts = (INITIAL_PARTS && INITIAL_PARTS[CURRENT_EQUIPMENT_ID]) ? INITIAL_PARTS[CURRENT_EQUIPMENT_ID] : [];
+		var partSelect = document.getElementById('changePartSelect');
+		var fluidSelect = document.getElementById('changeFluidTypeSelect');
+		if (partSelect) {
+			partSelect.innerHTML = '';
+			var optPlaceholder = document.createElement('option');
+			optPlaceholder.value = '';
+			optPlaceholder.textContent = 'Select part...';
+			partSelect.appendChild(optPlaceholder);
+			parts.forEach(function(p){
+				var opt = document.createElement('option');
+				opt.value = p.id || '';
+				opt.textContent = p.part || '(Unnamed part)';
+				opt.setAttribute('data-fluid-type', p.fluid_type || '');
+				partSelect.appendChild(opt);
+			});
+		}
+		if (fluidSelect) {
+			fluidSelect.innerHTML = '';
+			var ftPlaceholder = document.createElement('option');
+			ftPlaceholder.value = '';
+			ftPlaceholder.textContent = 'Select fluid type...';
+			fluidSelect.appendChild(ftPlaceholder);
+			var seen = {};
+			parts.forEach(function(p){
+				var ft = p.fluid_type || '';
+				if (ft && !seen[ft]) {
+					seen[ft] = true;
+					var opt = document.createElement('option');
+					opt.value = ft;
+					opt.textContent = ft;
+					fluidSelect.appendChild(opt);
+				}
+			});
+		}
+		if (partSelect && fluidSelect) {
+			partSelect.onchange = function(){
+				var sel = partSelect.options[partSelect.selectedIndex];
+				if (!sel) return;
+				var ft = sel.getAttribute('data-fluid-type') || '';
+				if (!ft) return;
+				var opts = fluidSelect.options;
+				var found = false;
+				for (var i = 0; i < opts.length; i++) {
+					if (opts[i].value === ft) { fluidSelect.value = ft; found = true; break; }
+				}
+				if (!found) {
+					var opt = document.createElement('option');
+					opt.value = ft;
+					opt.textContent = ft;
+					fluidSelect.appendChild(opt);
+					fluidSelect.value = ft;
+				}
+			};
+		}
+		var hoursInput = document.getElementById('changeHoursInput');
+		if (hoursInput) {
+			var h = equip && typeof equip.current_hours !== 'undefined' && equip.current_hours !== null ? equip.current_hours : '';
+			hoursInput.value = h;
+		}
+		var dateInput = document.getElementById('changeDateInput');
+		if (dateInput) {
+			var today = new Date();
+			dateInput.value = today.toISOString().slice(0, 10);
+		}
+		var changedBy = document.getElementById('changeByInput');
+		if (changedBy) {
+			changedBy.value = CURRENT_USER_NAME || '';
+		}
+		modal.style.display = 'flex';
+	}
+
+	function closeChangeFluidModal(){
+		var modal = document.getElementById('changeFluidModal');
+		if (!modal) return;
+		modal.style.display = 'none';
+	}
+
+	function submitChangeFluid(){
+		if (!CURRENT_EQUIPMENT_ID) {
+			alert('Select an equipment first.');
+			return;
+		}
+		var partSelect = document.getElementById('changePartSelect');
+		var fluidSelect = document.getElementById('changeFluidTypeSelect');
+		var dateInput = document.getElementById('changeDateInput');
+		var hoursInput = document.getElementById('changeHoursInput');
+		var changedBy = document.getElementById('changeByInput');
+		if (!partSelect || !fluidSelect || !dateInput || !hoursInput) {
+			alert('Form is not ready.');
+			return;
+		}
+		var partId = partSelect.value;
+		var partLabel = partSelect.options[partSelect.selectedIndex] ? partSelect.options[partSelect.selectedIndex].textContent : '';
+		var fluidType = fluidSelect.value;
+		var changeDate = dateInput.value;
+		var hoursVal = hoursInput.value;
+		var changedByVal = changedBy ? changedBy.value.trim() : '';
+		if (!partId) { alert('Please choose a part.'); return; }
+		if (!fluidType) { alert('Please choose a fluid type.'); return; }
+		if (!changeDate) { alert('Please choose a fluid change date.'); return; }
+		if (!hoursVal) { alert('Please enter equipment hours.'); return; }
+		var btn = document.getElementById('changeFluidSaveBtn');
+		if (!btn) return;
+		btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Saving...';
+		var fd = new FormData();
+		fd.append('equipment_id', CURRENT_EQUIPMENT_ID);
+		fd.append('part_id', partId);
+		fd.append('part', partLabel);
+		fd.append('fluid_type', fluidType);
+		fd.append('change_date', changeDate);
+		fd.append('equipment_hours', hoursVal);
+		fd.append('changed_by', changedByVal);
+		fetch(API_BASE + 'api/add_fluid_report.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function(r){ return r.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text, status:r.status }; } }); })
+			.then(function(json){
+				if (!json || !json.success) throw new Error((json && (json.error || json.message)) || 'Save failed');
+				var updated = json.row;
+				if (updated && updated.id) {
+					for (var k in INITIAL_PARTS) {
+						if (!INITIAL_PARTS.hasOwnProperty(k)) continue;
+						INITIAL_PARTS[k] = INITIAL_PARTS[k].map(function(it){ return Number(it.id) === Number(updated.id) ? updated : it; });
+					}
+				}
+				closeChangeFluidModal();
+				renderPartsFor(CURRENT_EQUIPMENT_ID);
+			})
+			.catch(function(err){
+				if (err && err.type === 'parse') {
+					alert('Error saving fluid change: invalid server response from server.');
+					console.error('Raw response:', err.text);
+				} else {
+					alert('Error saving fluid change: ' + (err && err.message ? err.message : 'unknown'));
+				}
+			})
+			.finally(function(){ btn.disabled = false; btn.textContent = orig; });
 	}
 
 	function openAddForm(){
@@ -716,6 +919,19 @@ try {
 
 	// Kick off
 	document.addEventListener('DOMContentLoaded', function(){
+		var backBtn = document.getElementById('backBtn');
+		if (backBtn) {
+			backBtn.addEventListener('click', function(e){
+				try {
+					var ref = document.referrer || '';
+					if (ref && ref.indexOf(location.origin) === 0) {
+						e.preventDefault();
+						history.back();
+					}
+				} catch (err) {}
+			});
+		}
+
 		buildRibbon();
 		// wire up add part UI (modal)
 		var showBtn = document.getElementById('showAddPartBtn'); if (showBtn) showBtn.addEventListener('click', function(){ renderExistingPartsDatalist(); document.getElementById('addModal').style.display='flex'; document.getElementById('partInput').focus(); });
@@ -724,6 +940,14 @@ try {
 		var cancelEditBtn = document.getElementById('cancelEditPartBtn'); if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
 		var submitEditBtn = document.getElementById('submitEditPartBtn'); if (submitEditBtn) submitEditBtn.addEventListener('click', submitEditPart);
 		var deleteEditBtn = document.getElementById('deleteEditPartBtn'); if (deleteEditBtn) deleteEditBtn.addEventListener('click', submitDeletePart);
+		var changeBtn = document.getElementById('changeFluidBtn'); if (changeBtn) changeBtn.addEventListener('click', openChangeFluidModal);
+		var changeCancel = document.getElementById('changeFluidCancelBtn'); if (changeCancel) changeCancel.addEventListener('click', closeChangeFluidModal);
+		var changeSave = document.getElementById('changeFluidSaveBtn'); if (changeSave) changeSave.addEventListener('click', submitChangeFluid);
+		var changeModal = document.getElementById('changeFluidModal');
+		if (changeModal) {
+			changeModal.addEventListener('click', function(e){ if (e.target === changeModal) closeChangeFluidModal(); });
+			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && changeModal.style.display === 'flex') closeChangeFluidModal(); });
+		}
 		// ensure datalist initially populated
 		renderExistingPartsDatalist();
 	});

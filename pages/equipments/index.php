@@ -525,6 +525,7 @@ function eq_format_warranty($dateValue) {
 							<div class="equipment-ribbon" aria-label="Reports">
 								<a href="all_engine_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item equipment-ribbon__item--danger">Engine Reports</a>
 								<a href="all_oil_change_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Oil Change Reports</a>
+								<a href="all_filter_change_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Filter Change Reports</a>
 							</div>
 						</div>
 

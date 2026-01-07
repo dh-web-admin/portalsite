@@ -973,18 +973,18 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                     <hr class="equipment-section-separator" />
                     <!-- Future Sections Placeholder -->
                     <div class="equipment-future-section">
-                        <div class="equipment-tabs-container">
-      <div class="equipment-tabs">
-        <button class="equipment-tab">Filters</button>
-        <button class="equipment-tab">Tires</button>
-        <button class="equipment-tab">Oil</button>
-        <button class="equipment-tab">Manuals</button>
-        <button class="equipment-tab">Warranty</button>
-        <button class="equipment-tab">Parts</button>
-        <button class="equipment-tab">Dimensions</button>
-        <button class="equipment-tab">Photos</button>
-      </div>
-    </div>
+                                                <div class="equipment-tabs-container">
+            <div class="equipment-tabs">
+                <a class="equipment-tab" href="Airfilters.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Filters</a>
+                <a class="equipment-tab" href="Tires.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Tires</a>
+                <a class="equipment-tab" href="oil_status.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Oil</a>
+                <button class="equipment-tab">Manuals</button>
+                <a class="equipment-tab" href="Warranty.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Warranty</a>
+                <button class="equipment-tab">Parts</button>
+                <a class="equipment-tab" href="all_dimensions.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Dimensions</a>
+                <button class="equipment-tab">Photos</button>
+            </div>
+        </div>
 
                         <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 8px;">
                             <button id="new-issue-btn" class="admin-only" style="padding: 8px 18px; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 700; font-size: 15px; border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.07); cursor: pointer; transition: background 0.2s;">New Issue</button>

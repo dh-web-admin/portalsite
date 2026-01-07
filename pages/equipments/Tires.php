@@ -145,7 +145,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 <div class="main-content">
                     <div class="panel-wrapper">
                         <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
-                            <a href="index.php<?php echo $previewParam; ?>" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
+                            <a id="backBtn" href="index.php<?php echo $previewParam; ?>" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
                         </div>
                         <div class="selected-info" aria-live="polite">
                             <div class="hours-bubble">Current equipment hours: <?php echo display_cell($currentHours); ?></div>
@@ -273,6 +273,19 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
     </div>
     <script>
         (function(){
+            var backBtn = document.getElementById('backBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function(e){
+                    try {
+                        var ref = document.referrer || '';
+                        if (ref && ref.indexOf(location.origin) === 0) {
+                            e.preventDefault();
+                            history.back();
+                        }
+                    } catch (err) {}
+                });
+            }
+
             var modal = document.getElementById('tireEditModal');
             var btns = document.querySelectorAll('.info-card .edit-btn');
             var closeBtn = document.getElementById('tireModalClose');

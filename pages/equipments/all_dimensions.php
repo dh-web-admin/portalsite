@@ -358,7 +358,7 @@ if (isset($_GET['preview_role'])) {
 				<div class="main-content" style="margin-top: 32px;">
 					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; width: 100%;">
 						<div style="flex: 1; display: flex; align-items: center;">
-							<a href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
+							<a id="backBtn" href="index.php<?php echo $previewParam; ?>" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
 						</div>
 						<div style="flex: 2; text-align: center;">
 							<h1 class="admin-page-title" style="font-size: 2.5rem; font-weight: 700; color: #374151; margin: 0;">Dimension Cheat Sheet</h1>
@@ -460,6 +460,19 @@ if (isset($_GET['preview_role'])) {
 					
 					<script>
 					document.addEventListener('DOMContentLoaded', function() {
+						var backBtn = document.getElementById('backBtn');
+						if (backBtn) {
+							backBtn.addEventListener('click', function(e){
+								try {
+									var ref = document.referrer || '';
+									if (ref && ref.indexOf(location.origin) === 0) {
+										e.preventDefault();
+										history.back();
+									}
+								} catch (err) {}
+							});
+						}
+
 						var tableBody = document.getElementById('dimensionTableBody');
 						var imageList = document.getElementById('dimensionImageList');
 						var addImageBtn = document.getElementById('addImageBtn');
