@@ -490,18 +490,31 @@ if (isset($_GET['preview_role'])) {
 						}
 
 						function normalizeImageUrl(url) {
-							url = url.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/+/, '/');
-							if (window.location.pathname.indexOf('/PortalSite/') === 0) {
-								if (url.indexOf('/PortalSite/uploads/equipment/') === 0) return url;
-								if (url.indexOf('/uploads/equipment/') === 0) return '/PortalSite' + url;
+							url = url.replace(/\\/g, '/').replace(/\/+/g, '/');
+							// Remove leading slashes for processing
+							var cleanUrl = url.replace(/^\/+/, '');
+							// Detect if we're in a /PortalSite/ subdirectory
+							var isInPortalSite = window.location.pathname.indexOf('/PortalSite/') === 0;
+							// Ensure URL starts with the proper base path
+							if (isInPortalSite) {
+								// We're at /PortalSite/... so URLs should be /PortalSite/uploads/...
+								if (cleanUrl.indexOf('PortalSite/uploads/equipment/') === 0) {
+									return '/' + cleanUrl;
+								} else if (cleanUrl.indexOf('uploads/equipment/') === 0) {
+									return '/PortalSite/' + cleanUrl;
+								} else {
+									return '/PortalSite/uploads/equipment/' + cleanUrl;
+								}
 							} else {
-								if (url.indexOf('/uploads/equipment/') === 0) return url;
-								if (url.indexOf('/PortalSite/uploads/equipment/') === 0) return url.replace('/PortalSite', '');
+								// We're at production (/) so URLs should be /uploads/...
+								if (cleanUrl.indexOf('PortalSite/uploads/equipment/') === 0) {
+									return '/' + cleanUrl.replace('PortalSite/', '');
+								} else if (cleanUrl.indexOf('uploads/equipment/') === 0) {
+									return '/' + cleanUrl;
+								} else {
+									return '/uploads/equipment/' + cleanUrl;
+								}
 							}
-							if (url.indexOf('uploads/equipment/') !== -1) {
-								return url.indexOf('/') === 0 ? url : '/' + url;
-							}
-							return url;
 						}
 
 						function fetchAndShowImages(equipmentId) {
