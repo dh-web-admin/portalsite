@@ -736,7 +736,7 @@ function eq_format_warranty($dateValue) {
 																		<img src="images/nowarrenty.svg" alt="No warranty" title="No warranty uploaded" style="height:28px;vertical-align:middle;opacity:0.7;" />
 																	<?php endif; ?>
 																</span>
-																<?php if (is_admin()): ?>
+																<?php if (is_admin() && $warrantyFiles === 0): ?>
 																	<button type="button" class="warranty-add-btn" title="Upload warranty">Add</button>
 																<?php endif; ?>
 															</div>
