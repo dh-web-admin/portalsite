@@ -303,7 +303,7 @@ a.equipment-ribbon__item:active {
   border-collapse: separate;
   border-spacing: 0;
   background: #fff;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .project-table.equipment-table thead th {
@@ -394,6 +394,17 @@ a.equipment-ribbon__item:active {
   white-space: nowrap;
 }
 
+/* Let the Type column size to its content (avoid truncation) */
+.project-table.equipment-table thead th:nth-child(2),
+.project-table.equipment-table tbody td:nth-child(2) {
+  width: max-content;
+}
+
+.project-table.equipment-table tbody td:nth-child(2) {
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .project-table.equipment-table td.airfilters-cell,
 .project-table.equipment-table td.airfilters-cell * {
   overflow: visible;
@@ -431,7 +442,6 @@ a.equipment-ribbon__item:active {
 /* Evenly distributed columns across the viewport */
 .project-table.equipment-table th,
 .project-table.equipment-table td {
-  width: 11.1111%;
   text-align: left !important;
 }
 

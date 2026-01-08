@@ -457,7 +457,7 @@ function eq_format_warranty($dateValue) {
 			margin-right: 10px;
 			width: auto;
 			min-width: 1200px;
-			max-width: 1700px;
+			max-width: none;
 		}
 		.table-container {
 			display: flex;
