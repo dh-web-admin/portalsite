@@ -299,7 +299,8 @@ a.equipment-ribbon__item:active {
 }
 
 .project-table.equipment-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   background: #fff;
@@ -398,11 +399,24 @@ a.equipment-ribbon__item:active {
 .project-table.equipment-table thead th:nth-child(2),
 .project-table.equipment-table tbody td:nth-child(2) {
   width: max-content;
+  min-width: 260px;
+}
+
+.project-table.equipment-table thead th:nth-child(2) {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.project-table.equipment-table thead th:nth-child(2) .equip-th__label {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .project-table.equipment-table tbody td:nth-child(2) {
   overflow: visible;
   text-overflow: clip;
+  max-width: none;
 }
 
 .project-table.equipment-table td.airfilters-cell,

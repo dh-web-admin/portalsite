@@ -242,7 +242,8 @@ function eq_format_warranty($dateValue) {
 		/* Equipment number cell with edit icon */
 		.equipment-number-cell {
 			position: relative;
-			display: inline-flex;
+			display: flex;
+			width: 100%;
 			align-items: center;
 			gap: 8px;
 		}
@@ -258,14 +259,16 @@ function eq_format_warranty($dateValue) {
 			display: inline-flex;
 			align-items: center;
 			justify-content: center;
+			margin-left: auto;
 		}
 		
 		.equipment-number-cell:hover .equipment-edit-icon {
 			opacity: 1;
 		}
 		.equipment-hours { cursor: pointer; }
-		.equipment-hours-cell, .equipment-inline-cell { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+		.equipment-hours-cell, .equipment-inline-cell { position: relative; display: flex; width: 100%; align-items: center; gap: 8px; }
 		.hours-edit-icon, .cell-edit-icon { opacity: 0; transition: opacity 0.2s, transform 0.2s; cursor: pointer; font-size: 12px; color: #667eea; padding: 4px 6px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(102, 126, 234, 0.4); background: rgba(102, 126, 234, 0.08); }
+		.hours-edit-icon, .cell-edit-icon { margin-left: auto; }
 		.equipment-hours-cell:hover .hours-edit-icon, .equipment-inline-cell:hover .cell-edit-icon { opacity: 1; }
 		.hours-edit-icon:hover, .cell-edit-icon:hover { background: rgba(102, 126, 234, 0.18); transform: scale(1.05); }
 		.warranty-cell { position: relative; display: inline-flex; align-items: center; gap: 10px; }
