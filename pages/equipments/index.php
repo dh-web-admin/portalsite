@@ -271,10 +271,10 @@ function eq_format_warranty($dateValue) {
 		.hours-edit-icon, .cell-edit-icon { margin-left: auto; }
 		.equipment-hours-cell:hover .hours-edit-icon, .equipment-inline-cell:hover .cell-edit-icon { opacity: 1; }
 		.hours-edit-icon:hover, .cell-edit-icon:hover { background: rgba(102, 126, 234, 0.18); transform: scale(1.05); }
-		.warranty-cell { position: relative; display: inline-flex; align-items: center; gap: 10px; }
-		.warranty-add-btn { opacity: 0; transition: opacity 0.2s, transform 0.2s; cursor: pointer; font-size: 12px; color: #2563eb; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(37, 99, 235, 0.35); background: rgba(37, 99, 235, 0.08); font-weight: 700; }
-		.warranty-cell:hover .warranty-add-btn { opacity: 1; }
-		.warranty-add-btn:hover { background: rgba(37, 99, 235, 0.16); transform: scale(1.03); }
+		.warranty-cell { position: relative; display: inline-flex; align-items: center; gap: 10px; padding-right: 58px; }
+		.warranty-add-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; cursor: pointer; font-size: 12px; color: #2563eb; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(37, 99, 235, 0.35); background: rgba(37, 99, 235, 0.08); font-weight: 700; }
+		.warranty-cell:hover .warranty-add-btn { opacity: 1; pointer-events: auto; }
+		.warranty-add-btn:hover { background: rgba(37, 99, 235, 0.16); transform: translateY(-50%) scale(1.03); }
 
 		/* Type / Location modals */
 		.type-modal__dialog, .location-modal__dialog { max-width: 420px; }
@@ -729,9 +729,11 @@ function eq_format_warranty($dateValue) {
 																?>
 																<span class="warranty-display">
 																	<?php if ($warrantyFiles > 0): ?>
-																		<a href="Warranty.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>
+																		<a href="Warranty.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" title="View warranty" style="display:inline-block;">
+																			<img src="images/warrenty.svg" alt="Warranty" style="height:28px;vertical-align:middle;" />
+																		</a>
 																	<?php else: ?>
-																		<span style="color:#bbb !important;">Not available</span>
+																		<img src="images/nowarrenty.svg" alt="No warranty" title="No warranty uploaded" style="height:28px;vertical-align:middle;opacity:0.7;" />
 																	<?php endif; ?>
 																</span>
 																<?php if (is_admin()): ?>
@@ -1833,7 +1835,7 @@ function eq_format_warranty($dateValue) {
 						if (activeWarrantyDisplay) {
 							var row = activeWarrantyDisplay.closest('tr[data-equipment-id]');
 							var href = row ? (row.getAttribute('data-warranty-href') || '#') : '#';
-							activeWarrantyDisplay.innerHTML = '<a href="' + href + '" style="color:#22c55e;cursor:pointer;font-weight:500;">View Warranty</a>';
+								activeWarrantyDisplay.innerHTML = '<a href="' + href + '" title="View warranty" style="display:inline-block;"><img src="images/warrenty.svg" alt="Warranty" style="height:28px;vertical-align:middle;" /></a>';
 						}
 						showSiteNotification('Warranty uploaded successfully!', 'success');
 						closeWarrantyModal();
