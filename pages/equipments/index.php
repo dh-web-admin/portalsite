@@ -542,17 +542,17 @@ function eq_format_warranty($dateValue) {
 														<button class="equip-sort-btn" type="button" aria-label="Filter type" data-sort="type">▾</button>
 													</span>
 												</th>
-												<th scope="col">
-													<span class="equip-th">
-														<span class="equip-th__label">Operating Condition</span>
-														<button class="equip-sort-btn" type="button" aria-label="Sort operating condition" data-sort="operating_condition">▾</button>
-													</span>
-												</th>
 												<th scope="col">Location</th>
 												<th scope="col">
 													<span class="equip-th">
 														<span class="equip-th__label">Current Hours</span>
 														<button class="equip-sort-btn" type="button" aria-label="Sort current hours" data-sort="current_hours">▾</button>
+													</span>
+												</th>
+												<th scope="col">
+													<span class="equip-th">
+														<span class="equip-th__label">Operating<br>Condition</span>
+														<button class="equip-sort-btn" type="button" aria-label="Sort operating condition" data-sort="operating_condition">▾</button>
 													</span>
 												</th>
 												<th scope="col">
@@ -643,6 +643,18 @@ function eq_format_warranty($dateValue) {
 															</div>
 														</td>
 														<td>
+															<div class="equipment-inline-cell">
+																<span><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></span>
+																<span class="cell-edit-icon cell-edit-location admin-only" title="Edit location">Edit</span>
+															</div>
+														</td>
+														<td>
+															<div class="equipment-hours-cell">
+																<span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span>
+																<span class="hours-edit-icon admin-only" title="Edit hours">Edit</span>
+															</div>
+														</td>
+														<td>
 															<?php $val = trim((string)($eq['operating_condition'] ?? '')); ?>
 															<?php
 															$svgMap = [
@@ -658,18 +670,6 @@ function eq_format_warranty($dateValue) {
 																	<img src="images/<?php echo htmlspecialchars($svgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> engine" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
-														</td>
-														<td>
-															<div class="equipment-inline-cell">
-																<span><?php echo htmlspecialchars((string)($eq['location'] ?? '')); ?></span>
-																<span class="cell-edit-icon cell-edit-location admin-only" title="Edit location">Edit</span>
-															</div>
-														</td>
-														<td>
-															<div class="equipment-hours-cell">
-																<span class="equipment-hours"><?php echo htmlspecialchars((string)($eq['current_hours'] ?? '0')); ?></span>
-																<span class="hours-edit-icon admin-only" title="Edit hours">Edit</span>
-															</div>
 														</td>
 														<?php $val = trim((string)($eq['oil_status'] ?? ''));
 															$oilHref = 'oil_status.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''); ?>

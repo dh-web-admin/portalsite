@@ -399,7 +399,7 @@ a.equipment-ribbon__item:active {
 .project-table.equipment-table thead th:nth-child(2),
 .project-table.equipment-table tbody td:nth-child(2) {
   width: max-content;
-  min-width: 260px;
+  min-width: 180px;
 }
 
 .project-table.equipment-table thead th:nth-child(2) {
@@ -413,10 +413,32 @@ a.equipment-ribbon__item:active {
   white-space: nowrap;
 }
 
+/* Allow a 2-line header label specifically for Operating Condition */
+.project-table.equipment-table thead th:nth-child(5) .equip-th__label {
+  white-space: normal;
+  line-height: 1.1;
+}
+
 .project-table.equipment-table tbody td:nth-child(2) {
   overflow: visible;
   text-overflow: clip;
   max-width: none;
+}
+
+/* Make these columns equal width (Operating Condition, Oil Status, Air Filters, Tires, Warranty) */
+.project-table.equipment-table thead th:nth-child(5),
+.project-table.equipment-table thead th:nth-child(6),
+.project-table.equipment-table thead th:nth-child(7),
+.project-table.equipment-table thead th:nth-child(8),
+.project-table.equipment-table thead th:nth-child(9),
+.project-table.equipment-table tbody td:nth-child(5),
+.project-table.equipment-table tbody td:nth-child(6),
+.project-table.equipment-table tbody td:nth-child(7),
+.project-table.equipment-table tbody td:nth-child(8),
+.project-table.equipment-table tbody td:nth-child(9) {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
 }
 
 .project-table.equipment-table td.airfilters-cell,
