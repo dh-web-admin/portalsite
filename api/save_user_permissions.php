@@ -84,8 +84,16 @@ try {
             $defaultEdit = 0;
         }
 
-        if ($canAccess === $defaultAccess && $canEdit === $defaultEdit) {
-            continue;
+        // Special-case: an explicit grant of `admin_panel` should always be
+        // persisted so that the user receives Admin Panel access even when
+        // their role's defaults do not allow it. This ensures the UI's
+        // "Allow admin panel access" confirmation creates a durable override.
+        if ($pageKey === 'admin_panel' && $canAccess === 1) {
+            // proceed to insert regardless of role default
+        } else {
+            if ($canAccess === $defaultAccess && $canEdit === $defaultEdit) {
+                continue;
+            }
         }
 
         $ins->bind_param('isii', $userId, $pageKey, $canAccess, $canEdit);
