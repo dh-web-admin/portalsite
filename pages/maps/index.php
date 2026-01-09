@@ -26,6 +26,8 @@ if (!can_access($role, 'maps')) {
   header('Location: /pages/dashboard/');
   exit();
 }
+
+$canEditMaps = can_edit_page('maps');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -75,6 +77,20 @@ if (!can_access($role, 'maps')) {
     .btn-delete { background:#ef4444; }
     .supplier-details-placeholder { color:#94a3b8; font-size:13px; padding:6px 0; }
     .supplier-details-container a { color: #059669; }
+
+    /* Slim action buttons (Maps page) */
+    .btn-slim {
+      padding: 8px 12px !important;
+      font-size: 12px !important;
+      font-weight: 700;
+      line-height: 1 !important;
+      border-radius: 10px !important;
+      white-space: nowrap;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
   </style>
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -97,8 +113,8 @@ if (!can_access($role, 'maps')) {
           </div>
            <!-- Add Supplier Button, Details Box, Filters, and Supplier Dropdown -->
           <div style="margin-bottom: 12px; margin-top: 12px; display: flex; gap: 14px; align-items: flex-start; flex-shrink: 0;">
-            <?php if ($role === 'admin'): ?>
-            <button id="addSupplierBtn" class="btn btn-primary">+ Add Supplier</button>
+            <?php if ($canEditMaps): ?>
+            <button id="addSupplierBtn" class="btn btn-primary btn-slim">+ Add Supplier</button>
             <?php endif; ?>
             <div class="supplier-details-stack">
               <div id="supplierDetailsBox" class="supplier-details-container">
@@ -129,6 +145,13 @@ if (!can_access($role, 'maps')) {
               <input id="filterState" type="text" placeholder="State" style="width:80px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#334155;" />
               <button id="clearFiltersBtn" class="btn" title="Clear filters" style="padding:5px 8px; font-size:11px;">Clear</button>
             </div>
+
+            <?php if ($canEditMaps): ?>
+            <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+              <button id="topAddServiceBtn" class="btn btn-primary btn-slim">+ Add Service</button>
+              <button id="topEditServiceBtn" class="btn btn-slim">Edit Service</button>
+            </div>
+            <?php endif; ?>
 
           </div>
           
@@ -284,6 +307,42 @@ if (!can_access($role, 'maps')) {
       </form>
     </div>
   </div>
+
+  <!-- Add Service Modal -->
+  <div id="addServiceModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
+      <h3 style="margin:0 0 16px 0;font-size:20px;color:#1e293b;">Add Service</h3>
+      <form id="addServiceForm" style="display:grid;gap:14px;">
+        <div>
+          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Service Name *</label>
+          <input type="text" id="addServiceName" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+        </div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+          <button type="button" id="cancelAddServiceBtn" class="btn" style="padding:10px 20px;">Cancel</button>
+          <button type="submit" id="confirmAddServiceBtn" class="btn btn-primary" style="padding:10px 20px;">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Service Modal -->
+  <div id="editServiceModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
+    <div style="background:#fff;border-radius:12px;padding:24px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
+      <h3 style="margin:0 0 16px 0;font-size:20px;color:#1e293b;">Edit Service</h3>
+      <form id="editServiceForm" style="display:grid;gap:14px;">
+        <input type="hidden" id="editServiceOldName" />
+        <div>
+          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Service Name *</label>
+          <input type="text" id="editServiceNewName" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+        </div>
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+          <button type="button" id="deleteServiceBtn" class="btn btn-danger" style="padding:10px 20px;background:#ef4444;border-color:#ef4444;color:#fff;">Delete</button>
+          <button type="button" id="cancelEditServiceBtn" class="btn" style="padding:10px 20px;">Cancel</button>
+          <button type="submit" id="confirmEditServiceBtn" class="btn btn-primary" style="padding:10px 20px;">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
   
   <!-- Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -298,6 +357,43 @@ if (!can_access($role, 'maps')) {
         minZoom: 2,
         maxZoom: 19
       }).setView([39.8283, -98.5795], 5); // Center of USA, zoom 5
+
+      function cssEscape(value) {
+        var v = String(value == null ? '' : value);
+        if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(v);
+        return v.replace(/[^a-zA-Z0-9_\-]/g, function(ch){ return '\\' + ch; });
+      }
+      // Delete service from Edit Service modal
+      var deleteServiceBtn = document.getElementById('deleteServiceBtn');
+      if (deleteServiceBtn) {
+        deleteServiceBtn.addEventListener('click', function(e){
+          e.preventDefault();
+          var oldName = editServiceOldName ? editServiceOldName.value.trim() : (currentService || '');
+          if (!oldName) { alert('No service selected to delete'); return; }
+          if (!confirm('Deleting this service will also delete all associated suppliers. This action cannot be undone. Continue?')) return;
+          deleteServiceBtn.disabled = true;
+          deleteServiceBtn.textContent = 'Deleting...';
+          var fd = new FormData();
+          fd.append('service_name', oldName);
+          fetch('../../api/delete_service.php', { method: 'POST', credentials: 'same-origin', body: fd })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+              if (data && data.success) {
+                currentService = null;
+                var ribbon = document.getElementById('mapRibbon');
+                if (ribbon) ribbon.innerHTML = '';
+                loadRibbon();
+                try { populateRemoveServiceSelect(); } catch (e) {}
+                closeModal(editServiceModal);
+                resetSupplierDetails();
+              } else {
+                alert((data && data.message) ? data.message : 'Failed to delete service');
+              }
+            })
+            .catch(function(err){ console.error(err); alert('Failed to delete service'); })
+            .finally(function(){ deleteServiceBtn.disabled = false; deleteServiceBtn.textContent = 'Delete'; });
+        });
+      }
 
       // Locate Me button logic
       var locateBtn = document.getElementById('locateMeBtn');
@@ -667,6 +763,13 @@ if (!can_access($role, 'maps')) {
 
             // Remove only buttons that do not match the current services list
             var existingBtns = Array.from(ribbon.querySelectorAll('.map-ribbon-btn'));
+            existingBtns.forEach(function(btn){
+              var n = btn.getAttribute('data-map');
+              if (services.indexOf(n) === -1) {
+                try { btn.remove(); } catch (e) { if (btn.parentNode) btn.parentNode.removeChild(btn); }
+              }
+            });
+            existingBtns = Array.from(ribbon.querySelectorAll('.map-ribbon-btn'));
             var existingNames = existingBtns.map(function(btn){ return btn.getAttribute('data-map'); });
 
             // If user reordered locally previously, prefer that order as a client-side fallback
@@ -689,8 +792,10 @@ if (!can_access($role, 'maps')) {
                 btn.setAttribute('draggable', 'true');
                 btn.style.cursor = 'grab';
 
-                // First button is active by default if none are active
-                if (index === 0 && !ribbon.querySelector('.map-ribbon-btn.active')) {
+                // Activate current service if set, otherwise activate first if none are active
+                if (currentService && serviceName === currentService) {
+                  btn.classList.add('active');
+                } else if (index === 0 && !ribbon.querySelector('.map-ribbon-btn.active')) {
                   btn.classList.add('active');
                 }
 
@@ -739,10 +844,16 @@ if (!can_access($role, 'maps')) {
               }
             });
 
-            // Load first service by default if none are active
-            if (services.length > 0 && !ribbon.querySelector('.map-ribbon-btn.active')) {
-              ribbon.querySelector('.map-ribbon-btn').classList.add('active');
-              loadSuppliers(services[0]);
+            // Always select the first service in the ribbon on page load
+            if (services.length > 0) {
+              // clear any previous active state, then activate first button
+              ribbon.querySelectorAll('.map-ribbon-btn').forEach(function(b){ b.classList.remove('active'); });
+              var firstBtn = ribbon.querySelector('.map-ribbon-btn');
+              if (firstBtn) {
+                firstBtn.classList.add('active');
+                // Load suppliers for the first service
+                loadSuppliers(firstBtn.getAttribute('data-map'));
+              }
             }
           }
         })
@@ -754,6 +865,122 @@ if (!can_access($role, 'maps')) {
       
       // Initialize ribbon
       loadRibbon();
+
+      /* =========================
+         Add/Edit Service (Top Right) Modals
+         ========================= */
+      var topAddServiceBtn = document.getElementById('topAddServiceBtn');
+      var topEditServiceBtn = document.getElementById('topEditServiceBtn');
+      var addServiceModal = document.getElementById('addServiceModal');
+      var editServiceModal = document.getElementById('editServiceModal');
+      var addServiceForm = document.getElementById('addServiceForm');
+      var editServiceForm = document.getElementById('editServiceForm');
+      var addServiceNameInput = document.getElementById('addServiceName');
+      var editServiceOldName = document.getElementById('editServiceOldName');
+      var editServiceNewName = document.getElementById('editServiceNewName');
+      var cancelAddServiceBtn = document.getElementById('cancelAddServiceBtn');
+      var cancelEditServiceBtn = document.getElementById('cancelEditServiceBtn');
+      var confirmAddServiceBtn = document.getElementById('confirmAddServiceBtn');
+      var confirmEditServiceBtn = document.getElementById('confirmEditServiceBtn');
+
+      function openModal(modalEl) {
+        if (!modalEl) return;
+        modalEl.style.display = 'flex';
+      }
+      function closeModal(modalEl) {
+        if (!modalEl) return;
+        modalEl.style.display = 'none';
+      }
+
+      if (topAddServiceBtn && addServiceModal) {
+        topAddServiceBtn.addEventListener('click', function(){
+          openModal(addServiceModal);
+          if (addServiceNameInput) {
+            addServiceNameInput.value = '';
+            setTimeout(function(){ try { addServiceNameInput.focus(); } catch(e){} }, 50);
+          }
+        });
+      }
+      if (topEditServiceBtn && editServiceModal) {
+        topEditServiceBtn.addEventListener('click', function(){
+          if (!currentService) {
+            alert('Select a service first.');
+            return;
+          }
+          if (editServiceOldName) editServiceOldName.value = currentService;
+          if (editServiceNewName) {
+            editServiceNewName.value = currentService;
+            setTimeout(function(){ try { editServiceNewName.focus(); editServiceNewName.select(); } catch(e){} }, 50);
+          }
+          openModal(editServiceModal);
+        });
+      }
+
+      if (cancelAddServiceBtn) cancelAddServiceBtn.addEventListener('click', function(){ closeModal(addServiceModal); });
+      if (cancelEditServiceBtn) cancelEditServiceBtn.addEventListener('click', function(){ closeModal(editServiceModal); });
+
+      if (addServiceModal) {
+        addServiceModal.addEventListener('click', function(e){ if (e.target === addServiceModal) closeModal(addServiceModal); });
+      }
+      if (editServiceModal) {
+        editServiceModal.addEventListener('click', function(e){ if (e.target === editServiceModal) closeModal(editServiceModal); });
+      }
+
+      if (addServiceForm) {
+        addServiceForm.addEventListener('submit', function(e){
+          e.preventDefault();
+          var name = addServiceNameInput ? addServiceNameInput.value.trim() : '';
+          if (!name) { alert('Please enter a service name'); return; }
+          if (confirmAddServiceBtn) { confirmAddServiceBtn.disabled = true; confirmAddServiceBtn.textContent = 'Adding...'; }
+          var formData = new FormData();
+          formData.append('service_name', name);
+          fetch('../../api/add_service.php', { method: 'POST', credentials: 'same-origin', body: formData })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+              if (data && data.success) {
+                currentService = name;
+                var ribbon = document.getElementById('mapRibbon');
+                if (ribbon) ribbon.innerHTML = '';
+                loadRibbon();
+                try { populateRemoveServiceSelect(); } catch (e) {}
+                closeModal(addServiceModal);
+              } else {
+                alert((data && data.message) ? data.message : 'Failed to add service');
+              }
+            })
+            .catch(function(err){ console.error(err); alert('Failed to add service'); })
+            .finally(function(){ if (confirmAddServiceBtn) { confirmAddServiceBtn.disabled = false; confirmAddServiceBtn.textContent = 'Add'; } });
+        });
+      }
+
+      if (editServiceForm) {
+        editServiceForm.addEventListener('submit', function(e){
+          e.preventDefault();
+          var oldName = editServiceOldName ? editServiceOldName.value.trim() : '';
+          var newName = editServiceNewName ? editServiceNewName.value.trim() : '';
+          if (!oldName || !newName) { alert('Service name required'); return; }
+          if (confirmEditServiceBtn) { confirmEditServiceBtn.disabled = true; confirmEditServiceBtn.textContent = 'Saving...'; }
+          var fd = new FormData();
+          fd.append('old_name', oldName);
+          fd.append('new_name', newName);
+          fetch('../../api/rename_service.php', { method: 'POST', credentials: 'same-origin', body: fd })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+              if (data && data.success) {
+                currentService = newName;
+                var ribbon = document.getElementById('mapRibbon');
+                if (ribbon) ribbon.innerHTML = '';
+                loadRibbon();
+                try { populateRemoveServiceSelect(); } catch (e) {}
+                closeModal(editServiceModal);
+              } else {
+                alert((data && data.message) ? data.message : 'Failed to edit service');
+              }
+            })
+            .catch(function(err){ console.error(err); alert('Failed to edit service'); })
+            .finally(function(){ if (confirmEditServiceBtn) { confirmEditServiceBtn.disabled = false; confirmEditServiceBtn.textContent = 'Save'; } });
+        });
+      }
       
       // Sidebar toggle handler
       var usersToggle = document.getElementById('usersToggle');
