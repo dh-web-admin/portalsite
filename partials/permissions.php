@@ -222,13 +222,19 @@ function can_access(string $role, string $pageKey): bool {
         $ovr = get_user_page_override((string)$_SESSION['email'], $pageKey);
         if ($ovr !== null) return (bool)$ovr['can_access'];
 
-        // If Admin Panel is enabled for this user, treat them as having the
-        // admin role's default access for all pages (unless a specific override exists).
-        if ($pageKey !== 'admin_panel') {
-            $adminPanelOvr = get_user_page_override((string)$_SESSION['email'], 'admin_panel');
-            if ($adminPanelOvr !== null && !empty($adminPanelOvr['can_access'])) {
-                $role = 'admin';
-            }
+        // Special-case: admin_panel should only be available by default to
+        // the `admin` and `developer` roles. Explicit per-user overrides
+        // (checked above) still apply and will be returned.
+        if ($pageKey === 'admin_panel') {
+            return in_array($role, ['admin', 'developer'], true);
+        }
+
+        // If Admin Panel is enabled for this user via the per-user admin_panel
+        // flag, treat them as having the admin role's default access for other
+        // pages (unless a specific override exists).
+        $adminPanelOvr = get_user_page_override((string)$_SESSION['email'], 'admin_panel');
+        if ($adminPanelOvr !== null && !empty($adminPanelOvr['can_access'])) {
+            $role = 'admin';
         }
     }
     $allowed = allowed_pages_for_role($role);
