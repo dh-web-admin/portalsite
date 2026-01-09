@@ -25,8 +25,8 @@ if (!can_access($role, 'equipments')) {
 		exit();
 }
 
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+// Hide admin-only UI elements for users without edit permission on this module
+if (!can_edit_page('equipments')) {
 	echo <<<'HTML'
 <style>.admin-only { display: none !important; }</style>
 HTML;
@@ -170,10 +170,9 @@ try {
 			<?php include __DIR__ . '/../../partials/sidebar.php'; ?>
 			<main class="content-area">
 				<div class="main-content">
-					<?php $previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>
 					<div class="panel-wrapper">
 						<div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
-							<a id="backBtn" href="index.php<?php echo $previewParam; ?>" class="equipment-back-btn">
+							<a id="backBtn" href="index.php" class="equipment-back-btn">
 								<span>←</span>
 								<span>Back to Equipments</span>
 							</a>
@@ -188,7 +187,7 @@ try {
 									<div id="partsContainer">
 										<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:8px;">
 											<div>
-												<button id="showAddPartBtn" type="button" class="btn" style="padding:8px 12px;border-radius:8px;">+ Add Part</button>
+												<button id="showAddPartBtn" type="button" class="btn admin-only" style="padding:8px 12px;border-radius:8px;">+ Add Part</button>
 											</div>
 										</div>
 										<table id="partsTable">
@@ -225,7 +224,7 @@ try {
 									<div id="fluidsAlerts" style="margin-bottom:10px;"></div>
 									<div class="oil-status-panel" id="fluidsPanel">
 										<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:8px;">
-											<button id="changeFluidBtn" type="button" class="btn" style="padding:8px 12px;border-radius:8px;">Change Fluid</button>
+											<button id="changeFluidBtn" type="button" class="btn admin-only" style="padding:8px 12px;border-radius:8px;">Change Fluid</button>
 										</div>
 										<table id="fluidsTable" style="width:100%;">
 										<thead>
@@ -247,7 +246,7 @@ try {
 								</div>
 
 								<!-- Add Part Modal -->
-								<div id="addModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1200;">
+								<div id="addModal" class="admin-only" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1200;">
 									<div style="background:#fff;padding:18px;border-radius:10px;min-width:520px;max-width:95%;box-shadow:0 16px 48px rgba(2,6,23,0.3);">
 										<h3 style="margin:0 0 8px 0;">Add Part</h3>
 										<div style="display:flex;flex-direction:column;gap:8px;">
@@ -270,7 +269,7 @@ try {
 												<input id="oilLifeInput" name="oil_life" placeholder="Fluid life (hours)" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
 											</div>
 											<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
-												<button id="submitAddPart" type="button" class="btn" style="padding:8px 12px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
+												<button id="submitAddPart" type="button" class="btn admin-only" style="padding:8px 12px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
 												<button id="cancelAddPart" type="button" class="btn btn-ghost" style="padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;">Cancel</button>
 											</div>
 										</div>
@@ -278,7 +277,7 @@ try {
 								</div>
 
 								<!-- Edit Part Modal -->
-								<div id="editModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1200;">
+								<div id="editModal" class="admin-only" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1200;">
 									<div style="background:#fff;padding:18px;border-radius:10px;min-width:520px;max-width:95%;box-shadow:0 16px 48px rgba(2,6,23,0.3);">
 										<h3 style="margin:0 0 8px 0;">Edit Part</h3>
 										<input type="hidden" id="editPartId">
@@ -301,8 +300,8 @@ try {
 													<input id="editOilLife" placeholder="Fluid life (hours)" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
 											</div>
 											<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
-												<button id="submitEditPartBtn" type="button" class="btn" style="padding:8px 12px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
-												<button id="deleteEditPartBtn" type="button" class="parts-delete-btn" style="padding:8px 12px;border-radius:8px;border:none;background:#ef4444;color:#fff;">Delete</button>
+												<button id="submitEditPartBtn" type="button" class="btn admin-only" style="padding:8px 12px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
+												<button id="deleteEditPartBtn" type="button" class="parts-delete-btn admin-only" style="padding:8px 12px;border-radius:8px;border:none;background:#ef4444;color:#fff;">Delete</button>
 												<button id="cancelEditPartBtn" type="button" class="btn btn-ghost" style="padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;">Cancel</button>
 											</div>
 										</div>
@@ -310,7 +309,7 @@ try {
 								</div>
 
 								<!-- Change Fluid Modal -->
-								<div id="changeFluidModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1300;">
+								<div id="changeFluidModal" class="admin-only" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1300;">
 									<div style="background:#fff;padding:18px;border-radius:10px;min-width:520px;max-width:95%;box-shadow:0 16px 48px rgba(2,6,23,0.3);">
 										<h3 id="changeFluidTitle" style="margin:0 0 8px 0;">Change Fluid</h3>
 										<div style="margin-bottom:10px;font-size:13px;color:#4b5563;">
@@ -344,7 +343,7 @@ try {
 												</div>
 											</div>
 											<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-												<button id="changeFluidSaveBtn" type="button" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
+												<button id="changeFluidSaveBtn" type="button" class="btn admin-only" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
 												<button id="changeFluidCancelBtn" type="button" class="btn btn-ghost" style="padding:8px 14px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;">Cancel</button>
 											</div>
 										</div>
@@ -365,7 +364,7 @@ try {
 	// Initial data emitted from server
 	var INITIAL_EQUIPMENTS = <?php echo json_encode($equipments ?: []); ?>;
 	var INITIAL_PARTS = <?php echo json_encode($partsByEquip ?: new stdClass()); ?>;
-	var IS_ADMIN = <?php echo is_admin() ? 'true' : 'false'; ?>;
+	var IS_ADMIN = <?php echo can_edit_page('equipments') ? 'true' : 'false'; ?>;
 	var CURRENT_USER_NAME = <?php echo json_encode($_SESSION['name'] ?? ''); ?>;
 	// build a list of existing part names for reuse across equipments
 	var EXISTING_PART_NAMES = (function(){
@@ -596,6 +595,7 @@ try {
 	}
 
 	function openChangeFluidModal(){
+		if (!IS_ADMIN) return;
 		if (!CURRENT_EQUIPMENT_ID) {
 			alert('Select an equipment first.');
 			return;
@@ -692,6 +692,7 @@ try {
 	}
 
 	function submitChangeFluid(){
+		if (!IS_ADMIN) return;
 		if (!CURRENT_EQUIPMENT_ID) {
 			alert('Select an equipment first.');
 			return;
@@ -752,6 +753,7 @@ try {
 	}
 
 	function openAddForm(){
+		if (!IS_ADMIN) return;
 		renderExistingPartsDatalist();
 		var modal = document.getElementById('addModal');
 		if (modal) modal.style.display = 'flex';
@@ -765,6 +767,7 @@ try {
 	}
 
 	function submitAddPart(){
+		if (!IS_ADMIN) return;
 		var btn = document.getElementById('submitAddPart'); btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Saving...';
 		var data = new FormData();
 		// allow creating parts without selecting an equipment; use 0 as fallback
@@ -933,20 +936,22 @@ try {
 		}
 
 		buildRibbon();
-		// wire up add part UI (modal)
-		var showBtn = document.getElementById('showAddPartBtn'); if (showBtn) showBtn.addEventListener('click', function(){ renderExistingPartsDatalist(); document.getElementById('addModal').style.display='flex'; document.getElementById('partInput').focus(); });
-		var cancelBtn = document.getElementById('cancelAddPart'); if (cancelBtn) cancelBtn.addEventListener('click', function(){ document.getElementById('addModal').style.display='none'; });
-		var submitBtn = document.getElementById('submitAddPart'); if (submitBtn) submitBtn.addEventListener('click', submitAddPart);
-		var cancelEditBtn = document.getElementById('cancelEditPartBtn'); if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
-		var submitEditBtn = document.getElementById('submitEditPartBtn'); if (submitEditBtn) submitEditBtn.addEventListener('click', submitEditPart);
-		var deleteEditBtn = document.getElementById('deleteEditPartBtn'); if (deleteEditBtn) deleteEditBtn.addEventListener('click', submitDeletePart);
-		var changeBtn = document.getElementById('changeFluidBtn'); if (changeBtn) changeBtn.addEventListener('click', openChangeFluidModal);
-		var changeCancel = document.getElementById('changeFluidCancelBtn'); if (changeCancel) changeCancel.addEventListener('click', closeChangeFluidModal);
-		var changeSave = document.getElementById('changeFluidSaveBtn'); if (changeSave) changeSave.addEventListener('click', submitChangeFluid);
-		var changeModal = document.getElementById('changeFluidModal');
-		if (changeModal) {
-			changeModal.addEventListener('click', function(e){ if (e.target === changeModal) closeChangeFluidModal(); });
-			document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && changeModal.style.display === 'flex') closeChangeFluidModal(); });
+		if (IS_ADMIN) {
+			// wire up add/edit/change UI (modals)
+			var showBtn = document.getElementById('showAddPartBtn'); if (showBtn) showBtn.addEventListener('click', function(){ renderExistingPartsDatalist(); document.getElementById('addModal').style.display='flex'; document.getElementById('partInput').focus(); });
+			var cancelBtn = document.getElementById('cancelAddPart'); if (cancelBtn) cancelBtn.addEventListener('click', function(){ document.getElementById('addModal').style.display='none'; });
+			var submitBtn = document.getElementById('submitAddPart'); if (submitBtn) submitBtn.addEventListener('click', submitAddPart);
+			var cancelEditBtn = document.getElementById('cancelEditPartBtn'); if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+			var submitEditBtn = document.getElementById('submitEditPartBtn'); if (submitEditBtn) submitEditBtn.addEventListener('click', submitEditPart);
+			var deleteEditBtn = document.getElementById('deleteEditPartBtn'); if (deleteEditBtn) deleteEditBtn.addEventListener('click', submitDeletePart);
+			var changeBtn = document.getElementById('changeFluidBtn'); if (changeBtn) changeBtn.addEventListener('click', openChangeFluidModal);
+			var changeCancel = document.getElementById('changeFluidCancelBtn'); if (changeCancel) changeCancel.addEventListener('click', closeChangeFluidModal);
+			var changeSave = document.getElementById('changeFluidSaveBtn'); if (changeSave) changeSave.addEventListener('click', submitChangeFluid);
+			var changeModal = document.getElementById('changeFluidModal');
+			if (changeModal) {
+				changeModal.addEventListener('click', function(e){ if (e.target === changeModal) closeChangeFluidModal(); });
+				document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && changeModal.style.display === 'flex') closeChangeFluidModal(); });
+			}
 		}
 		// ensure datalist initially populated
 		renderExistingPartsDatalist();

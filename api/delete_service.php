@@ -1,29 +1,13 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+if (!defined('IS_API')) define('IS_API', true);
+require_once __DIR__ . '/../partials/permissions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['email'])) {
-  http_response_code(401);
-  echo json_encode(['success' => false, 'message' => 'Not authenticated']);
-  exit;
-}
-
-$email = $_SESSION['email'];
-$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
-$stmt->bind_param('s', $email);
-$stmt->execute();
-$res = $stmt->get_result();
-$user = $res ? $res->fetch_assoc() : null;
-$userRole = $user ? $user['role'] : 'laborer';
-$stmt->close();
-
-if ($userRole !== 'admin' && $userRole !== 'developer') {
-  http_response_code(403);
-  echo json_encode(['success' => false, 'message' => 'Access denied']);
-  exit;
-}
+if (isset($conn)) $GLOBALS['conn'] = $conn;
+require_edit_api('maps');
 
 $serviceName = isset($_POST['service_name']) ? trim($_POST['service_name']) : '';
 if ($serviceName === '') {

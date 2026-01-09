@@ -1,15 +1,15 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+if (!defined('IS_API')) define('IS_API', true);
+require_once __DIR__ . '/../partials/permissions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Check authentication
-if (!isset($_SESSION['email'])) {
-  http_response_code(401);
-  echo json_encode(['success' => false, 'message' => 'Not authenticated']);
-  exit;
-}
+if (isset($conn)) $GLOBALS['conn'] = $conn;
+require_edit_api('maps');
+
+// Auth enforced by require_edit_api('maps')
 
 // Get form data
 $name = isset($_POST['name']) ? trim($_POST['name']) : '';

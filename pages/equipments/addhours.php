@@ -15,9 +15,6 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-if ($role === 'developer' && isset($_GET['preview_role'])) {
-	$role = $_GET['preview_role'];
-}
 $roleStmt->close();
 
 if (!can_access($role, 'equipments')) {
@@ -26,9 +23,25 @@ if (!can_access($role, 'equipments')) {
 }
 
 // Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+if (!can_edit_page('equipments')) {
 	echo <<<'HTML'
-<style>.admin-only { display: none !important; }</style>
+<style>.admin-only, .save-btn { display: none !important; }</style>
+<script>
+(function(){
+	var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i,/\bsave\b/i];
+	function hideIfMatch(el){
+		var text=(el.innerText||el.value||'').trim();
+		var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
+		if(!text && !title) return;
+		var combined = (text + ' ' + title).trim();
+		for(var i=0;i<patterns.length;i++){ if(patterns[i].test(combined)){ el.style.display='none'; return; } }
+	}
+	document.addEventListener('DOMContentLoaded', function(){
+		var els=document.querySelectorAll('a,button,input[type=button],input[type=submit]');
+		els.forEach(hideIfMatch);
+	});
+})();
+</script>
 HTML;
 }
 
@@ -141,10 +154,9 @@ try {
 			<?php include __DIR__ . '/../../partials/sidebar.php'; ?>
 			<main class="content-area">
 				<div class="main-content">
-					<?php $previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>
 					<div class="hours-page-wrapper">
 						<div style="margin-top:18px;margin-bottom:6px;">
-							<a href="index.php<?php echo $previewParam; ?>" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;text-decoration:none;">← Back to Equipments</a>
+							<a href="index.php" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;text-decoration:none;">← Back to Equipments</a>
 						</div>
 						<div class="hours-page-header">
 							<div>

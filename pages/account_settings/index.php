@@ -19,12 +19,7 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $actualRole = $user ? $user['role'] : 'laborer';
 
-// Check if developer is previewing as another role
-if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-} else {
-    $role = $actualRole;
-}
+$role = $actualRole;
 
 $stmt->close();
 ?>

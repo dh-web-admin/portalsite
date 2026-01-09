@@ -4,9 +4,14 @@ ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
 error_reporting(0);
 
+require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 header('Content-Type: application/json');
 while (ob_get_level()) ob_end_clean();
+
+if (isset($conn)) $GLOBALS['conn'] = $conn;
+require_edit_api('equipments');
 
 
 // Accept POST data from form

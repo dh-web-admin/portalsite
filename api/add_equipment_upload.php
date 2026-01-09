@@ -9,6 +9,10 @@ function log_upload_debug($msg) {
 }
 
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../partials/permissions.php';
+
+require_edit_api('equipments');
 
 // Do not expose PHP warnings in the JSON response
 ini_set('display_errors', '0');

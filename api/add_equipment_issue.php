@@ -1,6 +1,10 @@
 <?php
+require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 header('Content-Type: application/json');
+
+require_edit_api('equipments');
 
 // Validate and collect POST data
 $equipment_id = isset($_POST['equipment_id']) ? (int)$_POST['equipment_id'] : 0;

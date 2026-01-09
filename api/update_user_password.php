@@ -1,31 +1,11 @@
 <?php
-session_start();
-require_once '../config/config.php';
+require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-// Auth check
-if (!isset($_SESSION['email'])) {
-    echo json_encode(['success' => false, 'error' => 'Not authenticated']);
-    exit();
-}
-
-// Admin check
-$adminEmail = $_SESSION['email'];
-$stmt = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1");
-$stmt->bind_param('s', $adminEmail);
-$stmt->execute();
-$res = $stmt->get_result();
-if (!$res || $res->num_rows === 0) {
-    echo json_encode(['success' => false, 'error' => 'Not authorized']);
-    exit();
-}
-$row = $res->fetch_assoc();
-if ($row['role'] !== 'admin') {
-    echo json_encode(['success' => false, 'error' => 'Not authorized']);
-    exit();
-}
-$stmt->close();
+require_edit_api('admin_panel');
 
 // Get POST data
 $id = $_POST['id'] ?? '';

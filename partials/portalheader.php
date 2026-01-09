@@ -2,6 +2,7 @@
 // Shared Portal header
 if (session_status() === PHP_SESSION_NONE) { require_once __DIR__ . '/../session_init.php'; }
 require_once __DIR__ . '/url.php';
+require_once __DIR__ . '/permissions.php';
 
  $name = isset($_SESSION['name']) ? $_SESSION['name'] : 'User';
  $title = 'Employee Dashboard';
@@ -15,6 +16,8 @@ if (!empty($_SESSION['email'])) {
     if (file_exists($configPath)) {
         require_once $configPath;
         if (isset($conn) && $conn instanceof mysqli) {
+            // Make DB connection available to permissions helper
+            $GLOBALS['conn'] = $conn;
             if ($stmt = $conn->prepare('SELECT role FROM users WHERE email = ? LIMIT 1')) {
                 $stmt->bind_param('s', $_SESSION['email']);
                 if ($stmt->execute()) {
@@ -23,18 +26,15 @@ if (!empty($_SESSION['email'])) {
                         $row = $res->fetch_assoc();
                         if (isset($row['role'])) {
                             $actualRole = $row['role'];
-                            
-                            // Check if developer is previewing as another role
-                            if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
-                                $role = $_GET['preview_role'];
-                            } else {
-                                $role = $actualRole;
-                            }
-                            
+
+                            // Dev preview mode removed: always use actual role
+                            $role = $actualRole;
+
+                            // Make role available to permissions helper
+                            $GLOBALS['role'] = $role;
+
                             if ($role === 'admin') {
                                 $title = 'Admin Dashboard';
-                            } elseif ($actualRole === 'developer' && !isset($_GET['preview_role'])) {
-                                $title = 'Developer Preview Dashboard';
                             }
                         }
                     }
@@ -43,12 +43,6 @@ if (!empty($_SESSION['email'])) {
             }
         }
     }
-}
-
-// Preserve preview mode in URLs
-$previewParam = '';
-if (isset($_GET['preview_role'])) {
-    $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
 }
 ?>
 
@@ -59,8 +53,8 @@ if (isset($_GET['preview_role'])) {
     </div>
     <img src="<?php echo htmlspecialchars(base_url('/assets/images/eportal.svg')); ?>" alt="Portal logo" class="welcome-logo" />
     <div class="header-actions" aria-hidden="false">
-        <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php') . $previewParam); ?>" class="header-action-btn">Home</a>
-        <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php') . $previewParam); ?>" class="header-action-btn" title="Account Settings">
+        <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="header-action-btn">Home</a>
+        <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php')); ?>" class="header-action-btn" title="Account Settings">
             <img src="<?php echo htmlspecialchars(base_url('/assets/images/user-icon.svg')); ?>" alt="Account Settings" style="width: 16px; height: 16px;">
         </a>
         <a href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>" class="header-action-btn logout-btn">Logout</a>
@@ -75,8 +69,4 @@ if (isset($_GET['preview_role'])) {
 <!-- Responsive helper stylesheet (loaded late; conservative rules only) -->
 <link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/assets/css/responsive.css')); ?>" />
 
-<?php
-// Always attempt to include developer notch from header so it's present across pages
-// It will self-check actual developer role and render conditionally.
-include __DIR__ . '/dev_notch.php';
-?>
+<?php // Dev preview mode removed ?>

@@ -1,14 +1,13 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+// Indicate this is an API endpoint to prevent UI injection from permissions helper
+if (!defined('IS_API')) define('IS_API', true);
+require_once __DIR__ . '/../partials/permissions.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['email'])) {
-  http_response_code(401);
-  echo json_encode(['success' => false, 'message' => 'Not authenticated']);
-  exit;
-}
+require_edit_api('project_checklist');
 
 $body = file_get_contents('php://input');
 $data = json_decode($body, true);

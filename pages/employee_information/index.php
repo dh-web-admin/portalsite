@@ -19,12 +19,7 @@ $stmt->execute();
 $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $actualRole = $user ? $user['role'] : 'laborer';
-// Allow developer preview override
-if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
-  $role = $_GET['preview_role'];
-} else {
-  $role = $actualRole;
-}
+$role = $actualRole;
 $stmt->close();
 
 // Enforce access control for this page

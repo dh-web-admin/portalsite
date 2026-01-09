@@ -9,10 +9,28 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 	exit();
 }
 
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+// Get user role for access checks
+$email = $_SESSION['email'];
+$roleStmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
+$roleStmt->bind_param('s', $email);
+$roleStmt->execute();
+$roleRes = $roleStmt->get_result();
+$user = $roleRes ? $roleRes->fetch_assoc() : null;
+$role = $user ? $user['role'] : 'laborer';
+$roleStmt->close();
+
+if (!can_access($role, 'equipments')) {
+	header('Location: /pages/dashboard/');
+	exit();
+}
+
+$canEditEquipments = can_edit_page('equipments');
+
+// Hide admin-only UI elements for users without edit permission on this module
+
+if (empty($canEditEquipments)) {
 		echo <<<'HTML'
-<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
+<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn, #newEquipmentBtn, .warranty-add-btn, .equipment-open-edit { display: none !important; }</style>
 HTML;
 }
 
@@ -504,15 +522,15 @@ function eq_format_warranty($dateValue) {
 						<div class="equipment-topbar" role="region" aria-label="Equipment actions">
 							<button id="newEquipmentBtn" class="equipment-btn equipment-btn--green" type="button">Add Equipment</button>
 							<div class="equipment-ribbon" aria-label="Cheat sheets">
-								<a href="all_engine.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">All Eng Cheat Sheet</a>
-								<a href="all_filters.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Filter Cheat Sheet</a>
-								<a href="all_tires.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Tire Cheat Sheet</a>
-								<a href="all_dimensions.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Dimension Cheat Sheet</a>
+								<a href="all_engine.php" class="equipment-ribbon__item">All Eng Cheat Sheet</a>
+								<a href="all_filters.php" class="equipment-ribbon__item">Filter Cheat Sheet</a>
+								<a href="all_tires.php" class="equipment-ribbon__item">Tire Cheat Sheet</a>
+								<a href="all_dimensions.php" class="equipment-ribbon__item">Dimension Cheat Sheet</a>
 							</div>
 							<div class="equipment-ribbon" aria-label="Reports">
-								<a href="all_engine_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item equipment-ribbon__item--danger">Engine Reports</a>
-								<a href="all_oil_change_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Oil Change Reports</a>
-								<a href="all_filter_change_reports.php<?php echo isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-ribbon__item">Filter Change Reports</a>
+								<a href="all_engine_reports.php" class="equipment-ribbon__item equipment-ribbon__item--danger">Engine Reports</a>
+								<a href="all_oil_change_reports.php" class="equipment-ribbon__item">Oil Change Reports</a>
+								<a href="all_filter_change_reports.php" class="equipment-ribbon__item">Filter Change Reports</a>
 							</div>
 						</div>
 
@@ -620,11 +638,11 @@ function eq_format_warranty($dateValue) {
 													   data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
 													   data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
 													   data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
-													   data-warranty-href="<?php echo htmlspecialchars('Warranty.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''), ENT_QUOTES); ?>"
+													   data-warranty-href="<?php echo htmlspecialchars('Warranty.php?id=' . (int)$eq['equipment_id'], ENT_QUOTES); ?>"
 													>
 														<td>
 															<div class="equipment-number-cell">
-																<?php if (is_admin()): ?>
+																<?php if (!empty($canEditEquipments)): ?>
 																	<button type="button" class="equipment-number equipment-open-edit" title="Edit equipment">
 																		<?php echo htmlspecialchars((string)($eq['dhss_equipment_number'] ?? '')); ?>
 																	</button>
@@ -666,13 +684,13 @@ function eq_format_warranty($dateValue) {
 															<?php if ($val === '' || !isset($svgMap[$val])): ?>
 																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">
+																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?>">
 																	<img src="images/<?php echo htmlspecialchars($svgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> engine" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
 														</td>
 														<?php $val = trim((string)($eq['oil_status'] ?? ''));
-															$oilHref = 'oil_status.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''); ?>
+															$oilHref = 'oil_status.php?id=' . (int)$eq['equipment_id']; ?>
 														<td <?php if ($val !== '' ) { echo 'onclick="window.location=\'' . htmlspecialchars($oilHref, ENT_QUOTES) . '\';" style="cursor:pointer;"'; } ?>>
 															<?php
 															$oilSvgMap = [
@@ -684,7 +702,7 @@ function eq_format_warranty($dateValue) {
 															<?php if ($val === '' || !isset($oilSvgMap[$val])): ?>
 																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<a class="oil-status-link" href="oil_status.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">
+																<a class="oil-status-link" href="oil_status.php?id=<?php echo (int)$eq['equipment_id']; ?>">
 																	<img src="images/<?php echo htmlspecialchars($oilSvgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> oil" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
@@ -692,7 +710,7 @@ function eq_format_warranty($dateValue) {
 														<?php
 														$filterCondition = isset($eq['air_filters_condition_pct']) ? (float)$eq['air_filters_condition_pct'] : null;
 														$filterStatus = $eq['air_filters_status'] ?? ($eq['air_filters'] ?? null);
-														$filterHref = 'Airfilters.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : '');
+														$filterHref = 'Airfilters.php?id=' . (int)$eq['equipment_id'];
 														$filterSvgMap = [
 															'green' => 'greenfilter.svg',
 															'yellow' => 'yellowfilter.svg',
@@ -703,13 +721,13 @@ function eq_format_warranty($dateValue) {
 															<?php if ($filterStatus === null || !isset($filterSvgMap[$filterStatus])): ?>
 																<span class="equipment-pill equipment-pill--neutral">—</span>
 															<?php else: ?>
-																<a class="airfilters-status-link" href="Airfilters.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" title="Air filters condition: <?php echo htmlspecialchars((string)$filterCondition); ?>%">
+																<a class="airfilters-status-link" href="Airfilters.php?id=<?php echo (int)$eq['equipment_id']; ?>" title="Air filters condition: <?php echo htmlspecialchars((string)$filterCondition); ?>%">
 																	<img src="images/<?php echo htmlspecialchars($filterSvgMap[$filterStatus]); ?>" alt="<?php echo htmlspecialchars($filterStatus); ?> air filter" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
 														</td>
 														<td style="text-align:center;">
-															<?php $tiresHref = 'Tires.php?id=' . (int)$eq['equipment_id'] . (isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''); ?>
+															<?php $tiresHref = 'Tires.php?id=' . (int)$eq['equipment_id']; ?>
 															<a href="<?php echo htmlspecialchars($tiresHref, ENT_QUOTES); ?>" title="View tires" style="display:inline-block;">
 																<img src="images/tires.svg" alt="Tires" style="height:28px;vertical-align:middle;" />
 															</a>
@@ -729,14 +747,14 @@ function eq_format_warranty($dateValue) {
 																?>
 																<span class="warranty-display">
 																	<?php if ($warrantyFiles > 0): ?>
-																		<a href="Warranty.php?id=<?php echo (int)$eq['equipment_id']; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" title="View warranty" style="display:inline-block;">
+																		<a href="Warranty.php?id=<?php echo (int)$eq['equipment_id']; ?>" title="View warranty" style="display:inline-block;">
 																			<img src="images/warrenty.svg" alt="Warranty" style="height:28px;vertical-align:middle;" />
 																		</a>
 																	<?php else: ?>
 																		<img src="images/nowarrenty.svg" alt="No warranty" title="No warranty uploaded" style="height:28px;vertical-align:middle;opacity:0.7;" />
 																	<?php endif; ?>
 																</span>
-																<?php if (is_admin() && $warrantyFiles === 0): ?>
+																<?php if (!empty($canEditEquipments) && $warrantyFiles === 0): ?>
 																	<button type="button" class="warranty-add-btn" title="Upload warranty">Add</button>
 																<?php endif; ?>
 															</div>

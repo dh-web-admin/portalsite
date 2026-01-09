@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once '../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
 // Auth check
 if (!isset($_SESSION['email'])) {
@@ -20,17 +21,14 @@ if (!$res || $res->num_rows === 0) {
 }
 $row = $res->fetch_assoc();
 $actualRole = $row['role'];
-
-// Check if developer is previewing as admin
-if ($actualRole === 'developer' && isset($_GET['preview_role']) && $_GET['preview_role'] === 'admin') {
-    $role = 'admin';
-} elseif ($actualRole !== 'admin') {
-    header('Location: ../auth/login.php');
-    exit();
-} else {
-    $role = 'admin';
-}
+$role = $actualRole;
 $stmt->close();
+
+// Admin Panel access check (role default or per-user override).
+if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel')) {
+    header('Location: ../pages/dashboard/');
+    exit();
+}
 
 $sql = "SELECT id, name, email, role FROM users ORDER BY id DESC";
 $result = $conn->query($sql);
@@ -53,7 +51,7 @@ if ($result) {
 <body class="admin-page">
     <div class="admin-container">
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
-    <?php include __DIR__ . '/../partials/dev_notch.php'; ?>
+    <?php // Dev preview mode removed ?>
 
         <div class="admin-layout">
             <?php include __DIR__ . '/../partials/sidebar.php'; ?>

@@ -9,6 +9,8 @@ if (!defined('IS_API')) define('IS_API', true);
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../partials/permissions.php';
 
+require_edit_api('equipments');
+
 function json_exit_r($arr, $status = 200){
     http_response_code($status);
     $buf = ob_get_clean();

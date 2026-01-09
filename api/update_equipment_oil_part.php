@@ -21,6 +21,8 @@ function json_exit($arr, $status = 200){
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../partials/permissions.php';
 
+require_edit_api('equipments');
+
 // convert warnings/notices to exceptions so we can return JSON
 set_error_handler(function($severity, $message, $file, $line) {
     if (!(error_reporting() & $severity)) return false;

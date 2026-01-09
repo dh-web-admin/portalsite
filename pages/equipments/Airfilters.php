@@ -15,9 +15,6 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-if ($role === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-}
 $roleStmt->close();
 
 if (!can_access($role, 'equipments')) {
@@ -26,13 +23,27 @@ if (!can_access($role, 'equipments')) {
 }
 
 // Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+if (!can_edit_page('equipments')) {
     echo <<<'HTML'
 <style>.admin-only { display: none !important; }</style>
+<script>
+(function(){
+    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i,/\bsave\b/i];
+    function hideIfMatch(el){
+        var text=(el.innerText||el.value||'').trim();
+        var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
+        if(!text && !title) return;
+        var combined = (text + ' ' + title).trim();
+        for(var i=0;i<patterns.length;i++){ if(patterns[i].test(combined)){ el.style.display='none'; return; } }
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        var els=document.querySelectorAll('a,button,input[type=button],input[type=submit]');
+        els.forEach(hideIfMatch);
+    });
+})();
+</script>
 HTML;
 }
-
-$previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : '';
 
 $equipments = [];
 $equipErr = null;
@@ -186,10 +197,9 @@ $filterNames = array_values(array_unique($filterNames));
             <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
             <main class="content-area">
                 <div class="main-content">
-                    <?php $previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : ''; ?>
                     <div class="panel-wrapper">
                         <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
-                            <a id="backBtn" href="index.php<?php echo $previewParam; ?>" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
+                            <a id="backBtn" href="index.php" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
                         </div>
                     </div>
                     <div class="oil-page-heading" aria-hidden="true">
@@ -201,7 +211,7 @@ $filterNames = array_values(array_unique($filterNames));
                             <div id="filterAlerts" style="margin-bottom:10px;"></div>
                             <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:8px;gap:8px;">
                                 <button id="showAddFilterBtn" type="button" class="admin-only">Add Filter</button>
-                                <button id="changeFilterBtn" type="button">Change Air Filter</button>
+                                <button id="changeFilterBtn" type="button" class="admin-only">Change Air Filter</button>
                             </div>
                             <div id="filtersContainer">
                                 <table id="filtersTable">
@@ -263,7 +273,7 @@ $filterNames = array_values(array_unique($filterNames));
                         </div>
 
                         <!-- Change Air Filter Modal -->
-                        <div id="changeFilterModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1300;">
+                        <div id="changeFilterModal" class="admin-only" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:1300;">
                             <div style="background:#fff;padding:18px;border-radius:10px;min-width:520px;max-width:95%;box-shadow:0 16px 48px rgba(2,6,23,0.3);">
                                 <h3 id="changeFilterTitle" style="margin:0 0 8px 0;">Change Air Filter</h3>
                                 <div style="margin-bottom:10px;font-size:13px;color:#4b5563;">
@@ -301,7 +311,7 @@ $filterNames = array_values(array_unique($filterNames));
                                         </div>
                                     </div>
                                     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-                                        <button id="changeFilterSaveBtn" type="button" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
+                                        <button id="changeFilterSaveBtn" type="button" class="btn admin-only" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;">Save</button>
                                         <button id="changeFilterCancelBtn" type="button" class="btn btn-ghost" style="padding:8px 14px;border-radius:8px;border:1px solid #e5e7eb;background:#fff;">Cancel</button>
                                     </div>
                                 </div>
@@ -317,7 +327,7 @@ $filterNames = array_values(array_unique($filterNames));
         var INITIAL_EQUIPMENTS = <?php echo json_encode($equipments ?: []); ?>;
         var INITIAL_FILTERS = <?php echo json_encode($filtersByEquip ?: new stdClass()); ?>;
         var EXISTING_FILTER_NAMES = <?php echo json_encode($filterNames ?: []); ?>;
-        var IS_ADMIN = <?php echo is_admin() ? 'true' : 'false'; ?>;
+        var IS_ADMIN = <?php echo can_edit_page('equipments') ? 'true' : 'false'; ?>;
         var CURRENT_EQUIPMENT_ID = null;
         var CURRENT_USER_NAME = <?php echo json_encode($_SESSION['name'] ?? ''); ?>;
 
@@ -638,6 +648,7 @@ $filterNames = array_values(array_unique($filterNames));
 
         // Change Air Filter modal logic
         function openChangeFilterModal() {
+            if (!IS_ADMIN) return;
             if (!CURRENT_EQUIPMENT_ID) {
                 alert('Select an equipment first.');
                 return;
@@ -712,6 +723,7 @@ $filterNames = array_values(array_unique($filterNames));
         }
 
         function submitChangeFilter() {
+            if (!IS_ADMIN) return;
             if (!CURRENT_EQUIPMENT_ID) {
                 alert('Select an equipment first.');
                 return;
@@ -810,11 +822,11 @@ $filterNames = array_values(array_unique($filterNames));
             var deleteBtn = document.getElementById('deleteFilterBtn');
             if (deleteBtn) { deleteBtn.addEventListener('click', submitDeleteFilter); }
             var changeBtn = document.getElementById('changeFilterBtn');
-            if (changeBtn) { changeBtn.addEventListener('click', openChangeFilterModal); }
+            if (IS_ADMIN && changeBtn) { changeBtn.addEventListener('click', openChangeFilterModal); }
             var changeCancel = document.getElementById('changeFilterCancelBtn');
             if (changeCancel) { changeCancel.addEventListener('click', closeChangeFilterModal); }
             var changeSave = document.getElementById('changeFilterSaveBtn');
-            if (changeSave) { changeSave.addEventListener('click', submitChangeFilter); }
+            if (IS_ADMIN && changeSave) { changeSave.addEventListener('click', submitChangeFilter); }
             var addModal = document.getElementById('addFilterModal');
             if (addModal) {
                 addModal.addEventListener('click', function(evt){ if (evt.target === addModal) { closeAddFilterModal(); } });

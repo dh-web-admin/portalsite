@@ -8,6 +8,7 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 }
 
 require_once '../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
 // Get admin information
 $email = $_SESSION['email'];
@@ -15,12 +16,10 @@ $query = "SELECT role FROM users WHERE email='$email'";
 $result = $conn->query($query);
 $user = $result->fetch_assoc();
 
-// Verify user is admin or developer previewing as admin
-$actualRole = $user['role'];
-if ($actualRole === 'developer' && isset($_GET['preview_role']) && $_GET['preview_role'] === 'admin') {
-    // Developer previewing as admin - allow access
-} elseif ($actualRole !== 'admin') {
-    header("Location: ../auth/login.php");
+// Determine role and require Admin Panel access
+$role = (string)($user['role'] ?? 'laborer');
+if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel')) {
+    header('Location: ../pages/dashboard/');
     exit();
 }
 
@@ -126,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="admin-page">
     <div class="admin-container">
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
-    <?php include __DIR__ . '/../partials/dev_notch.php'; ?>
+    <?php // Dev preview mode removed ?>
 
         <div class="admin-layout">
             <?php include __DIR__ . '/../partials/sidebar.php'; ?>

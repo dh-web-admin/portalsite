@@ -1,10 +1,5 @@
 <?php
-// Coordinate Entry redirect with portal header (includes developer notch)
-// Shows the portal header/dev notch briefly before client-side redirecting to maps.php
 require_once __DIR__ . '/../../session_init.php';
-
-// Preserve developer preview param if present
-$preview = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : '';
 ?>
 <!doctype html>
 <html lang="en">
@@ -19,12 +14,11 @@ $preview = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['pr
 		<main style="padding:18px;">
 			<div class="note">
 				<h2>Coordinate Entry</h2>
-				<p>Redirecting you to the Coordinate Entry table — if you are not redirected automatically, <a href="../maps/maps.php<?php echo $preview; ?>">click here</a>.</p>
+				<p>Redirecting you to the Coordinate Entry table — if you are not redirected automatically, <a href="../maps/maps.php">click here</a>.</p>
 			</div>
 		</main>
 		<script>
-			// short client-side redirect to allow portal header (and dev notch) to render
-			setTimeout(function(){ window.location.href = '../maps/maps.php<?php echo $preview; ?>'; }, 400);
+			setTimeout(function(){ window.location.href = '../maps/maps.php'; }, 400);
 		</script>
 	</body>
 </html>

@@ -1,29 +1,6 @@
 <?php
 require_once __DIR__ . '/../../session_init.php';
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../partials/permissions.php';
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
-        echo <<<'HTML'
-<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
-<script>
-(function(){
-    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
-    function hideIfMatch(el){
-        var text=(el.innerText||el.value||'').trim();
-        var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
-        if(!text && !title) return;
-        var combined = (text + ' ' + title).trim();
-        for(var i=0;i<patterns.length;i++){ if(patterns[i].test(combined)){ el.style.display='none'; return; } }
-    }
-    document.addEventListener('DOMContentLoaded', function(){
-        var els=document.querySelectorAll('a,button,input[type=button],input[type=submit]');
-        els.forEach(hideIfMatch);
-    });
-})();
-</script>
-HTML;
-}
 
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     header('Location: /auth/login.php');
@@ -37,11 +14,24 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-if ($role === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-}
 $roleStmt->close();
-$previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : '';
+
+// Prevent permissions.php from echoing UI-hide CSS/JS before redirects (would break headers)
+if (!defined('IS_API')) {
+    define('IS_API', true);
+}
+require_once __DIR__ . '/../../partials/permissions.php';
+
+// Ensure permission helpers use the correct role for this request
+$GLOBALS['role'] = $role;
+$_SESSION['role'] = $role;
+
+if (!can_access($role, 'equipments')) {
+    header('Location: /pages/dashboard/');
+    exit();
+}
+
+$canEdit = can_edit_page('equipments');
 $equipment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($equipment_id <= 0) {
     die("Invalid equipment ID.");
@@ -191,17 +181,19 @@ $fileCount = count($fileList);
         <main class="content-area">
             <div style="display:flex;flex-direction:row;gap:40px;align-items:flex-start;min-height:480px;width:100%;">
                 <div style="flex:2 1 0;min-width:400px;max-width:60vw;">
-                    <a id="backBtn" href="index.php<?php echo $previewParam; ?>" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin-bottom:18px; transition: background 0.2s;">&larr; Back to Equipments</a>
+                    <a id="backBtn" href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin-bottom:18px; transition: background 0.2s;">&larr; Back to Equipments</a>
                     <div style="background:#e0e7ff;padding:16px 24px;border-radius:12px;font-weight:600;font-size:1.2rem;color:#374151;margin-bottom:18px;">
                         <?php echo $fileCount; ?> item<?php echo $fileCount !== 1 ? 's' : ''; ?> available for equipment #<?php echo $equipment_id; ?>
                     </div>
-                    <button id="uploadFilterBtn" class="download-print-btn" style="margin-bottom:12px;">
-                        <span class="icon" aria-hidden="true" style="display:inline-flex;align-items:center;">
-                            <!-- Up arrow for upload -->
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/></svg>
-                        </span>
-                        <span>Upload</span>
-                    </button>
+                    <?php if ($canEdit): ?>
+                        <button id="uploadFilterBtn" class="download-print-btn" style="margin-bottom:12px;">
+                            <span class="icon" aria-hidden="true" style="display:inline-flex;align-items:center;">
+                                <!-- Up arrow for upload -->
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/></svg>
+                            </span>
+                            <span>Upload</span>
+                        </button>
+                    <?php endif; ?>
                     <div id="uploadStatusMsg" style="margin:8px 0 0 0;font-weight:600;color:#22c55e;display:none;"></div>
                     <input type="file" id="filterFileInput" multiple style="display:none;" />
                     <ul id="filterFileList" class="file-list" style="list-style:none;padding:0;margin:0;min-height:40px;">
@@ -209,7 +201,9 @@ $fileCount = count($fileList);
                             <?php foreach ($fileList as $file): ?>
                                 <li class="filter-file-item" data-file-url="<?php echo htmlspecialchars($file['url']); ?>" data-file-id="<?php echo $file['id']; ?>" style="padding:12px 0;border-bottom:1px solid #f1f1f1;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
                                     <span>📄 <?php echo htmlspecialchars($file['name']); ?></span>
-                                    <button class="delete-upload-btn" style="margin-left:18px;padding:4px 12px;border-radius:6px;background:#f87171;color:#fff;border:none;font-size:13px;cursor:pointer;">Delete</button>
+                                    <?php if ($canEdit): ?>
+                                        <button class="delete-upload-btn" style="margin-left:18px;padding:4px 12px;border-radius:6px;background:#f87171;color:#fff;border:none;font-size:13px;cursor:pointer;">Delete</button>
+                                    <?php endif; ?>
                                 </li>
 
                             <?php endforeach; ?>
@@ -246,6 +240,7 @@ $fileCount = count($fileList);
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    var IS_ADMIN = <?php echo $canEdit ? 'true' : 'false'; ?>;
     var backBtn = document.getElementById('backBtn');
     if (backBtn) {
         backBtn.addEventListener('click', function(e){
@@ -301,6 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!item) return;
         // Handle delete button
         if (e.target.classList.contains('delete-upload-btn')) {
+            if (!IS_ADMIN) return;
             var fileId = item.getAttribute('data-file-id');
             var fileName = item.querySelector('span').textContent.trim();
             if (confirm('Are you sure you want to delete "' + fileName + '"? This cannot be undone.')) {
@@ -348,8 +344,13 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedFileName = item.textContent.trim();
         showPreview(selectedFileUrl, selectedFileName);
     });
-    uploadBtn.addEventListener('click', function() { fileInput.click(); });
+    if (IS_ADMIN) {
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', function() { fileInput.click(); });
+        }
+    }
     fileInput.addEventListener('change', function() {
+        if (!IS_ADMIN) return;
         if (!equipmentId || !fileInput.files.length) return;
         var files = Array.from(fileInput.files);
         var uploads = files.map(file => {

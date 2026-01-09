@@ -1,8 +1,13 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+if (!defined('IS_API')) define('IS_API', true);
+require_once __DIR__ . '/../partials/permissions.php';
 
 header('Content-Type: application/json');
+
+if (isset($conn)) $GLOBALS['conn'] = $conn;
+require_edit_api('maps');
 // Ensure session contains identifying info. If user_id is missing but email exists in session,
 // attempt to populate user_id and role from the database as a safe fallback.
 if (!isset($_SESSION['user_id']) && isset($_SESSION['email']) && isset($conn)) {
@@ -20,11 +25,7 @@ if (!isset($_SESSION['user_id']) && isset($_SESSION['email']) && isset($conn)) {
   }
 }
 
-// Only admins, developers, or data_entry users may update coordinates
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'developer', 'data_entry'])) {
-  echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-  exit;
-}
+// Permissions enforced by require_edit_api('maps')
 
 $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 $lat = isset($_POST['latitude']) ? trim($_POST['latitude']) : null;

@@ -1,17 +1,13 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+if (!defined('IS_API')) define('IS_API', true);
+require_once __DIR__ . '/../partials/permissions.php';
 
 header('Content-Type: application/json');
 
-// Check if user is authenticated and has admin/developer role
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'developer'])) {
-  echo json_encode([
-    'success' => false,
-    'message' => 'Unauthorized access'
-  ]);
-  exit;
-}
+if (isset($conn)) $GLOBALS['conn'] = $conn;
+require_edit_api('maps');
 
 // Validate required fields
 if (!isset($_POST['id']) || empty($_POST['id'])) {

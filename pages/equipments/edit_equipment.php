@@ -2,27 +2,30 @@
 require_once __DIR__ . '/../../session_init.php';
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../partials/permissions.php';
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
-        echo <<<'HTML'
-<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
-<script>
-(function(){
-    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
-    function hideIfMatch(el){
-        var text=(el.innerText||el.value||'').trim();
-        var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
-        if(!text && !title) return;
-        var combined = (text + ' ' + title).trim();
-        for(var i=0;i<patterns.length;i++){ if(patterns[i].test(combined)){ el.style.display='none'; return; } }
-    }
-    document.addEventListener('DOMContentLoaded', function(){
-        var els=document.querySelectorAll('a,button,input[type=button],input[type=submit]');
-        els.forEach(hideIfMatch);
-    });
-})();
-</script>
-HTML;
+
+if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
+    header('Location: /auth/login.php');
+    exit();
+}
+
+$email = $_SESSION['email'];
+$roleStmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
+$roleStmt->bind_param('s', $email);
+$roleStmt->execute();
+$roleRes = $roleStmt->get_result();
+$user = $roleRes ? $roleRes->fetch_assoc() : null;
+$role = $user ? $user['role'] : 'laborer';
+$roleStmt->close();
+
+if (!can_access($role, 'equipments')) {
+    header('Location: /pages/dashboard/');
+    exit();
+}
+
+if (!can_edit_page('equipments')) {
+    http_response_code(403);
+    echo 'Forbidden.';
+    exit();
 }
 
 $equipmentId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -44,11 +47,6 @@ if (!$equipment) {
 }
 
 // Handle update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !is_admin()) {
-    http_response_code(403);
-    echo '<div style="color:red;margin-bottom:16px;">Forbidden.</div>';
-    exit();
-}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fields = [
         'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',

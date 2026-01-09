@@ -35,6 +35,9 @@ if ($stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1')) {
     $stmt->close();
 }
 
+$GLOBALS['role'] = $role;
+require_edit_api('equipments');
+
 if (!can_access($role, 'equipments')) {
     fluid_json_exit(['success' => false, 'message' => 'Forbidden'], 403);
 }

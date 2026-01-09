@@ -1,14 +1,10 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['email'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
-
+if (isset($conn)) $GLOBALS['conn'] = $conn;
+require_edit_api('maps');
 header('Content-Type: application/json');
 
 // Get all suppliers missing coordinates

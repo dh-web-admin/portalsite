@@ -19,14 +19,18 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $actualRole = $user ? $user['role'] : 'laborer';
 
-// Check if developer is previewing as another role
-if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-} else {
-    $role = $actualRole;
-}
+$role = $actualRole;
 
 $stmt->close();
+
+require_once __DIR__ . '/../../partials/permissions.php';
+
+if (!can_access($role, 'project_checklist')) {
+  header('Location: /index.php');
+  exit();
+}
+
+$canEditProjectChecklist = can_edit_page('project_checklist');
 
 // Detect whether Projects table has a Status column (avoid fatal if not)
 $has_status = false;
@@ -58,6 +62,8 @@ try {
     $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     echo rtrim(str_replace('/pages/project_checklist/', '', $path), '/');
   ?>";
+
+    window.CAN_EDIT_PROJECT_CHECKLIST = <?php echo !empty($canEditProjectChecklist) ? 'true' : 'false'; ?>;
 </script>
 </head>
 <body class="admin-page">
@@ -69,7 +75,9 @@ try {
         <div class="main-content">
             <div class="toolbar" style="display:flex;align-items:center;margin-bottom:0px;gap:12px;position:sticky;top:0;z-index:100;background:#ffffff;padding:10px;box-shadow:0 2px 8px rgba(2,6,23,0.04);">
             <div class="toolbar-left" style="flex:0 0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-              <button id="addProjectBtn" class="btn btn-primary">New Project</button>
+              <?php if ($canEditProjectChecklist) { ?>
+                <button id="addProjectBtn" class="btn btn-primary">New Project</button>
+              <?php } ?>
               <div id="projectSummaryTab" class="project-summary-tab" aria-live="polite">
                 <div class="summary-header-line">Project: <span id="summaryProjectName" class="project-name-text">—</span></div>
                 <div class="summary-divider" role="presentation"></div>
@@ -81,8 +89,10 @@ try {
             </div>
             <!-- Centered controls (Save/Cancel + Filter inside a controlled centered area) -->
             <div style="position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;">
-              <button id="toggleEditBtn" class="btn btn-success" title="Enable editing" style="margin-left:8px;opacity:1">Edit</button>
-              <button id="cancelChangesBtn" class="btn btn-secondary" disabled style="margin-left:6px;opacity:0.6">Cancel</button>
+              <?php if ($canEditProjectChecklist) { ?>
+                <button id="toggleEditBtn" class="btn btn-success" title="Enable editing" style="margin-left:8px;opacity:1">Edit</button>
+                <button id="cancelChangesBtn" class="btn btn-secondary" disabled style="margin-left:6px;opacity:0.6">Cancel</button>
+              <?php } ?>
               <div class="filter-dropdown" style="margin-left:12px;">
                 <button id="filterBtn" class="filter-btn">Filter ▾</button>
                 <div id="filterMenu" class="filter-menu" aria-hidden="true">
@@ -245,15 +255,17 @@ try {
                           }
                           
                           // Minimal action icons: clone (copy), rename (pencil), delete (trash)
-                          $actions = "<span class=\"project-actions\" style=\"margin-left:auto\">" .
-                                     "<button class=\"icon-btn clone-btn\" data-project-id=\"{$pid}\" title=\"Clone project\">" .
-                                    "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M16 1H4a2 2 0 0 0-2 2v12\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><rect x=\"8\" y=\"7\" width=\"13\" height=\"13\" rx=\"2\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>" .
-                                     "</button>" .
-                                     "<button class=\"icon-btn edit-btn\" data-project-id=\"{$pid}\" title=\"Edit project\">" .
-                                    "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 21l3-1 11-11 1-3-3 1L4 20z\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>" .
-                                     "</button>" .
-                                     "" .
-                                     "</span>";
+                          $actions = '';
+                          if ($canEditProjectChecklist) {
+                            $actions = "<span class=\"project-actions\" style=\"margin-left:auto\">" .
+                                       "<button class=\"icon-btn clone-btn\" data-project-id=\"{$pid}\" title=\"Clone project\">" .
+                                      "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M16 1H4a2 2 0 0 0-2 2v12\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><rect x=\"8\" y=\"7\" width=\"13\" height=\"13\" rx=\"2\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>" .
+                                       "</button>" .
+                                       "<button class=\"icon-btn edit-btn\" data-project-id=\"{$pid}\" title=\"Edit project\">" .
+                                      "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 21l3-1 11-11 1-3-3 1L4 20z\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>" .
+                                       "</button>" .
+                                       "</span>";
+                          }
                           // wrap the project name in a span so we can flex it and push actions to the right
                           // CRITICAL: Wrap everything in a div to use flex layout without breaking sticky positioning
                           echo "<td class=\"project-name{$statusClass}\"><div><span class=\"project-title\">{$name}</span>{$actions}</div></td>\n";
@@ -290,35 +302,39 @@ try {
     </div>
   </div>
   
-  <!-- New Project Modal -->
-  <div id="newProjectModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:60"> 
-    <div style="background:#fff;border-radius:8px;padding:18px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2)">
-      <h3 style="margin:0 0 8px 0;font-size:18px">Create new project</h3>
-      <div style="margin-bottom:12px">
-        <label style="display:block;font-size:13px;margin-bottom:6px">Project name</label>
-        <input id="newProjectName" type="text" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px" placeholder="Enter project name" />
+  <?php if ($canEditProjectChecklist) { ?>
+    <!-- New Project Modal -->
+    <div id="newProjectModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:60"> 
+      <div style="background:#fff;border-radius:8px;padding:18px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2)">
+        <h3 style="margin:0 0 8px 0;font-size:18px">Create new project</h3>
+        <div style="margin-bottom:12px">
+          <label style="display:block;font-size:13px;margin-bottom:6px">Project name</label>
+          <input id="newProjectName" type="text" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px" placeholder="Enter project name" />
+        </div>
+        <div style="text-align:right;display:flex;gap:8px;justify-content:flex-end">
+          <button id="cancelNewProject" class="btn">Cancel</button>
+          <button id="createNewProject" class="btn btn-primary">Create</button>
+        </div>
       </div>
-      <div style="text-align:right;display:flex;gap:8px;justify-content:flex-end">
-        <button id="cancelNewProject" class="btn">Cancel</button>
-        <button id="createNewProject" class="btn btn-primary">Create</button>
+    </div>
+  <?php } ?>
+  </div>
+  <?php if ($canEditProjectChecklist) { ?>
+    <!-- Inline edit menu (rename / delete / mark status) -->
+    <div id="editMenu" class="edit-menu" role="dialog" aria-hidden="true">
+      <div class="row">
+        <input type="text" name="edit_name" placeholder="Project name" aria-label="Project name" />
+        <button class="btn" id="editMenuRename">Rename</button>
+      </div>
+      <div class="row actions">
+        <button class="btn danger" id="editMenuDelete">Delete</button>
+        <button class="btn muted" id="editMenuCancelProject">Cancel Project</button>
+        <button class="btn muted" id="editMenuCompleteProject">Mark Completed</button>
+        <button class="btn muted" id="editMenuContinueProject" style="display:none;">Continue Project</button>
+    <!-- visible action buttons now handle status changes directly -->
       </div>
     </div>
-  </div>
-  </div>
-  <!-- Inline edit menu (rename / delete / mark status) -->
-  <div id="editMenu" class="edit-menu" role="dialog" aria-hidden="true">
-    <div class="row">
-      <input type="text" name="edit_name" placeholder="Project name" aria-label="Project name" />
-      <button class="btn" id="editMenuRename">Rename</button>
-    </div>
-    <div class="row actions">
-      <button class="btn danger" id="editMenuDelete">Delete</button>
-      <button class="btn muted" id="editMenuCancelProject">Cancel Project</button>
-      <button class="btn muted" id="editMenuCompleteProject">Mark Completed</button>
-      <button class="btn muted" id="editMenuContinueProject" style="display:none;">Continue Project</button>
-  <!-- visible action buttons now handle status changes directly -->
-    </div>
-  </div>
+  <?php } ?>
 
   <!-- Status change toast -->
   <div id="statusToast" role="status" aria-live="polite">
@@ -448,13 +464,12 @@ try {
           .then(function(r){ return r.json(); })
           .then(function(json){
             if (json && json.success) {
-              // show toast if available, then reload shortly so user sees confirmation
               try { if (window && typeof window.showStatusToast === 'function') window.showStatusToast('Project cloned', 'success'); } catch(e){}
               setTimeout(function(){ window.location.reload(); }, 900);
             } else {
               alert((json && json.message) ? json.message : 'Failed to clone project');
             }
-          }).catch(function(err){ console.error(err); alert('Failed to clone project'); });
+          }).catch(function(err){ console.error(err); alert('Failed to clone project: ' + (err && err.message ? err.message : err)); });
       });
 
       // NOTE: rename is handled by the edit-menu (see separate script)
@@ -514,7 +529,7 @@ try {
           fetch('../../api/rename_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function(r){ return r.json(); })
             .then(function(json){ if (json && json.success) { window.location.reload(); } else { alert((json && json.message) ? json.message : 'Rename failed'); } })
-            .catch(function(){ alert('Rename failed'); });
+            .catch(function(err){ console.error('Rename error', err); alert('Rename failed: ' + (err && err.message ? err.message : err)); });
         });
 
         // Delete action
@@ -526,7 +541,7 @@ try {
           fetch('../../api/delete_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function(r){ return r.json(); })
             .then(function(json){ if (json && json.success) { window.location.reload(); } else { alert((json && json.message) ? json.message : 'Delete failed'); } })
-            .catch(function(){ alert('Delete failed'); });
+            .catch(function(err){ console.error('Delete error', err); alert('Delete failed: ' + (err && err.message ? err.message : err)); });
         });
 
         // Helper to set status via update_project_cell.php
@@ -536,7 +551,7 @@ try {
           fetch('../../api/update_project_cell.php', { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function(r){ return r.json(); })
             .then(function(json){ if (json && json.success) { window.location.reload(); } else { alert((json && json.message) ? json.message : 'Failed to update status'); } })
-            .catch(function(){ alert('Failed to update status'); });
+            .catch(function(err){ console.error('Status update error', err); alert('Failed to update status: ' + (err && err.message ? err.message : err)); });
         }
 
         if (btnCancelProject) btnCancelProject.addEventListener('click', function(){ var pid = editMenu.dataset.projectId; if (!pid) return; if (!confirm('Mark project as Cancelled?')) return; setStatus(pid, 'Cancelled'); });
@@ -590,7 +605,9 @@ try {
               try { if (window.UnsavedGuard) window.UnsavedGuard.markClean(); } catch(_){ }
               setTimeout(function(){ window.location.reload(); }, 900);
             } else {
-              alert((json && json.message) ? json.message : 'Failed to create project');
+              let msg = 'Failed to create project';
+              if (json && json.message) msg = 'Error: ' + json.message;
+              alert(msg);
             }
           })
           .catch(function(err){
@@ -1006,7 +1023,9 @@ editBtn.addEventListener('click', function(e){
     // Re-enable buttons
     editBtn.disabled = false;
     cancelBtn.disabled = false;
-    alert('Failed to save changes');
+    var msg = 'Failed to save changes';
+    if (err && err.message) msg += ': ' + err.message;
+    alert(msg);
   });
 });
     })();

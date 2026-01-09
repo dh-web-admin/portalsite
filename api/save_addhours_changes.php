@@ -7,6 +7,8 @@ header('Content-Type: application/json');
 // Ensure PHP notices/warnings do not break JSON responses
 @ini_set('display_errors', '0');
 
+require_edit_api('equipments');
+
 if (!function_exists('save_addhours_send_json')) {
     function save_addhours_send_json(array $payload) {
         if (ob_get_length()) {

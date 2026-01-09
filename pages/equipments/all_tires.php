@@ -1,3 +1,12 @@
+document.getElementById('edit_tire_id').value = btn.getAttribute('data-tire_id') || '';
+                document.getElementById('edit_equipment_id').value = btn.getAttribute('data-equipment_id') || '';
+
+                <input type="hidden" name="equipment_id" id="edit_equipment_id">
+
+                // If a new tire_id was created, update the hidden field for future saves
+                if (data.tire_id) {
+                    document.getElementById('edit_tire_id').value = data.tire_id;
+
 <?php
 require_once __DIR__ . '/../../session_init.php';
 
@@ -9,13 +18,13 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../partials/permissions.php';
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+// Hide edit/mutating UI elements for users without edit permission on this module
+if (!can_edit_page('equipments')) {
         echo <<<'HTML'
 <style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
 <script>
 (function(){
-    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
+    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i,/\bsave\b/i];
     function hideIfMatch(el){
         var text=(el.innerText||el.value||'').trim();
         var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
@@ -40,18 +49,11 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-
-// Check if developer is previewing as another role
-if ($role === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-}
-
 $roleStmt->close();
 
-// Preserve preview mode in URLs
-$previewParam = '';
-if (isset($_GET['preview_role'])) {
-    $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
+if (!can_access($role, 'equipments')) {
+    header('Location: /pages/dashboard/');
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -228,6 +230,7 @@ if (isset($_GET['preview_role'])) {
             <h3 style="margin-bottom:18px; font-size:1.3rem; font-weight:700; color:#374151;">Edit Tire Info</h3>
             <form id="editTireForm">
                 <input type="hidden" name="tire_id" id="edit_tire_id">
+                <input type="hidden" name="equipment_id" id="edit_equipment_id">
                 <div style="margin-bottom:12px;">
                     <label style="font-weight:600;color:#374151;margin-bottom:4px;display:block;">Steer Tire Make</label>
                     <input type="text" name="steer_tire_make" id="edit_steer_tire_make" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #d1d5db;font-size:15px;">
@@ -269,7 +272,7 @@ if (isset($_GET['preview_role'])) {
                     <h1 class="admin-page-title" style="text-align:center;margin-top:32px;margin-bottom:24px;">All Tires Cheat-Sheet</h1>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <div>
-                            <a href="index.php<?php echo $previewParam; ?>" class="equipment-btn equipment-btn--secondary">&larr; Back to Equipments</a>
+                            <a href="index.php" class="equipment-btn equipment-btn--secondary">&larr; Back to Equipments</a>
                         </div>
                         <div>
                             <button id="downloadCsvBtn" class="download-print-btn">
@@ -387,13 +390,17 @@ if (isset($_GET['preview_role'])) {
     document.querySelectorAll('.edit-tire-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
             document.getElementById('edit_tire_id').value = btn.getAttribute('data-tire_id') || '';
+            document.getElementById('edit_equipment_id').value = btn.getAttribute('data-equipment_id') || '';
             document.getElementById('edit_steer_tire_make').value = btn.getAttribute('data-steer_tire_make') || '';
             document.getElementById('edit_steer_tire_model').value = btn.getAttribute('data-steer_tire_model') || '';
             document.getElementById('edit_steer_tire_size').value = btn.getAttribute('data-steer_tire_size') || '';
             document.getElementById('edit_drive_tire_make').value = btn.getAttribute('data-drive_tire_make') || '';
             document.getElementById('edit_drive_tire_model').value = btn.getAttribute('data-drive_tire_model') || '';
             document.getElementById('edit_drive_tire_size').value = btn.getAttribute('data-drive_tire_size') || '';
-            
+            // Defensive: always set both hidden fields before open
+            var tid = document.getElementById('edit_tire_id').value;
+            var eid = btn.getAttribute('data-equipment_id') || '';
+            document.getElementById('edit_equipment_id').value = eid;
             document.getElementById('editTireModal').style.display = 'flex';
         });
     });
@@ -412,7 +419,16 @@ if (isset($_GET['preview_role'])) {
 
     document.getElementById('editTireForm').addEventListener('submit', function(e) {
         e.preventDefault();
+        // Defensive: always set both hidden fields before submit
+        var tid = document.getElementById('edit_tire_id').value;
+        var eid = document.getElementById('edit_equipment_id').value;
+        if (!eid) {
+            alert('Missing equipment_id.');
+            return;
+        }
         var formData = new FormData(this);
+        formData.set('tire_id', tid || '');
+        formData.set('equipment_id', eid);
         fetch('../../api/update_tire_info.php', {
             method: 'POST',
             body: formData
@@ -420,6 +436,10 @@ if (isset($_GET['preview_role'])) {
         .then(resp => resp.json())
         .then(data => {
             if (data.success) {
+                // If a new tire_id was created, update the hidden field for future saves
+                if (data.tire_id) {
+                    document.getElementById('edit_tire_id').value = data.tire_id;
+                }
                 alert('Tire info updated successfully!');
                 document.getElementById('editTireModal').style.display = 'none';
                 document.getElementById('editTireForm').reset();
@@ -428,9 +448,7 @@ if (isset($_GET['preview_role'])) {
                 alert('Error updating tire info: ' + (data.error || 'Unknown error'));
             }
         })
-        .catch(() => {
-            alert('Network error.');
-        });
+        .catch(() => alert('Network error while updating'));
     });
     </script>
     <script src="../../assets/js/mobile-menu.js"></script>

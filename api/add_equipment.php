@@ -32,6 +32,8 @@ require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../partials/permissions.php';
 
+require_edit_api('equipments');
+
 // Require login
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     http_response_code(401);

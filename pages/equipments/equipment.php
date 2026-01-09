@@ -19,31 +19,46 @@ $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $actualRole = $user ? $user['role'] : 'laborer';
 
-// Check if developer is previewing as another role
-if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-} else {
-    $role = $actualRole;
-}
+$role = $actualRole;
 
 $stmt->close();
 
-// Preserve preview mode in URLs
-$previewParam = '';
-if (isset($_GET['preview_role'])) {
-    $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
+if (!can_access($role, 'equipments')) {
+    header('Location: /pages/dashboard/');
+    exit();
 }
 
 // Handle save changes POST request (move this block to the top to avoid headers already sent)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !is_admin()) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !can_edit_page('equipments')) {
     http_response_code(403);
     echo '<div style="color:red;margin-bottom:16px;">Forbidden.</div>';
     exit();
 }
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+// Hide admin-only UI elements for users without edit permission on this module
+if (!can_edit_page('equipments')) {
         echo <<<'HTML'
-<style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
+<style>
+.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn,
+button[name="save_changes"], button[name="delete_equipment"], #saveNewIssue, #saveEditIssue, #deleteEditIssue {
+    display: none !important;
+}
+</style>
+<script>
+(function(){
+    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i,/\bsave\b/i,/\bupdate\b/i];
+    function hideIfMatch(el){
+        var text=(el.innerText||el.value||'').trim();
+        var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
+        if(!text && !title) return;
+        var combined = (text + ' ' + title).trim();
+        for(var i=0;i<patterns.length;i++){ if(patterns[i].test(combined)){ el.style.display='none'; return; } }
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        var els=document.querySelectorAll('a,button,input[type=button],input[type=submit]');
+        els.forEach(hideIfMatch);
+    });
+})();
+</script>
 HTML;
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && isset($_POST['equipment_id'])) {
@@ -67,11 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && is
     $stmt->execute();
     // Redirect to view mode after save
     $redirectUrl = 'equipment.php?id=' . $_POST['equipment_id'];
-    // Preserve preview_role from POST (if submitted via form) or GET (if still in URL)
-    $previewRole = $_POST['preview_role'] ?? $_GET['preview_role'] ?? null;
-    if ($previewRole) {
-        $redirectUrl .= '&preview_role=' . urlencode($previewRole);
-    }
     header('Location: ' . $redirectUrl);
     exit();
 }
@@ -84,11 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_equipment']) &
         $stmt->bind_param('i', $deleteId);
         $stmt->execute();
         $redirectUrl = 'index.php';
-        // Preserve preview_role from POST (if submitted via form) or GET (if still in URL)
-        $previewRole = $_POST['preview_role'] ?? $_GET['preview_role'] ?? null;
-        if ($previewRole) {
-            $redirectUrl .= '?preview_role=' . urlencode($previewRole);
-        }
         header('Location: ' . $redirectUrl);
         exit();
     }
@@ -763,23 +768,20 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
             <main class="content-area">
                 <div class="equipment-detail-page">
                     <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left">
-                        <a href="index.php<?php echo $previewParam; ?>" class="equipment-back-btn">
+                        <a href="index.php" class="equipment-back-btn">
                             <span>←</span>
                             <span>Back to Equipments</span>
                         </a>
                     </div>
                     <?php if ($editMode) { ?>
 <form method="POST" style="margin-bottom:0;">
-<?php if (isset($_GET['preview_role'])): ?>
-<input type="hidden" name="preview_role" value="<?php echo htmlspecialchars($_GET['preview_role']); ?>" />
-<?php endif; ?>
 <?php } ?>
 <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 18px; gap: 12px;">
     <?php if (!$editMode) { ?>
-        <a href="equipment.php?id=<?php echo $equipmentId; ?>&edit=1<?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-action-btn equipment-action-btn--primary" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Edit</a>
+        <a href="equipment.php?id=<?php echo $equipmentId; ?>&edit=1" class="equipment-action-btn equipment-action-btn--primary" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Edit</a>
     <?php } else { ?>
         <button class="equipment-action-btn equipment-action-btn--primary" type="submit" name="save_changes" style="min-width: 80px; padding: 8px 20px; font-size: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.07);">Save Changes</button>
-        <a href="equipment.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>" class="equipment-action-btn" style="background:#f3f6f9;color:#2563eb;border-color:#d1d5db;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);text-decoration:none;">Cancel</a>
+        <a href="equipment.php?id=<?php echo $equipmentId; ?>" class="equipment-action-btn" style="background:#f3f6f9;color:#2563eb;border-color:#d1d5db;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);text-decoration:none;">Cancel</a>
         <input type="hidden" name="equipment_id" value="<?php echo $equipmentId; ?>" />
         <button type="submit" name="delete_equipment" class="equipment-action-btn" style="background:#ef4444;color:#fff;border-color:#ef4444;min-width:80px;padding:8px 20px;font-size:15px;box-shadow:0 1px 3px rgba(0,0,0,0.07);" onclick="return confirm('Are you sure you want to delete this equipment?');">Delete</button>
     <?php } ?>
@@ -959,13 +961,13 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                     <div class="equipment-future-section">
                                                 <div class="equipment-tabs-container">
             <div class="equipment-tabs">
-                <a class="equipment-tab" href="Airfilters.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Filters</a>
-                <a class="equipment-tab" href="Tires.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Tires</a>
-                <a class="equipment-tab" href="oil_status.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Oil</a>
+                <a class="equipment-tab" href="Airfilters.php?id=<?php echo $equipmentId; ?>">Filters</a>
+                <a class="equipment-tab" href="Tires.php?id=<?php echo $equipmentId; ?>">Tires</a>
+                <a class="equipment-tab" href="oil_status.php?id=<?php echo $equipmentId; ?>">Oil</a>
                 <button class="equipment-tab">Manuals</button>
-                <a class="equipment-tab" href="Warranty.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Warranty</a>
+                <a class="equipment-tab" href="Warranty.php?id=<?php echo $equipmentId; ?>">Warranty</a>
                 <button class="equipment-tab">Parts</button>
-                <a class="equipment-tab" href="all_dimensions.php?id=<?php echo $equipmentId; ?><?php echo isset($_GET['preview_role']) ? '&preview_role=' . urlencode($_GET['preview_role']) : ''; ?>">Dimensions</a>
+                <a class="equipment-tab" href="all_dimensions.php?id=<?php echo $equipmentId; ?>">Dimensions</a>
                 <button class="equipment-tab">Photos</button>
             </div>
         </div>
@@ -1791,9 +1793,7 @@ if (editIssueForm) {
                 var prev = document.querySelector('.equipment-chip.is-selected');
                 if (prev) { prev.classList.remove('is-selected'); }
                 chip.classList.add('is-selected');
-                var previewParam = (new URLSearchParams(location.search)).get('preview_role');
                 var url = 'equipment.php?id=' + eq.equipment_id;
-                if (previewParam) { url += '&preview_role=' + encodeURIComponent(previewParam); }
                 window.location.href = url;
             });
             ribbon.appendChild(chip);

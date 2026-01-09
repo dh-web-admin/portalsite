@@ -15,9 +15,6 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-if ($role === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-}
 $roleStmt->close();
 
 if (!can_access($role, 'equipments')) {
@@ -25,7 +22,8 @@ if (!can_access($role, 'equipments')) {
     exit();
 }
 
-$previewParam = isset($_GET['preview_role']) ? '?preview_role=' . urlencode($_GET['preview_role']) : '';
+$canEditEquipments = can_edit_page('equipments');
+
 $equipmentId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($equipmentId <= 0) {
     die('Invalid equipment ID.');
@@ -118,7 +116,9 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
         .tire-modal__title { margin: 0; font-size: 18px; font-weight: 700; }
         .tire-modal__close { background: rgba(255,255,255,0.2); border: none; color: #fff; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
         .tire-modal__close:hover { background: rgba(255,255,255,0.3); }
-        .tire-modal__body { padding: 20px; display: grid; gap: 14px; }
+        .tire-modal__body { padding: 20px; }
+        .tire-modal__section { display: none; }
+        .tire-modal__section.is-active { display: grid; gap: 14px; }
         .tire-modal__field { display: flex; flex-direction: column; gap: 6px; }
         .tire-modal__field label { font-weight: 700; color: #374151; font-size: 14px; }
         .tire-modal__field input { padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; }
@@ -145,7 +145,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 <div class="main-content">
                     <div class="panel-wrapper">
                         <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
-                            <a id="backBtn" href="index.php<?php echo $previewParam; ?>" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
+                            <a id="backBtn" href="index.php" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
                         </div>
                         <div class="selected-info" aria-live="polite">
                             <div class="hours-bubble">Current equipment hours: <?php echo display_cell($currentHours); ?></div>
@@ -162,7 +162,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                             <div class="info-card">
                                 <div class="card-header">
                                     <h3>Equipment Details</h3>
-                                    <button type="button" class="edit-btn">Edit</button>
+                                    <?php if (!empty($canEditEquipments)) { ?><button type="button" class="edit-btn" data-scope="equipment">Edit</button><?php } ?>
                                 </div>
                                 <ul class="info-list">
                                     <li><span class="info-label">Type</span><span class="info-value" id="eq-type-value"><?php echo display_cell($equipment['type'] ?? ''); ?></span></li>
@@ -175,7 +175,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                             <div class="info-card">
                                 <div class="card-header">
                                     <h3>Steer Tires</h3>
-                                    <button type="button" class="edit-btn">Edit</button>
+                                    <?php if (!empty($canEditEquipments)) { ?><button type="button" class="edit-btn" data-scope="steer">Edit</button><?php } ?>
                                 </div>
                                 <ul class="info-list">
                                     <li><span class="info-label">Make</span><span class="info-value" id="steer-make-value"><?php echo display_cell($tire['steer_tire_make'] ?? ''); ?></span></li>
@@ -187,7 +187,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                             <div class="info-card">
                                 <div class="card-header">
                                     <h3>Drive Tires</h3>
-                                    <button type="button" class="edit-btn">Edit</button>
+                                    <?php if (!empty($canEditEquipments)) { ?><button type="button" class="edit-btn" data-scope="drive">Edit</button><?php } ?>
                                 </div>
                                 <ul class="info-list">
                                     <li><span class="info-label">Make</span><span class="info-value" id="drive-make-value"><?php echo display_cell($tire['drive_tire_make'] ?? ''); ?></span></li>
@@ -209,6 +209,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                         </div>
                     </div>
                 </div>
+                <?php if (!empty($canEditEquipments)) { ?>
                 <div id="tireEditModal" class="tire-modal" aria-hidden="true">
                     <div class="tire-modal__dialog" role="dialog" aria-modal="true" aria-label="Edit equipment and tires">
                         <div class="tire-modal__header">
@@ -218,47 +219,53 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                         <div class="tire-modal__error" id="tireModalError"></div>
                         <form id="tireModalForm">
                             <div class="tire-modal__body">
-                                <div class="tire-modal__field">
-                                    <label for="modal_type">Type</label>
-                                    <input id="modal_type" name="type" type="text" />
+                                <div class="tire-modal__section" data-scope="equipment">
+                                    <div class="tire-modal__field">
+                                        <label for="modal_type">Type</label>
+                                        <input id="modal_type" name="type" type="text" />
+                                    </div>
+                                    <div class="tire-modal__field">
+                                        <label for="modal_year">Year</label>
+                                        <input id="modal_year" name="vehicle_year" type="text" />
+                                    </div>
+                                    <div class="tire-modal__field">
+                                        <label for="modal_make">Make</label>
+                                        <input id="modal_make" name="make" type="text" />
+                                    </div>
+                                    <div class="tire-modal__field">
+                                        <label for="modal_model">Model</label>
+                                        <input id="modal_model" name="model" type="text" />
+                                    </div>
                                 </div>
-                                <div class="tire-modal__field">
-                                    <label for="modal_year">Year</label>
-                                    <input id="modal_year" name="vehicle_year" type="text" />
+
+                                <div class="tire-modal__section" data-scope="steer">
+                                    <div class="tire-modal__field">
+                                        <label for="modal_steer_make">Steer Make</label>
+                                        <input id="modal_steer_make" name="steer_tire_make" type="text" />
+                                    </div>
+                                    <div class="tire-modal__field">
+                                        <label for="modal_steer_model">Steer Model</label>
+                                        <input id="modal_steer_model" name="steer_tire_model" type="text" />
+                                    </div>
+                                    <div class="tire-modal__field">
+                                        <label for="modal_steer_size">Steer Size</label>
+                                        <input id="modal_steer_size" name="steer_tire_size" type="text" />
+                                    </div>
                                 </div>
-                                <div class="tire-modal__field">
-                                    <label for="modal_make">Make</label>
-                                    <input id="modal_make" name="make" type="text" />
-                                </div>
-                                <div class="tire-modal__field">
-                                    <label for="modal_model">Model</label>
-                                    <input id="modal_model" name="model" type="text" />
-                                </div>
-                                <hr>
-                                <div class="tire-modal__field">
-                                    <label for="modal_steer_make">Steer Make</label>
-                                    <input id="modal_steer_make" name="steer_tire_make" type="text" />
-                                </div>
-                                <div class="tire-modal__field">
-                                    <label for="modal_steer_model">Steer Model</label>
-                                    <input id="modal_steer_model" name="steer_tire_model" type="text" />
-                                </div>
-                                <div class="tire-modal__field">
-                                    <label for="modal_steer_size">Steer Size</label>
-                                    <input id="modal_steer_size" name="steer_tire_size" type="text" />
-                                </div>
-                                <hr>
-                                <div class="tire-modal__field">
-                                    <label for="modal_drive_make">Drive Make</label>
-                                    <input id="modal_drive_make" name="drive_tire_make" type="text" />
-                                </div>
-                                <div class="tire-modal__field">
-                                    <label for="modal_drive_model">Drive Model</label>
-                                    <input id="modal_drive_model" name="drive_tire_model" type="text" />
-                                </div>
-                                <div class="tire-modal__field">
-                                    <label for="modal_drive_size">Drive Size</label>
-                                    <input id="modal_drive_size" name="drive_tire_size" type="text" />
+
+                                <div class="tire-modal__section" data-scope="drive">
+                                    <div class="tire-modal__field">
+                                        <label for="modal_drive_make">Drive Make</label>
+                                        <input id="modal_drive_make" name="drive_tire_make" type="text" />
+                                    </div>
+                                    <div class="tire-modal__field">
+                                        <label for="modal_drive_model">Drive Model</label>
+                                        <input id="modal_drive_model" name="drive_tire_model" type="text" />
+                                    </div>
+                                    <div class="tire-modal__field">
+                                        <label for="modal_drive_size">Drive Size</label>
+                                        <input id="modal_drive_size" name="drive_tire_size" type="text" />
+                                    </div>
                                 </div>
                             </div>
                             <div class="tire-modal__actions">
@@ -268,6 +275,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                         </form>
                     </div>
                 </div>
+                <?php } ?>
             </main>
         </div>
     </div>
@@ -286,6 +294,9 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 });
             }
 
+            var CAN_EDIT = <?php echo !empty($canEditEquipments) ? 'true' : 'false'; ?>;
+            if (!CAN_EDIT) return;
+
             var modal = document.getElementById('tireEditModal');
             var btns = document.querySelectorAll('.info-card .edit-btn');
             var closeBtn = document.getElementById('tireModalClose');
@@ -293,6 +304,9 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
             var form = document.getElementById('tireModalForm');
             var saveBtn = document.getElementById('tireModalSave');
             var errBox = document.getElementById('tireModalError');
+            var titleEl = document.querySelector('.tire-modal__title');
+            var sections = document.querySelectorAll('.tire-modal__section');
+            var activeScope = 'equipment';
 
             var equipmentId = <?php echo (int)$equipmentId; ?>;
             var tireId = <?php echo (int)$tireId; ?>;
@@ -323,13 +337,30 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 inputs.drive_size.value = document.getElementById('drive-size-value').textContent.trim();
             }
 
-            function openModal(){
+            function setActiveScope(scope){
+                activeScope = scope || 'equipment';
+                sections.forEach(function(s){
+                    var sScope = s.getAttribute('data-scope');
+                    if (sScope === activeScope) s.classList.add('is-active');
+                    else s.classList.remove('is-active');
+                });
+                if (titleEl) {
+                    if (activeScope === 'steer') titleEl.textContent = 'Edit Steer Tires';
+                    else if (activeScope === 'drive') titleEl.textContent = 'Edit Drive Tires';
+                    else titleEl.textContent = 'Edit Equipment Details';
+                }
+            }
+
+            function openModal(scope){
                 if (!modal) return;
                 fillFormFromPage();
+                setActiveScope(scope);
                 modal.classList.add('is-open');
                 modal.setAttribute('aria-hidden','false');
                 if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
-                if (inputs.type) inputs.type.focus();
+                if (activeScope === 'steer' && inputs.steer_make) inputs.steer_make.focus();
+                else if (activeScope === 'drive' && inputs.drive_make) inputs.drive_make.focus();
+                else if (inputs.type) inputs.type.focus();
             }
 
             function closeModal(){
@@ -340,7 +371,11 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 if (errBox) { errBox.style.display = 'none'; errBox.textContent = ''; }
             }
 
-            btns.forEach(function(b){ b.addEventListener('click', openModal); });
+            btns.forEach(function(b){
+                b.addEventListener('click', function(){
+                    openModal(b.getAttribute('data-scope') || 'equipment');
+                });
+            });
             if (closeBtn) closeBtn.addEventListener('click', closeModal);
             if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
             if (modal) modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
@@ -366,6 +401,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
 
                 var tireFd = new FormData();
                 tireFd.append('tire_id', tireId);
+                tireFd.append('equipment_id', equipmentId);
                 tireFd.append('steer_tire_make', inputs.steer_make.value);
                 tireFd.append('steer_tire_model', inputs.steer_model.value);
                 tireFd.append('steer_tire_size', inputs.steer_size.value);
@@ -373,28 +409,45 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 tireFd.append('drive_tire_model', inputs.drive_model.value);
                 tireFd.append('drive_tire_size', inputs.drive_size.value);
 
-                Promise.all([
-                    fetch('../../api/update_equipment.php', { method: 'POST', body: equipFd, credentials: 'same-origin' }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); }),
-                    fetch('../../api/update_tire_info.php', { method: 'POST', body: tireFd, credentials: 'same-origin' }).then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
-                ]).then(function(resArray){
-                    var equipRes = resArray[0];
-                    var tireRes = resArray[1];
-                    if (!equipRes.ok || !equipRes.json || !equipRes.json.success) {
-                        throw new Error((equipRes.json && equipRes.json.message) ? equipRes.json.message : 'Failed to update equipment');
+                var requests = [];
+                if (activeScope === 'equipment') {
+                    requests.push(
+                        fetch('../../api/update_equipment.php', { method: 'POST', body: equipFd, credentials: 'same-origin' })
+                            .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+                    );
+                } else {
+                    // update_tire_info.php expects all tire fields; keep the non-edited side intact
+                    requests.push(
+                        fetch('../../api/update_tire_info.php', { method: 'POST', body: tireFd, credentials: 'same-origin' })
+                            .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, json: j }; }); })
+                    );
+                }
+
+                Promise.all(requests).then(function(resArray){
+                    var res = resArray[0];
+                    if (!res.ok || !res.json || !res.json.success) {
+                        throw new Error((res.json && (res.json.message || res.json.error)) ? (res.json.message || res.json.error) : 'Update failed');
                     }
-                    if (!tireRes.ok || !tireRes.json || !tireRes.json.success) {
-                        throw new Error((tireRes.json && tireRes.json.error) ? tireRes.json.error : 'Failed to update tires');
+
+                    if (res.json && typeof res.json.tire_id !== 'undefined') {
+                        var newId = parseInt(res.json.tire_id, 10);
+                        if (!isNaN(newId) && newId > 0) tireId = newId;
                     }
-                    document.getElementById('eq-type-value').textContent = inputs.type.value;
-                    document.getElementById('eq-year-value').textContent = inputs.year.value;
-                    document.getElementById('eq-make-value').textContent = inputs.make.value;
-                    document.getElementById('eq-model-value').textContent = inputs.model.value;
-                    document.getElementById('steer-make-value').textContent = inputs.steer_make.value;
-                    document.getElementById('steer-model-value').textContent = inputs.steer_model.value;
-                    document.getElementById('steer-size-value').textContent = inputs.steer_size.value;
-                    document.getElementById('drive-make-value').textContent = inputs.drive_make.value;
-                    document.getElementById('drive-model-value').textContent = inputs.drive_model.value;
-                    document.getElementById('drive-size-value').textContent = inputs.drive_size.value;
+
+                    // Reflect updates in UI
+                    if (activeScope === 'equipment') {
+                        document.getElementById('eq-type-value').textContent = inputs.type.value;
+                        document.getElementById('eq-year-value').textContent = inputs.year.value;
+                        document.getElementById('eq-make-value').textContent = inputs.make.value;
+                        document.getElementById('eq-model-value').textContent = inputs.model.value;
+                    } else {
+                        document.getElementById('steer-make-value').textContent = inputs.steer_make.value;
+                        document.getElementById('steer-model-value').textContent = inputs.steer_model.value;
+                        document.getElementById('steer-size-value').textContent = inputs.steer_size.value;
+                        document.getElementById('drive-make-value').textContent = inputs.drive_make.value;
+                        document.getElementById('drive-model-value').textContent = inputs.drive_model.value;
+                        document.getElementById('drive-size-value').textContent = inputs.drive_size.value;
+                    }
                     closeModal();
                 }).catch(function(err){
                     setError(err.message || 'Update failed');

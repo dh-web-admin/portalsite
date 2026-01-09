@@ -77,6 +77,9 @@ if ($stmt = $conn->prepare('SELECT role FROM users WHERE email = ? LIMIT 1')) {
     $stmt->close();
 }
 
+$GLOBALS['role'] = $role;
+require_edit_api('equipments');
+
 if (!can_access($role, 'equipments')) {
     json_exit_reset_filter(['success' => false, 'error' => 'Forbidden'], 403);
 }

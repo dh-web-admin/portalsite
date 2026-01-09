@@ -1,6 +1,10 @@
 <?php
+require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 header('Content-Type: application/json');
+
+require_edit_api('equipments');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

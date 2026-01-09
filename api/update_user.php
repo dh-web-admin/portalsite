@@ -1,7 +1,10 @@
 <?php
-session_start();
-require_once '../config/config.php';
+require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 header('Content-Type: application/json; charset=utf-8');
+
+require_edit_api('admin_panel');
 
 // Only POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -9,30 +12,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success'=>false,'error'=>'Method not allowed']);
     exit();
 }
-
-if (!isset($_SESSION['email'])) {
-    http_response_code(403);
-    echo json_encode(['success'=>false,'error'=>'Not authenticated']);
-    exit();
-}
-
-$adminEmail = $_SESSION['email'];
-$stmt = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1");
-$stmt->bind_param('s', $adminEmail);
-$stmt->execute();
-$res = $stmt->get_result();
-if (!$res || $res->num_rows === 0) {
-    http_response_code(403);
-    echo json_encode(['success'=>false,'error'=>'Unauthorized']);
-    exit();
-}
-$row = $res->fetch_assoc();
-if ($row['role'] !== 'admin') {
-    http_response_code(403);
-    echo json_encode(['success'=>false,'error'=>'Admins only']);
-    exit();
-}
-$stmt->close();
 
 $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 $name = isset($_POST['name']) ? trim($_POST['name']) : null;

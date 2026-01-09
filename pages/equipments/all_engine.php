@@ -9,13 +9,13 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../partials/permissions.php';
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+// Hide edit/mutating UI elements for users without edit permission on this module
+if (!can_edit_page('equipments')) {
         echo <<<'HTML'
 <style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
 <script>
 (function(){
-    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
+    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i,/\bsave\b/i];
     function hideIfMatch(el){
         var text=(el.innerText||el.value||'').trim();
         var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
@@ -40,18 +40,11 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-
-// Check if developer is previewing as another role
-if ($role === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-}
-
 $roleStmt->close();
 
-// Preserve preview mode in URLs
-$previewParam = '';
-if (isset($_GET['preview_role'])) {
-    $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
+if (!can_access($role, 'equipments')) {
+    header('Location: /pages/dashboard/');
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -227,7 +220,7 @@ if (isset($_GET['preview_role'])) {
                     <h1 class="admin-page-title" style="text-align:center;margin-top:32px;margin-bottom:24px;">All Engine Cheat-Sheet</h1>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <div>
-                            <a href="index.php<?php echo $previewParam; ?>" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
+                            <a href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
                         </div>
                         <div>
                             <!-- Update SVGs to use currentColor for stroke so they inherit text color -->
@@ -273,7 +266,7 @@ if (isset($_GET['preview_role'])) {
                             </thead>
                             <tbody>
                                 <?php
-                                $sql = "SELECT dhcst_equipment_number, dhss_equipment_number, type, vin, vehicle_year, make, model, engine, engine_serial_number, transmission, trans_serial_number, transfer_case_serial, front_differential_serial, middle_differential_serial, rear_differential_serial FROM equipments ORDER BY equipment_id ASC";
+                                $sql = "SELECT equipment_id, dhcst_equipment_number, dhss_equipment_number, type, vin, vehicle_year, make, model, engine, engine_serial_number, transmission, trans_serial_number, transfer_case_serial, front_differential_serial, middle_differential_serial, rear_differential_serial FROM equipments ORDER BY equipment_id ASC";
                                 $result = $conn->query($sql);
                                 if ($result && $result->num_rows > 0) {
                                     while ($row = $result->fetch_assoc()) {

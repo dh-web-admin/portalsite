@@ -2,13 +2,11 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+// Indicate this is an API endpoint to prevent UI injection from permissions helper
+if (!defined('IS_API')) define('IS_API', true);
+require_once __DIR__ . '/../partials/permissions.php';
 
-// Require login
-if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
+require_edit_api('project_checklist');
 
 $projectName = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

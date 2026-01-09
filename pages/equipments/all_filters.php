@@ -6,13 +6,13 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 }
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../partials/permissions.php';
-// Hide admin-only UI elements for non-admin users
-if (!is_admin()) {
+// Hide edit/mutating UI elements for users without edit permission on this module
+if (!can_edit_page('equipments')) {
         echo <<<'HTML'
 <style>.admin-only, .edit-filter-btn, .edit-dimension-btn, .edit-tire-btn, .upload-btn, #uploadImagesBtn, .editEquipmentBtn, .delete-equipment, .uploadFilterBtn, .add-equipment-btn { display: none !important; }</style>
 <script>
 (function(){
-    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i];
+    var patterns=[/\bedit\b/i,/\bupload\b/i,/\bdelete\b/i,/\badd\b/i,/\bremove\b/i,/\bsave\b/i];
     function hideIfMatch(el){
         var text=(el.innerText||el.value||'').trim();
         var title=(el.getAttribute && (el.getAttribute('title')||el.getAttribute('aria-label')))||'';
@@ -35,13 +35,11 @@ $roleStmt->execute();
 $roleRes = $roleStmt->get_result();
 $user = $roleRes ? $roleRes->fetch_assoc() : null;
 $role = $user ? $user['role'] : 'laborer';
-if ($role === 'developer' && isset($_GET['preview_role'])) {
-    $role = $_GET['preview_role'];
-}
 $roleStmt->close();
-$previewParam = '';
-if (isset($_GET['preview_role'])) {
-    $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
+
+if (!can_access($role, 'equipments')) {
+    header('Location: /pages/dashboard/');
+    exit();
 }
 
 // --- Default filter names ---
@@ -275,7 +273,7 @@ foreach ($equipments as $eid) {
                 <div class="main-content" style="display: flex; flex-direction: row; gap: 32px; align-items: flex-start;">
                     <div style="flex: 0 0 340px; max-width: 340px; min-width: 240px; background: #f8fafc; border-radius: 14px; box-shadow: 0 2px 8px #0001; padding: 24px 12px 24px 18px; height: 80vh; overflow-y: auto;">
                         <div style="margin-bottom: 16px; display: flex; align-items: center;">
-                            <a href="index.php<?php echo $previewParam; ?>" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
+                            <a href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
                         </div>
                         <h2 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 18px; color: #374151;">Select an equipment.</h2>
                         <ul id="equipmentList" style="list-style: none; padding: 0; margin: 0;">

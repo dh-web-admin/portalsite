@@ -1,6 +1,11 @@
 <?php
+require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 header('Content-Type: application/json');
+
+if (isset($conn)) $GLOBALS['conn'] = $conn;
+require_edit_api('equipments');
 
 $equipmentId = isset($_POST['equipment_id']) ? (int)$_POST['equipment_id'] : 0;
 if ($equipmentId <= 0) {

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 require_once '../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
 // Must be logged in
 if (!isset($_SESSION['email'])) {
@@ -20,11 +21,12 @@ if (!$res || $res->num_rows === 0) {
 }
 $row = $res->fetch_assoc();
 $actualRole = $row['role'];
-// Allow admin or developer previewing as admin
-if ($actualRole === 'developer' && isset($_GET['preview_role']) && $_GET['preview_role'] === 'admin') {
-    // Developer previewing as admin - allow access
-} elseif ($actualRole !== 'admin') {
-    header('Location: ../auth/login.php');
+
+$role = $actualRole;
+
+// Admin Panel access check (role default or per-user override).
+if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel')) {
+    header('Location: ../pages/dashboard/');
     exit();
 }
 

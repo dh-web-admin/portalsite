@@ -3,12 +3,20 @@ require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
 // URL helper for base_url()
 require_once __DIR__ . '/../partials/url.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
-// Only allow admin users
-$role = $_SESSION['role'] ?? null;
-if ($role !== 'admin') {
+// Must be logged in
+if (!isset($_SESSION['email'])) {
     http_response_code(403);
-    echo '<h2>Access denied</h2><p>You must be an admin to access this page.</p>';
+    echo '<h2>Access denied</h2><p>You must be logged in to access this page.</p>';
+    exit();
+}
+
+// Admin Panel access check (role default or per-user override).
+$role = get_current_role() ?? ($_SESSION['role'] ?? 'laborer');
+if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel')) {
+    http_response_code(403);
+    echo '<h2>Access denied</h2><p>Admin panel access is disabled for your account.</p>';
     exit();
 }
 

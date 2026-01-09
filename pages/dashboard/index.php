@@ -9,6 +9,12 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 
 // Include database configuration
 require_once '../../config/config.php';
+require_once __DIR__ . '/../../partials/permissions.php';
+
+// Ensure permissions helper can see the DB connection
+if (isset($conn)) {
+    $GLOBALS['conn'] = $conn;
+}
 
 // Get user information
 $email = $_SESSION['email'];
@@ -19,18 +25,8 @@ $user = $result->fetch_assoc();
 // Store role for access control
 $actualRole = $user['role'] ?? 'laborer';
 
-// Check if developer is previewing as another role
-if ($actualRole === 'developer' && isset($_GET['preview_role'])) {
-    $previewRole = $_GET['preview_role'];
-    $allowedRoles = ['admin', 'projectmanager', 'estimator', 'accounting', 'superintendent', 'foreman', 'mechanic', 'operator', 'laborer', 'developer', 'data_entry'];
-    if (in_array($previewRole, $allowedRoles)) {
-        $role = $previewRole;
-    } else {
-        $role = $actualRole;
-    }
-} else {
-    $role = $actualRole;
-}
+// Dev preview mode removed: always use actual role
+$role = $actualRole;
 
 // Define page access by role
 $allPages = [
@@ -111,22 +107,27 @@ switch ($role) {
                     <!-- Role-based tiles -->
                     <?php 
                     require_once __DIR__ . '/../../partials/url.php';
-                    // Preserve preview mode in tile URLs
-                    $previewParam = '';
-                    if (isset($_GET['preview_role'])) {
-                        $previewParam = '?preview_role=' . urlencode($_GET['preview_role']);
-                    }
+                    // No preview params
                     ?>
                     <?php foreach ($allPages as $page => $title): ?>
                         <?php
-                            // Skip pages hidden by role rules
-                            if (in_array($page, $hiddenPages)) {
-                                continue;
+                            // Centralized access logic:
+                            // - If per-user override exists, it applies.
+                            // - If no override exists, it falls back to role-based access.
+                            if (function_exists('can_access')) {
+                                if (!can_access((string)$role, (string)$page)) {
+                                    continue;
+                                }
+                            } else {
+                                // Fallback to legacy rules if helper isn't available
+                                if (in_array($page, $hiddenPages, true)) {
+                                    continue;
+                                }
                             }
 
                             // (Coordinate Entry removed from dashboard)
                         ?>
-                        <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/') . $previewParam); ?>" class="tile">
+                        <a href="<?php echo htmlspecialchars(base_url('/pages/' . $page . '/')); ?>" class="tile">
                             <h2><?php echo htmlspecialchars($title); ?></h2>
                         </a>
                     <?php endforeach; ?>
@@ -155,7 +156,7 @@ switch ($role) {
             });
         }
         
-        // Developer Preview handled globally via dev_notch partial
+        // Dev preview mode removed
     })();
     </script>
     <script src="../../assets/js/mobile-menu.js"></script>
