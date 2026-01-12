@@ -198,6 +198,30 @@ if ($selected > 0) {
     echo '<div class="history-table-area">';
     echo '<div class="history-table-scroll-x"><div style="height:1px;width:1200px;"></div></div>';
     echo '<div class="history-table-wrap" style="overflow:auto;">';
+    ?>
+    <script>
+    (function(){
+        var topScroll = document.querySelector('.history-table-scroll-x');
+        var tableWrap = document.querySelector('.history-table-wrap');
+        if (!topScroll || !tableWrap) return;
+        var table = tableWrap.querySelector('table');
+        if (!table) return;
+            var adjust = function(){
+                try {
+                    var desired = Math.max(table.scrollWidth, tableWrap.clientWidth + 1);
+                    topScroll.firstElementChild.style.width = desired + 'px';
+                    topScroll.scrollLeft = tableWrap.scrollLeft;
+                } catch(e){}
+            };
+        adjust();
+        setTimeout(adjust, 100);
+        window.addEventListener('load', function(){ setTimeout(adjust, 50); });
+        topScroll.onscroll = function(){ tableWrap.scrollLeft = topScroll.scrollLeft; };
+        tableWrap.onscroll = function(){ topScroll.scrollLeft = tableWrap.scrollLeft; };
+        window.addEventListener('resize', function(){ setTimeout(adjust, 50); });
+    })();
+    </script>
+    <?php
     echo '<table class="equipment-history-table" id="historyTable">';
     echo '<thead><tr><th>Report #</th><th>Part</th><th>Fluid Type</th><th>Change Date</th><th>Equipment Hours</th><th>Changed By</th><th>Recorded At</th></tr></thead>';
     echo '<tbody>';

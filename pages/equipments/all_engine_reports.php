@@ -371,9 +371,17 @@ if ($selected > 0) {
             var table = tableWrap.querySelector('table');
             if (!table) return;
             var adjust = function(){
-                try { topScroll.firstElementChild.style.width = table.scrollWidth + 'px'; } catch(e){}
+                try {
+                    var desired = Math.max(table.scrollWidth, tableWrap.clientWidth + 1);
+                    topScroll.firstElementChild.style.width = desired + 'px';
+                    // sync initial positions
+                    topScroll.scrollLeft = tableWrap.scrollLeft;
+                } catch(e){}
             };
+            // Run immediately and slightly after to allow layout to settle
             adjust();
+            setTimeout(adjust, 100);
+            window.addEventListener('load', function(){ setTimeout(adjust, 50); });
             topScroll.onscroll = function(){ tableWrap.scrollLeft = topScroll.scrollLeft; };
             tableWrap.onscroll = function(){ topScroll.scrollLeft = tableWrap.scrollLeft; };
             window.addEventListener('resize', function(){ setTimeout(adjust, 50); });
