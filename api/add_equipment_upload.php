@@ -75,13 +75,15 @@ if (empty($files)) {
 // Use Railway volume mount in production
 
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+// Allow overrides via environment variables; sensible defaults for local and Railway
+$uploads_mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+$uploads_web_prefix = getenv('UPLOADS_WEB_PREFIX') ?: '/PortalSite/uploads/equipment';
 if ($isProduction) {
-    // Volume is mounted at /app/PortalSite/uploads, equipment is subdirectory
-    $uploadDir = '/app/PortalSite/uploads/equipment/';
-    $fileUrlPrefix = '/PortalSite/uploads/equipment/';
+    $uploadDir = rtrim($uploads_mount, '/') . '/equipment/';
+    $fileUrlPrefix = rtrim($uploads_web_prefix, '/');
 } else {
     $uploadDir = __DIR__ . '/../uploads/equipment/';
-    $fileUrlPrefix = '/PortalSite/uploads/equipment/';
+    $fileUrlPrefix = rtrim($uploads_web_prefix, '/');
 }
 
 // Ensure upload directory exists and is writable
@@ -114,7 +116,7 @@ foreach ($files as $file) {
     $baseName = $field . '_' . uniqid() . '.' . $ext;
     // Ensure filename is safe
     $baseName = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $baseName);
-    $fileUrl = $fileUrlPrefix . $baseName;
+        $fileUrl = $fileUrlPrefix . '/' . $baseName;
     $targetPath = rtrim($uploadDir, '/') . '/' . $baseName;
     // Prevent duplicate DB insert for the same file in a single request
     if (isset($seenFiles[$fileUrl])) continue;
@@ -142,13 +144,16 @@ foreach ($files as $file) {
     }
 
     if ($moved) {
-        $stmt = $conn->prepare('INSERT INTO equipment_uploads (equipment_id, field, file_url, uploaded_at) VALUES (?, ?, ?, NOW())');
+        // Insert metadata into the new `uploads` table
+        $upload_key = bin2hex(random_bytes(12));
+        $uploaded_by = isset($_SESSION['user_id']) ? intval($_SESSION['user_id']) : 0;
+        $stmt = $conn->prepare('INSERT INTO uploads (upload_key, equipment_id, field, file_url, filename, original_name, mime_type, size_bytes, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())');
         if (!$stmt) {
             log_upload_debug("DB prepare failed: " . $conn->error);
             $errors[] = 'DB prepare failed: ' . $conn->error;
             continue;
         }
-        $stmt->bind_param('iss', $equipment_id, $field, $fileUrl);
+        $stmt->bind_param('sissssiii', $upload_key, $equipment_id, $field, $fileUrl, $baseName, $file['name'], $file['type'], $file['size'], $uploaded_by);
         if (!$stmt->execute()) {
             log_upload_debug("DB error: " . $stmt->error);
             $errors[] = 'DB error: ' . $stmt->error;

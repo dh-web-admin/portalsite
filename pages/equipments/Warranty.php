@@ -36,7 +36,7 @@ $equipment_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($equipment_id <= 0) {
     die("Invalid equipment ID.");
 }
-$fileStmt = $conn->prepare("SELECT id, file_url, uploaded_at FROM equipment_uploads WHERE equipment_id=? AND field='warranty' ORDER BY uploaded_at DESC");
+$fileStmt = $conn->prepare("SELECT id, file_url, filename, original_name, mime_type, size_bytes, created_at FROM uploads WHERE equipment_id=? AND field='warranty' ORDER BY created_at DESC");
 $fileStmt->bind_param('i', $equipment_id);
 if (!$fileStmt->execute()) {
     die("SQL execute error: " . $fileStmt->error);
@@ -51,41 +51,33 @@ $fileStmt->close();
 // Build file list, skipping any records whose files no longer exist on disk
 $fileList = [];
 foreach ($uploads as $row) {
-    $dbUrl = $row['file_url'] ?? '';
-    if (!$dbUrl) continue;
+    $filename = $row['filename'] ?? basename($row['file_url'] ?? '');
+    if (!$filename) continue;
 
-    // Normalize slashes
-    $dbUrl = str_replace('\\', '/', $dbUrl);
-    $dbUrl = ltrim($dbUrl, '/');
-
-    // Resolve filesystem path by filename only (handles legacy prefixes)
-    $filename = basename($dbUrl);
     $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
-    $filePath = $isProduction
-        ? '/app/PortalSite/uploads/equipment/' . $filename
-        : __DIR__ . '/../../uploads/equipment/' . $filename;
+    $uploads_mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+    $uploads_web_prefix = getenv('UPLOADS_WEB_PREFIX') ?: '/PortalSite/uploads/equipment';
+    if ($isProduction) {
+        $filePath = rtrim($uploads_mount, '/') . '/equipment/' . $filename;
+        $fileUrl = rtrim($uploads_web_prefix, '/') . '/' . $filename;
+    } else {
+        $filePath = __DIR__ . '/../../uploads/equipment/' . $filename;
+        $fileUrl = rtrim($uploads_web_prefix, '/') . '/' . $filename;
+    }
 
     if (!file_exists($filePath)) {
         // Skip orphaned DB rows where the physical file is missing
         continue;
     }
 
-    // Build URL used by the browser
-    if ($isProduction) {
-        $fileUrl = '/PortalSite/uploads/equipment/' . $filename;
-    } else {
-        $fileUrl = '/PortalSite/uploads/equipment/' . $filename;
-    }
-
-    // Ensure single leading slash and no double slashes
     $fileUrl = preg_replace('#/+#', '/', $fileUrl);
     $ext = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
     $isImage = in_array($ext, ['jpg','jpeg','png','gif','bmp','webp','svg']);
     $fileList[] = [
         'url' => $fileUrl,
-        'name' => basename($fileUrl),
+        'name' => $row['original_name'] ?? $filename,
         'isImage' => $isImage,
-        'uploaded_at' => $row['uploaded_at'],
+        'uploaded_at' => $row['created_at'] ?? null,
         'id' => $row['id']
     ];
 }

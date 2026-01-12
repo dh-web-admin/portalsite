@@ -12,15 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+ $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 if (!$id) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Missing file id']);
     exit;
 }
 
-// Get file path before deleting
-$stmt = $conn->prepare('SELECT file_url FROM equipment_uploads WHERE id=?');
+// Get file path before deleting (use new `uploads` table)
+$stmt = $conn->prepare('SELECT file_url, filename FROM uploads WHERE id=?');
 $stmt->bind_param('i', $id);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -35,15 +35,17 @@ if (!$row) {
 
 $fileUrl = $row['file_url'];
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+// Resolve filesystem path using UPLOADS_MOUNT_PATH or fallback
+$uploads_mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+$isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 if ($isProduction) {
-    // On Railway, uploads are at /app/PortalSite/uploads/equipment/ (absolute path)
-    $filePath = '/app/PortalSite/uploads/equipment/' . basename($fileUrl);
+    $filePath = rtrim($uploads_mount, '/') . '/equipment/' . basename($row['filename'] ?: $fileUrl);
 } else {
-    $filePath = __DIR__ . '/../uploads/equipment/' . basename($fileUrl);
+    $filePath = __DIR__ . '/../uploads/equipment/' . basename($row['filename'] ?: $fileUrl);
 }
 
-// Delete DB record
-$stmt = $conn->prepare('DELETE FROM equipment_uploads WHERE id=?');
+// Delete DB record from uploads
+$stmt = $conn->prepare('DELETE FROM uploads WHERE id=?');
 $stmt->bind_param('i', $id);
 $success = $stmt->execute();
 $stmt->close();
