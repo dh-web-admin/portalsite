@@ -240,22 +240,19 @@ function eq_format_warranty($dateValue) {
 	<link rel="stylesheet" href="../../assets/css/dashboard.css">
 	<link rel="stylesheet" href="style.css?v=<?php echo urlencode((string)@filemtime(__DIR__ . '/style.css')); ?>">
 	<style>
-		/* Force Add Equipment button to be green and pill-shaped */
-		#newEquipmentBtn.equipment-btn--green {
-			background: #22c55e !important;
+		/* Add Equipment button: keep original pill shape, only change color and add small + icon */
+		#newEquipmentBtn.equipment-btn--green, .equipment-btn--green {
+			background: #0f8a5f !important;
 			color: #fff !important;
 			border-radius: 999px !important;
-			box-shadow: 0 4px 16px rgba(34,197,94,0.10);
+			box-shadow: 0 4px 16px rgba(15,138,95,0.10);
+			padding: 10px 22px;
 		}
-		#newEquipmentBtn.equipment-btn--green:hover {
-			background: #16a34a !important;
+		#newEquipmentBtn.equipment-btn--green:hover, .equipment-btn--green:hover {
+			background: #0b6f49 !important;
 		}
-		.equipment-btn--green {
-			background: #22c55e !important;
-			color: #fff !important;
-			border-radius: 999px !important;
-			box-shadow: 0 4px 16px rgba(34,197,94,0.10);
-		}
+		/* Minimal icon styling only */
+		#newEquipmentBtn .btn-icon { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; background:rgba(255,255,255,0.12); color:#fff; border-radius:6px; font-size:14px; }
 		
 		/* Equipment number cell with edit icon */
 		.equipment-number-cell {
@@ -520,7 +517,7 @@ function eq_format_warranty($dateValue) {
 				<div class="main-content">
 					<section class="equipment-page" aria-label="Equipment management">
 						<div class="equipment-topbar" role="region" aria-label="Equipment actions">
-							<button id="newEquipmentBtn" class="equipment-btn equipment-btn--green" type="button">Add Equipment</button>
+							<button id="newEquipmentBtn" class="equipment-btn equipment-btn--green" type="button"><span class="btn-icon">+</span><span class="btn-label">Add Equipment</span></button>
 							<div class="equipment-ribbon" aria-label="Cheat sheets">
 								<a href="all_engine.php" class="equipment-ribbon__item">All Eng Cheat Sheet</a>
 								<a href="all_filters.php" class="equipment-ribbon__item">Filter Cheat Sheet</a>
