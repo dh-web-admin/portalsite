@@ -180,7 +180,7 @@ $eqStmt->close();
 // Determine selected equipment id from GET or default
 $selected = isset($_GET['selected']) ? (int)$_GET['selected'] : $firstId;
 if ($selected > 0) {
-    $historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id FROM equipment_history WHERE equipment_id = ? ORDER BY id DESC');
+    $historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id FROM equipment_history WHERE equipment_id = ? ORDER BY date_reported DESC, id DESC');
     $historyStmt->bind_param('i', $selected);
     $historyStmt->execute();
     $historyRes = $historyStmt->get_result();
@@ -308,14 +308,25 @@ if ($selected > 0) {
         if (dl) dl.addEventListener('click', function(){
             var table = document.getElementById('historyTable');
             if (!table) return alert('No table to download');
-            var rows = Array.from(table.querySelectorAll('tr'));
-            var csv = rows.map(function(row){
+            // Build CSV: include header from THEAD (if present), then visible TBODY rows
+            var csvRows = [];
+            var thead = table.querySelectorAll('thead th');
+            if (thead && thead.length > 0) {
+                var header = Array.from(thead).map(function(th){ return '"' + th.innerText.replace(/\n/g,' ').trim().replace(/"/g,'""') + '"'; }).join(',');
+                csvRows.push(header);
+            }
+            var bodyRows = Array.from(table.querySelectorAll('tbody tr'));
+            bodyRows.forEach(function(row){
+                // only include rows that are visible
+                if (row.offsetParent === null) return;
                 var cells = Array.from(row.querySelectorAll('th,td'));
-                return cells.map(function(cell){
+                var line = cells.map(function(cell){
                     var text = cell.innerText.replace(/\n/g,' ').trim();
                     return '"' + text.replace(/"/g,'""') + '"';
                 }).join(',');
-            }).join('\n');
+                csvRows.push(line);
+            });
+            var csv = csvRows.join('\n');
             var blob = new Blob([csv], { type: 'text/csv' });
             var url = URL.createObjectURL(blob);
             var a = document.createElement('a');

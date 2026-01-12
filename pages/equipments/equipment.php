@@ -315,6 +315,13 @@ $editMode = isset($_GET['edit']) && $_GET['edit'] == '1';
 .equipment-history-table td {
     padding: 10px;
     border-bottom: 1px solid #eef2f7;
+    text-align: left;
+}
+
+/* Ensure any scoped or inherited rules don't center cells in this table */
+.equipment-history-table th,
+.equipment-history-table td {
+    text-align: left !important;
 }
 
 /* ---------- RESPONSIVE ---------- */
@@ -1081,6 +1088,10 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                             <label for="edit_date_repaired">Date Repaired</label>
                                             <input id="edit_date_repaired" name="date_repaired" type="date" />
                                         </div>
+                                        <div class="equipment-form__field">
+                                            <label for="edit_equipment_hours">Equipment Hours</label>
+                                            <input id="edit_equipment_hours" name="equipment_hours_at_repair" type="number" step="1" min="0" />
+                                        </div>
                                         <div class="equipment-form__field" style="grid-column: span 2;">
                                             <label for="edit_mechanic_diagnosis">Mechanic Diagnosis</label>
                                             <textarea id="edit_mechanic_diagnosis" name="mechanic_diagnosis" rows="2" style="width:100%;resize:vertical;"></textarea>
@@ -1127,6 +1138,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                             <th>Equipment Location</th>
                                             <th>Operating Condition</th>
                                             <th>Mechanic Diagnosis</th>
+                                            <th>Equipment Hours</th>
                                             <th>Date Repaired</th>
                                             <th>Repair Mechanic</th>
                                             <th>Parts fixed</th>
@@ -1135,7 +1147,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                     </thead>
                                     <tbody>
 <?php
-$historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id FROM equipment_history WHERE equipment_id = ? ORDER BY id DESC');
+    $historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, equipment_hours_at_repair, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id FROM equipment_history WHERE equipment_id = ? ORDER BY date_reported DESC, id DESC');
 $historyStmt->bind_param('i', $equipmentId);
 $historyStmt->execute();
 $historyRes = $historyStmt->get_result();
@@ -1154,6 +1166,13 @@ if ($historyRes && $historyRes->num_rows > 0) {
             $hasNewerVersion[$row['original_issue_id']] = true;
         }
     }
+}
+
+// Debug helper: show counts when ?debug=1 is present
+if (!empty($_GET['debug'])) {
+    $fetched = $historyRes ? $historyRes->num_rows : 0;
+    $hiddenIds = array_keys($hasNewerVersion);
+    echo '<tr><td colspan="12" style="background:#fff7ed;color:#92400e;padding:8px;font-weight:600;">Debug: fetched ' . intval($fetched) . ' rows; hidden originals: ' . htmlspecialchars(json_encode($hiddenIds)) . '</td></tr>';
 }
 
 if (count($allRows) > 0) {
@@ -1215,6 +1234,7 @@ if (count($allRows) > 0) {
         }
         echo '<td>' . htmlspecialchars($opConditionDisplay) . '</td>';
         echo '<td>' . htmlspecialchars($row['mechanic_diagnosis'] ?? '') . '</td>';
+        echo '<td>' . htmlspecialchars($row['equipment_hours_at_repair'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['date_repaired'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['repair_mechanic'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['parts_fixed'] ?? '') . '</td>';
@@ -1307,6 +1327,7 @@ function openEditIssueModal(rowData) {
         var origOp = document.getElementById('edit_original_operating_condition');
         if (origOp) origOp.value = rowData.operating_condition || '';
         document.getElementById('edit_mechanic_diagnosis').value = rowData.mechanic_diagnosis || '';
+        document.getElementById('edit_equipment_hours').value = (rowData.equipment_hours_at_repair !== undefined && rowData.equipment_hours_at_repair !== null) ? rowData.equipment_hours_at_repair : '';
         document.getElementById('edit_date_repaired').value = formatDateTimeLocal(rowData.date_repaired);
         document.getElementById('edit_repair_mechanic').value = rowData.repair_mechanic || '';
         document.getElementById('edit_parts_fixed').value = rowData.parts_fixed || '';
@@ -1463,7 +1484,16 @@ if (deleteEditIssueBtn) {
             fd.append('issue_id', issueId);
             
             fetch('../../api/delete_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-                .then(r => r.json())
+                .then(async r => {
+                    const text = await r.text();
+                    try {
+                        return JSON.parse(text);
+                    } catch (err) {
+                        console.error('Delete issue API returned non-JSON:', text);
+                        alert('Server error while deleting issue: ' + (text || 'empty response'));
+                        throw new Error('InvalidJSON');
+                    }
+                })
                 .then(res => {
                     if (!res.success) {
                         alert(res.message || 'Failed to delete issue.');
@@ -1476,7 +1506,7 @@ if (deleteEditIssueBtn) {
                     window.location.href = window.location.pathname + window.location.search;
                 })
                 .catch(() => {
-                    alert('Network error while deleting issue.');
+                    // If we errored after showing server text, keep UX consistent
                     deleteEditIssueBtn.disabled = false;
                     deleteEditIssueBtn.textContent = 'Delete Issue';
                 });
@@ -1574,7 +1604,16 @@ if (newIssueForm) {
         if (newIssueError) { newIssueError.style.display = 'none'; newIssueError.textContent = ''; }
         const fd = new FormData(newIssueForm);
         fetch('../../api/add_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-            .then(r => r.json())
+            .then(async r => {
+                const text = await r.text();
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    console.error('Add issue API returned non-JSON:', text);
+                    if (newIssueError) { newIssueError.textContent = 'Server error: ' + (text || 'empty response'); newIssueError.style.display = 'block'; }
+                    throw new Error('InvalidJSON');
+                }
+            })
             .then(res => {
                 if (!res.success) {
                     if (newIssueError) { newIssueError.textContent = res.message || 'Failed to save issue.'; newIssueError.style.display = 'block'; }
@@ -1603,9 +1642,12 @@ if (editIssueForm) {
         const issueId = document.getElementById('edit_issue_id').value;
         const isTopFieldsEditable = !dateReported.readOnly;
         
-        if (isTopFieldsEditable) {
+            if (isTopFieldsEditable) {
             // Top fields are editable, so create a new copy
             const fd = new FormData(editIssueForm);
+            // Ensure equipment hours (edit-only field) are NOT sent when creating a new copy
+            if (fd.delete) try { fd.delete('equipment_hours_at_repair'); } catch(e){}
+            else if (fd.set) fd.set('equipment_hours_at_repair','');
             fd.append('is_edited_copy', '1');
             fd.append('original_issue_id', issueId); // Track the original issue ID
             fetch('../../api/add_equipment_issue.php', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -1632,6 +1674,7 @@ if (editIssueForm) {
             updateFd.append('operating_condition', document.getElementById('edit_operating_condition').value || '');
             updateFd.append('mechanic_diagnosis', document.getElementById('edit_mechanic_diagnosis').value || '');
             updateFd.append('date_repaired', document.getElementById('edit_date_repaired').value || '');
+            updateFd.append('equipment_hours_at_repair', document.getElementById('edit_equipment_hours').value || '');
             updateFd.append('repair_mechanic', document.getElementById('edit_repair_mechanic').value || '');
             updateFd.append('parts_fixed', document.getElementById('edit_parts_fixed').value || '');
             // Optional: condition after repair — if provided, send separately so it can update equipment condition without overwriting original issue condition
@@ -1640,9 +1683,18 @@ if (editIssueForm) {
                 updateFd.append('condition_after_repair', afterCondEl.value);
             }
 
-            // First, update the issue record
+            // First, update the issue record (robustly parse response and show server text on failure)
             fetch('../../api/update_equipment_issue.php', { method: 'POST', body: updateFd, credentials: 'same-origin' })
-                .then(r => r.json())
+                .then(async r => {
+                    const text = await r.text();
+                    try {
+                        return JSON.parse(text);
+                    } catch (err) {
+                        console.error('Update issue API returned non-JSON:', text);
+                        if (editIssueError) { editIssueError.textContent = 'Server error: ' + (text || 'empty response'); editIssueError.style.display = 'block'; }
+                        throw new Error('InvalidJSON');
+                    }
+                })
                 .then(async res => {
                     if (!res.success) {
                         if (editIssueError) { editIssueError.textContent = res.message || 'Failed to update issue.'; editIssueError.style.display = 'block'; }

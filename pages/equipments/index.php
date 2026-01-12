@@ -569,8 +569,8 @@ function eq_format_warranty($dateValue) {
 												</th>
 												<th scope="col">
 													<span class="equip-th">
-														<span class="equip-th__label">Operating<br>Condition</span>
-														<button class="equip-sort-btn" type="button" aria-label="Sort operating condition" data-sort="operating_condition">▾</button>
+														<span class="equip-th__label">Engine Status</span>
+															<button class="equip-sort-btn" type="button" aria-label="Sort engine status" data-sort="operating_condition">▾</button>
 													</span>
 												</th>
 												<th scope="col">
@@ -579,7 +579,12 @@ function eq_format_warranty($dateValue) {
 														<button class="equip-sort-btn" type="button" aria-label="Sort oil status" data-sort="oil_status">▾</button>
 													</span>
 												</th>
-												<th scope="col">Air Filters</th>
+												<th scope="col">
+													<span class="equip-th">
+														<span class="equip-th__label">Filter Status</span>
+														<button class="equip-sort-btn" type="button" aria-label="Filter status" data-sort="air_filters">▾</button>
+													</span>
+												</th>
 												<th scope="col">Tires</th>
 												<th scope="col">Warranty</th>
 											</tr>
@@ -595,6 +600,7 @@ function eq_format_warranty($dateValue) {
 													<?php
 														$opState = eq_normalize_status($eq['operating_condition'] ?? '');
 														$oilState = eq_normalize_status($eq['oil_status'] ?? '');
+														$filterState = eq_normalize_status($eq['air_filters_status'] ?? ($eq['air_filters'] ?? ''));
 														$tiresState = eq_normalize_status($eq['tires'] ?? '');
 														$warranty = eq_format_warranty($eq['warranty'] ?? null);
 														$eqNumSort = strtolower(trim((string)($eq['dhss_equipment_number'] ?? '')));
@@ -637,6 +643,7 @@ function eq_format_warranty($dateValue) {
 													   data-sort-equipment-number="<?php echo htmlspecialchars($eqNumSort); ?>"
 													   data-sort-operating-condition="<?php echo htmlspecialchars($opState); ?>"
 													   data-sort-oil-status="<?php echo htmlspecialchars($oilState); ?>"
+													   data-sort-air-filters="<?php echo htmlspecialchars($filterState); ?>"
 													   data-sort-current-hours="<?php echo htmlspecialchars((string)$hoursSort); ?>"
 													   data-warranty-href="<?php echo htmlspecialchars('Warranty.php?id=' . (int)$eq['equipment_id'], ENT_QUOTES); ?>"
 													>
@@ -822,7 +829,7 @@ function eq_format_warranty($dateValue) {
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_current_hours">Current Hours</label>
-						<input id="eq_current_hours" name="current_hours" type="number" step="0.1" min="0" value="0" />
+						<input id="eq_current_hours" name="current_hours" type="number" step="0.1" min="0" value="" placeholder="" />
 					</div>
 					<div class="equipment-form__field">
 						<label for="eq_oil_status">Oil Status</label>
@@ -1214,7 +1221,10 @@ function eq_format_warranty($dateValue) {
 
 				var rows = getRows();
 				rows.sort(function(a, b){
-					var attr = key === 'operating_condition' ? 'data-sort-operating-condition' : 'data-sort-oil-status';
+					var attr;
+					if (key === 'operating_condition') attr = 'data-sort-operating-condition';
+					else if (key === 'oil_status') attr = 'data-sort-oil-status';
+					else attr = 'data-sort-air-filters';
 					var av = a.getAttribute(attr) || 'neutral';
 					var bv = b.getAttribute(attr) || 'neutral';
 					var ai = order.indexOf(av); if (ai === -1) ai = order.length;
@@ -1303,7 +1313,7 @@ function eq_format_warranty($dateValue) {
 					types.forEach(function(type){
 						addOption(type, function(){ applyTypeFilter(type); }, currentTypeFilter.toLowerCase() === type.toLowerCase());
 					});
-				} else if (key === 'operating_condition' || key === 'oil_status') {
+				} else if (key === 'operating_condition' || key === 'oil_status' || key === 'air_filters') {
 					addOption('Green', function(){ applyStatusSort(key, 'good'); });
 					addOption('Yellow', function(){ applyStatusSort(key, 'warn'); });
 					addOption('Red', function(){ applyStatusSort(key, 'bad'); });
