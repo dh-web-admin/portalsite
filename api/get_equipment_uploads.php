@@ -8,7 +8,7 @@ if (!$equipment_id) {
     exit;
 }
 
-$stmt = $conn->prepare("SELECT id, field, file_url, uploaded_at FROM equipment_uploads WHERE equipment_id = ?");
+$stmt = $conn->prepare("SELECT id, field, file_url, filename, created_at FROM uploads WHERE equipment_id = ?");
 $stmt->bind_param('i', $equipment_id);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -19,34 +19,25 @@ $uploads = [
     'dimension' => []
 ];
 
-// Detect environment (same as config.php)
+// Resolve mount and web prefix from env with sensible defaults
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+$uploads_mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+$uploads_web_prefix = getenv('UPLOADS_WEB_PREFIX') ?: '/PortalSite/uploads/equipment';
+
 while ($row = $res->fetch_assoc()) {
     $f = $row['field'];
-    if (!isset($row['file_url'])) {
-        continue;
+    $filename = $row['filename'] ?? basename($row['file_url'] ?? '');
+    if (!$filename) continue;
+
+    if ($isProduction) {
+        $filePath = rtrim($uploads_mount, '/') . '/equipment/' . $filename;
+        $url = rtrim($uploads_web_prefix, '/') . '/' . $filename;
+    } else {
+        $filePath = __DIR__ . '/../uploads/equipment/' . $filename;
+        $url = rtrim($uploads_web_prefix, '/') . '/' . $filename;
     }
 
-    // Normalize DB URL and resolve to a concrete filename
-    $dbUrl = str_replace('\\', '/', $row['file_url']);
-    $dbUrl = ltrim($dbUrl, '/');
-    $filename = basename($dbUrl);
-    if ($filename === '') {
-        continue;
-    }
-
-    // Resolve physical path in uploads/equipment (same as add_equipment_upload.php)
-    $filePath = $isProduction
-        ? '/app/PortalSite/uploads/equipment/' . $filename
-        : __DIR__ . '/../uploads/equipment/' . $filename;
-
-    if (!file_exists($filePath)) {
-        // Skip orphaned rows where the file no longer exists
-        continue;
-    }
-
-    // Always expose URLs in the same format used by issue pictures
-    $url = '/PortalSite/uploads/equipment/' . $filename;
+    if (!file_exists($filePath)) continue;
     $row['file_url'] = preg_replace('#/+#', '/', $url);
 
     if (isset($uploads[$f])) {

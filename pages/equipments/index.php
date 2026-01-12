@@ -740,7 +740,7 @@ function eq_format_warranty($dateValue) {
 															<div class="warranty-cell">
 																<?php
 																$warrantyFiles = 0;
-																$stmtWarranty = $conn->prepare("SELECT COUNT(*) as cnt FROM equipment_uploads WHERE equipment_id = ? AND field = 'warranty'");
+																$stmtWarranty = $conn->prepare("SELECT COUNT(*) as cnt FROM uploads WHERE equipment_id = ? AND field = 'warranty'");
 																$stmtWarranty->bind_param('i', $eq['equipment_id']);
 																$stmtWarranty->execute();
 																$resWarranty = $stmtWarranty->get_result();
@@ -942,7 +942,7 @@ function eq_format_warranty($dateValue) {
 				   	];
 				   if (isset($_GET['edit_id']) && is_numeric($_GET['edit_id'])) {
 					   $eid = (int)$_GET['edit_id'];
-					   $stmt = $conn->prepare("SELECT field, file_url, id FROM equipment_uploads WHERE equipment_id = ?");
+					   $stmt = $conn->prepare("SELECT field, file_url, filename, id FROM uploads WHERE equipment_id = ?");
 					   $stmt->bind_param('i', $eid);
 					   $stmt->execute();
 					   $res = $stmt->get_result();
