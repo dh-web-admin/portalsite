@@ -141,6 +141,15 @@ try {
     $stmt->bind_param('iisssds', $equipment_id, $part_id, $part_label, $fluid_type, $change_dt, $hours, $changed_by);
     if (!$stmt->execute()) {
         $err = $stmt->error;
+        // Log bound values for diagnostics
+        error_log('[add_fluid_report] Insert failed. Bind values: equipment_id=' . var_export($equipment_id, true)
+            . ', part_id=' . var_export($part_id, true)
+            . ', part_label=' . var_export($part_label, true)
+            . ', fluid_type=' . var_export($fluid_type, true)
+            . ', change_dt=' . var_export($change_dt, true)
+            . ', equipment_hours=' . var_export($hours, true)
+            . ', changed_by=' . var_export($changed_by, true)
+            . ' -- stmt error: ' . $err);
         $stmt->close();
         throw new Exception('Execute insert fluid_reports failed: ' . $err);
     }
