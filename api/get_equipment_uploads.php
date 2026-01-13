@@ -19,26 +19,36 @@ $uploads = [
     'dimension' => []
 ];
 
-// Resolve mount and web prefix from env with sensible defaults
+// Determine mount path for server-side checks
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 $uploads_mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
-$uploads_web_prefix = getenv('UPLOADS_WEB_PREFIX') ?: '/PortalSite/uploads/equipment';
 
 while ($row = $res->fetch_assoc()) {
     $f = $row['field'];
     $filename = $row['filename'] ?? basename($row['file_url'] ?? '');
     if (!$filename) continue;
 
-    if ($isProduction) {
-        $filePath = rtrim($uploads_mount, '/') . '/equipment/' . $filename;
-        $url = rtrim($uploads_web_prefix, '/') . '/' . $filename;
-    } else {
-        $filePath = __DIR__ . '/../uploads/equipment/' . $filename;
-        $url = rtrim($uploads_web_prefix, '/') . '/' . $filename;
+    // Canonical public URL
+    $publicUrl = '/uploads/equipment/' . $filename;
+
+    // Server-side file path
+    $filePath = rtrim($uploads_mount, '/') . '/equipment/' . $filename;
+
+    // If the physical file doesn't exist, skip
+    if (!file_exists($filePath)) {
+        continue;
     }
 
-    if (!file_exists($filePath)) continue;
-    $row['file_url'] = preg_replace('#/+#', '/', $url);
+    // If the DB contains a legacy path (e.g., /PortalSite/...), log it for diagnostics
+    $stored = isset($row['file_url']) ? $row['file_url'] : '';
+    if (strpos($stored, '/uploads/') !== 0) {
+        // log mismatch
+        $logfile = __DIR__ . '/../uploads/equipment/upload_debug.log';
+        @file_put_contents($logfile, date('Y-m-d H:i:s') . " DB path mismatch for id={$row['id']} stored='{$stored}' expected='{$publicUrl}'\n", FILE_APPEND);
+    }
+
+    // Return canonical public URL regardless of what is stored
+    $row['file_url'] = $publicUrl;
 
     if (isset($uploads[$f])) {
         $uploads[$f][] = $row;

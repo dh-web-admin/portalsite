@@ -1790,13 +1790,13 @@ if (editIssueForm) {
             var picsData = btn.getAttribute('data-pictures') || '[]';
             try { currentList = JSON.parse(picsData); } catch(e){ currentList = []; }
             if (!Array.isArray(currentList) || currentList.length === 0) return;
-            // Normalize possible relative URLs stored in DB
+            // Normalize possible relative URLs stored in DB — ensure they are absolute paths or full URLs
             currentList = currentList.map(function(u){
                 if (!u) return null;
                 u = String(u).trim();
                 if (/^https?:\/\//i.test(u) || u.startsWith('/')) return u;
-                // Prepend app root path for local/prod consistency
-                return '/PortalSite/' + u.replace(/^\/+/, '');
+                // Ensure leading slash but do not add /PortalSite prefix
+                return '/' + u.replace(/^\/+/, '');
             }).filter(function(x){ return !!x; });
             showIndex(0);
             modal.style.display = 'flex';

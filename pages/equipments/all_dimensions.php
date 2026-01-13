@@ -525,21 +525,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function isValidEquipmentId(eid) { return eid && eid !== '0' && !/^temp_/.test(eid); }
 
-    function normalizeImageUrl(url) {
-        url = (url || '').replace(/\\/g, '/').replace(/\/+/g, '/');
-        var cleanUrl = url.replace(/^\/+/, '');
-        var isInPortalSite = window.location.pathname.indexOf('/PortalSite/') === 0;
-
-        if (isInPortalSite) {
-            if (cleanUrl.indexOf('PortalSite/uploads/equipment/') === 0) return '/' + cleanUrl;
-            if (cleanUrl.indexOf('uploads/equipment/') === 0) return '/PortalSite/' + cleanUrl;
-            return '/PortalSite/uploads/equipment/' + cleanUrl;
-        } else {
-            if (cleanUrl.indexOf('PortalSite/uploads/equipment/') === 0) return '/' + cleanUrl.replace('PortalSite/', '');
-            if (cleanUrl.indexOf('uploads/equipment/') === 0) return '/' + cleanUrl;
-            return '/uploads/equipment/' + cleanUrl;
-        }
-    }
+    // The API returns canonical `file_url` values (e.g. /uploads/equipment/...).
+    // Use the value directly in the UI; do not attempt to rewrite or guess prefixes.
 
     function clearSelectedPreviews() {
         var previewDiv = document.getElementById('dimensionImagePreviewList');
@@ -558,9 +545,7 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadBtnContainer.classList.remove('visible');
         imageInput.value = '';
 
-        var apiUrl = window.location.pathname.includes('/PortalSite/')
-            ? '/PortalSite/api/get_equipment_uploads.php'
-            : '/api/get_equipment_uploads.php';
+        var apiUrl = '/api/get_equipment_uploads.php';
 
         fetch(apiUrl + '?equipment_id=' + encodeURIComponent(equipmentId))
             .then(function(res){
@@ -577,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     addImageBtn.textContent = 'Add More';
                     data.uploads.dimension.forEach(function(upload) {
                         var img = document.createElement('img');
-                        img.src = normalizeImageUrl(upload.file_url);
+                        img.src = upload.file_url || '';
                         img.alt = 'Equipment Photo';
                         img.onerror = function(){
                             var errSpan = document.createElement('span');
@@ -677,9 +662,7 @@ document.addEventListener('DOMContentLoaded', function() {
         countMsg.textContent = 'Uploading ' + selectedFiles.length + ' image(s)...';
         countMsg.style.color = '#667eea';
 
-        var apiUrl = window.location.pathname.includes('/PortalSite/')
-            ? '/PortalSite/api/add_equipment_upload.php'
-            : '/api/add_equipment_upload.php';
+        var apiUrl = '/api/add_equipment_upload.php';
 
         var uploads = selectedFiles.map(function(file) {
             var fd = new FormData();

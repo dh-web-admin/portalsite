@@ -31,6 +31,10 @@ ErrorDocument 500 /index.php
 # Disable directory browsing
 Options -Indexes
 
+# Map public /uploads/ URL to mounted uploads folder (for servers where docroot is /app)
+# Adjust target path if your container uses a different path for the mount.
+RewriteRule ^uploads/(.*)$ /portalsite/uploads/$1 [L]
+
 # Enable compression
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript

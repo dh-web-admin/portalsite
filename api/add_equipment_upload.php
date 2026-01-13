@@ -114,9 +114,14 @@ $seenFiles = [];
 foreach ($files as $file) {
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     $baseName = $field . '_' . uniqid() . '.' . $ext;
-    // Ensure filename is safe
+    // Ensure filename is safe (no directory traversal)
     $baseName = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $baseName);
-        $fileUrl = $fileUrlPrefix . '/' . $baseName;
+    if (strpos($baseName, '..') !== false) {
+        $errors[] = 'Invalid filename';
+        continue;
+    }
+    // Always store canonical public path
+    $fileUrl = '/uploads/equipment/' . $baseName;
     $targetPath = rtrim($uploadDir, '/') . '/' . $baseName;
     // Prevent duplicate DB insert for the same file in a single request
     if (isset($seenFiles[$fileUrl])) continue;
@@ -153,7 +158,8 @@ foreach ($files as $file) {
             $errors[] = 'DB prepare failed: ' . $conn->error;
             continue;
         }
-        $stmt->bind_param('sissssiii', $upload_key, $equipment_id, $field, $fileUrl, $baseName, $file['name'], $file['type'], $file['size'], $uploaded_by);
+        // bind types: s (upload_key), i (equipment_id), s (field), s (file_url), s (filename), s (original_name), s (mime_type), i (size_bytes), i (uploaded_by)
+        $stmt->bind_param('sisssssii', $upload_key, $equipment_id, $field, $fileUrl, $baseName, $file['name'], $file['type'], $file['size'], $uploaded_by);
         if (!$stmt->execute()) {
             log_upload_debug("DB error: " . $stmt->error);
             $errors[] = 'DB error: ' . $stmt->error;
@@ -161,7 +167,7 @@ foreach ($files as $file) {
             continue;
         }
         $stmt->close();
-        log_upload_debug("DB insert success for $fileUrl");
+        log_upload_debug("DB insert success for $fileUrl (file: $targetPath)");
         $uploadedFiles[] = $fileUrl;
         $successCount++;
     } else {

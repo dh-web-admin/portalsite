@@ -358,7 +358,7 @@ if ($selected > 0) {
                 try { var list = JSON.parse(data); } catch(e){ return; }
                 if (!Array.isArray(list) || list.length === 0) return;
                 var u = String(list[0] || '').trim();
-                if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) u = '/PortalSite/' + u.replace(/^\/+/, '');
+                if (!/^https?:\/\//i.test(u) && !u.startsWith('/')) u = '/' + u.replace(/^\/+/, '');
                 window.open(u, '_blank');
             });
         });

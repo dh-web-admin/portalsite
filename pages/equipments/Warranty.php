@@ -48,29 +48,21 @@ if (!$res) {
 $uploads = $res->fetch_all(MYSQLI_ASSOC);
 $fileStmt->close();
 
-// Build file list, skipping any records whose files no longer exist on disk
 $fileList = [];
+// Use stored `file_url` where possible; normalize legacy /PortalSite/ prefix.
+$uploads_mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
 foreach ($uploads as $row) {
-    $filename = $row['filename'] ?? basename($row['file_url'] ?? '');
+    $stored = isset($row['file_url']) ? $row['file_url'] : '';
+    if (!$stored) continue;
+    // Normalize legacy values
+    $fileUrl = preg_replace('#^/PortalSite/uploads/#', '/uploads/', $stored);
+    $fileUrl = preg_replace('#/+#', '/', $fileUrl);
+    $filename = basename($fileUrl);
     if (!$filename) continue;
 
-    $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
-    $uploads_mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
-    $uploads_web_prefix = getenv('UPLOADS_WEB_PREFIX') ?: '/PortalSite/uploads/equipment';
-    if ($isProduction) {
-        $filePath = rtrim($uploads_mount, '/') . '/equipment/' . $filename;
-        $fileUrl = rtrim($uploads_web_prefix, '/') . '/' . $filename;
-    } else {
-        $filePath = __DIR__ . '/../../uploads/equipment/' . $filename;
-        $fileUrl = rtrim($uploads_web_prefix, '/') . '/' . $filename;
-    }
+    $filePath = rtrim($uploads_mount, '/') . '/equipment/' . $filename;
+    if (!file_exists($filePath)) continue;
 
-    if (!file_exists($filePath)) {
-        // Skip orphaned DB rows where the physical file is missing
-        continue;
-    }
-
-    $fileUrl = preg_replace('#/+#', '/', $fileUrl);
     $ext = strtolower(pathinfo($fileUrl, PATHINFO_EXTENSION));
     $isImage = in_array($ext, ['jpg','jpeg','png','gif','bmp','webp','svg']);
     $fileList[] = [
