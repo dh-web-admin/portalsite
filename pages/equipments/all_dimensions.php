@@ -123,12 +123,10 @@ if (!can_access($role, 'equipments')) {
 
         #addImageBtn{
             background:#6c7ae0; color:#fff; border:none; border-radius:8px;
-            padding:10px 32px; font-size:16px; font-weight:600; cursor:pointer;
+            padding:10px 24px; font-size:16px; font-weight:600; cursor:pointer;
             box-shadow:0 2px 6px rgba(156,163,175,0.15);
             margin-top:12px; width:90%; display:block; transition: all 0.2s ease;
-            /* keep Add button visible at bottom of panel */
-            position: sticky;
-            bottom: 16px;
+            position: sticky; top: 8px; z-index:5; /* stick to top of panel */
         }
         #addImageBtn:hover:not(:disabled){ background:#5a68d0; transform:translateY(-2px); box-shadow:0 4px 12px rgba(108,122,224,0.3); }
         #addImageBtn:disabled{ opacity:0.5; cursor:not-allowed; }
@@ -136,12 +134,12 @@ if (!can_access($role, 'equipments')) {
         #dimensionImagePanel{
             flex:1 1 0; min-width:320px; max-width:520px;
             background:#f8fafc; border-radius:14px; box-shadow:0 2px 8px #0001;
-            padding:32px 18px;
+            padding:32px 18px; box-sizing:border-box;
             display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
             min-height:520px;
-            /* Make right panel its own scrollable area so the Add button can stick */
-            max-height: calc(100vh - 140px);
-            overflow-y: auto;
+            /* Fix panel height so the image scroller can show exactly 2 images per view */
+            height: calc(100vh - 180px);
+            overflow: hidden;
         }
 
         #uploadBtnContainer{
@@ -202,10 +200,18 @@ if (!can_access($role, 'equipments')) {
             .main-content { box-shadow:none !important; background:#fff !important; }
         }
         /* Uploaded image card + delete button */
-        .uploaded-image-card{ width:100%; position:relative; border-radius:12px; overflow:hidden; background:#fff; padding:6px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-        .uploaded-image-card img{ width:100%; height:auto; display:block; border-radius:8px; }
-        .delete-image-btn{ position:absolute; top:8px; right:8px; z-index:10; background:rgba(0,0,0,0.6); color:#fff; border:none; width:36px; height:36px; border-radius:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-        .delete-image-btn:hover{ background:rgba(0,0,0,0.8); }
+        .uploaded-image-card{
+            width:100%; position:relative; border-radius:12px; overflow:hidden; background:#fff; padding:6px; box-shadow:0 2px 8px rgba(0,0,0,0.06);
+            /* each card takes half of the visible scroller so 2 cards per view */
+            flex: 0 0 calc((100% - 18px) / 2);
+            scroll-snap-align: start;
+        }
+        .uploaded-image-card img{ width:100%; height:100%; display:block; border-radius:8px; object-fit:contain; }
+        .delete-image-btn{ position:absolute; top:8px; right:8px; z-index:10; background:rgba(0,0,0,0.6); color:#fff; border:none; height:36px; border-radius:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 10px; overflow:hidden; transition: all 0.12s ease; }
+        .delete-image-btn .icon{ display:inline-block; }
+        .delete-image-btn .label{ display:inline-block; margin-left:8px; opacity:0; transform:translateX(6px); transition: opacity 0.12s, transform 0.12s; white-space:nowrap; font-weight:600; }
+        .uploaded-image-card:hover .delete-image-btn{ background:rgba(0,0,0,0.8); }
+        .uploaded-image-card:hover .delete-image-btn .label{ opacity:1; transform:translateX(0); }
     </style>
 </head>
 
@@ -345,14 +351,15 @@ if (!can_access($role, 'equipments')) {
                             </button>
                         </div>
 
-                        <div class="dimension-image-list" id="dimensionImageList" style="min-height:520px; max-height:800px;">
+                        <div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-bottom:8px; width:100%;">
+                            <button id="addImageBtn" disabled style="opacity:0.5;cursor:not-allowed;">Add Image</button>
+                        </div>
+
+                        <div class="dimension-image-list" id="dimensionImageList" style="height: calc(100% - 120px);">
                             <span class="no-image">Select an equipment row to view images</span>
                         </div>
 
                         <input type="file" id="dimensionImageInput" accept="image/*" multiple style="display:none;" />
-                        <div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:8px;">
-                            <button id="addImageBtn" disabled style="opacity:0.5;cursor:not-allowed;">Add Image</button>
-                        </div>
                     </div>
                 </div>
 
@@ -588,7 +595,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         var delBtn = document.createElement('button');
                         delBtn.className = 'delete-image-btn';
                         delBtn.setAttribute('title', 'Delete image');
-                        delBtn.innerHTML = '&#x2716;';
+                        delBtn.innerHTML = '<span class="icon">&#x2716;</span><span class="label">Delete</span>';
                         delBtn.addEventListener('click', function(ev) {
                             ev.stopPropagation();
                             if (!confirm('Delete this image?')) return;
