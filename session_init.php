@@ -2,6 +2,13 @@
 // Centralized session bootstrap for Railway/FrankenPHP
 // Ensures sessions persist by using a writable save path and sane cookie settings
 
+// Bypass session/auth for static uploads paths so static files are served
+// directly by the webserver and are never routed through auth/session handlers.
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+if (strpos($requestUri, '/uploads/') === 0 || strpos($requestUri, '/PortalSite/uploads/') === 0) {
+    return; // allow Apache/Nginx to serve the static file
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     // Use file-based sessions and a writable path
     @ini_set('session.save_handler', 'files');
@@ -15,7 +22,6 @@ if (session_status() === PHP_SESSION_NONE) {
     @session_save_path($savePath);
 
     // Configure cookie params (secure over HTTPS)
-    // Extended lifetime to 24 hours by default (prevents logout on refresh)
     $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
     @session_set_cookie_params([

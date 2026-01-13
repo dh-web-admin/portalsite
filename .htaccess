@@ -8,7 +8,13 @@ RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Don't rewrite files or directories
+# --- Serve uploads directly from mounted volume and bypass app routing ---
+# If a request targets /uploads/ or /PortalSite/uploads/ serve from the mounted
+# path and stop rewrite processing so app auth/session handlers are never invoked.
+RewriteRule ^uploads/(.*)$ /portalsite/uploads/$1 [L,PT]
+RewriteRule ^PortalSite/uploads/(.*)$ /portalsite/uploads/$1 [L,PT]
+
+# Don't rewrite files or directories (preserve existing behavior for other assets)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
