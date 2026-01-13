@@ -272,7 +272,7 @@ if (!can_access($role, 'equipments')) {
                     <h1 class="admin-page-title" style="text-align:center;margin-top:32px;margin-bottom:24px;">All Tires Cheat-Sheet</h1>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <div>
-                            <a href="index.php" class="equipment-btn equipment-btn--secondary">&larr; Back to Equipments</a>
+                            <a href="index.php" class="equipment-btn equipment-btn--secondary">Back ← </a>
                         </div>
                         <div>
                             <button id="downloadCsvBtn" class="download-print-btn">
@@ -296,7 +296,6 @@ if (!can_access($role, 'equipments')) {
                         <table class="project-table equipment-table engine-table">
                             <thead>
                                 <tr>
-                                    <th>DHCST #</th>
                                     <th>DHSS #</th>
                                     <th>Type</th>
                                     <th>Year</th>
@@ -318,7 +317,6 @@ if (!can_access($role, 'equipments')) {
                                 if ($result && $result->num_rows > 0) {
                                     while ($row = $result->fetch_assoc()) {
                                         echo '<tr>';
-                                        echo '<td>' . htmlspecialchars($row['dhcst_equipment_number'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['dhss_equipment_number'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['type'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['vehicle_year'] ?? '') . '</td>';
@@ -344,7 +342,7 @@ if (!can_access($role, 'equipments')) {
                                         echo '</tr>';
                                     }
                                 } else {
-                                    echo '<tr><td colspan="13">No equipment or tire info found.</td></tr>';
+                                    echo '<tr><td colspan="12">No equipment or tire info found.</td></tr>';
                                 }
                                 ?>
                             </tbody>

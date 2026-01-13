@@ -156,7 +156,7 @@ try {
 				<div class="main-content">
 					<div class="hours-page-wrapper">
 						<div style="margin-top:18px;margin-bottom:6px;">
-							<a href="index.php" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;text-decoration:none;">← Back to Equipments</a>
+							<a href="index.php" class="btn" style="padding:8px 14px;border-radius:8px;background:#2563eb;color:#fff;border:none;text-decoration:none;">Back ← </a>
 						</div>
 						<div class="hours-page-header">
 							<div>

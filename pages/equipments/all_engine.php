@@ -58,11 +58,11 @@ if (!can_access($role, 'equipments')) {
     <link rel="stylesheet" href="../../assets/css/admin-layout.css" />
     <link rel="stylesheet" href="../../assets/css/dashboard.css" />
     <style>
-    .engine-table-area {
-      overflow-x: auto;
-      margin: 0 auto;
-      max-width: 98vw;
-    }
+        .engine-table-area {
+            overflow-x: auto;
+            margin: 0; /* align table to left */
+            max-width: 98vw;
+        }
     .engine-table {
       border-collapse: separate;
       border-spacing: 0;
@@ -220,7 +220,7 @@ if (!can_access($role, 'equipments')) {
                     <h1 class="admin-page-title" style="text-align:center;margin-top:32px;margin-bottom:24px;">All Engine Cheat-Sheet</h1>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <div>
-                            <a href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
+                            <a href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">Back ← </a>
                         </div>
                         <div>
                             <!-- Update SVGs to use currentColor for stroke so they inherit text color -->
@@ -246,7 +246,6 @@ if (!can_access($role, 'equipments')) {
                         <table class="project-table equipment-table engine-table">
                             <thead>
                                 <tr>
-                                    <th>DHCST #</th>
                                     <th>DHSS #</th>
                                     <th>Type</th>
                                     <th>VIN</th>
@@ -271,7 +270,6 @@ if (!can_access($role, 'equipments')) {
                                 if ($result && $result->num_rows > 0) {
                                     while ($row = $result->fetch_assoc()) {
                                         echo '<tr>';
-                                        echo '<td>' . htmlspecialchars($row['dhcst_equipment_number'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['dhss_equipment_number'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['type'] ?? '') . '</td>';
                                         echo '<td>' . htmlspecialchars($row['vin'] ?? '') . '</td>';

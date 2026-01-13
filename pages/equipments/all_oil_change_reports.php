@@ -138,7 +138,7 @@ if (!can_access($role, 'equipments')) {
                     <div style="display:flex; gap:24px; align-items:flex-start;">
                         <div style="flex:0 0 320px; max-width:320px;">
                             <div style="margin-bottom: 16px;">
-                                <a href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">&larr; Back to Equipments</a>
+                                <a href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin: 0; transition: background 0.2s;">Back ← </a>
                             </div>
 
                             <div class="equipment-card">

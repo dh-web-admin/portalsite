@@ -165,7 +165,7 @@ $fileCount = count($fileList);
         <main class="content-area">
             <div style="display:flex;flex-direction:row;gap:40px;align-items:flex-start;min-height:480px;width:100%;">
                 <div style="flex:2 1 0;min-width:400px;max-width:60vw;">
-                    <a id="backBtn" href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin-bottom:18px; transition: background 0.2s;">&larr; Back to Equipments</a>
+                    <a id="backBtn" href="index.php" class="equipment-btn equipment-btn--secondary" style="padding: 10px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; background: #f3f4f6; color: #6b7280; border: none; text-decoration: none; display: inline-block; margin-bottom:18px; transition: background 0.2s;">Back ← </a>
                     <div style="background:#e0e7ff;padding:16px 24px;border-radius:12px;font-weight:600;font-size:1.2rem;color:#374151;margin-bottom:18px;">
                         <?php echo $fileCount; ?> item<?php echo $fileCount !== 1 ? 's' : ''; ?> available for equipment #<?php echo $equipment_id; ?>
                     </div>

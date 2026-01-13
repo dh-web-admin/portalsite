@@ -145,7 +145,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 <div class="main-content">
                     <div class="panel-wrapper">
                         <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
-                            <a id="backBtn" href="index.php" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
+                            <a id="backBtn" href="index.php" class="equipment-back-btn"><span>Back ← </span></a>
                         </div>
                         <div class="selected-info" aria-live="polite">
                             <div class="hours-bubble">Current equipment hours: <?php echo display_cell($currentHours); ?></div>

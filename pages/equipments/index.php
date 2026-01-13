@@ -123,7 +123,18 @@ try {
 								foreach ($equipments as &$eq) {
 									$eid = (int)($eq['equipment_id'] ?? 0);
 									$filters = $filtersByEquip[$eid] ?? [];
-									if (count($filters) === 0) continue;
+									// If there are no filter rows, clear stored air_filters and schedule NULL persistence
+									if (count($filters) === 0) {
+										if (($eq['air_filters'] ?? null) !== null) {
+											$airFilterUpdates[] = [
+												'status' => null,
+												'id' => $eid
+											];
+										}
+										$eq['air_filters'] = null;
+										$eq['air_filters_status'] = null;
+										continue;
+									}
 									$equipHours = is_numeric($eq['current_hours'] ?? null) ? (float)$eq['current_hours'] : 0.0;
 									$worstCondition = null;
 									foreach ($filters as $filterRow) {
@@ -161,14 +172,25 @@ try {
 								if (!empty($airFilterUpdates)) {
 									try {
 										$stmtUpdateAir = $conn->prepare('UPDATE equipments SET air_filters = ? WHERE equipment_id = ?');
-										if ($stmtUpdateAir) {
+										$stmtUpdateAirNull = $conn->prepare('UPDATE equipments SET air_filters = NULL WHERE equipment_id = ?');
+										if ($stmtUpdateAir || $stmtUpdateAirNull) {
 											foreach ($airFilterUpdates as $upd) {
 												$statusVal = $upd['status'];
 												$idVal = $upd['id'];
-												$stmtUpdateAir->bind_param('si', $statusVal, $idVal);
-												$stmtUpdateAir->execute();
+												if ($statusVal === null) {
+													if ($stmtUpdateAirNull) {
+														$stmtUpdateAirNull->bind_param('i', $idVal);
+														$stmtUpdateAirNull->execute();
+													}
+												} else {
+													if ($stmtUpdateAir) {
+														$stmtUpdateAir->bind_param('si', $statusVal, $idVal);
+														$stmtUpdateAir->execute();
+													}
+												}
 											}
-											$stmtUpdateAir->close();
+											if ($stmtUpdateAir) $stmtUpdateAir->close();
+											if ($stmtUpdateAirNull) $stmtUpdateAirNull->close();
 										}
 									} catch (Throwable $inner) {
 										// swallow persistence issues; UI still shows computed values
@@ -227,6 +249,20 @@ function eq_format_warranty($dateValue) {
 		return ['label' => date('Y-m-d', $ts), 'state' => 'good'];
 	}
 	return ['label' => date('Y-m-d', $ts), 'state' => 'bad'];
+}
+
+// Helper: echo inline SVG scaled to a given height (falls back to <img>)
+function echo_svg_inline($filename, $height = 28) {
+	$safe = basename($filename);
+	$path = __DIR__ . '/images/' . $safe;
+	if (file_exists($path)) {
+		$svg = file_get_contents($path);
+		// Inject style attribute on the first <svg ...> tag to force height
+		$svg = preg_replace('/<svg\b([^>]*)>/i', '<svg $1 style="height:' . intval($height) . 'px;width:auto;vertical-align:middle;">', $svg, 1);
+		echo $svg;
+	} else {
+		echo '<img src="images/' . htmlspecialchars($safe) . '" alt="' . htmlspecialchars(pathinfo($safe, PATHINFO_FILENAME)) . '" style="height:' . intval($height) . 'px;vertical-align:middle;" />';
+	}
 }
 ?>
 <!DOCTYPE html>
@@ -290,6 +326,18 @@ function eq_format_warranty($dateValue) {
 		.warranty-add-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; cursor: pointer; font-size: 12px; color: #2563eb; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(37, 99, 235, 0.35); background: rgba(37, 99, 235, 0.08); font-weight: 700; }
 		.warranty-cell:hover .warranty-add-btn { opacity: 1; pointer-events: auto; }
 		.warranty-add-btn:hover { background: rgba(37, 99, 235, 0.16); transform: translateY(-50%) scale(1.03); }
+
+		/* Placeholder and inline add button for oil / filter when empty */
+		.oil-placeholder, .filter-placeholder { display:inline-flex; align-items:center; gap:8px; }
+		.oil-placeholder .add-oil-btn, .filter-placeholder .add-filter-btn { display:none; }
+		.oil-placeholder:hover .add-oil-btn, .filter-placeholder:hover .add-filter-btn { display:inline-block; }
+		.add-oil-btn, .add-filter-btn {
+			background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+		}
+
+		/* Center the last five status columns */
+		.engine-cell, .oil-cell, .airfilters-cell, .tires-cell, .warranty-col { text-align: center; vertical-align: middle; }
+		.engine-cell img, .oil-cell img, .airfilters-cell img, .tires-cell img, .warranty-col img { display: inline-block; margin: 0 auto; }
 
 		/* Type / Location modals */
 		.type-modal__dialog, .location-modal__dialog { max-width: 420px; }
@@ -676,7 +724,7 @@ function eq_format_warranty($dateValue) {
 																<span class="hours-edit-icon admin-only" title="Edit hours">Edit</span>
 															</div>
 														</td>
-														<td>
+														<td class="engine-cell">
 															<?php $val = trim((string)($eq['operating_condition'] ?? '')); ?>
 															<?php
 															$svgMap = [
@@ -686,7 +734,9 @@ function eq_format_warranty($dateValue) {
 															];
 															?>
 															<?php if ($val === '' || !isset($svgMap[$val])): ?>
-																<span class="equipment-pill equipment-pill--neutral">—</span>
+																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?>" title="No engine status">
+																	<?php echo_svg_inline('noengine.svg', 28); ?>
+																</a>
 															<?php else: ?>
 																<a href="equipment.php?id=<?php echo (int)$eq['equipment_id']; ?>">
 																	<img src="images/<?php echo htmlspecialchars($svgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> engine" style="height:28px;vertical-align:middle;" />
@@ -695,7 +745,7 @@ function eq_format_warranty($dateValue) {
 														</td>
 														<?php $val = trim((string)($eq['oil_status'] ?? ''));
 															$oilHref = 'oil_status.php?id=' . (int)$eq['equipment_id']; ?>
-														<td <?php if ($val !== '' ) { echo 'onclick="window.location=\'' . htmlspecialchars($oilHref, ENT_QUOTES) . '\';" style="cursor:pointer;"'; } ?>>
+														<td class="oil-cell" <?php if ($val !== '' ) { echo 'onclick="window.location=\'' . htmlspecialchars($oilHref, ENT_QUOTES) . '\';" style="cursor:pointer;"'; } ?>>
 															<?php
 															$oilSvgMap = [
 																'green' => 'greenoil.svg',
@@ -704,7 +754,10 @@ function eq_format_warranty($dateValue) {
 															];
 															?>
 															<?php if ($val === '' || !isset($oilSvgMap[$val])): ?>
-																<span class="equipment-pill equipment-pill--neutral">—</span>
+																<div class="oil-placeholder">
+																	<?php echo_svg_inline('nooil.svg', 28); ?>
+																	<button class="add-oil-btn" title="Add oil" onclick="window.location.href='oil_status.php?id=<?php echo (int)$eq['equipment_id']; ?>'">Add</button>
+																</div>
 															<?php else: ?>
 																<a class="oil-status-link" href="oil_status.php?id=<?php echo (int)$eq['equipment_id']; ?>">
 																	<img src="images/<?php echo htmlspecialchars($oilSvgMap[$val]); ?>" alt="<?php echo htmlspecialchars($val); ?> oil" style="height:28px;vertical-align:middle;" />
@@ -723,20 +776,23 @@ function eq_format_warranty($dateValue) {
 														?>
 														<td class="airfilters-cell" <?php if ($filterStatus !== null && isset($filterSvgMap[$filterStatus])) { echo 'onclick="window.location=\'' . htmlspecialchars($filterHref, ENT_QUOTES) . '\';" style="cursor:pointer;"'; } ?>>
 															<?php if ($filterStatus === null || !isset($filterSvgMap[$filterStatus])): ?>
-																<span class="equipment-pill equipment-pill--neutral">—</span>
+																<div class="filter-placeholder">
+																	<?php echo_svg_inline('nofilter.svg', 28); ?>
+																	<button class="add-filter-btn" title="Add filter" onclick="window.location.href='Airfilters.php?id=<?php echo (int)$eq['equipment_id']; ?>'">Add</button>
+																</div>
 															<?php else: ?>
 																<a class="airfilters-status-link" href="Airfilters.php?id=<?php echo (int)$eq['equipment_id']; ?>" title="Air filters condition: <?php echo htmlspecialchars((string)$filterCondition); ?>%">
 																	<img src="images/<?php echo htmlspecialchars($filterSvgMap[$filterStatus]); ?>" alt="<?php echo htmlspecialchars($filterStatus); ?> air filter" style="height:28px;vertical-align:middle;" />
 																</a>
 															<?php endif; ?>
 														</td>
-														<td style="text-align:center;">
+														<td class="tires-cell">
 															<?php $tiresHref = 'Tires.php?id=' . (int)$eq['equipment_id']; ?>
 															<a href="<?php echo htmlspecialchars($tiresHref, ENT_QUOTES); ?>" title="View tires" style="display:inline-block;">
 																<img src="images/tires.svg" alt="Tires" style="height:28px;vertical-align:middle;" />
 															</a>
 														</td>
-														<td>
+														<td class="warranty-col">
 															<div class="warranty-cell">
 																<?php
 																$warrantyFiles = 0;

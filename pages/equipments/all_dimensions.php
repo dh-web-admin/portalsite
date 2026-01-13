@@ -229,7 +229,7 @@ if (!can_access($role, 'equipments')) {
             <div class="main-content" style="margin-top:32px;">
                 <div class="page-top-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px; width:100%;">
                     <div style="flex:1; display:flex; align-items:center;">
-                        <a id="backBtn" href="index.php" class="equipment-btn equipment-btn--secondary" style="padding:10px 28px;border-radius:8px;font-weight:600;font-size:15px;background:#f3f4f6;color:#6b7280;border:none;text-decoration:none;display:inline-block;margin:0;">&larr; Back to Equipments</a>
+                        <a id="backBtn" href="index.php" class="equipment-btn equipment-btn--secondary" style="padding:10px 28px;border-radius:8px;font-weight:600;font-size:15px;background:#f3f4f6;color:#6b7280;border:none;text-decoration:none;display:inline-block;margin:0;">Back ← </a>
                     </div>
                     <div style="flex:2; text-align:center;">
                         <h1 class="admin-page-title" style="font-size:2.5rem;font-weight:700;color:#374151;margin:0;">Dimension Cheat Sheet</h1>

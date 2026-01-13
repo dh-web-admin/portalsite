@@ -199,7 +199,7 @@ $filterNames = array_values(array_unique($filterNames));
                 <div class="main-content">
                     <div class="panel-wrapper">
                         <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
-                            <a id="backBtn" href="index.php" class="equipment-back-btn"><span>←</span><span>Back to Equipments</span></a>
+                            <a id="backBtn" href="index.php" class="equipment-back-btn"><span>Back ← </span></a>
                         </div>
                     </div>
                     <div class="oil-page-heading" aria-hidden="true">

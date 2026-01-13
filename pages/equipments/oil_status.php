@@ -173,8 +173,7 @@ try {
 					<div class="panel-wrapper">
 						<div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
 							<a id="backBtn" href="index.php" class="equipment-back-btn">
-								<span>←</span>
-								<span>Back to Equipments</span>
+								<span>Back ← </span>
 							</a>
 						</div>
 					</div>

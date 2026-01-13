@@ -67,7 +67,7 @@ if (!can_access($role, 'equipments')) {
                 <div class="main-content">
                     <h1>All Warranties</h1>
                     <p>Content for all warranties will go here.</p>
-                    <a href="index.php">&larr; Back to Equipments</a>
+                    <a href="index.php">Back ← </a>
                 </div>
             </main>
         </div>
