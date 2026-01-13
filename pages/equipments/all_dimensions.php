@@ -61,6 +61,15 @@ if (!can_access($role, 'equipments')) {
 
     <style>
         .dimension-table-area { overflow-x: auto; margin-left:0; margin-right:0; max-width: 60vw; }
+        /* Keep the left table visible while scrolling */
+        .dimension-table-area {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 120px; /* adjust if header height changes */
+            align-self: flex-start;
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
         .dimension-table {
             border-collapse: separate; border-spacing: 0; width: 100%;
             background:#fff; border-radius:16px;
@@ -117,6 +126,9 @@ if (!can_access($role, 'equipments')) {
             padding:10px 32px; font-size:16px; font-weight:600; cursor:pointer;
             box-shadow:0 2px 6px rgba(156,163,175,0.15);
             margin-top:12px; width:90%; display:block; transition: all 0.2s ease;
+            /* keep Add button visible at bottom of panel */
+            position: sticky;
+            bottom: 16px;
         }
         #addImageBtn:hover:not(:disabled){ background:#5a68d0; transform:translateY(-2px); box-shadow:0 4px 12px rgba(108,122,224,0.3); }
         #addImageBtn:disabled{ opacity:0.5; cursor:not-allowed; }
@@ -127,6 +139,9 @@ if (!can_access($role, 'equipments')) {
             padding:32px 18px;
             display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
             min-height:520px;
+            /* Make right panel its own scrollable area so the Add button can stick */
+            max-height: calc(100vh - 140px);
+            overflow-y: auto;
         }
 
         #uploadBtnContainer{
@@ -186,6 +201,11 @@ if (!can_access($role, 'equipments')) {
             .no-print, .no-print * { display:none !important; }
             .main-content { box-shadow:none !important; background:#fff !important; }
         }
+        /* Uploaded image card + delete button */
+        .uploaded-image-card{ width:100%; position:relative; border-radius:12px; overflow:hidden; background:#fff; padding:6px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        .uploaded-image-card img{ width:100%; height:auto; display:block; border-radius:8px; }
+        .delete-image-btn{ position:absolute; top:8px; right:8px; z-index:10; background:rgba(0,0,0,0.6); color:#fff; border:none; width:36px; height:36px; border-radius:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+        .delete-image-btn:hover{ background:rgba(0,0,0,0.8); }
     </style>
 </head>
 
@@ -561,6 +581,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     countMsg.textContent = n + ' image' + (n > 1 ? 's' : '') + ' added';
                     addImageBtn.textContent = 'Add More';
                     data.uploads.dimension.forEach(function(upload) {
+                        var card = document.createElement('div');
+                        card.className = 'uploaded-image-card';
+                        card.setAttribute('data-upload-id', upload.id || '');
+
+                        var delBtn = document.createElement('button');
+                        delBtn.className = 'delete-image-btn';
+                        delBtn.setAttribute('title', 'Delete image');
+                        delBtn.innerHTML = '&#x2716;';
+                        delBtn.addEventListener('click', function(ev) {
+                            ev.stopPropagation();
+                            if (!confirm('Delete this image?')) return;
+                            var uploadId = upload.id || card.getAttribute('data-upload-id');
+                            if (!uploadId) return alert('Missing upload id');
+                            fetch('/api/delete_equipment_upload.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: 'id=' + encodeURIComponent(uploadId)
+                            }).then(function(res){ return res.json().catch(function(){ return { success:false }; }); })
+                            .then(function(j){
+                                if (j && j.success) {
+                                    card.remove();
+                                    // update count message
+                                    var cards = imageList.querySelectorAll('.uploaded-image-card');
+                                    var n = cards.length;
+                                    if (n > 0) countMsg.textContent = n + ' image' + (n>1?'s':'') + ' added';
+                                    else {
+                                        countMsg.textContent = 'No image uploaded for this equipment.';
+                                        var msg = document.createElement('span'); msg.className = 'no-image'; msg.textContent = 'No image uploaded for this equipment.'; imageList.appendChild(msg);
+                                    }
+                                } else {
+                                    alert('Delete failed');
+                                }
+                            }).catch(function(){ alert('Network error'); });
+                        });
+
                         var img = document.createElement('img');
                         img.src = upload.file_url || '';
                         img.alt = 'Equipment Photo';
@@ -570,7 +625,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             errSpan.textContent = 'Error loading image: ' + (upload.file_url || '');
                             img.replaceWith(errSpan);
                         };
-                        imageList.appendChild(img);
+
+                        card.appendChild(delBtn);
+                        card.appendChild(img);
+                        imageList.appendChild(card);
                     });
                 } else {
                     addImageBtn.textContent = 'Add Image';
