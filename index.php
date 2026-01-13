@@ -1,26 +1,64 @@
 <?php
 // Front controller safety: allow health endpoint to be served even if server rewrites to index
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
-if (preg_match('~/(health(?:\.php)?)$~i', $uri)) {
-	// Serve the health check directly
-	require __DIR__ . '/health.php';
-	exit;
+$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+
+// ✅ Serve uploads directly from mounted volume when requested.
+// This bypasses session/auth so static files return 200 instead of redirecting to /auth/login.php.
+if (preg_match('#^/(?:PortalSite/)?uploads/(.+)$#i', $uri, $m)) {
+    $rel = $m[1];
+
+    // Prevent traversal
+    if (strpos($rel, '..') !== false) {
+        http_response_code(400);
+        echo 'Bad request';
+        exit;
+    }
+
+    $fs = '/portalsite/uploads/' . $rel;
+
+    if (!is_file($fs) || !is_readable($fs)) {
+        // Debug log in a writable location
+        @file_put_contents('/tmp/upload_debug.log', date('c') . " MISS: $uri -> $fs\n", FILE_APPEND | LOCK_EX);
+        http_response_code(404);
+        echo 'Not found';
+        exit;
+    }
+
+    $ext = strtolower(pathinfo($fs, PATHINFO_EXTENSION));
+    $types = [
+        'png'  => 'image/png',
+        'jpg'  => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'webp' => 'image/webp',
+        'gif'  => 'image/gif',
+        'pdf'  => 'application/pdf',
+    ];
+
+    header('Content-Type: ' . ($types[$ext] ?? 'application/octet-stream'));
+    header('Content-Length: ' . filesize($fs));
+    header('Cache-Control: public, max-age=31536000, immutable');
+    readfile($fs);
+    exit;
 }
 
-// Bootstrap session and route based on auth state
+if (preg_match('~/(health(?:\.php)?)$~i', $uri)) {
+    require __DIR__ . '/health.php';
+    exit;
+}
+
+// ✅ Continue normal app flow
 require_once __DIR__ . '/session_init.php';
 
-// If already logged in, go straight to dashboard; otherwise show login
+// IMPORTANT: Don’t redirect everything unless this file is *only* for root.
+// If this is your true front controller, you should dispatch to your router instead.
 if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
-	// Detect environment and set dashboard path
-	$isProduction = (strpos($_SERVER['HTTP_HOST'], 'darkhorsespreader.com') !== false || getenv('RAILWAY_ENVIRONMENT'));
-	$dashboardPath = $isProduction ? '/pages/dashboard/' : '/PortalSite/pages/dashboard/';
-	header('Location: ' . $dashboardPath);
-	exit;
+    $isProduction = (strpos($_SERVER['HTTP_HOST'] ?? '', 'darkhorsespreader.com') !== false || getenv('RAILWAY_ENVIRONMENT'));
+    $dashboardPath = $isProduction ? '/pages/dashboard/' : '/PortalSite/pages/dashboard/';
+    header('Location: ' . $dashboardPath);
+    exit;
 } else {
-	$isProduction = (strpos($_SERVER['HTTP_HOST'], 'darkhorsespreader.com') !== false || getenv('RAILWAY_ENVIRONMENT'));
-	$loginPath = $isProduction ? '/auth/login.php' : '/PortalSite/auth/login.php';
-	header('Location: ' . $loginPath);
-	exit;
+    $isProduction = (strpos($_SERVER['HTTP_HOST'] ?? '', 'darkhorsespreader.com') !== false || getenv('RAILWAY_ENVIRONMENT'));
+    $loginPath = $isProduction ? '/auth/login.php' : '/PortalSite/auth/login.php';
+    header('Location: ' . $loginPath);
+    exit;
 }
-?>
