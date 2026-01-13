@@ -215,10 +215,7 @@ if (!can_access($role, 'equipments')) {
         .uploaded-image-card:hover .delete-image-btn{ background:rgba(0,0,0,0.8); opacity:1; pointer-events:auto; }
         .uploaded-image-card:hover .delete-image-btn .label{ opacity:1; transform:translateX(0); }
 
-        /* image scroller nav buttons */
-        .image-scroller-btn{ position:absolute; right:22px; width:40px; height:40px; border-radius:20px; background:#667eea; color:#fff; border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(102,126,234,0.2); cursor:pointer; z-index:50; }
-        .image-scroller-btn.up{ top:130px; }
-        .image-scroller-btn.down{ bottom:130px; }
+        /* image scroller buttons removed - using native scrollbar for image list */
     </style>
 </head>
 
@@ -366,8 +363,7 @@ if (!can_access($role, 'equipments')) {
                             <span class="no-image">Select an equipment row to view images</span>
                         </div>
 
-                        <button class="image-scroller-btn up" id="imgScrollUp" aria-label="Scroll images up">▲</button>
-                        <button class="image-scroller-btn down" id="imgScrollDown" aria-label="Scroll images down">▼</button>
+                        <!-- image scroller buttons removed; image list uses native scrollbar -->
 
                         <input type="file" id="dimensionImageInput" accept="image/*" multiple style="display:none;" />
                     </div>
@@ -807,20 +803,7 @@ document.addEventListener('DOMContentLoaded', function() {
         URL.revokeObjectURL(url);
     });
 
-    // Image scroller buttons (scroll image list by one card)
-    var imgScrollUp = document.getElementById('imgScrollUp');
-    var imgScrollDown = document.getElementById('imgScrollDown');
-    function scrollImageBy(step) {
-        if (!imageList) return;
-        var card = imageList.querySelector('.uploaded-image-card');
-        if (!card) return;
-        var gap = 18; // fallback gap
-        try { gap = parseInt(getComputedStyle(imageList).gap) || gap; } catch(e){}
-        var amount = card.offsetHeight + gap;
-        imageList.scrollBy({ top: step * amount, behavior: 'smooth' });
-    }
-    if (imgScrollUp) imgScrollUp.addEventListener('click', function(){ scrollImageBy(-1); });
-    if (imgScrollDown) imgScrollDown.addEventListener('click', function(){ scrollImageBy(1); });
+    // Image scroller arrows removed — use native scrollbar inside the image panel
 
 });
 </script>
