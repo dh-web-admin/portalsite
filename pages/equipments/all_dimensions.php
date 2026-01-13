@@ -65,9 +65,9 @@ if (!can_access($role, 'equipments')) {
         .dimension-table-area {
             position: -webkit-sticky;
             position: sticky;
-            top: 120px; /* adjust if header height changes */
+            top: 160px; /* leave space for fixed top bar */
             align-self: flex-start;
-            max-height: calc(100vh - 160px);
+            max-height: calc(100vh - 200px);
             overflow-y: auto;
         }
         .dimension-table {
@@ -140,6 +140,7 @@ if (!can_access($role, 'equipments')) {
             /* Fix panel height so the image scroller can show exactly 2 images per view */
             height: calc(100vh - 180px);
             overflow: hidden;
+            position: relative;
         }
 
         #uploadBtnContainer{
@@ -207,11 +208,17 @@ if (!can_access($role, 'equipments')) {
             scroll-snap-align: start;
         }
         .uploaded-image-card img{ width:100%; height:100%; display:block; border-radius:8px; object-fit:contain; }
-        .delete-image-btn{ position:absolute; top:8px; right:8px; z-index:10; background:rgba(0,0,0,0.6); color:#fff; border:none; height:36px; border-radius:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 10px; overflow:hidden; transition: all 0.12s ease; }
+        /* hide delete control until hovered */
+        .delete-image-btn{ position:absolute; top:8px; right:8px; z-index:10; background:rgba(0,0,0,0.6); color:#fff; border:none; height:36px; border-radius:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0 10px; overflow:hidden; transition: all 0.12s ease; opacity:0; pointer-events:none; }
         .delete-image-btn .icon{ display:inline-block; }
         .delete-image-btn .label{ display:inline-block; margin-left:8px; opacity:0; transform:translateX(6px); transition: opacity 0.12s, transform 0.12s; white-space:nowrap; font-weight:600; }
-        .uploaded-image-card:hover .delete-image-btn{ background:rgba(0,0,0,0.8); }
+        .uploaded-image-card:hover .delete-image-btn{ background:rgba(0,0,0,0.8); opacity:1; pointer-events:auto; }
         .uploaded-image-card:hover .delete-image-btn .label{ opacity:1; transform:translateX(0); }
+
+        /* image scroller nav buttons */
+        .image-scroller-btn{ position:absolute; right:22px; width:40px; height:40px; border-radius:20px; background:#667eea; color:#fff; border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(102,126,234,0.2); cursor:pointer; z-index:50; }
+        .image-scroller-btn.up{ top:130px; }
+        .image-scroller-btn.down{ bottom:130px; }
     </style>
 </head>
 
@@ -223,7 +230,7 @@ if (!can_access($role, 'equipments')) {
 
         <main class="content-area">
             <div class="main-content" style="margin-top:32px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px; width:100%;">
+                <div class="page-top-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px; width:100%;">
                     <div style="flex:1; display:flex; align-items:center;">
                         <a id="backBtn" href="index.php" class="equipment-btn equipment-btn--secondary" style="padding:10px 28px;border-radius:8px;font-weight:600;font-size:15px;background:#f3f4f6;color:#6b7280;border:none;text-decoration:none;display:inline-block;margin:0;">&larr; Back to Equipments</a>
                     </div>
@@ -358,6 +365,9 @@ if (!can_access($role, 'equipments')) {
                         <div class="dimension-image-list" id="dimensionImageList" style="height: calc(100% - 120px);">
                             <span class="no-image">Select an equipment row to view images</span>
                         </div>
+
+                        <button class="image-scroller-btn up" id="imgScrollUp" aria-label="Scroll images up">▲</button>
+                        <button class="image-scroller-btn down" id="imgScrollDown" aria-label="Scroll images down">▼</button>
 
                         <input type="file" id="dimensionImageInput" accept="image/*" multiple style="display:none;" />
                     </div>
@@ -796,6 +806,21 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     });
+
+    // Image scroller buttons (scroll image list by one card)
+    var imgScrollUp = document.getElementById('imgScrollUp');
+    var imgScrollDown = document.getElementById('imgScrollDown');
+    function scrollImageBy(step) {
+        if (!imageList) return;
+        var card = imageList.querySelector('.uploaded-image-card');
+        if (!card) return;
+        var gap = 18; // fallback gap
+        try { gap = parseInt(getComputedStyle(imageList).gap) || gap; } catch(e){}
+        var amount = card.offsetHeight + gap;
+        imageList.scrollBy({ top: step * amount, behavior: 'smooth' });
+    }
+    if (imgScrollUp) imgScrollUp.addEventListener('click', function(){ scrollImageBy(-1); });
+    if (imgScrollDown) imgScrollDown.addEventListener('click', function(){ scrollImageBy(1); });
 
 });
 </script>
