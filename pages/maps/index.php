@@ -165,7 +165,10 @@ $canEditMaps = can_edit_page('maps');
   <!-- Add Supplier Modal -->
   <div id="addSupplierModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
-      <h3 style="margin:0 0 20px 0;font-size:20px;color:#1e293b;">Add New Supplier</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 20px 0;">
+        <div style="font-size:20px;color:#1e293b;font-weight:700;">Add New Supplier</div>
+        <div style="font-size:13px;color:#475569;font-weight:600;">Service: <span id="addSupplierServiceName" style="font-weight:700;color:#0f172a;">—</span></div>
+      </div>
       <form id="addSupplierForm" style="display:grid;gap:16px;">
         <div style="position:relative;">
           <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Name *</label>
@@ -1140,10 +1143,18 @@ $canEditMaps = can_edit_page('maps');
       var cancelSupplierBtn = document.getElementById('cancelSupplierBtn');
       var addSupplierOpenBtn = document.getElementById('addSupplierBtn');
 
-      // Open modal
+      // Open modal and set service label
       if (addSupplierOpenBtn && addSupplierModal) {
         addSupplierOpenBtn.addEventListener('click', function() {
+          // Show modal
           addSupplierModal.style.display = 'flex';
+          // Update the Service label to reflect the currently selected service
+          try {
+            var lbl = document.getElementById('addSupplierServiceName');
+            if (lbl) lbl.textContent = currentService || 'None selected';
+            // Also ensure map resizes to avoid clipping
+            setTimeout(function(){ if (typeof map !== 'undefined' && map && map.invalidateSize) map.invalidateSize(); }, 60);
+          } catch (e) { /* ignore */ }
         });
       }
 
