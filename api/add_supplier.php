@@ -25,6 +25,8 @@ $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
 $service = isset($_POST['service']) ? trim($_POST['service']) : '';
 $latitude = isset($_POST['latitude']) ? trim($_POST['latitude']) : '';
 $longitude = isset($_POST['longitude']) ? trim($_POST['longitude']) : '';
+$supply_method = isset($_POST['supply_method']) ? trim($_POST['supply_method']) : '';
+$location_phone = isset($_POST['location_phone']) ? trim($_POST['location_phone']) : '';
 // ...existing code...
 
 // Validate required fields
@@ -52,7 +54,8 @@ $lngVal = floatval($longitude);
 
 // Insert supplier
 // Include latitude and longitude in the insert
-$stmt = $conn->prepare('INSERT INTO suppliers (name, material, sales_contact, contact_number, email, address, city, state, location_type, notes, service, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+// Include new columns `supply_method` and `location_phone` in the insert
+$stmt = $conn->prepare('INSERT INTO suppliers (name, material, sales_contact, contact_number, location_phone, email, address, city, state, location_type, supply_method, notes, service, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
 if (!$stmt) {
   http_response_code(500);
@@ -60,7 +63,7 @@ if (!$stmt) {
   exit;
 }
 
-$stmt->bind_param('sssssssssssdd', $name, $material, $sales_contact, $contact_number, $email, $address, $city, $state, $location_type, $notes, $service, $latVal, $lngVal);
+$stmt->bind_param('sssssssssssssdd', $name, $material, $sales_contact, $contact_number, $location_phone, $email, $address, $city, $state, $location_type, $supply_method, $notes, $service, $latVal, $lngVal);
 
 if ($stmt->execute()) {
   echo json_encode(['success' => true, 'message' => 'Supplier added successfully', 'supplier_id' => $stmt->insert_id]);

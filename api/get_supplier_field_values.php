@@ -14,7 +14,7 @@ if (!isset($_SESSION['email'])) {
 $field = isset($_GET['field']) ? trim($_GET['field']) : '';
 
 // Whitelist of allowed fields to prevent SQL injection
-$allowedFields = ['name', 'material', 'location_type', 'sales_contact', 'contact_number', 'email', 'address', 'city', 'state'];
+$allowedFields = ['name', 'material', 'location_type', 'sales_contact', 'contact_number', 'email', 'address', 'city', 'state', 'supply_method', 'location_phone'];
 
 if (!in_array($field, $allowedFields)) {
   http_response_code(400);

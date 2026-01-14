@@ -26,6 +26,8 @@ if (!can_access($role, 'Bid_tracking')) {
   header('Location: /pages/dashboard/');
   exit();
 }
+// Determine if current user can edit this page (used to show add button)
+$canEditBidTracking = function_exists('can_edit_page') ? can_edit_page('Bid_tracking') : false;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,10 +47,12 @@ if (!can_access($role, 'Bid_tracking')) {
       <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
-  <div class="maintenance-wrap">
-           <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
+          <div class="toolbar" style="display:flex;align-items:center;justify-content:flex-start;padding:8px 0;gap:12px;">
+            <?php if (!empty($canEditBidTracking)) { ?>
+              <button id="addProjectBtn" class="btn btn-primary">add Project +</button>
+            <?php } ?>
           </div>
-      </div>
+        </div>
       </main>
     </div>
   </div>

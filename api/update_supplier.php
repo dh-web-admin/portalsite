@@ -38,38 +38,55 @@ try {
   $city = isset($_POST['city']) ? trim($_POST['city']) : null;
   $state = isset($_POST['state']) ? trim($_POST['state']) : null;
   $location_type = isset($_POST['location_type']) ? trim($_POST['location_type']) : null;
+  $supply_method = isset($_POST['supply_method']) ? trim($_POST['supply_method']) : null;
+  $location_phone = isset($_POST['location_phone']) ? trim($_POST['location_phone']) : null;
+  $latitude = isset($_POST['latitude']) ? trim($_POST['latitude']) : null;
+  $longitude = isset($_POST['longitude']) ? trim($_POST['longitude']) : null;
   $notes = isset($_POST['notes']) ? trim($_POST['notes']) : null;
   $service = isset($_POST['service']) ? trim($_POST['service']) : null;
   
   // Prepare UPDATE statement
-  $sql = "UPDATE suppliers SET 
-          name = ?,
-          material = ?,
-          sales_contact = ?,
-          contact_number = ?,
-          email = ?,
-          address = ?,
-          city = ?,
-          state = ?,
-          location_type = ?,
-          notes = ?,
-          service = ?
-          WHERE id = ?";
+      $sql = "UPDATE suppliers SET 
+        name = ?,
+        material = ?,
+        sales_contact = ?,
+        contact_number = ?,
+        location_phone = ?,
+        email = ?,
+        address = ?,
+        city = ?,
+        state = ?,
+        location_type = ?,
+        supply_method = ?,
+        notes = ?,
+        service = ?,
+        latitude = ?,
+        longitude = ?
+        WHERE id = ?";
   
   $stmt = $conn->prepare($sql);
+  $latParam = is_numeric($latitude) ? floatval($latitude) : null;
+  $lngParam = is_numeric($longitude) ? floatval($longitude) : null;
+
+  // Types: 13 strings, 2 doubles, 1 integer
+  $types = "sssssssssssssddi";
   $stmt->bind_param(
-    "sssssssssssi",
+    $types,
     $name,
     $material,
     $sales_contact,
     $contact_number,
+    $location_phone,
     $email,
     $address,
     $city,
     $state,
     $location_type,
+    $supply_method,
     $notes,
     $service,
+    $latParam,
+    $lngParam,
     $id
   );
   

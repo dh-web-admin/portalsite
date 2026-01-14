@@ -149,7 +149,7 @@ $canEditMaps = can_edit_page('maps');
             <?php if ($canEditMaps): ?>
             <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
               <button id="topAddServiceBtn" class="btn btn-primary btn-slim">+ Add Service</button>
-              <button id="topEditServiceBtn" class="btn btn-slim">Edit Service</button>
+              <button id="topEditServiceBtn" class="btn btn-slim" style="background:#3b82f6;color:#fff;border:none;box-shadow:0 2px 6px rgba(59,130,246,0.18);">Edit Service</button>
             </div>
             <?php endif; ?>
 
@@ -163,7 +163,7 @@ $canEditMaps = can_edit_page('maps');
   </div>
   
   <!-- Add Supplier Modal -->
-  <div id="addSupplierModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
+  <div id="addSupplierModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
       <h3 style="margin:0 0 20px 0;font-size:20px;color:#1e293b;">Add New Supplier</h3>
       <form id="addSupplierForm" style="display:grid;gap:16px;">
@@ -184,14 +184,31 @@ $canEditMaps = can_edit_page('maps');
             <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
           </div>
         </div>
+        <!-- Third row: Supply Method + Location Phone Number -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="position:relative;">
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Supply Method</label>
+            <input type="text" name="supply_method" autocomplete="off" class="autocomplete-input" data-field="supply_method" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+            <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+          </div>
+          <div style="position:relative;">
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Location Phone Number</label>
+            <input type="tel" name="location_phone" autocomplete="off" class="autocomplete-input" data-field="location_phone" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+            <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+          </div>
+        </div>
+
+        <!-- Fourth row: Sales Contact Name (full width) -->
         <div style="position:relative;">
-          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Sales Contact</label>
+          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Sales Contact Name</label>
           <input type="text" name="sales_contact" autocomplete="off" class="autocomplete-input" data-field="sales_contact" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
           <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
         </div>
+
+        <!-- Next row: Sales Contact Number + Email -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
-            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Contact Number</label>
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Sales Contact Number</label>
             <input type="tel" name="contact_number" autocomplete="off" class="autocomplete-input" data-field="contact_number" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
             <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
           </div>
@@ -239,7 +256,7 @@ $canEditMaps = can_edit_page('maps');
   </div>
   
   <!-- Edit Supplier Modal -->
-  <div id="editSupplierModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
+  <div id="editSupplierModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
       <h3 style="margin:0 0 20px 0;font-size:20px;color:#1e293b;">Edit Supplier</h3>
       <form id="editSupplierForm" style="display:grid;gap:16px;">
@@ -261,14 +278,31 @@ $canEditMaps = can_edit_page('maps');
             <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
           </div>
         </div>
+        <!-- Third row: Supply Method + Location Phone Number -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="position:relative;">
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Supply Method</label>
+            <input type="text" name="supply_method" id="editSupplierSupplyMethod" autocomplete="off" class="autocomplete-input" data-field="supply_method" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+            <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+          </div>
+          <div style="position:relative;">
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Location Phone Number</label>
+            <input type="tel" name="location_phone" id="editSupplierLocationPhone" autocomplete="off" class="autocomplete-input" data-field="location_phone" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+            <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+          </div>
+        </div>
+
+        <!-- Fourth row: Sales Contact Name (full width) -->
         <div style="position:relative;">
-          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Sales Contact</label>
+          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Sales Contact Name</label>
           <input type="text" name="sales_contact" id="editSupplierSalesContact" autocomplete="off" class="autocomplete-input" data-field="sales_contact" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
           <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
         </div>
+
+        <!-- Next row: Sales Contact Number + Email -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
-            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Contact Number</label>
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Sales Contact Number</label>
             <input type="tel" name="contact_number" id="editSupplierContactNumber" autocomplete="off" class="autocomplete-input" data-field="contact_number" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
             <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
           </div>
@@ -282,6 +316,13 @@ $canEditMaps = can_edit_page('maps');
           <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Address</label>
           <input type="text" name="address" id="editSupplierAddress" autocomplete="off" class="autocomplete-input" data-field="address" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
           <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+        </div>
+        <div>
+          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Coordinates * <span style="font-weight:400;font-size:12px;color:#94a3b8">(format: lat, lng)</span></label>
+          <input type="text" id="editSupplierCoordinates" placeholder="e.g. 41.0998, -80.6495" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+          <div id="editSupplierCoordError" class="coord-error" aria-live="polite" style="display:none;margin-top:6px;color:#ef4444;font-size:12px;"></div>
+          <input type="hidden" name="latitude" id="editSupplierLatitude" />
+          <input type="hidden" name="longitude" id="editSupplierLongitude" />
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
@@ -309,7 +350,7 @@ $canEditMaps = can_edit_page('maps');
   </div>
 
   <!-- Add Service Modal -->
-  <div id="addServiceModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
+  <div id="addServiceModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
       <h3 style="margin:0 0 16px 0;font-size:20px;color:#1e293b;">Add Service</h3>
       <form id="addServiceForm" style="display:grid;gap:14px;">
@@ -326,7 +367,7 @@ $canEditMaps = can_edit_page('maps');
   </div>
 
   <!-- Edit Service Modal -->
-  <div id="editServiceModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
+  <div id="editServiceModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
       <h3 style="margin:0 0 16px 0;font-size:20px;color:#1e293b;">Edit Service</h3>
       <form id="editServiceForm" style="display:grid;gap:14px;">
@@ -600,6 +641,28 @@ $canEditMaps = can_edit_page('maps');
         console.warn('Geocoding disabled by configuration. Supplier', supplier && supplier.id, 'will not be geocoded.');
         return;
       }
+
+      // Vertical wrap behavior: when user pans past near-polar latitudes, jump the view
+      // so the map appears to 'roll over' from bottom/top. This creates a seamless
+      // UX for panning vertically without permanently hitting a hard stop.
+      (function enableVerticalWrap(){
+        var WRAP_LAT_THRESHOLD = 85; // degrees latitude near pole to trigger wrap
+        var WRAP_OFFSET = 170; // degrees to subtract/add to center latitude
+        try {
+          map.on('moveend', function() {
+            try {
+              var c = map.getCenter();
+              if (c && typeof c.lat === 'number') {
+                if (c.lat > WRAP_LAT_THRESHOLD) {
+                  map.setView([c.lat - WRAP_OFFSET, c.lng], map.getZoom(), {animate:false});
+                } else if (c.lat < -WRAP_LAT_THRESHOLD) {
+                  map.setView([c.lat + WRAP_OFFSET, c.lng], map.getZoom(), {animate:false});
+                }
+              }
+            } catch (e) { /* non-fatal */ }
+          });
+        } catch (e) { console.warn('Vertical wrap initialization failed', e); }
+      })();
       
       // Function to plot marker on map
       function plotMarker(supplier, popupContent, lat, lng) {
@@ -886,10 +949,13 @@ $canEditMaps = can_edit_page('maps');
       function openModal(modalEl) {
         if (!modalEl) return;
         modalEl.style.display = 'flex';
+        // Ensure Leaflet redraws to avoid clipped tiles when modal changes layout
+        try { setTimeout(function(){ if (typeof map !== 'undefined' && map && map.invalidateSize) map.invalidateSize(); }, 50); } catch(e) {}
       }
       function closeModal(modalEl) {
         if (!modalEl) return;
         modalEl.style.display = 'none';
+        try { setTimeout(function(){ if (typeof map !== 'undefined' && map && map.invalidateSize) map.invalidateSize(); }, 50); } catch(e) {}
       }
 
       if (topAddServiceBtn && addServiceModal) {
@@ -1253,6 +1319,8 @@ $canEditMaps = can_edit_page('maps');
                     material: form.querySelector('[name="material"]').value || '',
                     sales_contact: form.querySelector('[name="sales_contact"]').value || '',
                     contact_number: form.querySelector('[name="contact_number"]').value || '',
+                    supply_method: form.querySelector('[name="supply_method"]').value || '',
+                    location_phone: form.querySelector('[name="location_phone"]').value || '',
                     email: form.querySelector('[name="email"]').value || '',
                     address: form.querySelector('[name="address"]').value || '',
                     city: form.querySelector('[name="city"]').value || '',
@@ -1279,7 +1347,9 @@ $canEditMaps = can_edit_page('maps');
                     (supplierObj.city?('<div><strong>City:</strong> ' + supplierObj.city + '</div>'):'') +
                     (supplierObj.state?('<div><strong>State:</strong> ' + supplierObj.state + '</div>'):'') +
                     (supplierObj.sales_contact?('<div><strong>Contact:</strong> ' + supplierObj.sales_contact + '</div>'):'') +
-                    (supplierObj.contact_number?('<div><strong>Phone:</strong> ' + supplierObj.contact_number + '</div>'):'') +
+                    (supplierObj.contact_number?('<div><strong>Sales Phone:</strong> ' + supplierObj.contact_number + '</div>'):'') +
+                    (supplierObj.location_phone?('<div><strong>Location Phone:</strong> ' + supplierObj.location_phone + '</div>'):'') +
+                    (supplierObj.supply_method?('<div><strong>Supply Method:</strong> ' + supplierObj.supply_method + '</div>'):'') +
                     (supplierObj.email?('<div><strong>Email:</strong> <a href="mailto:' + supplierObj.email + '">' + supplierObj.email + '</a></div>'):'') +
                     (supplierObj.notes?('<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplierObj.notes + '</em></div>'):'') +
                     '</div>';
@@ -1339,10 +1409,23 @@ $canEditMaps = can_edit_page('maps');
         document.getElementById('editSupplierName').value = supplier.name || '';
         document.getElementById('editSupplierMaterial').value = supplier.material || '';
         document.getElementById('editSupplierLocationType').value = supplier.location_type || '';
+        document.getElementById('editSupplierSupplyMethod').value = supplier.supply_method || '';
+        document.getElementById('editSupplierLocationPhone').value = supplier.location_phone || '';
         document.getElementById('editSupplierSalesContact').value = supplier.sales_contact || '';
         document.getElementById('editSupplierContactNumber').value = supplier.contact_number || '';
         document.getElementById('editSupplierEmail').value = supplier.email || '';
         document.getElementById('editSupplierAddress').value = supplier.address || '';
+        // Populate coordinates (combined input and hidden fields)
+        var combined = '';
+        if (supplier.latitude && supplier.longitude) {
+          combined = supplier.latitude + ', ' + supplier.longitude;
+        }
+        var editCoordsEl = document.getElementById('editSupplierCoordinates');
+        var editLatEl = document.getElementById('editSupplierLatitude');
+        var editLngEl = document.getElementById('editSupplierLongitude');
+        if (editCoordsEl) editCoordsEl.value = combined;
+        if (editLatEl) editLatEl.value = supplier.latitude || '';
+        if (editLngEl) editLngEl.value = supplier.longitude || '';
         document.getElementById('editSupplierCity').value = supplier.city || '';
         document.getElementById('editSupplierState').value = supplier.state || '';
         document.getElementById('editSupplierService').value = supplier.service || '';
@@ -1406,10 +1489,65 @@ $canEditMaps = can_edit_page('maps');
       
       // Handle edit form submission
       if (editSupplierForm) {
+        // Capture-phase listener: parse combined coords into hidden fields before other listeners
+        editSupplierForm.addEventListener('submit', function(e) {
+          var coordsInput = document.getElementById('editSupplierCoordinates');
+          var latHidden = document.getElementById('editSupplierLatitude');
+          var lngHidden = document.getElementById('editSupplierLongitude');
+          var err = document.getElementById('editSupplierCoordError');
+          if (coordsInput && latHidden && lngHidden) {
+            var val = (coordsInput.value || '').trim();
+            if (err) { err.textContent = ''; err.style.display = 'none'; }
+            if (val) {
+              var parsed = null;
+              try { parsed = parseCoords(val); } catch (ex) { parsed = null; }
+              if (!parsed || isNaN(Number(parsed.lat)) || isNaN(Number(parsed.lng))) {
+                var m = (val || '').replace(/\u00A0/g, ' ').match(/-?\d+(?:\.\d+)?/g);
+                if (m && m.length >= 2) {
+                  parsed = { lat: parseFloat(m[0]), lng: parseFloat(m[1]) };
+                }
+              }
+              if (parsed && !isNaN(Number(parsed.lat)) && !isNaN(Number(parsed.lng))) {
+                latHidden.value = String(parsed.lat);
+                lngHidden.value = String(parsed.lng);
+              } else {
+                if (err) { err.textContent = 'Invalid coordinates — enter as "lat, lng"'; err.style.display = 'block'; }
+                e.preventDefault();
+                return;
+              }
+            }
+          }
+        }, true); // capture
+
         editSupplierForm.addEventListener('submit', function(e) {
           e.preventDefault();
-          
+
           var formData = new FormData(editSupplierForm);
+          // Ensure latitude/longitude are present in FormData (fallback parse)
+          try {
+            var latHiddenEl = editSupplierForm.querySelector('[name="latitude"]');
+            var lngHiddenEl = editSupplierForm.querySelector('[name="longitude"]');
+            var coordsInputEl = document.getElementById('editSupplierCoordinates');
+            var coordErrEl = document.getElementById('editSupplierCoordError');
+            if (coordErrEl) { coordErrEl.textContent = ''; coordErrEl.style.display = 'none'; }
+            var latValNow = latHiddenEl ? (latHiddenEl.value || '').trim() : '';
+            var lngValNow = lngHiddenEl ? (lngHiddenEl.value || '').trim() : '';
+            if ((!latValNow || !lngValNow) && coordsInputEl) {
+              var parsedFallback = null;
+              try { parsedFallback = parseCoords((coordsInputEl.value || '').trim()); } catch (ex) { parsedFallback = null; }
+              if ((!parsedFallback || isNaN(Number(parsedFallback.lat)) || isNaN(Number(parsedFallback.lng))) && coordsInputEl) {
+                var raw = (coordsInputEl.value || '').replace(/\u00A0/g, ' ');
+                var m = raw.match(/-?\d+(?:\.\d+)?/g);
+                if (m && m.length >= 2) parsedFallback = { lat: parseFloat(m[0]), lng: parseFloat(m[1]) };
+              }
+              if (parsedFallback && !isNaN(Number(parsedFallback.lat)) && !isNaN(Number(parsedFallback.lng))) {
+                if (latHiddenEl) latHiddenEl.value = String(parsedFallback.lat);
+                if (lngHiddenEl) lngHiddenEl.value = String(parsedFallback.lng);
+                formData.set('latitude', String(parsedFallback.lat));
+                formData.set('longitude', String(parsedFallback.lng));
+              }
+            }
+          } catch (e) { console.error('Coordinate fallback parse error', e); }
           
           var submitBtn = editSupplierForm.querySelector('button[type="submit"]');
           if (submitBtn) {
