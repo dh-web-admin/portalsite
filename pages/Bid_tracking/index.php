@@ -530,10 +530,18 @@ try {
                 console.log('content-type:', ct);
                 return r.text().then(function(text){
                   console.log('raw response (first 300 chars):', (text || '').slice(0,300));
+                  // If server returned HTML (likely a login redirect), handle gracefully
+                  if (ct.indexOf('text/html') !== -1 || String(text || '').trim().toLowerCase().indexOf('<!doctype html') === 0) {
+                    console.warn('update_bid: received HTML response, likely redirect to login or server error');
+                    // Show specific message and redirect to login so user can re-authenticate
+                    try { showToast('Session expired - please sign in again', 'error'); } catch(e){ console.warn('showToast missing', e); }
+                    setTimeout(function(){ window.location.href = '/auth/login.php'; }, 900);
+                    throw new Error('Non-JSON HTML response');
+                  }
                   try {
                     return JSON.parse(text);
                   } catch (e) {
-                    console.error('JSON parse error:', e);
+                    console.error('JSON parse error:', e, 'raw:', (text||'').slice(0,300));
                     throw e;
                   }
                 });
