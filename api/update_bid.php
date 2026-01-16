@@ -1,4 +1,27 @@
 <?php
+// Temporary debug: log incoming requests to help diagnose HTML responses
+// (Remove this block after debugging)
+$__dbg = [];
+$__dbg['time'] = date('c');
+$__dbg['script'] = __FILE__;
+$__dbg['request_uri'] = $_SERVER['REQUEST_URI'] ?? '';
+$__dbg['method'] = $_SERVER['REQUEST_METHOD'] ?? '';
+$__dbg['remote_addr'] = $_SERVER['REMOTE_ADDR'] ?? '';
+$__dbg['server_name'] = $_SERVER['SERVER_NAME'] ?? '';
+$__dbg['cookie_header'] = isset($_SERVER['HTTP_COOKIE']) ? $_SERVER['HTTP_COOKIE'] : null;
+$__dbg['cookies'] = $_COOKIE ?? [];
+$__dbg['get'] = $_GET ?? [];
+$__dbg['post_raw_length'] = strlen(file_get_contents('php://input'));
+$__hdrs = [];
+foreach ($_SERVER as $k => $v) {
+    if (strpos($k, 'HTTP_') === 0) {
+        $name = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($k, 5)))));
+        $__hdrs[$name] = $v;
+    }
+}
+$__dbg['headers'] = $__hdrs;
+@file_put_contents(__DIR__ . '/update_bid_access.log', json_encode($__dbg) . PHP_EOL, FILE_APPEND);
+
 header('Content-Type: application/json; charset=utf-8');
 
 // Ensure no PHP warnings or whitespace break JSON output

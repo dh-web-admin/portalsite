@@ -520,8 +520,9 @@ try {
             var saveBtn = document.getElementById('saveEditBid');
             if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
 
-            var theUpdateUrl = '/PortalSite/api/update_bid.php';
-            console.log('updateUrl:', theUpdateUrl);
+            // Use the environment-safe `updateUrl` defined earlier instead of hardcoded path
+            var theUpdateUrl = (typeof updateUrl !== 'undefined' && updateUrl) ? updateUrl : '../../api/update_bid.php';
+            console.log('Final update URL used:', theUpdateUrl);
 
             fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd })
               .then(function(r){
