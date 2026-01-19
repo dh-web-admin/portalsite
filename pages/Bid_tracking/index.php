@@ -277,15 +277,26 @@ try {
                           // Skip the native status column from the regular headers (we render status separately)
                           if ($col === 'status') continue;
                           // Insert an empty header cell before DHSS project # for the status pill (no header text)
-                          if ($col === 'dhss_project_number') {
-                            echo '<th class="col-status" data-col="status"></th>';
-                          }
-                          $label = ($col === 'dhss_project_number') ? 'dhss project #' : str_replace('_',' ',$col);
-                          if ($col === 'dhss_project_number') {
-                            echo '<th class="col-dhss" data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
-                          } else {
-                            echo '<th data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
-                          }
+                            if ($col === 'dhss_project_number') {
+                              echo '<th class="col-status" data-col="status"></th>';
+                            }
+                            // Build a human-friendly, title-cased label. Special cases for DHSS and GC columns.
+                            if ($col === 'dhss_project_number') {
+                              $label = 'DHSS Project #';
+                            } elseif ($col === 'gc_name') {
+                              $label = 'General Contractor Name';
+                            } elseif ($col === 'gc_number') {
+                              $label = 'General Contractor Number';
+                            } elseif (strpos(strtolower($col), 'gc') !== false || $col === 'general_contractor') {
+                              $label = 'General Contractor';
+                            } else {
+                              $label = ucwords(str_replace('_',' ',$col));
+                            }
+                            if ($col === 'dhss_project_number') {
+                              echo '<th class="col-dhss" data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
+                            } else {
+                              echo '<th data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
+                            }
                         }
                       } else {
                         echo '<th>No columns</th>';
@@ -385,11 +396,11 @@ try {
                     <input type="text" id="editDhssProjectNumber" name="dhss_project_number" data-col="dhss_project_number" style="padding:10px;border:1px solid #cbd5e1;border-radius:6px;" />
                   </div>
                   <div style="display:flex;flex-direction:column;">
-                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">Project name</label>
+                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">Project Name</label>
                     <input type="text" id="editProjectName" name="project_name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;" />
                   </div>
                   <div style="display:flex;flex-direction:column;">
-                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">Bid date</label>
+                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">Bid Date</label>
                     <input type="date" id="editBidDate" name="bid_date" data-col="bid_date" style="padding:10px;border:1px solid #cbd5e1;border-radius:6px;" />
                   </div>
                 </div>
@@ -462,7 +473,12 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($locFields as $col) {
-                      $label = str_replace('_',' ',$col);
+                      // Title-case labels and handle special cases
+                      if ($col === 'gc_name') { $label = 'General Contractor Name'; }
+                      elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
+                      elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
+                      elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
+                      else { $label = ucwords(str_replace('_',' ',$col)); }
                     ?>
                       <div class="field">
                         <label><?php echo htmlspecialchars($label); ?></label>
@@ -482,7 +498,12 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($gcFields as $col) {
-                      $label = str_replace('_',' ',$col);
+                      // GC-specific label mapping: distinct labels for name/number
+                      if ($col === 'gc_name') { $label = 'General Contractor Name'; }
+                      elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
+                      elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
+                      elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
+                      else { $label = ucwords(str_replace('_',' ',$col)); }
                     ?>
                       <div class="field">
                         <label><?php echo htmlspecialchars($label); ?></label>
@@ -501,7 +522,11 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($specFields as $col) {
-                      $label = str_replace('_',' ',$col);
+                      if ($col === 'gc_name') { $label = 'General Contractor Name'; }
+                      elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
+                      elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
+                      elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
+                      else { $label = ucwords(str_replace('_',' ',$col)); }
                       $type = (strtolower($col) === 'bid_date') ? 'date' : 'text';
                     ?>
                       <div class="field">
@@ -521,7 +546,11 @@ try {
                     <?php foreach ($otherFields as $col) {
                       // We'll render notes separately below; skip it here so it doesn't appear twice
                       if ($col === 'notes') continue;
-                      $label = str_replace('_',' ',$col);
+                      if ($col === 'gc_name') { $label = 'General Contractor Name'; }
+                      elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
+                      elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
+                      elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
+                      else { $label = ucwords(str_replace('_',' ',$col)); }
                     ?>
                       <div class="field">
                         <label><?php echo htmlspecialchars($label); ?></label>
@@ -1050,7 +1079,18 @@ try {
               li.style.padding = '8px'; li.style.border = '1px solid rgba(14,20,26,0.04)'; li.style.borderRadius = '8px'; li.style.background = '#fff';
               var left = document.createElement('div'); left.style.display = 'flex'; left.style.alignItems = 'center'; left.style.gap = '10px';
               var chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = !!item.visible; chk.style.width = '16px'; chk.style.height = '16px'; chk.dataset.col = item.name;
-              var lbl = document.createElement('div'); lbl.textContent = item.name.replace(/_/g,' '); lbl.style.color = '#0f172a'; lbl.style.fontWeight = 700; lbl.style.fontSize = '13px';
+              var lbl = document.createElement('div');
+              // friendly display label for Manage Columns list
+              var displayLabel = (function(k){
+                if (!k) return '';
+                if (k === 'dhss_project_number') return 'DHSS Project #';
+                if (k === 'gc_name') return 'General Contractor Name';
+                if (k === 'gc_number') return 'General Contractor Number';
+                if (/gc/i.test(k) || k === 'general_contractor') return 'General Contractor';
+                return k.replace(/_/g,' ').replace(/\b\w/g, function(ch){ return ch.toUpperCase(); });
+              })(item.name);
+              lbl.textContent = displayLabel;
+              lbl.style.color = '#0f172a'; lbl.style.fontWeight = 700; lbl.style.fontSize = '13px';
               left.appendChild(chk); left.appendChild(lbl);
               var grip = document.createElement('div'); grip.textContent = '≡'; grip.className = 'drag-grip'; grip.style.opacity = '0.6';
               // determine if this item is locked (one of the first 4 original columns)
