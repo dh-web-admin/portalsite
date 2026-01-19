@@ -151,6 +151,78 @@ try {
     #projectToast.error { background: #fee2e2; color: #7f1d1d; border-color: rgba(127,29,29,0.08); }
     #projectToast .msg { flex:1; font-weight:700; }
     #projectToast .close { background:transparent;border:0;color:rgba(15,23,42,0.7);cursor:pointer;font-weight:700;padding:6px;border-radius:6px }
+    /* Status pill style for table */
+    .status-pill { display:inline-block; padding:6px 12px; border-radius:999px; font-weight:700; font-size:13px; line-height:1; background: #f1f5f9; color:#0f172a; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset; }
+    .status-pill.status-won { background: rgba(16,185,129,0.12); color:#065f46; }
+    .status-pill.status-completed { background: rgba(59,130,246,0.08); color:#1e40af; }
+    .status-pill.status-lost { background: rgba(239,68,68,0.08); color:#7f1d1d; }
+    .status-pill.status-pending { background: rgba(99,102,241,0.04); color:#334155; }
+    /* Ensure the bids table can expand to its content width */
+    #tableContainer { overflow-x: auto; overflow-y: auto; box-sizing:border-box; }
+    /* Make the table container fill available viewport height so table area remains tall even when empty */
+    #tableContainer { min-height: calc(100vh - 220px); }
+    #bidsTable { display: inline-table; width: -webkit-max-content; width: -moz-max-content; width: max-content; table-layout: auto; }
+    /* Make the scroll area stretch full width while allowing the table to be wider */
+    #tableTopScroller { box-sizing: border-box; }
+    /* TABLE HEADER — modern, elevated look */
+    #bidsTable thead th {
+      padding: 14px 16px;
+      background: rgba(249,250,251,0.92);
+      border-bottom: 1px solid #e5e7eb;
+      font-weight: 800;
+      letter-spacing: .02em;
+      box-shadow: 0 1px 0 rgba(15,23,42,.06);
+      color: #334155;
+      font-size: 13px;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    #bidsTable thead th.col-status, #bidsTable tbody td.col-status { width: 120px; }
+    #bidsTable thead th.col-dhss, #bidsTable tbody td.col-dhss { width: 90px; text-align: center; }
+
+    /* BODY CELLS — roomier reading space */
+    #bidsTable tbody td {
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #0f172a;
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Row separators and hover state */
+    #bidsTable tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background .12s ease;
+    }
+    #bidsTable tbody tr:hover { background: #f8fafc; }
+
+    /* Notes column exception (keep allowing it to be wider) */
+    #bidsTable td.notes-col, #bidsTable th.notes-col { max-width: 420px; }
+
+    /* Group spacer (leave intact but slightly tuned to match new visual language) */
+    .group-spacer td {
+      padding: 0;
+      height: 12px;
+      background: linear-gradient(90deg, rgba(203,213,225,0.06), rgba(230,238,240,0));
+      border-top: 2px solid rgba(229,231,235,0.9);
+      border-bottom: 1px solid rgba(229,231,235,0.6);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+
+    /* Ensure sticky column cells retain solid backgrounds while scrolling */
+    #bidsTable th[style*="position: sticky"], #bidsTable td[style*="position: sticky"] {
+      background: rgba(255,255,255,0.98) !important;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   </style>
 </head>
 <body class="admin-page">
@@ -168,11 +240,14 @@ try {
           </div>
 
           <div style="padding:16px 40px;">
-            <div style="overflow:auto;border:1px solid #e6edf0;border-radius:8px;padding:8px;background:#fff;">
+              <div id="tableTopScroller" style="display:none;height:12px;overflow-x:auto;overflow-y:hidden;margin-bottom:8px;border-radius:6px;width:100%;">
+                <div id="tableTopScrollerInner" style="height:1px;"></div>
+              </div>
+            <div id="tableContainer" style="overflow:auto;border:1px solid #e6edf0;border-radius:8px;padding:8px;background:#fff;">
               <?php if (!$bidTableExists) { ?>
                 <div style="padding:12px;color:#7f1d1d;background:#fff5f5;border:1px solid rgba(127,29,29,0.06);border-radius:6px;margin-bottom:8px;">Bids table not found in the database.</div>
               <?php } ?>
-              <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+              <table id="bidsTable" style="width:auto;border-collapse:collapse;font-size:13px;text-align:left;table-layout:auto;">
                 <thead>
                   <tr>
                     <?php
@@ -182,17 +257,17 @@ try {
                           if ($col === 'status') continue;
                           // Insert an empty header cell before DHSS project # for the status pill (no header text)
                           if ($col === 'dhss_project_number') {
-                            echo '<th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f7;background:#fbfdfe;font-weight:700;color:#334155;width:120px;white-space:nowrap;"></th>';
+                            echo '<th class="col-status"></th>';
                           }
                           $label = ($col === 'dhss_project_number') ? 'dhss project #' : str_replace('_',' ',$col);
                           if ($col === 'dhss_project_number') {
-                            echo '<th style="text-align:center;padding:8px;border-bottom:1px solid #eef2f7;background:#fbfdfe;font-weight:700;color:#334155;width:90px;white-space:nowrap;">' . htmlspecialchars($label) . '</th>';
+                            echo '<th class="col-dhss">' . htmlspecialchars($label) . '</th>';
                           } else {
-                            echo '<th style="text-align:left;padding:8px;border-bottom:1px solid #eef2f7;background:#fbfdfe;font-weight:700;color:#334155;">' . htmlspecialchars($label) . '</th>';
+                            echo '<th>' . htmlspecialchars($label) . '</th>';
                           }
                         }
                       } else {
-                        echo '<th style="text-align:left;padding:8px;">No columns</th>';
+                        echo '<th>No columns</th>';
                       }
                     ?>
                   </tr>
@@ -214,26 +289,24 @@ try {
                             $normalized = preg_replace('/[^a-z0-9]/', '', $statusKey);
 
                             $label = $statusRaw;
-                            $color = '#374151';
-                            $font = 'Arial, sans-serif';
-                            if ($normalized === 'won') { $color = '#10b981'; $label = 'won'; $font = 'Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial'; }
-                            else if ($normalized === 'completed') { $color = '#3b82f6'; $label = 'completed'; $font = 'Tahoma, Verdana, Segoe UI, sans-serif'; }
-                            else if ($normalized === 'lost') { $color = '#ef4444'; $label = 'lost'; $font = 'Georgia, "Times New Roman", Times, serif'; }
-                            else if ($normalized === 'didntbid' || $normalized === 'didnt') { $color = '#f97316'; $label = "didn't bid"; $font = '"Courier New", Courier, monospace'; }
+                            if ($normalized === 'won') { $label = 'won'; }
+                            else if ($normalized === 'completed') { $label = 'completed'; }
+                            else if ($normalized === 'lost') { $label = 'lost'; }
+                            else if ($normalized === 'didntbid' || $normalized === 'didnt') { $label = "didn't bid"; }
                             else { $label = $statusRaw ? $statusRaw : 'pending'; }
 
                           ?>
-                            <td style="padding:8px;border-bottom:1px solid #f1f5f9;color:<?php echo $color; ?>;vertical-align:top;word-break:break-word;font-weight:600;width:120px;white-space:nowrap;font-family:<?php echo htmlspecialchars($font); ?>;">
-                              <?php echo htmlspecialchars($label); ?>
+                            <td class="col-status">
+                              <span class="status-pill status-<?php echo htmlspecialchars($normalized); ?>"><?php echo htmlspecialchars($label); ?></span>
                             </td>
                           <?php } ?>
 
                           <?php if ($col === 'dhss_project_number') { ?>
-                            <td style="padding:8px;border-bottom:1px solid #f1f5f9;color:#0f172a;vertical-align:top;word-break:break-word;width:90px;white-space:nowrap;text-align:center;">
+                            <td class="col-dhss">
                               <?php echo htmlspecialchars(isset($r[$col]) ? $r[$col] : ''); ?>
                             </td>
                           <?php } else { ?>
-                            <td style="padding:8px;border-bottom:1px solid #f1f5f9;color:#0f172a;vertical-align:top;word-break:break-word;">
+                            <td>
                               <?php echo htmlspecialchars(isset($r[$col]) ? $r[$col] : ''); ?>
                             </td>
                           <?php } ?>
@@ -249,7 +322,7 @@ try {
 
           <!-- Edit Bid Modal -->
           <div id="editBidModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;z-index:4500;padding:20px;overflow-y:auto;">
-            <div style="background:#fff;border-radius:12px;padding:16px;max-width:700px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.12);max-height:90vh;overflow-y:auto;">
+            <div style="background:#fff;border-radius:12px;padding:16px;max-width:980px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.12);max-height:90vh;overflow-y:auto;">
               <form id="editBidForm" style="display:block;">
                 <input type="hidden" id="editBidId" name="bid_id" />
                 <div style="margin-bottom:12px;text-align:center;">
@@ -262,23 +335,166 @@ try {
                   </select>
                 </div>
 
-                <div style="display:flex;justify-content:flex-start;align-items:center;margin-bottom:12px;gap:12px;">
-                  <div style="display:flex;flex-direction:column;flex:1;">
-                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">Project_name -</label>
+                <style>
+                  /* Top row compact styling so three inputs fit nicely */
+                  .modal-top { display:grid; grid-template-columns:1fr 2fr 1fr; gap:8px; align-items:start; margin-bottom:12px; }
+                  .modal-top label { font-size:11px; margin-bottom:6px; color:#475569; }
+                  /* Override inline styles to force a smaller, tighter appearance */
+                  .modal-top input { font-size:12px !important; padding:6px 8px !important; height:36px !important; border-radius:6px !important; }
+                  /* Target the specific top inputs as a fallback to ensure they shrink */
+                  #editDhssProjectNumber, #editProjectName, #editBidDate { font-size:12px !important; padding:6px 8px !important; height:36px !important; }
+                  /* Make date control's inner text smaller on some browsers */
+                  #editBidDate::-webkit-datetime-edit, #editBidDate::-webkit-inner-spin-button { font-size:12px !important; }
+                </style>
+
+                <div class="modal-top" style="grid-template-columns:1fr 2fr 1fr;">
+                  <div style="display:flex;flex-direction:column;">
+                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">DHSS Project #</label>
+                    <input type="text" id="editDhssProjectNumber" name="dhss_project_number" data-col="dhss_project_number" style="padding:10px;border:1px solid #cbd5e1;border-radius:6px;" />
+                  </div>
+                  <div style="display:flex;flex-direction:column;">
+                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">Project name</label>
                     <input type="text" id="editProjectName" name="project_name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;" />
+                  </div>
+                  <div style="display:flex;flex-direction:column;">
+                    <label style="font-weight:600;color:#475569;margin-bottom:6px;">Bid date</label>
+                    <input type="date" id="editBidDate" name="bid_date" data-col="bid_date" style="padding:10px;border:1px solid #cbd5e1;border-radius:6px;" />
                   </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
-                  <?php foreach ($bidColumns as $col) {
+                <?php
+                  // Partition columns into logical modal subsections
+                  $locFields = [];
+                  $gcFields = [];
+                  $specFields = [];
+                  $otherFields = [];
+                  foreach ($bidColumns as $col) {
                     if ($col === 'project_name' || $col === 'status') continue;
-                    $label = ($col === 'dhss_project_number') ? 'dhss project #' : str_replace('_',' ', $col);
-                  ?>
-                    <div>
-                      <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;"><?php echo htmlspecialchars($label); ?></label>
-                      <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
+                    // reserve dhss_project_number and bid_date to be shown in the top area
+                    if ($col === 'dhss_project_number' || $col === 'bid_date') continue;
+                    $lc = strtolower($col);
+
+                    // Project Location specific fields
+                    if (strpos($lc, 'project_city') !== false || strpos($lc, 'project_county') !== false || strpos($lc, 'project_state') !== false) {
+                      $locFields[] = $col;
+                      continue;
+                    }
+
+                    // General Contractor related fields
+                    if (strpos($lc, 'gc') !== false || strpos($lc, 'general_contractor') !== false) {
+                      $gcFields[] = $col;
+                      continue;
+                    }
+
+                    // Material type or price fields should live in specifications
+                    if (preg_match('/material|material_type/i', $lc) || preg_match('/total.*price|price|total_price/i', $lc)) {
+                      $specFields[] = $col;
+                      continue;
+                    }
+
+                    // Project specification related fields (fallback)
+                    if (strpos($lc, 'dhss_project_number') !== false || strpos($lc, 'project_') === 0 || strpos($lc, 'bid_date') !== false || preg_match('/square|ton|dimension|area|spec/i', $lc)) {
+                      $specFields[] = $col;
+                      continue;
+                    }
+
+                    // Everything else
+                    $otherFields[] = $col;
+                  }
+                ?>
+
+                <style>
+                  .modal-section { margin-top:12px; padding:0; border-radius:8px; border:1px solid #eef2f7; background:#fbfdfe; overflow:hidden; }
+                  .modal-section .header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; cursor:pointer; }
+                  .modal-section .header h4 { margin:0;font-size:13px;font-weight:700;color:#334155; }
+                  .modal-section .header .toggle { font-size:12px;color:#64748b;display:inline-flex;align-items:center;gap:8px }
+                  .modal-section .toggle .chev { transition: transform .18s ease; display:inline-block; }
+                  .modal-section .section-content { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:10px 12px 14px 12px; }
+                  /* Make the General Contractor section use three columns so its fields fit on one row */
+                  #section-gc .section-content { grid-template-columns: repeat(3, 1fr); }
+                  .add-gc-btn { background: #f3f4f6; border: 1px solid #e6edf0; color: #0f172a; padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px; }
+                  .modal-section.collapsed .header .add-gc-btn { display: none !important; }
+                  .modal-section .field { display:flex; flex-direction:column; }
+                  .modal-section .field label { font-weight:600; color:#475569; margin-bottom:6px; }
+                  .modal-section .field input { padding:8px; border:1px solid #cbd5e1; border-radius:6px; }
+                  .modal-section.collapsed .section-content { display:none; }
+                  .modal-section.collapsed .toggle .chev { transform: rotate(-90deg); }
+                </style>
+
+                  <div class="modal-section collapsed" id="section-location">
+                  <div class="header" role="button" aria-expanded="false">
+                    <h4>Project Location</h4>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <div class="toggle"><span class="chev">▾</span><span>collapse</span></div>
                     </div>
-                  <?php } ?>
+                  </div>
+                  <div class="section-content">
+                    <?php foreach ($locFields as $col) {
+                      $label = str_replace('_',' ',$col);
+                    ?>
+                      <div class="field">
+                        <label><?php echo htmlspecialchars($label); ?></label>
+                        <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
+                      </div>
+                    <?php } ?>
+                  </div>
+                </div>
+
+                <div class="modal-section collapsed" id="section-gc">
+                  <div class="header" role="button" aria-expanded="false">
+                    <h4>General Contractor</h4>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <button type="button" id="addGcBtn" class="add-gc-btn">+ Add contractor</button>
+                      <div class="toggle"><span class="chev">▾</span><span>collapse</span></div>
+                    </div>
+                  </div>
+                  <div class="section-content">
+                    <?php foreach ($gcFields as $col) {
+                      $label = str_replace('_',' ',$col);
+                    ?>
+                      <div class="field">
+                        <label><?php echo htmlspecialchars($label); ?></label>
+                        <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
+                      </div>
+                    <?php } ?>
+                    <!-- container for any new GC entries the user adds -->
+                    <div id="newGcContainer" style="grid-column:1/-1;display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+                  </div>
+                </div>
+
+                <div class="modal-section collapsed" id="section-specs">
+                  <div class="header" role="button" aria-expanded="false">
+                    <h4>Project Specifications</h4>
+                    <div class="toggle"><span class="chev">▾</span><span>collapse</span></div>
+                  </div>
+                  <div class="section-content">
+                    <?php foreach ($specFields as $col) {
+                      $label = str_replace('_',' ',$col);
+                      $type = (strtolower($col) === 'bid_date') ? 'date' : 'text';
+                    ?>
+                      <div class="field">
+                        <label><?php echo htmlspecialchars($label); ?></label>
+                        <input type="<?php echo $type; ?>" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
+                      </div>
+                    <?php } ?>
+                  </div>
+                </div>
+
+                <div class="modal-section collapsed" id="section-addl">
+                  <div class="header" role="button" aria-expanded="false">
+                    <h4>Additional Information</h4>
+                    <div class="toggle"><span class="chev">▾</span><span>collapse</span></div>
+                  </div>
+                  <div class="section-content">
+                    <?php foreach ($otherFields as $col) {
+                      $label = str_replace('_',' ',$col);
+                    ?>
+                      <div class="field">
+                        <label><?php echo htmlspecialchars($label); ?></label>
+                        <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
+                      </div>
+                    <?php } ?>
+                  </div>
                 </div>
 
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
@@ -505,10 +721,29 @@ try {
 
         var editForm = document.getElementById('editBidForm');
         if (editForm) {
+          // Handle GC clone creation before submitting the normal update
           editForm.addEventListener('submit', function(e){
             e.preventDefault();
 
             var fd = new FormData(editForm);
+
+            // collect new GC entries if any
+            var newGcContainer = document.getElementById('newGcContainer');
+            var newClones = [];
+            if (newGcContainer) {
+              var rows = newGcContainer.querySelectorAll('.new-gc-row');
+              rows.forEach(function(r){
+                var gc = r.querySelector('input[name="new_gc_general"]');
+                var name = r.querySelector('input[name="new_gc_name"]');
+                var num = r.querySelector('input[name="new_gc_number"]');
+                var obj = {};
+                if (gc) obj['general_contractor'] = gc.value || null;
+                if (name) obj['gc_name'] = name.value || null;
+                if (num) obj['gc_number'] = num.value || null;
+                // only include if at least one field provided
+                if (obj.general_contractor || obj.gc_name || obj.gc_number) newClones.push(obj);
+              });
+            }
 
             // Debug
             try {
@@ -524,8 +759,20 @@ try {
             var theUpdateUrl = (typeof updateUrl !== 'undefined' && updateUrl) ? updateUrl : '../../api/update_bid.php';
             console.log('Final update URL used:', theUpdateUrl);
 
-            fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd })
-              .then(function(r){
+            // If there are new GC clones, POST them first to clone the bid row(s)
+            (new Promise(function(resolve, reject){
+              if (!newClones.length) return resolve(null);
+              var cloneUrl = '../../api/clone_bid_with_gc.php';
+              console.log('Posting clones to', cloneUrl, newClones);
+              fetch(cloneUrl, { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ bid_id: fd.get('bid_id'), clones: newClones }) })
+                .then(function(r){ return r.json(); })
+                .then(function(data){ if (data && data.success) resolve(data); else reject(data); })
+                .catch(function(err){ reject(err); });
+            })).then(function(cloneResult){
+              if (cloneResult) console.log('Clone result', cloneResult);
+              // proceed with normal update
+              return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
+            }).then(function(r){
                 console.log('HTTP status:', r.status);
                 var ct = (r.headers.get('content-type') || '').toLowerCase();
                 console.log('content-type:', ct);
@@ -569,6 +816,155 @@ try {
               });
           });
         }
+
+        // -----------------------------
+        // Top scrollbar sync + sticky columns
+        // -----------------------------
+        try {
+          var container = document.getElementById('tableContainer');
+          var table = document.getElementById('bidsTable');
+          var topScroller = document.getElementById('tableTopScroller');
+          var topInner = document.getElementById('tableTopScrollerInner');
+
+          function syncTopScroller() {
+            if (!container || !table || !topScroller || !topInner) return;
+            topInner.style.width = table.scrollWidth + 'px';
+            topScroller.style.display = (table.scrollWidth > container.clientWidth) ? 'block' : 'none';
+          }
+
+          if (topScroller && container) {
+            topScroller.addEventListener('scroll', function(){ container.scrollLeft = topScroller.scrollLeft; });
+            container.addEventListener('scroll', function(){ topScroller.scrollLeft = container.scrollLeft; });
+            window.addEventListener('resize', syncTopScroller);
+            setTimeout(syncTopScroller, 60);
+          }
+
+          function setupStickyColumns(count) {
+            if (!table) return;
+            var thead = table.querySelector('thead');
+            var headCells = thead ? Array.from(thead.querySelectorAll('th')) : [];
+            // reset
+            table.querySelectorAll('th, td').forEach(function(cell){ cell.style.position = ''; cell.style.left = ''; cell.style.zIndex = ''; cell.style.background = ''; cell.style.boxShadow = ''; });
+
+            var cumulative = 0;
+            for (var i=0;i<count && i < headCells.length;i++) {
+              var th = headCells[i];
+              var w = Math.ceil(th.getBoundingClientRect().width);
+              th.style.position = 'sticky'; th.style.left = cumulative + 'px'; th.style.top = '0'; th.style.zIndex = 60; th.style.background = '#fff';
+              // apply to body cells
+              table.querySelectorAll('tbody tr').forEach(function(row){
+                var cells = row.querySelectorAll('td');
+                if (cells && cells[i]) {
+                  var td = cells[i]; td.style.position = 'sticky'; td.style.left = cumulative + 'px'; td.style.zIndex = 50; td.style.background = '#fff';
+                }
+              });
+              cumulative += w;
+            }
+          }
+
+          // init sticky for first 4 columns
+          setTimeout(function(){ try { setupStickyColumns(4); } catch(e){} }, 120);
+          window.addEventListener('resize', function(){ try { setupStickyColumns(4); syncTopScroller(); } catch(e){} });
+        } catch(e) { console.warn('sticky/topScroller init failed', e); }
+
+        // Group projects by dhss_project_number and sort rows within group by nearest bid_date to today
+        try {
+          function applyProjectGrouping() {
+            var tbody = document.querySelector('#tableContainer table tbody');
+            var table = document.getElementById('bidsTable');
+            if (!tbody || !table) return;
+
+            var rows = Array.from(tbody.querySelectorAll('tr[data-bid]'));
+            var groups = new Map();
+            var now = new Date();
+
+            rows.forEach(function(r){
+              try {
+                var obj = JSON.parse(r.getAttribute('data-bid')) || {};
+                var key = (obj.dhss_project_number || '').toString();
+                var dateVal = null;
+                if (obj.bid_date) {
+                  var d = new Date(obj.bid_date);
+                  if (!isNaN(d)) dateVal = d;
+                }
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key).push({ row: r, date: dateVal });
+              } catch(e) { console.warn('group parse error', e); }
+            });
+
+            // compute group nearest distance and sort members
+            var groupEntries = Array.from(groups.entries()).map(function(ent){
+              var key = ent[0];
+              var items = ent[1];
+              items.forEach(function(it){
+                it.dist = it.date ? Math.abs(it.date - now) : Number.POSITIVE_INFINITY;
+              });
+              items.sort(function(a,b){ return a.dist - b.dist; });
+              var nearest = items.length ? items[0].dist : Number.POSITIVE_INFINITY;
+              return { key: key, items: items, nearest: nearest };
+            });
+
+            // sort groups by nearest date ascending
+            groupEntries.sort(function(a,b){ return a.nearest - b.nearest; });
+
+            // rebuild tbody with spacer rows between groups
+            var frag = document.createDocumentFragment();
+            var headerCount = table.querySelectorAll('thead th').length || 1;
+            groupEntries.forEach(function(g, gi){
+              // spacer for groups except first
+              if (gi !== 0) {
+                var spr = document.createElement('tr'); spr.className = 'group-spacer';
+                var td = document.createElement('td'); td.colSpan = headerCount; spr.appendChild(td);
+                frag.appendChild(spr);
+              }
+              g.items.forEach(function(it){ frag.appendChild(it.row); });
+            });
+
+            // clear and append
+            tbody.innerHTML = '';
+            tbody.appendChild(frag);
+            try { setupStickyColumns(4); syncTopScroller(); } catch(e){}
+          }
+
+          // apply grouping now and whenever table content changes (basic)
+          applyProjectGrouping();
+        } catch(e) { console.warn('applyProjectGrouping failed', e); }
+
+        // Make modal subsections collapsible
+        try {
+          function initModalCollapsibles() {
+            var sections = document.querySelectorAll('.modal-section');
+            sections.forEach(function(sec){
+              var header = sec.querySelector('.header');
+              var toggle = sec.querySelector('.toggle');
+              if (!header) return;
+              header.addEventListener('click', function(){
+                var isCollapsed = sec.classList.toggle('collapsed');
+                try { header.setAttribute('aria-expanded', !isCollapsed); } catch(e){}
+                if (toggle) toggle.querySelector('.chev').style.transform = isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+              });
+            });
+          }
+          initModalCollapsibles();
+          // init add GC button
+          var addGcBtn = document.getElementById('addGcBtn');
+          if (addGcBtn) {
+            addGcBtn.addEventListener('click', function(e){
+              e.stopPropagation();
+              var container = document.getElementById('newGcContainer');
+              if (!container) return;
+              // create new-gc-row
+              var row = document.createElement('div'); row.className = 'new-gc-row';
+              row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center';
+              row.innerHTML = '<input name="new_gc_general" placeholder="general contractor" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_name" placeholder="gc name" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_number" placeholder="gc number" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<button type="button" class="remove-gc" style="background:#fff;border:1px solid #e6edf0;padding:6px 8px;border-radius:6px;cursor:pointer;">Remove</button>';
+              container.appendChild(row);
+              row.querySelector('.remove-gc').addEventListener('click', function(){ container.removeChild(row); });
+            });
+          }
+        } catch(e){ console.warn('initModalCollapsibles failed', e); }
       });
     })();
   </script>
