@@ -81,8 +81,6 @@ try {
       box-shadow: 0 8px 22px rgba(16,185,129,0.12);
       transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
       cursor: pointer;
-      margin-top: 32px;
-      margin-left: 40px;
     }
     #addProjectBtn:hover { transform: translateY(-2px); box-shadow: 0 12px 34px rgba(16,185,129,0.16); }
     #addProjectBtn:active { transform: translateY(0); box-shadow: 0 8px 22px rgba(16,185,129,0.12); }
@@ -223,6 +221,28 @@ try {
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
+
+    /* Manage Columns modal button styles */
+    .manage-columns-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:12px; }
+    .mc-btn { background:#fff; border:1px solid #e6edf0; padding:8px 14px; border-radius:10px; font-weight:700; cursor:pointer; color:#0f172a; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset; transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease; }
+    .mc-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(2,6,23,0.06); }
+    .mc-btn:active { transform: translateY(0); }
+    .mc-btn[disabled], .mc-btn.disabled { opacity:0.6; cursor:not-allowed; transform:none; box-shadow:none; }
+    .mc-btn-ghost { background:#fff; border:1px solid #e6edf0; color:#0f172a; }
+    .mc-btn-primary { background:#10b981; border:none; color:#ffffff; }
+    .mc-btn-primary:hover { box-shadow: 0 12px 34px rgba(16,185,129,0.16); }
+
+    /* Normalize toolbar buttons so they line up */
+    .toolbar .btn, #addProjectBtn, #manageColumnsBtn { display:inline-flex; align-items:center; height:40px; padding:8px 14px; }
+    #addProjectBtn { padding:8px 16px; }
+
+    /* Drag-reorder visuals for Manage Columns */
+    .drag-grip { cursor: grab; opacity:0.7; padding:4px 8px; border-radius:6px; user-select:none; }
+    .drag-grip[draggable="false"] { cursor: not-allowed; opacity:0.35; }
+    .dragging { opacity:0.5; }
+    .drop-placeholder { border: 2px dashed rgba(14,20,26,0.06); background: #fff; height:48px; border-radius:8px; margin:0; box-sizing:border-box; }
+    .drop-placeholder .placeholder-inner { height:100%; display:flex; align-items:center; padding:8px; color:#94a3b8; font-weight:700; }
+    .drag-over { outline: 2px solid rgba(16,185,129,0.08); }
   </style>
 </head>
 <body class="admin-page">
@@ -233,9 +253,10 @@ try {
       <main class="content-area">
         <div class="main-content">
 
-          <div class="toolbar" style="display:flex;align-items:center;justify-content:flex-start;padding:8px 0;gap:12px;">
+          <div class="toolbar" style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:nowrap;min-height:48px;padding:16px 0 8px 40px;">
             <?php if (!empty($canEditBidTracking)) { ?>
               <button id="addProjectBtn" class="btn btn-primary">add Project +</button>
+              <button id="manageColumnsBtn" class="btn" style="padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Manage Columns</button>
             <?php } ?>
           </div>
 
@@ -257,13 +278,13 @@ try {
                           if ($col === 'status') continue;
                           // Insert an empty header cell before DHSS project # for the status pill (no header text)
                           if ($col === 'dhss_project_number') {
-                            echo '<th class="col-status"></th>';
+                            echo '<th class="col-status" data-col="status"></th>';
                           }
                           $label = ($col === 'dhss_project_number') ? 'dhss project #' : str_replace('_',' ',$col);
                           if ($col === 'dhss_project_number') {
-                            echo '<th class="col-dhss">' . htmlspecialchars($label) . '</th>';
+                            echo '<th class="col-dhss" data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
                           } else {
-                            echo '<th>' . htmlspecialchars($label) . '</th>';
+                            echo '<th data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
                           }
                         }
                       } else {
@@ -274,16 +295,16 @@ try {
                 </thead>
                 <tbody>
                   <?php if (!$bidTableExists) { ?>
-                    <tr><td style="padding:12px;text-align:left;color:#64748b;" colspan="1">Table not available.</td></tr>
+                    <tr><td class="notes-col" colspan="1">Table not available.</td></tr>
                   <?php } else if (empty($bidRows)) { ?>
-                    <tr><td style="padding:12px;text-align:left;color:#64748b;" colspan="<?php echo max(1, count($bidColumns)+1); ?>">No bids found.</td></tr>
+                    <tr><td colspan="<?php echo max(1, count($bidColumns)+1); ?>">No bids found.</td></tr>
                   <?php } else { ?>
                     <?php foreach ($bidRows as $r) { ?>
                       <tr data-bid='<?php echo htmlspecialchars(json_encode($r), ENT_QUOTES, "UTF-8"); ?>' style="cursor:pointer;">
-                        <?php foreach ($bidColumns as $col) { 
-                            if ($col === 'status') continue; ?>
-
-                          <?php if ($col === 'dhss_project_number') {
+                      <?php
+                        foreach ($bidColumns as $col) {
+                          if ($col === 'status') continue;
+                          if ($col === 'dhss_project_number') {
                             $statusRaw = isset($r['status']) ? $r['status'] : '';
                             $statusKey = strtolower(trim((string)$statusRaw));
                             $normalized = preg_replace('/[^a-z0-9]/', '', $statusKey);
@@ -294,29 +315,40 @@ try {
                             else if ($normalized === 'lost') { $label = 'lost'; }
                             else if ($normalized === 'didntbid' || $normalized === 'didnt') { $label = "didn't bid"; }
                             else { $label = $statusRaw ? $statusRaw : 'pending'; }
-
-                          ?>
-                            <td class="col-status">
-                              <span class="status-pill status-<?php echo htmlspecialchars($normalized); ?>"><?php echo htmlspecialchars($label); ?></span>
-                            </td>
-                          <?php } ?>
-
-                          <?php if ($col === 'dhss_project_number') { ?>
-                            <td class="col-dhss">
-                              <?php echo htmlspecialchars(isset($r[$col]) ? $r[$col] : ''); ?>
-                            </td>
+                            ?>
+                            <td class="col-status" data-col="status"><span class="status-pill status-<?php echo htmlspecialchars($normalized); ?>"><?php echo htmlspecialchars($label); ?></span></td>
+                            <td class="col-dhss" data-col="<?php echo htmlspecialchars($col); ?>"><?php echo htmlspecialchars(isset($r[$col]) ? $r[$col] : ''); ?></td>
                           <?php } else { ?>
-                            <td>
-                              <?php echo htmlspecialchars(isset($r[$col]) ? $r[$col] : ''); ?>
-                            </td>
-                          <?php } ?>
-
-                        <?php } ?>
+                            <td data-col="<?php echo htmlspecialchars($col); ?>"><?php echo htmlspecialchars(isset($r[$col]) ? $r[$col] : ''); ?></td>
+                          <?php }
+                        }
+                      ?>
                       </tr>
                     <?php } ?>
                   <?php } ?>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <!-- Manage Columns Modal -->
+          <div id="manageColumnsModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);align-items:center;justify-content:center;z-index:5000;padding:20px;">
+            <div style="background:#fff;border-radius:12px;padding:16px;max-width:640px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.12);max-height:80vh;overflow:auto;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-weight:800;color:#0f172a;font-size:16px;">Manage Columns</div>
+                <button id="closeManageColumns" style="background:transparent;border:0;font-weight:700;cursor:pointer;">✕</button>
+              </div>
+              
+              <div style="border:1px solid #e6edf0;border-radius:8px;padding:12px;background:#fbfdfe;">
+                <ul id="manageColumnsList" style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;">
+                  <!-- items populated by JS -->
+                </ul>
+              </div>
+              <div class="manage-columns-actions">
+                <button type="button" id="resetColumnsBtn" class="mc-btn mc-btn-ghost">Reset</button>
+                <button type="button" id="cancelColumnsBtn" class="mc-btn mc-btn-ghost">Cancel</button>
+                <button type="button" id="saveColumnsBtn" class="mc-btn mc-btn-primary">Save</button>
+              </div>
             </div>
           </div>
 
@@ -487,6 +519,8 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($otherFields as $col) {
+                      // We'll render notes separately below; skip it here so it doesn't appear twice
+                      if ($col === 'notes') continue;
                       $label = str_replace('_',' ',$col);
                     ?>
                       <div class="field">
@@ -496,6 +530,14 @@ try {
                     <?php } ?>
                   </div>
                 </div>
+
+                <!-- Notes: shown as a full-width textarea at the end of the modal -->
+                <?php if (in_array('notes', $bidColumns, true)) { ?>
+                  <div style="margin-top:12px;">
+                    <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;">Notes</label>
+                    <textarea id="editNotes" name="notes" data-col="notes" style="width:100%;min-height:120px;padding:10px;border:1px solid #cbd5e1;border-radius:6px;"></textarea>
+                  </div>
+                <?php } ?>
 
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
                   <button type="button" id="closeEditBid" style="background:#fff;border:1px solid #e6edf0;color:#0f172a;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
@@ -642,6 +684,7 @@ try {
   <script>
     (function(){
       var bidColumns = <?php echo json_encode($bidColumns); ?> || [];
+      var allTableColumns = <?php echo json_encode(array_merge(['status'], $bidColumns)); ?> || [];
       var updateUrl = '../../api/update_bid.php'; // ✅ WORKS on local + Railway for /pages/... structure
 
       // Helper: set status control color based on status value
@@ -681,11 +724,16 @@ try {
           setStatusColor(v);
         }
 
-        // fill other fields
+        // fill other fields (supports inputs, selects, and textareas)
         bidColumns.forEach(function(col){
           if (col === 'project_name') return;
-          var input = modal.querySelector('input[data-col="' + col + '"]');
-          if (input) input.value = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : '';
+          var els = modal.querySelectorAll('[data-col="' + col + '"]');
+          els.forEach(function(el){
+            var tag = (el.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') {
+              el.value = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : '';
+            }
+          });
         });
 
         modal.style.display = 'flex';
@@ -965,6 +1013,247 @@ try {
             });
           }
         } catch(e){ console.warn('initModalCollapsibles failed', e); }
+
+        // -----------------------------
+        // Manage Columns modal
+        // -----------------------------
+        try {
+          var manageBtn = document.getElementById('manageColumnsBtn');
+          var manageModal = document.getElementById('manageColumnsModal');
+          var manageList = document.getElementById('manageColumnsList');
+          var closeManageBtn = document.getElementById('closeManageColumns');
+          var resetBtn = document.getElementById('resetColumnsBtn');
+          var cancelBtn = document.getElementById('cancelColumnsBtn');
+          var saveBtn = document.getElementById('saveColumnsBtn');
+
+          // capture the original header order & visibility from DOM at init
+          var originalConfig = (function(){
+            try {
+              var ths = document.querySelectorAll('#bidsTable thead th');
+              var arr = [];
+              ths.forEach(function(th){ var k = th.getAttribute('data-col') || null; arr.push({ name: k, visible: (th.style.display !== 'none') }); });
+              return arr;
+            } catch(e) { return allTableColumns.map(function(c){ return { name: c, visible: true }; }); }
+          })();
+          var defaultConfig = originalConfig.slice();
+
+          function getSavedConfig(){
+            try { var s = localStorage.getItem('bidsColumnConfig'); return s ? JSON.parse(s) : null; } catch(e){ return null; }
+          }
+
+          function buildManageList(config){
+            if (!manageList) return;
+            manageList.innerHTML = '';
+            config.forEach(function(item){
+              var li = document.createElement('li'); li.dataset.col = item.name;
+              li.style.display = 'flex'; li.style.alignItems = 'center'; li.style.justifyContent = 'space-between'; li.style.gap = '8px';
+              li.style.padding = '8px'; li.style.border = '1px solid rgba(14,20,26,0.04)'; li.style.borderRadius = '8px'; li.style.background = '#fff';
+              var left = document.createElement('div'); left.style.display = 'flex'; left.style.alignItems = 'center'; left.style.gap = '10px';
+              var chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = !!item.visible; chk.style.width = '16px'; chk.style.height = '16px'; chk.dataset.col = item.name;
+              var lbl = document.createElement('div'); lbl.textContent = item.name.replace(/_/g,' '); lbl.style.color = '#0f172a'; lbl.style.fontWeight = 700; lbl.style.fontSize = '13px';
+              left.appendChild(chk); left.appendChild(lbl);
+              var grip = document.createElement('div'); grip.textContent = '≡'; grip.className = 'drag-grip'; grip.style.opacity = '0.6';
+              // determine if this item is locked (one of the first 4 original columns)
+              var origIndex = originalConfig.findIndex(function(x){ return x.name === item.name; });
+              var locked = (origIndex !== -1 && origIndex < 4);
+              if (locked) {
+                chk.checked = true;
+                chk.disabled = true;
+                li.dataset.locked = '1';
+                grip.setAttribute('draggable','false');
+                grip.style.opacity = '0.3';
+                grip.style.cursor = 'not-allowed';
+              } else {
+                grip.setAttribute('draggable','true');
+              }
+              li.appendChild(left); li.appendChild(grip);
+              manageList.appendChild(li);
+            });
+            attachDragHandlers();
+          }
+
+          function attachDragHandlers(){
+            // Tacky drag-reorder implementation using grip-only draggable elements
+            var dragging = null;
+            var placeholder = null;
+            var lockedCount = (originalConfig && originalConfig.length) ? Math.min(4, originalConfig.length) : 0;
+
+            function createPlaceholder(){
+              var ph = document.createElement('li');
+              ph.className = 'drop-placeholder';
+              var inner = document.createElement('div'); inner.className = 'placeholder-inner'; inner.textContent = 'Drop here';
+              ph.appendChild(inner);
+              return ph;
+            }
+
+            // dragstart delegated from grips only
+            manageList.addEventListener('dragstart', function(e){
+              var grip = e.target.closest ? e.target.closest('.drag-grip') : null;
+              if (!grip) { e.preventDefault(); return; }
+              // if grip explicitly marked non-draggable (locked), block
+              if (grip.getAttribute('draggable') === 'false') { e.preventDefault(); return; }
+              var li = grip.closest('li');
+              if (!li || li.dataset.locked) { e.preventDefault(); return; }
+              dragging = li;
+              li.classList.add('dragging');
+              // create placeholder after the dragged item initially
+              placeholder = createPlaceholder();
+              li.parentNode.insertBefore(placeholder, li.nextSibling);
+              try { e.dataTransfer.setData('text/plain',''); } catch(ex){}
+              e.dataTransfer.effectAllowed = 'move';
+            });
+
+            manageList.addEventListener('dragend', function(e){
+              if (dragging) dragging.classList.remove('dragging');
+              dragging = null;
+              if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+              placeholder = null;
+            });
+
+            // live preview movement
+            manageList.addEventListener('dragover', function(e){
+              e.preventDefault();
+              if (!dragging) return;
+              var targetLi = e.target.closest ? e.target.closest('li') : null;
+              // If hovering over the placeholder itself, do nothing
+              if (targetLi && targetLi === placeholder) return;
+
+              // compute allowed insertion point: can't insert before locked items
+              var children = Array.from(manageList.querySelectorAll('li')).filter(function(n){ return n !== dragging && n !== placeholder; });
+              // find index where to insert (before targetLi), otherwise at end
+              var insertBeforeNode = null;
+              if (targetLi && targetLi !== placeholder) {
+                // do not allow dropping on or before locked items
+                var idx = children.indexOf(targetLi);
+                // if target is locked or its index < lockedCount, set to first non-locked item
+                var targetLocked = !!targetLi.dataset.locked;
+                if (targetLocked) {
+                  // find first child after locked block
+                  for (var i = 0; i < children.length; i++) {
+                    if (!children[i].dataset.locked) { insertBeforeNode = children[i]; break; }
+                  }
+                } else {
+                  insertBeforeNode = targetLi.nextSibling === placeholder ? targetLi.nextSibling : targetLi;
+                }
+              } else {
+                // if no target, append at end but ensure not before locked block
+                // find first non-locked child to insert before, otherwise append
+                insertBeforeNode = null;
+                for (var j = 0; j < children.length; j++) {
+                  if (!children[j].dataset.locked) { insertBeforeNode = null; }
+                }
+              }
+
+              // enforce placeholder not to move above lockedCount
+              var firstNonLocked = null;
+              var allChildren = Array.from(manageList.querySelectorAll('li'));
+              for (var k = 0; k < allChildren.length; k++) {
+                if (!allChildren[k].dataset.locked) { firstNonLocked = allChildren[k]; break; }
+              }
+
+              // place placeholder intelligently: before targetLi if target is non-locked, else after locked block
+              if (targetLi && !targetLi.dataset.locked) {
+                // insert placeholder before targetLi
+                if (placeholder.parentNode !== manageList || placeholder.nextSibling !== targetLi) {
+                  manageList.insertBefore(placeholder, targetLi);
+                }
+              } else {
+                // insert after last locked item
+                var lastLocked = null;
+                var kids = Array.from(manageList.querySelectorAll('li'));
+                for (var m = 0; m < kids.length; m++) { if (kids[m].dataset.locked) lastLocked = kids[m]; }
+                if (lastLocked) {
+                  if (lastLocked.nextSibling !== placeholder) manageList.insertBefore(placeholder, lastLocked.nextSibling);
+                } else {
+                  // no locked items - append to end
+                  if (placeholder.parentNode !== manageList) manageList.appendChild(placeholder);
+                }
+              }
+            });
+
+            manageList.addEventListener('drop', function(e){
+              e.preventDefault();
+              if (!dragging) return;
+              if (placeholder && placeholder.parentNode) {
+                manageList.insertBefore(dragging, placeholder);
+                placeholder.parentNode.removeChild(placeholder);
+              }
+              // cleanup
+              if (dragging) dragging.classList.remove('dragging');
+              dragging = null; placeholder = null;
+            });
+          }
+
+          function openManageModal(){
+            var saved = getSavedConfig();
+            var cfg = saved ? saved : defaultConfig.slice();
+            buildManageList(cfg);
+            if (manageModal) manageModal.style.display = 'flex';
+          }
+
+          function resetManageList(){ buildManageList(originalConfig.slice()); }
+
+          function closeManage(){ if (manageModal) manageModal.style.display = 'none'; }
+
+          function saveManage(){
+            if (!manageList) return;
+            var items = Array.from(manageList.querySelectorAll('li')).map(function(li){
+              var name = li.dataset.col; var chk = li.querySelector('input[type="checkbox"]');
+              return { name: name, visible: !!(chk && chk.checked), locked: !!li.dataset.locked };
+            });
+            // Ensure locked first-4 stay at the front in original order and are visible
+            var lockedFront = originalConfig.slice(0,4).map(function(x){ return x.name; }).filter(Boolean);
+            var ordered = [];
+            lockedFront.forEach(function(k){ var it = items.find(function(i){ return i.name === k; }); if (!it) { ordered.push({ name: k, visible: true, locked: true }); } else { it.visible = true; it.locked = true; ordered.push(it); } });
+            // append remaining items in current order
+            items.forEach(function(i){ if (lockedFront.indexOf(i.name) === -1) ordered.push(i); });
+            try { localStorage.setItem('bidsColumnConfig', JSON.stringify(ordered)); } catch(e) { console.warn('save columns failed', e); }
+            applyColumnConfig(ordered);
+            closeManage();
+          }
+
+          function applyColumnConfig(cfg){
+            if (!cfg || !cfg.length) return;
+            var theadRow = document.querySelector('#bidsTable thead tr');
+            if (!theadRow) return;
+            var thMap = {};
+            Array.from(theadRow.querySelectorAll('th')).forEach(function(th){ var k = th.getAttribute('data-col'); if (k) thMap[k] = th; });
+            // build new header order
+            var frag = document.createDocumentFragment();
+            cfg.forEach(function(item){ var th = thMap[item.name]; if (th) {
+              th.style.display = item.visible ? '' : 'none'; frag.appendChild(th);
+            }});
+            // append any headers not included in cfg at end
+            Array.from(theadRow.querySelectorAll('th')).forEach(function(th){ var k = th.getAttribute('data-col'); if (!k) return; if (!cfg.find(function(x){ return x.name === k; })) frag.appendChild(th); });
+            theadRow.innerHTML = '';
+            theadRow.appendChild(frag);
+
+            // apply to body rows
+            var rows = document.querySelectorAll('#bidsTable tbody tr');
+            rows.forEach(function(tr){
+              var tdMap = {};
+              Array.from(tr.querySelectorAll('td')).forEach(function(td){ var k = td.getAttribute('data-col'); if (k) tdMap[k] = td; });
+              var df = document.createDocumentFragment();
+              cfg.forEach(function(item){ var td = tdMap[item.name]; if (td) { td.style.display = item.visible ? '' : 'none'; df.appendChild(td); } });
+              // append any tds not in cfg
+              Object.keys(tdMap).forEach(function(k){ if (!cfg.find(function(x){ return x.name === k; })) df.appendChild(tdMap[k]); });
+              tr.innerHTML = '';
+              tr.appendChild(df);
+            });
+            try { // ensure sticky columns recalculated
+              setupStickyColumns(4); syncTopScroller();
+            } catch(e){}
+          }
+
+          if (manageBtn) manageBtn.addEventListener('click', openManageModal);
+          if (closeManageBtn) closeManageBtn.addEventListener('click', closeManage);
+          if (resetBtn) resetBtn.addEventListener('click', function(){ resetManageList(); });
+          if (cancelBtn) cancelBtn.addEventListener('click', function(){ closeManage(); });
+          if (saveBtn) saveBtn.addEventListener('click', function(){ saveManage(); });
+
+          // on load apply saved config if present
+          try { var saved = getSavedConfig(); if (saved) applyColumnConfig(saved); } catch(e){}
+        } catch(e){ console.warn('manage columns init failed', e); }
       });
     })();
   </script>
