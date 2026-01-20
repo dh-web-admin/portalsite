@@ -195,11 +195,14 @@ try {
       text-overflow: ellipsis;
     }
 
-    /* Row separators and hover state */
+    /* Row separators and hover state: apply border to cells so group spacers remain visible */
     #bidsTable tbody tr {
-      border-bottom: 1px solid #f1f5f9;
       transition: background .12s ease;
     }
+    #bidsTable tbody td {
+      border-bottom: 1px solid #f1f5f9;
+    }
+    /* Keep hover on row but apply to cells for clearer separation */
     #bidsTable tbody tr:hover { background: #f8fafc; }
 
     /* Notes column exception (keep allowing it to be wider) */
@@ -221,6 +224,19 @@ try {
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
+
+    /* Floating cloned header (used when page scroll moves table out of view) */
+    #floatingHeader {
+      position: fixed;
+      left: 0;
+      right: 0;
+      display: none;
+      z-index: 1200;
+      pointer-events: none; /* header is visual only */
+      overflow: hidden;
+    }
+    #floatingHeader table { border-collapse: collapse; width: 100%; background: rgba(249,250,251,0.98); }
+    #floatingHeader th { padding: 14px 16px; font-weight:800; color:#334155; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
     /* Manage Columns modal button styles */
     .manage-columns-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:12px; }
@@ -902,6 +918,78 @@ try {
           var table = document.getElementById('bidsTable');
           var topScroller = document.getElementById('tableTopScroller');
           var topInner = document.getElementById('tableTopScrollerInner');
+
+          // Floating header element (cloned thead) for viewport-anchored header
+          var floatingHeader = document.createElement('div');
+          floatingHeader.id = 'floatingHeader';
+          document.body.appendChild(floatingHeader);
+
+          function buildFloatingHeader() {
+            if (!table) return;
+            floatingHeader.innerHTML = '';
+            var clone = document.createElement('table');
+            clone.id = 'floatingBidsHeader';
+            // copy thead
+            var thead = table.querySelector('thead');
+            if (!thead) return;
+            clone.appendChild(thead.cloneNode(true));
+            floatingHeader.appendChild(clone);
+            // set widths to match original header cells
+            updateFloatingHeaderWidths();
+          }
+
+          function updateFloatingHeaderWidths() {
+            var origThs = table.querySelectorAll('thead th');
+            var cloneThs = floatingHeader.querySelectorAll('th');
+            if (!origThs || !cloneThs || origThs.length !== cloneThs.length) return;
+            var tableRect = table.getBoundingClientRect();
+            floatingHeader.style.left = tableRect.left + 'px';
+            floatingHeader.style.width = tableRect.width + 'px';
+            var total = 0;
+            for (var i = 0; i < origThs.length; i++) {
+              var w = Math.ceil(origThs[i].getBoundingClientRect().width);
+              cloneThs[i].style.width = w + 'px';
+              total += w;
+            }
+            // ensure inner table uses exact width
+            var inner = floatingHeader.querySelector('table');
+            if (inner) inner.style.width = total + 'px';
+          }
+
+          function showOrHideFloatingHeader() {
+            if (!table) return;
+            var rect = table.getBoundingClientRect();
+            // compute page header offset (if any) so header sits below top chrome
+            var pageHeader = document.querySelector('.portalheader, header, .portalHeader');
+            var offset = 0;
+            if (pageHeader) offset = pageHeader.getBoundingClientRect().height || 0;
+            // also account for toolbar within page (so header doesn't overlap toolbar)
+            var toolbar = document.querySelector('.toolbar');
+            if (toolbar) offset += toolbar.getBoundingClientRect().height || 0;
+            var headerHeight = (table.querySelector('thead th') && table.querySelector('thead th').getBoundingClientRect().height) || 40;
+
+            if (rect.top < offset && rect.bottom > offset + headerHeight) {
+              // show floating header
+              if (floatingHeader.style.display !== 'block') floatingHeader.style.display = 'block';
+              floatingHeader.style.top = offset + 'px';
+              updateFloatingHeaderWidths();
+              // horizontal sync: translate to match container scroll
+              var scrollLeft = container ? container.scrollLeft : 0;
+              var inner = floatingHeader.querySelector('table');
+              if (inner) inner.style.transform = 'translateX(' + (-scrollLeft) + 'px)';
+            } else {
+              if (floatingHeader.style.display !== 'none') floatingHeader.style.display = 'none';
+            }
+          }
+
+          // Rebuild on resize to recalc widths
+          window.addEventListener('resize', function(){ try { updateFloatingHeaderWidths(); showOrHideFloatingHeader(); } catch(e){} });
+          // Sync on container scroll for horizontal movement
+          if (container) container.addEventListener('scroll', function(){ try { showOrHideFloatingHeader(); } catch(e){} });
+          // And on window scroll for showing/hiding
+          window.addEventListener('scroll', function(){ try { showOrHideFloatingHeader(); } catch(e){} });
+          // Build initial
+          setTimeout(function(){ try { buildFloatingHeader(); showOrHideFloatingHeader(); } catch(e){} }, 120);
 
           function syncTopScroller() {
             if (!container || !table || !topScroller || !topInner) return;
