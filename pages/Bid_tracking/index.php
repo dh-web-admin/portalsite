@@ -1252,72 +1252,86 @@ try {
             });
           })();
 
-          function applyFiltersAndGrouping() {
-            if (!tbody || !table) return;
+function applyFiltersAndGrouping() {
+  if (!tbody || !table) return;
 
-            var selectedYear = yearFilterEl ? yearFilterEl.value : '';
-            var selectedStatus = statusFilterEl ? statusFilterEl.value : 'all';
+  var selectedYear = yearFilterEl ? yearFilterEl.value : '';
+  var selectedStatus = statusFilterEl ? statusFilterEl.value : 'all';
 
-            // Show status filter only when a year is selected (default is current year)
-            if (statusFilterEl) statusFilterEl.hidden = !selectedYear;
+  // Show status filter only when a year is selected (default is current year)
+  if (statusFilterEl) statusFilterEl.hidden = !selectedYear;
 
-            // 1) Year filter (projects starting with YY)
-            var filtered = originalRows.filter(function(it){
-              if (!selectedYear) return true;
-              return it.project && it.project.indexOf(selectedYear) === 0;
-            });
+  // 1) Year filter (projects starting with YY)
+  var filtered = originalRows.filter(function(it){
+    if (!selectedYear) return true;
+    return it.project && it.project.indexOf(selectedYear) === 0;
+  });
 
-            // 2) Status filter (applies only within selected year set)
-            if (selectedStatus && selectedStatus !== 'all') {
-              filtered = filtered.filter(function(it){ return it.status === selectedStatus; });
-            }
+  // 2) Status filter (applies only within selected year set)
+  if (selectedStatus && selectedStatus !== 'all') {
+    filtered = filtered.filter(function(it){ return it.status === selectedStatus; });
+  }
 
-            // 3) Group by DHSS Project # and sort within group by nearest bid_date to today
-            var now = new Date();
-            var groups = new Map();
+  // 3) Group by DHSS Project #.
+  //    Sort PROJECTS globally by the earliest bid_date in the project (due-date style).
+  //    Sort ROWS inside each project by bid_date ascending.
+  var groups = new Map();
 
-            filtered.forEach(function(it){
-              var key = (it.project || '').toString();
-              if (!groups.has(key)) groups.set(key, []);
-              var dist = it.date ? Math.abs(it.date - now) : Number.POSITIVE_INFINITY;
-              groups.get(key).push({ it: it, dist: dist });
-            });
+  filtered.forEach(function(it){
+    var key = (it.project || '').toString();
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ it: it, date: it.date });
+  });
 
-            var groupEntries = Array.from(groups.entries()).map(function(ent){
-              var key = ent[0];
-              var items = ent[1];
-              items.sort(function(a,b){ return a.dist - b.dist; });
-              var nearest = items.length ? items[0].dist : Number.POSITIVE_INFINITY;
-              return { key: key, items: items, nearest: nearest };
-            });
+  var groupEntries = Array.from(groups.entries()).map(function(ent){
+    var key = ent[0];
+    var items = ent[1];
 
-            groupEntries.sort(function(a,b){ return a.nearest - b.nearest; });
+    // Sort rows within project by bid_date ascending (nulls last)
+    items.sort(function(a, b){
+      var ad = a.date ? a.date.getTime() : Number.POSITIVE_INFINITY;
+      var bd = b.date ? b.date.getTime() : Number.POSITIVE_INFINITY;
+      return ad - bd;
+    });
 
-            // 4) Rebuild tbody with spacer rows between groups
-            var frag = document.createDocumentFragment();
-            var colCount = getVisibleHeaderCount();
+    // Project "due date" = earliest bid_date in project (nulls go to bottom)
+    var projectDue = (items.length && items[0].date) ? items[0].date.getTime() : Number.POSITIVE_INFINITY;
 
-            groupEntries.forEach(function(g, gi){
-              if (gi !== 0) {
-                var spr = document.createElement('tr');
-                spr.className = 'group-spacer';
-                var td = document.createElement('td');
-                td.colSpan = colCount;
-                spr.appendChild(td);
-                frag.appendChild(spr);
-              }
-              g.items.forEach(function(w){ frag.appendChild(w.it.row); });
-            });
+    return { key: key, items: items, projectDue: projectDue };
+  });
 
-            tbody.innerHTML = '';
-            tbody.appendChild(frag);
+  // Sort ALL projects by earliest bid_date (earliest first), tie-break by project id
+  groupEntries.sort(function(a, b){
+    if (a.projectDue !== b.projectDue) return a.projectDue - b.projectDue;
+    return (a.key || '').localeCompare(b.key || '');
+  });
 
-            try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
-            try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
+  // 4) Rebuild tbody with spacer rows between groups
+  var frag = document.createDocumentFragment();
+  var colCount = getVisibleHeaderCount();
 
-            // Update project separators after tbody rebuild
-            try { updateProjectSeparators(); } catch(e) { console.warn('updateProjectSeparators failed', e); }
-          }
+  groupEntries.forEach(function(g, gi){
+    if (gi !== 0) {
+      var spr = document.createElement('tr');
+      spr.className = 'group-spacer';
+      var td = document.createElement('td');
+      td.colSpan = colCount;
+      spr.appendChild(td);
+      frag.appendChild(spr);
+    }
+    g.items.forEach(function(w){ frag.appendChild(w.it.row); });
+  });
+
+  tbody.innerHTML = '';
+  tbody.appendChild(frag);
+
+  try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
+  try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
+
+  // Update project separators after tbody rebuild
+  try { updateProjectSeparators(); } catch(e) { console.warn('updateProjectSeparators failed', e); }
+}
+
 
           // Delegated row click (works even after tbody rebuild)
           tbody.addEventListener('click', function(e){
