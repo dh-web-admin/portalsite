@@ -268,24 +268,27 @@ try {
     /* Optional zebra for readability */
     #bidsTable tbody tr[data-bid]:nth-child(even) td { background: rgba(248, 250, 252, 0.55); }
 
-    /* Group boundary separator */
-    #bidsTable tbody tr.group-spacer td {
-      position: relative;
-      padding: 0 !important;
-      border: 0 !important;
-      height: 18px;
-      background: transparent !important;
-    }
-    #bidsTable tbody tr.group-spacer td::before {
-      content: "";
-      position: absolute;
-      left: 14px;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      border-top: 3px solid rgba(15, 23, 42, 0.18);
-      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
-    }
+   /* Group spacer: keep harmless and don't rely on it for important separators */
+#bidsTable tbody tr.group-spacer td {
+  padding: 6px 0 !important;
+  border: 0 !important;
+  height: 12px;                 /* keep small spacing if present */
+  background: transparent !important;
+}
+#bidsTable tbody tr.group-spacer td::before,
+#bidsTable tbody tr.group-spacer td::after { content: none !important; }
+
+/* Project boundary separator — applied to rows where the next visible row has a different DHSS project # */
+#bidsTable tbody tr.project-break td {
+  border-bottom: 1px solid rgb(188, 190, 194) !important; /* gray */
+  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset !important;
+}
+
+#bidsTable tbody tr.project-break:hover td { /* preserve hover but keep separator visible */
+  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset !important;
+}
+
+
 
     /* ================================
        Header filter controls (NEW)
@@ -680,6 +683,7 @@ try {
 
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
                   <button type="button" id="closeEditBid" style="background:#fff;border:1px solid #e6edf0;color:#0f172a;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
+                  <button type="button" id="deleteBidBtn" style="background:#fee2e2;border:1px solid rgba(239,68,68,0.12);color:#7f1d1d;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;">Delete</button>
                   <button type="submit" id="saveEditBid" style="background:#10b981;border:none;color:#fff;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer;">Save</button>
                 </div>
               </form>
@@ -1006,6 +1010,37 @@ try {
           });
         }
 
+        // Delete button handler inside modal
+        try {
+          var deleteBtn = document.getElementById('deleteBidBtn');
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', function(e){
+              e.preventDefault();
+              var idInput = document.getElementById('editBidId');
+              var bidId = idInput ? idInput.value : null;
+              if (!bidId) return showToast('Missing bid id', 'error');
+              if (!confirm('Delete this bid? This action cannot be undone.')) return;
+
+              deleteBtn.disabled = true; deleteBtn.textContent = 'Deleting...';
+
+              var fd = new FormData(); fd.append('bid_id', bidId);
+              fetch('../../api/delete_bid.php', { method: 'POST', credentials: 'same-origin', body: fd })
+                .then(function(r){ return r.json ? r.json() : r.text(); })
+                .then(function(data){
+                  if (data && data.success) {
+                    try { showToast('Deleted', 'success'); } catch(e){}
+                    try { closeEditModal(); } catch(e){}
+                    setTimeout(function(){ window.location.reload(); }, 600);
+                  } else {
+                    var msg = (data && data.message) ? data.message : 'Delete failed';
+                    try { showToast(msg, 'error'); } catch(e){}
+                    deleteBtn.disabled = false; deleteBtn.textContent = 'Delete';
+                  }
+                }).catch(function(){ try { showToast('Delete failed', 'error'); } catch(e){}; deleteBtn.disabled = false; deleteBtn.textContent = 'Delete'; });
+            });
+          }
+        } catch(e) { console.warn('delete handler init failed', e); }
+
         // -----------------------------
         // Top scrollbar sync + sticky columns + floating header
         // -----------------------------
@@ -1112,6 +1147,36 @@ try {
           }
           window.setupStickyColumns = setupStickyColumns; // expose for later calls
 
+          // Update project separators: add/remove the `project-break` class on rows
+          function updateProjectSeparators() {
+            try {
+              var tb = document.querySelector('#bidsTable tbody');
+              if (!tb) return;
+              var dataRows = Array.from(tb.querySelectorAll('tr[data-bid]'));
+              if (!dataRows.length) return;
+
+              function getProj(r) {
+                if (!r) return '';
+                var raw = r.getAttribute('data-bid');
+                if (raw) {
+                  try { var obj = JSON.parse(raw || '{}'); if (obj && obj.dhss_project_number) return String(obj.dhss_project_number).trim(); } catch(e) {}
+                }
+                var cell = r.querySelector('td[data-col="dhss_project_number"]');
+                return cell ? String((cell.textContent||'').trim()) : '';
+              }
+
+              for (var i = 0; i < dataRows.length; i++) {
+                var r = dataRows[i];
+                // last visible data row should not show a separator
+                if (i === dataRows.length - 1) { r.classList.remove('project-break'); continue; }
+                var cur = getProj(r);
+                var nxt = getProj(dataRows[i+1]);
+                if (cur !== nxt) r.classList.add('project-break'); else r.classList.remove('project-break');
+              }
+            } catch(e) { console.warn('updateProjectSeparators error', e); }
+          }
+
+
           setTimeout(function(){ try { setupStickyColumns(4); } catch(e){} }, 120);
           window.addEventListener('resize', function(){ try { setupStickyColumns(4); syncTopScroller(); } catch(e){} });
         } catch(e) { console.warn('sticky/topScroller init failed', e); }
@@ -1127,24 +1192,29 @@ try {
           var statusFilterEl = document.getElementById('statusFilter');
 
           // Build last 5 years dropdown (auto updates each year)
-          (function initYearOptions(){
-            if (!yearFilterEl) return;
-            var nowY = new Date().getFullYear();
-            var years = [];
-            for (var i = 0; i < 5; i++) years.push(nowY - i);
+        (function initYearOptions(){
+  if (!yearFilterEl) return;
+  var nowY = new Date().getFullYear();
 
-            yearFilterEl.innerHTML = '';
-            years.forEach(function(y){
-              var opt = document.createElement('option');
-              opt.value = String(y).slice(-2); // 2026 -> "26"
-              opt.textContent = String(y);
-              yearFilterEl.appendChild(opt);
-            });
+  yearFilterEl.innerHTML = '';
 
-            // Default = current year only
-            yearFilterEl.value = String(nowY).slice(-2);
-          })();
+  // ✅ All years option
+  var allOpt = document.createElement('option');
+  allOpt.value = '';
+  allOpt.textContent = 'All Years';
+  yearFilterEl.appendChild(allOpt);
 
+  for (var i = 0; i < 5; i++) {
+    var y = nowY - i;
+    var opt = document.createElement('option');
+    opt.value = String(y).slice(-2); // 2026 -> "26"
+    opt.textContent = String(y);
+    yearFilterEl.appendChild(opt);
+  }
+
+  // choose default: current year (keep your preference)
+  yearFilterEl.value = String(nowY).slice(-2);
+})();
           function normStatus(raw) {
             var s = (raw || '').toString().trim().toLowerCase();
             s = s.replace(/[^a-z0-9]/g,'');
@@ -1244,6 +1314,9 @@ try {
 
             try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
             try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
+
+            // Update project separators after tbody rebuild
+            try { updateProjectSeparators(); } catch(e) { console.warn('updateProjectSeparators failed', e); }
           }
 
           // Delegated row click (works even after tbody rebuild)
@@ -1484,22 +1557,45 @@ try {
             theadRow.innerHTML = '';
             theadRow.appendChild(frag);
 
+          
             var rows = document.querySelectorAll('#bidsTable tbody tr');
-            rows.forEach(function(tr){
-              var tdMap = {};
-              Array.from(tr.querySelectorAll('td')).forEach(function(td){ var k = td.getAttribute('data-col'); if (k) tdMap[k] = td; });
-              var df = document.createDocumentFragment();
-              cfg.forEach(function(item){
-                var td = tdMap[item.name];
-                if (td) { td.style.display = item.visible ? '' : 'none'; df.appendChild(td); }
-              });
-              Object.keys(tdMap).forEach(function(k){
-                if (!cfg.find(function(x){ return x.name === k; })) df.appendChild(tdMap[k]);
-              });
-              tr.innerHTML = '';
-              tr.appendChild(df);
-            });
+rows.forEach(function(tr){
 
+  // ✅ Keep the spacer row's TD so separator line doesn't disappear
+  if (tr.classList && tr.classList.contains('group-spacer')) {
+    var td = tr.querySelector('td');
+    if (!td) {
+      td = document.createElement('td');
+      tr.appendChild(td);
+    }
+    // update colspan to visible columns
+    td.colSpan = cfg.filter(function(x){ return x.visible; }).length || 1;
+    td.style.display = '';
+    return;
+  }
+
+  var tdMap = {};
+  Array.from(tr.querySelectorAll('td')).forEach(function(td){
+    var k = td.getAttribute('data-col');
+    if (k) tdMap[k] = td;
+  });
+
+  var df = document.createDocumentFragment();
+  cfg.forEach(function(item){
+    var td = tdMap[item.name];
+    if (td) {
+      td.style.display = item.visible ? '' : 'none';
+      df.appendChild(td);
+    }
+  });
+
+  Object.keys(tdMap).forEach(function(k){
+    if (!cfg.find(function(x){ return x.name === k; })) df.appendChild(tdMap[k]);
+  });
+
+  tr.innerHTML = '';
+  tr.appendChild(df);
+});
             try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
             try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
           }
