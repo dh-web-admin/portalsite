@@ -149,12 +149,14 @@ try {
     #projectToast.error { background: #fee2e2; color: #7f1d1d; border-color: rgba(127,29,29,0.08); }
     #projectToast .msg { flex:1; font-weight:700; }
     #projectToast .close { background:transparent;border:0;color:rgba(15,23,42,0.7);cursor:pointer;font-weight:700;padding:6px;border-radius:6px }
+
     /* Status pill style for table */
     .status-pill { display:inline-block; padding:6px 12px; border-radius:999px; font-weight:700; font-size:13px; line-height:1; background: #f1f5f9; color:#0f172a; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset; }
     .status-pill.status-won { background: rgba(16,185,129,0.12); color:#065f46; }
     .status-pill.status-completed { background: rgba(59,130,246,0.08); color:#1e40af; }
     .status-pill.status-lost { background: rgba(239,68,68,0.08); color:#7f1d1d; }
     .status-pill.status-pending { background: rgba(99,102,241,0.04); color:#334155; }
+
     /* Ensure the bids table can expand to its content width */
     #tableContainer { overflow-x: auto; overflow-y: auto; box-sizing:border-box; }
     /* Make the table container fill available viewport height so table area remains tall even when empty */
@@ -162,6 +164,7 @@ try {
     #bidsTable { display: inline-table; width: -webkit-max-content; width: -moz-max-content; width: max-content; table-layout: auto; }
     /* Make the scroll area stretch full width while allowing the table to be wider */
     #tableTopScroller { box-sizing: border-box; }
+
     /* TABLE HEADER — modern, elevated look */
     #bidsTable thead th {
       padding: 14px 16px;
@@ -195,27 +198,21 @@ try {
       text-overflow: ellipsis;
     }
 
-    /* Row separators and hover state: apply border to cells so group spacers remain visible */
-    #bidsTable tbody tr {
-      transition: background .12s ease;
-    }
-    #bidsTable tbody td {
-      border-bottom: 1px solid #f1f5f9;
-    }
-    /* Keep hover on row but apply to cells for clearer separation */
+    #bidsTable tbody tr { transition: background .12s ease; }
     #bidsTable tbody tr:hover { background: #f8fafc; }
 
     /* Notes column exception (keep allowing it to be wider) */
     #bidsTable td.notes-col, #bidsTable th.notes-col { max-width: 420px; }
 
-    /* Group spacer (leave intact but slightly tuned to match new visual language) */
-    .group-spacer td {
-      padding: 0;
+    /* old group divider (safe to keep) */
+    .group-spacer td { padding: 0; border: 0; height: auto; }
+    .group-spacer .group-divider {
       height: 12px;
-      background: linear-gradient(90deg, rgba(203,213,225,0.06), rgba(230,238,240,0));
+      width: 100%;
       border-top: 2px solid rgba(229,231,235,0.9);
       border-bottom: 1px solid rgba(229,231,235,0.6);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+      display: block;
     }
 
     /* Ensure sticky column cells retain solid backgrounds while scrolling */
@@ -259,6 +256,76 @@ try {
     .drop-placeholder { border: 2px dashed rgba(14,20,26,0.06); background: #fff; height:48px; border-radius:8px; margin:0; box-sizing:border-box; }
     .drop-placeholder .placeholder-inner { height:100%; display:flex; align-items:center; padding:8px; color:#94a3b8; font-weight:700; }
     .drag-over { outline: 2px solid rgba(16,185,129,0.08); }
+
+    /* =========================================================
+       Show separators ONLY between different DHSS Project # groups
+       (JS inserts: tr.group-spacer between project-id groups)
+       ========================================================= */
+
+    /* Remove per-row dividers so same-project rows don't show lines */
+    #bidsTable tbody tr[data-bid] td { border-bottom: 0 !important; }
+
+    /* Optional zebra for readability */
+    #bidsTable tbody tr[data-bid]:nth-child(even) td { background: rgba(248, 250, 252, 0.55); }
+
+    /* Group boundary separator */
+    #bidsTable tbody tr.group-spacer td {
+      position: relative;
+      padding: 0 !important;
+      border: 0 !important;
+      height: 18px;
+      background: transparent !important;
+    }
+    #bidsTable tbody tr.group-spacer td::before {
+      content: "";
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      border-top: 3px solid rgba(15, 23, 42, 0.18);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+
+    /* ================================
+       Header filter controls (NEW)
+       ================================ */
+    .th-with-filter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .th-with-filter .th-label {
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+    .th-filter {
+      font-size: 12px;
+      font-weight: 800;
+      color: #334155;
+      padding: 6px 32px 6px 10px;
+      border: 1px solid rgba(15,23,42,0.10);
+      border-radius: 10px;
+      background: #ffffff;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+
+      /* Inverted triangle caret */
+      background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='16' height='16'%3E%3Cpath fill='%23334155' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 16px;
+    }
+    .th-filter:focus {
+      border-color: rgba(16,185,129,0.45);
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+    }
+    .th-filter[hidden] { display:none !important; }
+    #bidsTable thead th.col-status { padding: 10px 12px; }
+
   </style>
 </head>
 <body class="admin-page">
@@ -277,13 +344,15 @@ try {
           </div>
 
           <div style="padding:16px 40px;">
-              <div id="tableTopScroller" style="display:none;height:12px;overflow-x:auto;overflow-y:hidden;margin-bottom:8px;border-radius:6px;width:100%;">
-                <div id="tableTopScrollerInner" style="height:1px;"></div>
-              </div>
+            <div id="tableTopScroller" style="display:none;height:12px;overflow-x:auto;overflow-y:hidden;margin-bottom:8px;border-radius:6px;width:100%;">
+              <div id="tableTopScrollerInner" style="height:1px;"></div>
+            </div>
+
             <div id="tableContainer" style="overflow:auto;border:1px solid #e6edf0;border-radius:8px;padding:8px;background:#fff;">
               <?php if (!$bidTableExists) { ?>
                 <div style="padding:12px;color:#7f1d1d;background:#fff5f5;border:1px solid rgba(127,29,29,0.06);border-radius:6px;margin-bottom:8px;">Bids table not found in the database.</div>
               <?php } ?>
+
               <table id="bidsTable" style="width:auto;border-collapse:collapse;font-size:13px;text-align:left;table-layout:auto;">
                 <thead>
                   <tr>
@@ -292,27 +361,44 @@ try {
                         foreach ($bidColumns as $col) {
                           // Skip the native status column from the regular headers (we render status separately)
                           if ($col === 'status') continue;
-                          // Insert an empty header cell before DHSS project # for the status pill (no header text)
-                            if ($col === 'dhss_project_number') {
-                              echo '<th class="col-status" data-col="status"></th>';
-                            }
-                            // Build a human-friendly, title-cased label. Special cases for DHSS and GC columns.
-                            if ($col === 'dhss_project_number') {
-                              $label = 'DHSS Project #';
-                            } elseif ($col === 'gc_name') {
-                              $label = 'General Contractor Name';
-                            } elseif ($col === 'gc_number') {
-                              $label = 'General Contractor Number';
-                            } elseif (strpos(strtolower($col), 'gc') !== false || $col === 'general_contractor') {
-                              $label = 'General Contractor';
-                            } else {
-                              $label = ucwords(str_replace('_',' ',$col));
-                            }
-                            if ($col === 'dhss_project_number') {
-                              echo '<th class="col-dhss" data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
-                            } else {
-                              echo '<th data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
-                            }
+
+                          // Insert status header cell before DHSS project # (NEW: status filter dropdown)
+                          if ($col === 'dhss_project_number') {
+                            echo '<th class="col-status" data-col="status">
+                                    <select id="statusFilter" class="th-filter" title="Filter status">
+                                      <option value="all" selected>All</option>
+                                      <option value="won">Won</option>
+                                      <option value="lost">Lost</option>
+                                      <option value="pending">Pending</option>
+                                      <option value="completed">Completed</option>
+                                    </select>
+                                  </th>';
+                          }
+
+                          // Build a human-friendly, title-cased label.
+                          if ($col === 'dhss_project_number') {
+                            $label = 'DHSS Project #';
+                          } elseif ($col === 'gc_name') {
+                            $label = 'General Contractor Name';
+                          } elseif ($col === 'gc_number') {
+                            $label = 'General Contractor Number';
+                          } elseif (strpos(strtolower($col), 'gc') !== false || $col === 'general_contractor') {
+                            $label = 'General Contractor';
+                          } else {
+                            $label = ucwords(str_replace('_',' ',$col));
+                          }
+
+                          // NEW: year filter dropdown embedded in DHSS Project # header
+                          if ($col === 'dhss_project_number') {
+                            echo '<th class="col-dhss" data-col="' . htmlspecialchars($col) . '">
+                                    <div class="th-with-filter">
+                                      <span class="th-label">' . htmlspecialchars($label) . '</span>
+                                      <select id="yearFilter" class="th-filter" title="Filter by year"></select>
+                                    </div>
+                                  </th>';
+                          } else {
+                            echo '<th data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($label) . '</th>';
+                          }
                         }
                       } else {
                         echo '<th>No columns</th>';
@@ -320,13 +406,17 @@ try {
                     ?>
                   </tr>
                 </thead>
+
                 <tbody>
                   <?php if (!$bidTableExists) { ?>
                     <tr><td class="notes-col" colspan="1">Table not available.</td></tr>
                   <?php } else if (empty($bidRows)) { ?>
                     <tr><td colspan="<?php echo max(1, count($bidColumns)+1); ?>">No bids found.</td></tr>
                   <?php } else { ?>
-                    <?php foreach ($bidRows as $r) { ?>
+                    <?php
+                      // NOTE: We render rows normally; JS will do filtering + grouping on load.
+                      foreach ($bidRows as $r) {
+                    ?>
                       <tr data-bid='<?php echo htmlspecialchars(json_encode($r), ENT_QUOTES, "UTF-8"); ?>' style="cursor:pointer;">
                       <?php
                         foreach ($bidColumns as $col) {
@@ -335,6 +425,7 @@ try {
                             $statusRaw = isset($r['status']) ? $r['status'] : '';
                             $statusKey = strtolower(trim((string)$statusRaw));
                             $normalized = preg_replace('/[^a-z0-9]/', '', $statusKey);
+                            if ($normalized === '') $normalized = 'pending';
 
                             $label = $statusRaw;
                             if ($normalized === 'won') { $label = 'won'; }
@@ -429,35 +520,25 @@ try {
                   $otherFields = [];
                   foreach ($bidColumns as $col) {
                     if ($col === 'project_name' || $col === 'status') continue;
-                    // reserve dhss_project_number and bid_date to be shown in the top area
                     if ($col === 'dhss_project_number' || $col === 'bid_date') continue;
                     $lc = strtolower($col);
 
-                    // Project Location specific fields
                     if (strpos($lc, 'project_city') !== false || strpos($lc, 'project_county') !== false || strpos($lc, 'project_state') !== false) {
                       $locFields[] = $col;
                       continue;
                     }
-
-                    // General Contractor related fields
                     if (strpos($lc, 'gc') !== false || strpos($lc, 'general_contractor') !== false) {
                       $gcFields[] = $col;
                       continue;
                     }
-
-                    // Material type or price fields should live in specifications
                     if (preg_match('/material|material_type/i', $lc) || preg_match('/total.*price|price|total_price/i', $lc)) {
                       $specFields[] = $col;
                       continue;
                     }
-
-                    // Project specification related fields (fallback)
                     if (strpos($lc, 'dhss_project_number') !== false || strpos($lc, 'project_') === 0 || strpos($lc, 'bid_date') !== false || preg_match('/square|ton|dimension|area|spec/i', $lc)) {
                       $specFields[] = $col;
                       continue;
                     }
-
-                    // Everything else
                     $otherFields[] = $col;
                   }
                 ?>
@@ -469,7 +550,6 @@ try {
                   .modal-section .header .toggle { font-size:12px;color:#64748b;display:inline-flex;align-items:center;gap:8px }
                   .modal-section .toggle .chev { transition: transform .18s ease; display:inline-block; }
                   .modal-section .section-content { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:10px 12px 14px 12px; }
-                  /* Make the General Contractor section use three columns so its fields fit on one row */
                   #section-gc .section-content { grid-template-columns: repeat(3, 1fr); }
                   .add-gc-btn { background: #f3f4f6; border: 1px solid #e6edf0; color: #0f172a; padding:6px 10px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px; }
                   .modal-section.collapsed .header .add-gc-btn { display: none !important; }
@@ -480,7 +560,7 @@ try {
                   .modal-section.collapsed .toggle .chev { transform: rotate(-90deg); }
                 </style>
 
-                  <div class="modal-section collapsed" id="section-location">
+                <div class="modal-section collapsed" id="section-location">
                   <div class="header" role="button" aria-expanded="false">
                     <h4>Project Location</h4>
                     <div style="display:flex;align-items:center;gap:10px;">
@@ -489,7 +569,6 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($locFields as $col) {
-                      // Title-case labels and handle special cases
                       if ($col === 'gc_name') { $label = 'General Contractor Name'; }
                       elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
                       elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
@@ -514,7 +593,6 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($gcFields as $col) {
-                      // GC-specific label mapping: distinct labels for name/number
                       if ($col === 'gc_name') { $label = 'General Contractor Name'; }
                       elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
                       elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
@@ -526,7 +604,6 @@ try {
                         <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
                       </div>
                     <?php } ?>
-                    <!-- container for any new GC entries the user adds -->
                     <div id="newGcContainer" style="grid-column:1/-1;display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
                   </div>
                 </div>
@@ -560,23 +637,40 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($otherFields as $col) {
-                      // We'll render notes separately below; skip it here so it doesn't appear twice
                       if ($col === 'notes') continue;
                       if ($col === 'gc_name') { $label = 'General Contractor Name'; }
                       elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
                       elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
                       elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
                       else { $label = ucwords(str_replace('_',' ',$col)); }
+
+                      // Render a custom UI for the `reason` column: a select with common values and an "Other" text input.
+                      if ($col === 'reason') {
                     ?>
+                      <div class="field">
+                        <label><?php echo htmlspecialchars($label); ?></label>
+                        <select data-col="reason" name="reason" class="reason-select" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;">
+                          <option value="">--</option>
+                          <option>Didn't Bid</option>
+                          <option>High</option>
+                          <option>Never Went</option>
+                          <option>Did Themselves</option>
+                          <option>Self Performed</option>
+                          <option>Don't Know</option>
+                          <option value="Other">Other</option>
+                        </select>
+                        <input type="text" data-col="reason_other" name="reason_other" placeholder="Other (specify)" style="margin-top:8px;display:none;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
+                      </div>
+                    <?php } else { ?>
                       <div class="field">
                         <label><?php echo htmlspecialchars($label); ?></label>
                         <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
                       </div>
-                    <?php } ?>
+                    <?php }
+                    } ?>
                   </div>
                 </div>
 
-                <!-- Notes: shown as a full-width textarea at the end of the modal -->
                 <?php if (in_array('notes', $bidColumns, true)) { ?>
                   <div style="margin-top:12px;">
                     <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;">Notes</label>
@@ -781,6 +875,38 @@ try {
           });
         });
 
+        // Populate reason_other explicitly if present in the bid object
+        try {
+          var reasonOtherEl = modal.querySelector('[data-col="reason_other"]');
+          if (reasonOtherEl) {
+            reasonOtherEl.value = (bidObj.reason_other !== undefined && bidObj.reason_other !== null) ? bidObj.reason_other : '';
+          }
+        } catch(e) {}
+
+        // Ensure reason "Other" text input visibility matches the selected value
+        try {
+          var reasonSel = modal.querySelector('.reason-select');
+          if (reasonSel) {
+            var ro = modal.querySelector('[data-col="reason_other"]');
+            // try to match option case-insensitively to stored value
+            try {
+              var raw = (bidObj.reason !== undefined && bidObj.reason !== null) ? String(bidObj.reason) : '';
+              if (raw) {
+                var matched = false;
+                Array.from(reasonSel.options).forEach(function(opt){
+                  if (!opt) return;
+                  var ov = (opt.value || opt.text || '').toString().toLowerCase();
+                  if (ov === raw.toString().toLowerCase()) { reasonSel.value = opt.value; matched = true; }
+                });
+                if (!matched) reasonSel.value = raw;
+              }
+            } catch(e) {}
+            function toggleReasonOther() { if (!ro) return; ro.style.display = (reasonSel.value === 'Other') ? 'block' : 'none'; }
+            reasonSel.addEventListener('change', toggleReasonOther);
+            toggleReasonOther();
+          }
+        } catch(e) {}
+
         modal.style.display = 'flex';
       }
 
@@ -791,26 +917,14 @@ try {
       }
 
       document.addEventListener('DOMContentLoaded', function(){
-        var rows = document.querySelectorAll('table tbody tr[data-bid]');
-        rows.forEach(function(r){
-          r.addEventListener('click', function(){
-            try {
-              var bidObj = JSON.parse(r.getAttribute('data-bid'));
-              openEditModal(bidObj);
-            } catch(e) {
-              console.error('Row JSON parse failed', e);
-            }
-          });
-        });
-
-        var closeBtn = document.getElementById('closeEditBid');
-        if (closeBtn) closeBtn.addEventListener('click', closeEditModal);
-
         // update color when user changes selection
         var statusEl = document.getElementById('editStatus');
         if (statusEl) {
           statusEl.addEventListener('change', function(){ setStatusColor(this.value); });
         }
+
+        var closeBtn = document.getElementById('closeEditBid');
+        if (closeBtn) closeBtn.addEventListener('click', closeEditModal);
 
         var editForm = document.getElementById('editBidForm');
         if (editForm) {
@@ -819,6 +933,17 @@ try {
             e.preventDefault();
 
             var fd = new FormData(editForm);
+
+            // If reason select is set to "Other", send the typed `reason_other` value as `reason` instead
+            try {
+              var rs = editForm.querySelector('[name="reason"]');
+              var ro = editForm.querySelector('[name="reason_other"]');
+              if (rs && ro && rs.value === 'Other') {
+                fd.set('reason', ro.value || 'Other');
+                // also send reason_other field so backend can store it separately if desired
+                fd.set('reason_other', ro.value || '');
+              }
+            } catch (e) { /* ignore if fields not present */ }
 
             // collect new GC entries if any
             var newGcContainer = document.getElementById('newGcContainer');
@@ -833,76 +958,47 @@ try {
                 if (gc) obj['general_contractor'] = gc.value || null;
                 if (name) obj['gc_name'] = name.value || null;
                 if (num) obj['gc_number'] = num.value || null;
-                // only include if at least one field provided
                 if (obj.general_contractor || obj.gc_name || obj.gc_number) newClones.push(obj);
               });
             }
 
-            // Debug
-            try {
-              var obj = {};
-              fd.forEach(function(v,k){ obj[k] = v; });
-              console.log('Submitting update_bid:', obj);
-            } catch(err) {}
-
             var saveBtn = document.getElementById('saveEditBid');
             if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
 
-            // Use the environment-safe `updateUrl` defined earlier instead of hardcoded path
             var theUpdateUrl = (typeof updateUrl !== 'undefined' && updateUrl) ? updateUrl : '../../api/update_bid.php';
-            console.log('Final update URL used:', theUpdateUrl);
 
-            // If there are new GC clones, POST them first to clone the bid row(s)
             (new Promise(function(resolve, reject){
               if (!newClones.length) return resolve(null);
               var cloneUrl = '../../api/clone_bid_with_gc.php';
-              console.log('Posting clones to', cloneUrl, newClones);
               fetch(cloneUrl, { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ bid_id: fd.get('bid_id'), clones: newClones }) })
                 .then(function(r){ return r.json(); })
                 .then(function(data){ if (data && data.success) resolve(data); else reject(data); })
                 .catch(function(err){ reject(err); });
-            })).then(function(cloneResult){
-              if (cloneResult) console.log('Clone result', cloneResult);
-              // proceed with normal update
+            })).then(function(){
               return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
             }).then(function(r){
-                console.log('HTTP status:', r.status);
                 var ct = (r.headers.get('content-type') || '').toLowerCase();
-                console.log('content-type:', ct);
                 return r.text().then(function(text){
-                  console.log('raw response (first 300 chars):', (text || '').slice(0,300));
-                  // If server returned HTML (likely a login redirect), handle gracefully
                   if (ct.indexOf('text/html') !== -1 || String(text || '').trim().toLowerCase().indexOf('<!doctype html') === 0) {
-                    console.warn('update_bid: received HTML response, likely redirect to login or server error');
-                    // Show specific message and redirect to login so user can re-authenticate
-                    try { showToast('Session expired - please sign in again', 'error'); } catch(e){ console.warn('showToast missing', e); }
+                    try { showToast('Session expired - please sign in again', 'error'); } catch(e){}
                     setTimeout(function(){ window.location.href = '/auth/login.php'; }, 900);
                     throw new Error('Non-JSON HTML response');
                   }
-                  try {
-                    return JSON.parse(text);
-                  } catch (e) {
-                    console.error('JSON parse error:', e, 'raw:', (text||'').slice(0,300));
-                    throw e;
-                  }
+                  return JSON.parse(text);
                 });
               })
               .then(function(data){
-                console.log('update_bid response', data);
                 if (data && data.success) {
-                  console.log('update_bid: success — closing modal then showing toast');
-                  try { closeEditModal(); } catch(e) { console.warn('closeEditModal error', e); }
-                  try { showToast('Saved', 'success'); } catch(e) { console.warn('showToast error', e); }
+                  try { closeEditModal(); } catch(e){}
+                  try { showToast('Saved', 'success'); } catch(e){}
                   setTimeout(function(){ window.location.reload(); }, 800);
                 } else {
                   var msg = (data && data.message) ? data.message : 'Failed to save';
-                  console.warn('update_bid: server returned failure', msg);
-                  try { showToast(msg, 'error'); } catch(e) { console.warn('showToast error', e); }
+                  try { showToast(msg, 'error'); } catch(e){}
                 }
               })
-              .catch(function(err){
-                console.error('update_bid fetch error', err);
-                showToast('Failed to save', 'error');
+              .catch(function(){
+                try { showToast('Failed to save', 'error'); } catch(e){}
               })
               .finally(function(){
                 if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
@@ -911,7 +1007,7 @@ try {
         }
 
         // -----------------------------
-        // Top scrollbar sync + sticky columns
+        // Top scrollbar sync + sticky columns + floating header
         // -----------------------------
         try {
           var container = document.getElementById('tableContainer');
@@ -929,12 +1025,10 @@ try {
             floatingHeader.innerHTML = '';
             var clone = document.createElement('table');
             clone.id = 'floatingBidsHeader';
-            // copy thead
             var thead = table.querySelector('thead');
             if (!thead) return;
             clone.appendChild(thead.cloneNode(true));
             floatingHeader.appendChild(clone);
-            // set widths to match original header cells
             updateFloatingHeaderWidths();
           }
 
@@ -951,7 +1045,6 @@ try {
               cloneThs[i].style.width = w + 'px';
               total += w;
             }
-            // ensure inner table uses exact width
             var inner = floatingHeader.querySelector('table');
             if (inner) inner.style.width = total + 'px';
           }
@@ -959,21 +1052,17 @@ try {
           function showOrHideFloatingHeader() {
             if (!table) return;
             var rect = table.getBoundingClientRect();
-            // compute page header offset (if any) so header sits below top chrome
             var pageHeader = document.querySelector('.portalheader, header, .portalHeader');
             var offset = 0;
             if (pageHeader) offset = pageHeader.getBoundingClientRect().height || 0;
-            // also account for toolbar within page (so header doesn't overlap toolbar)
             var toolbar = document.querySelector('.toolbar');
             if (toolbar) offset += toolbar.getBoundingClientRect().height || 0;
             var headerHeight = (table.querySelector('thead th') && table.querySelector('thead th').getBoundingClientRect().height) || 40;
 
             if (rect.top < offset && rect.bottom > offset + headerHeight) {
-              // show floating header
               if (floatingHeader.style.display !== 'block') floatingHeader.style.display = 'block';
               floatingHeader.style.top = offset + 'px';
               updateFloatingHeaderWidths();
-              // horizontal sync: translate to match container scroll
               var scrollLeft = container ? container.scrollLeft : 0;
               var inner = floatingHeader.querySelector('table');
               if (inner) inner.style.transform = 'translateX(' + (-scrollLeft) + 'px)';
@@ -982,13 +1071,9 @@ try {
             }
           }
 
-          // Rebuild on resize to recalc widths
           window.addEventListener('resize', function(){ try { updateFloatingHeaderWidths(); showOrHideFloatingHeader(); } catch(e){} });
-          // Sync on container scroll for horizontal movement
           if (container) container.addEventListener('scroll', function(){ try { showOrHideFloatingHeader(); } catch(e){} });
-          // And on window scroll for showing/hiding
           window.addEventListener('scroll', function(){ try { showOrHideFloatingHeader(); } catch(e){} });
-          // Build initial
           setTimeout(function(){ try { buildFloatingHeader(); showOrHideFloatingHeader(); } catch(e){} }, 120);
 
           function syncTopScroller() {
@@ -996,6 +1081,7 @@ try {
             topInner.style.width = table.scrollWidth + 'px';
             topScroller.style.display = (table.scrollWidth > container.clientWidth) ? 'block' : 'none';
           }
+          window.syncTopScroller = syncTopScroller; // expose for later calls
 
           if (topScroller && container) {
             topScroller.addEventListener('scroll', function(){ container.scrollLeft = topScroller.scrollLeft; });
@@ -1008,7 +1094,6 @@ try {
             if (!table) return;
             var thead = table.querySelector('thead');
             var headCells = thead ? Array.from(thead.querySelectorAll('th')) : [];
-            // reset
             table.querySelectorAll('th, td').forEach(function(cell){ cell.style.position = ''; cell.style.left = ''; cell.style.zIndex = ''; cell.style.background = ''; cell.style.boxShadow = ''; });
 
             var cumulative = 0;
@@ -1016,7 +1101,6 @@ try {
               var th = headCells[i];
               var w = Math.ceil(th.getBoundingClientRect().width);
               th.style.position = 'sticky'; th.style.left = cumulative + 'px'; th.style.top = '0'; th.style.zIndex = 60; th.style.background = '#fff';
-              // apply to body cells
               table.querySelectorAll('tbody tr').forEach(function(row){
                 var cells = row.querySelectorAll('td');
                 if (cells && cells[i]) {
@@ -1026,74 +1110,161 @@ try {
               cumulative += w;
             }
           }
+          window.setupStickyColumns = setupStickyColumns; // expose for later calls
 
-          // init sticky for first 4 columns
           setTimeout(function(){ try { setupStickyColumns(4); } catch(e){} }, 120);
           window.addEventListener('resize', function(){ try { setupStickyColumns(4); syncTopScroller(); } catch(e){} });
         } catch(e) { console.warn('sticky/topScroller init failed', e); }
 
-        // Group projects by dhss_project_number and sort rows within group by nearest bid_date to today
+        // ------------------------------------
+        // NEW: Year + Status filters + Project grouping (rebuild tbody)
+        // ------------------------------------
         try {
-          function applyProjectGrouping() {
-            var tbody = document.querySelector('#tableContainer table tbody');
-            var table = document.getElementById('bidsTable');
-            if (!tbody || !table) return;
+          var table = document.getElementById('bidsTable');
+          var tbody = document.querySelector('#bidsTable tbody');
 
-            var rows = Array.from(tbody.querySelectorAll('tr[data-bid]'));
-            var groups = new Map();
-            var now = new Date();
+          var yearFilterEl = document.getElementById('yearFilter');
+          var statusFilterEl = document.getElementById('statusFilter');
 
-            rows.forEach(function(r){
-              try {
-                var obj = JSON.parse(r.getAttribute('data-bid')) || {};
-                var key = (obj.dhss_project_number || '').toString();
-                var dateVal = null;
-                if (obj.bid_date) {
-                  var d = new Date(obj.bid_date);
-                  if (!isNaN(d)) dateVal = d;
-                }
-                if (!groups.has(key)) groups.set(key, []);
-                groups.get(key).push({ row: r, date: dateVal });
-              } catch(e) { console.warn('group parse error', e); }
+          // Build last 5 years dropdown (auto updates each year)
+          (function initYearOptions(){
+            if (!yearFilterEl) return;
+            var nowY = new Date().getFullYear();
+            var years = [];
+            for (var i = 0; i < 5; i++) years.push(nowY - i);
+
+            yearFilterEl.innerHTML = '';
+            years.forEach(function(y){
+              var opt = document.createElement('option');
+              opt.value = String(y).slice(-2); // 2026 -> "26"
+              opt.textContent = String(y);
+              yearFilterEl.appendChild(opt);
             });
 
-            // compute group nearest distance and sort members
+            // Default = current year only
+            yearFilterEl.value = String(nowY).slice(-2);
+          })();
+
+          function normStatus(raw) {
+            var s = (raw || '').toString().trim().toLowerCase();
+            s = s.replace(/[^a-z0-9]/g,'');
+            if (!s) return 'pending';
+            if (s === 'didntbid' || s === 'didnt') return 'didntbid';
+            return s;
+          }
+
+          function getVisibleHeaderCount() {
+            var ths = table ? Array.from(table.querySelectorAll('thead th')) : [];
+            var count = 0;
+            ths.forEach(function(th){
+              if (th.style.display === 'none') return;
+              count++;
+            });
+            return Math.max(1, count);
+          }
+
+          // Capture original rows once (source of truth)
+          var originalRows = [];
+          (function captureRows(){
+            if (!tbody) return;
+            originalRows = Array.from(tbody.querySelectorAll('tr[data-bid]')).map(function(r){
+              var obj = {};
+              try { obj = JSON.parse(r.getAttribute('data-bid')) || {}; } catch(e){}
+              var proj = (obj.dhss_project_number || '').toString().trim();
+              var yearPrefix = proj.slice(0,2);
+              var st = normStatus(obj.status);
+              var dateVal = null;
+              if (obj.bid_date) {
+                var d = new Date(obj.bid_date);
+                if (!isNaN(d)) dateVal = d;
+              }
+              return { row: r, obj: obj, project: proj, yearPrefix: yearPrefix, status: st, date: dateVal };
+            });
+          })();
+
+          function applyFiltersAndGrouping() {
+            if (!tbody || !table) return;
+
+            var selectedYear = yearFilterEl ? yearFilterEl.value : '';
+            var selectedStatus = statusFilterEl ? statusFilterEl.value : 'all';
+
+            // Show status filter only when a year is selected (default is current year)
+            if (statusFilterEl) statusFilterEl.hidden = !selectedYear;
+
+            // 1) Year filter (projects starting with YY)
+            var filtered = originalRows.filter(function(it){
+              if (!selectedYear) return true;
+              return it.project && it.project.indexOf(selectedYear) === 0;
+            });
+
+            // 2) Status filter (applies only within selected year set)
+            if (selectedStatus && selectedStatus !== 'all') {
+              filtered = filtered.filter(function(it){ return it.status === selectedStatus; });
+            }
+
+            // 3) Group by DHSS Project # and sort within group by nearest bid_date to today
+            var now = new Date();
+            var groups = new Map();
+
+            filtered.forEach(function(it){
+              var key = (it.project || '').toString();
+              if (!groups.has(key)) groups.set(key, []);
+              var dist = it.date ? Math.abs(it.date - now) : Number.POSITIVE_INFINITY;
+              groups.get(key).push({ it: it, dist: dist });
+            });
+
             var groupEntries = Array.from(groups.entries()).map(function(ent){
               var key = ent[0];
               var items = ent[1];
-              items.forEach(function(it){
-                it.dist = it.date ? Math.abs(it.date - now) : Number.POSITIVE_INFINITY;
-              });
               items.sort(function(a,b){ return a.dist - b.dist; });
               var nearest = items.length ? items[0].dist : Number.POSITIVE_INFINITY;
               return { key: key, items: items, nearest: nearest };
             });
 
-            // sort groups by nearest date ascending
             groupEntries.sort(function(a,b){ return a.nearest - b.nearest; });
 
-            // rebuild tbody with spacer rows between groups
+            // 4) Rebuild tbody with spacer rows between groups
             var frag = document.createDocumentFragment();
-            var headerCount = table.querySelectorAll('thead th').length || 1;
+            var colCount = getVisibleHeaderCount();
+
             groupEntries.forEach(function(g, gi){
-              // spacer for groups except first
               if (gi !== 0) {
-                var spr = document.createElement('tr'); spr.className = 'group-spacer';
-                var td = document.createElement('td'); td.colSpan = headerCount; spr.appendChild(td);
+                var spr = document.createElement('tr');
+                spr.className = 'group-spacer';
+                var td = document.createElement('td');
+                td.colSpan = colCount;
+                spr.appendChild(td);
                 frag.appendChild(spr);
               }
-              g.items.forEach(function(it){ frag.appendChild(it.row); });
+              g.items.forEach(function(w){ frag.appendChild(w.it.row); });
             });
 
-            // clear and append
             tbody.innerHTML = '';
             tbody.appendChild(frag);
-            try { setupStickyColumns(4); syncTopScroller(); } catch(e){}
+
+            try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
+            try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
           }
 
-          // apply grouping now and whenever table content changes (basic)
-          applyProjectGrouping();
-        } catch(e) { console.warn('applyProjectGrouping failed', e); }
+          // Delegated row click (works even after tbody rebuild)
+          tbody.addEventListener('click', function(e){
+            var tr = e.target && e.target.closest ? e.target.closest('tr[data-bid]') : null;
+            if (!tr) return;
+            // prevent header dropdown clicks from triggering row (extra safe)
+            if (e.target && (e.target.id === 'yearFilter' || e.target.id === 'statusFilter')) return;
+            try {
+              var bidObj = JSON.parse(tr.getAttribute('data-bid'));
+              openEditModal(bidObj);
+            } catch(err) {
+              console.error('Row JSON parse failed', err);
+            }
+          });
+
+          if (yearFilterEl) yearFilterEl.addEventListener('change', applyFiltersAndGrouping);
+          if (statusFilterEl) statusFilterEl.addEventListener('change', applyFiltersAndGrouping);
+
+          applyFiltersAndGrouping();
+        } catch(e) { console.warn('filters+grouping failed', e); }
 
         // Make modal subsections collapsible
         try {
@@ -1111,14 +1282,12 @@ try {
             });
           }
           initModalCollapsibles();
-          // init add GC button
           var addGcBtn = document.getElementById('addGcBtn');
           if (addGcBtn) {
             addGcBtn.addEventListener('click', function(e){
               e.stopPropagation();
               var container = document.getElementById('newGcContainer');
               if (!container) return;
-              // create new-gc-row
               var row = document.createElement('div'); row.className = 'new-gc-row';
               row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center';
               row.innerHTML = '<input name="new_gc_general" placeholder="general contractor" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
@@ -1132,7 +1301,7 @@ try {
         } catch(e){ console.warn('initModalCollapsibles failed', e); }
 
         // -----------------------------
-        // Manage Columns modal
+        // Manage Columns modal (unchanged)
         // -----------------------------
         try {
           var manageBtn = document.getElementById('manageColumnsBtn');
@@ -1143,7 +1312,6 @@ try {
           var cancelBtn = document.getElementById('cancelColumnsBtn');
           var saveBtn = document.getElementById('saveColumnsBtn');
 
-          // capture the original header order & visibility from DOM at init
           var originalConfig = (function(){
             try {
               var ths = document.querySelectorAll('#bidsTable thead th');
@@ -1168,7 +1336,6 @@ try {
               var left = document.createElement('div'); left.style.display = 'flex'; left.style.alignItems = 'center'; left.style.gap = '10px';
               var chk = document.createElement('input'); chk.type = 'checkbox'; chk.checked = !!item.visible; chk.style.width = '16px'; chk.style.height = '16px'; chk.dataset.col = item.name;
               var lbl = document.createElement('div');
-              // friendly display label for Manage Columns list
               var displayLabel = (function(k){
                 if (!k) return '';
                 if (k === 'dhss_project_number') return 'DHSS Project #';
@@ -1181,7 +1348,6 @@ try {
               lbl.style.color = '#0f172a'; lbl.style.fontWeight = 700; lbl.style.fontSize = '13px';
               left.appendChild(chk); left.appendChild(lbl);
               var grip = document.createElement('div'); grip.textContent = '≡'; grip.className = 'drag-grip'; grip.style.opacity = '0.6';
-              // determine if this item is locked (one of the first 4 original columns)
               var origIndex = originalConfig.findIndex(function(x){ return x.name === item.name; });
               var locked = (origIndex !== -1 && origIndex < 4);
               if (locked) {
@@ -1201,10 +1367,8 @@ try {
           }
 
           function attachDragHandlers(){
-            // Tacky drag-reorder implementation using grip-only draggable elements
             var dragging = null;
             var placeholder = null;
-            var lockedCount = (originalConfig && originalConfig.length) ? Math.min(4, originalConfig.length) : 0;
 
             function createPlaceholder(){
               var ph = document.createElement('li');
@@ -1214,86 +1378,44 @@ try {
               return ph;
             }
 
-            // dragstart delegated from grips only
             manageList.addEventListener('dragstart', function(e){
               var grip = e.target.closest ? e.target.closest('.drag-grip') : null;
               if (!grip) { e.preventDefault(); return; }
-              // if grip explicitly marked non-draggable (locked), block
               if (grip.getAttribute('draggable') === 'false') { e.preventDefault(); return; }
               var li = grip.closest('li');
               if (!li || li.dataset.locked) { e.preventDefault(); return; }
               dragging = li;
               li.classList.add('dragging');
-              // create placeholder after the dragged item initially
               placeholder = createPlaceholder();
               li.parentNode.insertBefore(placeholder, li.nextSibling);
               try { e.dataTransfer.setData('text/plain',''); } catch(ex){}
               e.dataTransfer.effectAllowed = 'move';
             });
 
-            manageList.addEventListener('dragend', function(e){
+            manageList.addEventListener('dragend', function(){
               if (dragging) dragging.classList.remove('dragging');
               dragging = null;
               if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
               placeholder = null;
             });
 
-            // live preview movement
             manageList.addEventListener('dragover', function(e){
               e.preventDefault();
               if (!dragging) return;
               var targetLi = e.target.closest ? e.target.closest('li') : null;
-              // If hovering over the placeholder itself, do nothing
               if (targetLi && targetLi === placeholder) return;
 
-              // compute allowed insertion point: can't insert before locked items
-              var children = Array.from(manageList.querySelectorAll('li')).filter(function(n){ return n !== dragging && n !== placeholder; });
-              // find index where to insert (before targetLi), otherwise at end
-              var insertBeforeNode = null;
-              if (targetLi && targetLi !== placeholder) {
-                // do not allow dropping on or before locked items
-                var idx = children.indexOf(targetLi);
-                // if target is locked or its index < lockedCount, set to first non-locked item
-                var targetLocked = !!targetLi.dataset.locked;
-                if (targetLocked) {
-                  // find first child after locked block
-                  for (var i = 0; i < children.length; i++) {
-                    if (!children[i].dataset.locked) { insertBeforeNode = children[i]; break; }
-                  }
-                } else {
-                  insertBeforeNode = targetLi.nextSibling === placeholder ? targetLi.nextSibling : targetLi;
-                }
-              } else {
-                // if no target, append at end but ensure not before locked block
-                // find first non-locked child to insert before, otherwise append
-                insertBeforeNode = null;
-                for (var j = 0; j < children.length; j++) {
-                  if (!children[j].dataset.locked) { insertBeforeNode = null; }
-                }
-              }
-
-              // enforce placeholder not to move above lockedCount
-              var firstNonLocked = null;
-              var allChildren = Array.from(manageList.querySelectorAll('li'));
-              for (var k = 0; k < allChildren.length; k++) {
-                if (!allChildren[k].dataset.locked) { firstNonLocked = allChildren[k]; break; }
-              }
-
-              // place placeholder intelligently: before targetLi if target is non-locked, else after locked block
               if (targetLi && !targetLi.dataset.locked) {
-                // insert placeholder before targetLi
                 if (placeholder.parentNode !== manageList || placeholder.nextSibling !== targetLi) {
                   manageList.insertBefore(placeholder, targetLi);
                 }
               } else {
-                // insert after last locked item
                 var lastLocked = null;
                 var kids = Array.from(manageList.querySelectorAll('li'));
                 for (var m = 0; m < kids.length; m++) { if (kids[m].dataset.locked) lastLocked = kids[m]; }
                 if (lastLocked) {
                   if (lastLocked.nextSibling !== placeholder) manageList.insertBefore(placeholder, lastLocked.nextSibling);
                 } else {
-                  // no locked items - append to end
                   if (placeholder.parentNode !== manageList) manageList.appendChild(placeholder);
                 }
               }
@@ -1306,7 +1428,6 @@ try {
                 manageList.insertBefore(dragging, placeholder);
                 placeholder.parentNode.removeChild(placeholder);
               }
-              // cleanup
               if (dragging) dragging.classList.remove('dragging');
               dragging = null; placeholder = null;
             });
@@ -1320,7 +1441,6 @@ try {
           }
 
           function resetManageList(){ buildManageList(originalConfig.slice()); }
-
           function closeManage(){ if (manageModal) manageModal.style.display = 'none'; }
 
           function saveManage(){
@@ -1329,13 +1449,17 @@ try {
               var name = li.dataset.col; var chk = li.querySelector('input[type="checkbox"]');
               return { name: name, visible: !!(chk && chk.checked), locked: !!li.dataset.locked };
             });
-            // Ensure locked first-4 stay at the front in original order and are visible
+
             var lockedFront = originalConfig.slice(0,4).map(function(x){ return x.name; }).filter(Boolean);
             var ordered = [];
-            lockedFront.forEach(function(k){ var it = items.find(function(i){ return i.name === k; }); if (!it) { ordered.push({ name: k, visible: true, locked: true }); } else { it.visible = true; it.locked = true; ordered.push(it); } });
-            // append remaining items in current order
+            lockedFront.forEach(function(k){
+              var it = items.find(function(i){ return i.name === k; });
+              if (!it) { ordered.push({ name: k, visible: true, locked: true }); }
+              else { it.visible = true; it.locked = true; ordered.push(it); }
+            });
             items.forEach(function(i){ if (lockedFront.indexOf(i.name) === -1) ordered.push(i); });
-            try { localStorage.setItem('bidsColumnConfig', JSON.stringify(ordered)); } catch(e) { console.warn('save columns failed', e); }
+
+            try { localStorage.setItem('bidsColumnConfig', JSON.stringify(ordered)); } catch(e){}
             applyColumnConfig(ordered);
             closeManage();
           }
@@ -1346,31 +1470,38 @@ try {
             if (!theadRow) return;
             var thMap = {};
             Array.from(theadRow.querySelectorAll('th')).forEach(function(th){ var k = th.getAttribute('data-col'); if (k) thMap[k] = th; });
-            // build new header order
+
             var frag = document.createDocumentFragment();
-            cfg.forEach(function(item){ var th = thMap[item.name]; if (th) {
-              th.style.display = item.visible ? '' : 'none'; frag.appendChild(th);
-            }});
-            // append any headers not included in cfg at end
-            Array.from(theadRow.querySelectorAll('th')).forEach(function(th){ var k = th.getAttribute('data-col'); if (!k) return; if (!cfg.find(function(x){ return x.name === k; })) frag.appendChild(th); });
+            cfg.forEach(function(item){
+              var th = thMap[item.name];
+              if (th) { th.style.display = item.visible ? '' : 'none'; frag.appendChild(th); }
+            });
+            Array.from(theadRow.querySelectorAll('th')).forEach(function(th){
+              var k = th.getAttribute('data-col');
+              if (!k) return;
+              if (!cfg.find(function(x){ return x.name === k; })) frag.appendChild(th);
+            });
             theadRow.innerHTML = '';
             theadRow.appendChild(frag);
 
-            // apply to body rows
             var rows = document.querySelectorAll('#bidsTable tbody tr');
             rows.forEach(function(tr){
               var tdMap = {};
               Array.from(tr.querySelectorAll('td')).forEach(function(td){ var k = td.getAttribute('data-col'); if (k) tdMap[k] = td; });
               var df = document.createDocumentFragment();
-              cfg.forEach(function(item){ var td = tdMap[item.name]; if (td) { td.style.display = item.visible ? '' : 'none'; df.appendChild(td); } });
-              // append any tds not in cfg
-              Object.keys(tdMap).forEach(function(k){ if (!cfg.find(function(x){ return x.name === k; })) df.appendChild(tdMap[k]); });
+              cfg.forEach(function(item){
+                var td = tdMap[item.name];
+                if (td) { td.style.display = item.visible ? '' : 'none'; df.appendChild(td); }
+              });
+              Object.keys(tdMap).forEach(function(k){
+                if (!cfg.find(function(x){ return x.name === k; })) df.appendChild(tdMap[k]);
+              });
               tr.innerHTML = '';
               tr.appendChild(df);
             });
-            try { // ensure sticky columns recalculated
-              setupStickyColumns(4); syncTopScroller();
-            } catch(e){}
+
+            try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
+            try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
           }
 
           if (manageBtn) manageBtn.addEventListener('click', openManageModal);
@@ -1379,9 +1510,9 @@ try {
           if (cancelBtn) cancelBtn.addEventListener('click', function(){ closeManage(); });
           if (saveBtn) saveBtn.addEventListener('click', function(){ saveManage(); });
 
-          // on load apply saved config if present
           try { var saved = getSavedConfig(); if (saved) applyColumnConfig(saved); } catch(e){}
         } catch(e){ console.warn('manage columns init failed', e); }
+
       });
     })();
   </script>
