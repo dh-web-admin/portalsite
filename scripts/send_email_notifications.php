@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../auth/mailjet_helper.php';
 
 // Set timezone if desired; else rely on server timezone
-// date_default_timezone_set('America/New_York');
+date_default_timezone_set('America/New_York');
 
 $now = new DateTime();
 $hour = (int)$now->format('H');
