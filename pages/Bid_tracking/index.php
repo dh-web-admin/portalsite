@@ -2120,8 +2120,25 @@ function syncGcDisplayForProjects() {
                 var sel = Array.from(emailDaysList.querySelectorAll('input[type=checkbox]:checked')).map(function(c){ return parseInt(c.value,10); });
                 if (sel.length > maxSelect) return showToast('You may select up to ' + maxSelect + ' days', 'error');
                 localStorage.setItem('bids_email_days', JSON.stringify(sel));
-                showToast('Email preferences saved', 'success');
-                closeEmailModal();
+
+                // Persist server-side and trigger confirmation email
+                var fd = new FormData();
+                fd.append('opted_in', '1');
+                fd.append('preferred_days', JSON.stringify(sel));
+
+                fetch('/api/save_email_preferences.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                  .then(function(resp){ return resp.json(); })
+                  .then(function(data){
+                    if (data && data.success) {
+                      showToast('Email preferences saved — confirmation sent', 'success');
+                      closeEmailModal();
+                    } else {
+                      console.error('Save email prefs failed', data);
+                      showToast('Failed to save preferences', 'error');
+                    }
+                  })
+                  .catch(function(err){ console.error(err); showToast('Failed to save preferences', 'error'); });
+
               } catch(e){ showToast('Failed to save', 'error'); }
             });
           }
