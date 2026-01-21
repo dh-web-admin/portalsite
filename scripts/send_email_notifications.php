@@ -99,6 +99,9 @@ try {
             AND b.bid_date >= CURDATE()
     ";
 
+    // Log the resolved script path and SQL for debugging
+    logit('Running script: ' . (realpath(__FILE__) ?: __FILE__));
+    logit('Executing SQL: ' . trim(preg_replace('/\s+/', ' ', $sql)));
     $res = $conn->query($sql);
 
     $toSend = [];
