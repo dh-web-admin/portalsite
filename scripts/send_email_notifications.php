@@ -21,10 +21,25 @@ if (file_exists($loggerPath)) {
 // ----------------------------
 // Mailer (Mailjet) - your project uses auth/mailjet_helper.php
 // ----------------------------
-$mailerPath = __DIR__ . '/../auth/mailjet_helper.php';
-if (!file_exists($mailerPath)) {
-    logit('Cron error: mailer file not found at ' . $mailerPath);
-    throw new RuntimeException('Mailer helper missing: ' . $mailerPath);
+// Ensure debug directory exists
+$logDir = dirname($logFile);
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+
+// Try multiple possible mailer helper locations for portability
+$mailerCandidates = [
+    __DIR__ . '/../auth/mailjet_helper.php',
+    __DIR__ . '/../partials/mailer.php',
+    __DIR__ . '/../partials/mailer_helper.php'
+];
+$mailerPath = null;
+foreach ($mailerCandidates as $cand) {
+    if (file_exists($cand)) { $mailerPath = $cand; break; }
+}
+if (!$mailerPath) {
+    logit('Cron error: mailer helper not found in expected locations: ' . implode(', ', $mailerCandidates));
+    throw new RuntimeException('Mailer helper missing; looked for: ' . implode(', ', $mailerCandidates));
 }
 require_once $mailerPath;
 
