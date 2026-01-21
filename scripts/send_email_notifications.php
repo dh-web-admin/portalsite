@@ -18,29 +18,32 @@ if (file_exists($loggerPath)) {
     }
 }
 
-// ----------------------------
-// Mailer (Mailjet) - your project uses auth/mailjet_helper.php
-// ----------------------------
 // Ensure debug directory exists
 $logDir = dirname($logFile);
 if (!is_dir($logDir)) {
     @mkdir($logDir, 0755, true);
 }
 
-// Try multiple possible mailer helper locations for portability
+// ----------------------------
+// Mailer (Mailjet) - your project uses auth/mailjet_helper.php
+// ----------------------------
 $mailerCandidates = [
     __DIR__ . '/../auth/mailjet_helper.php',
     __DIR__ . '/../partials/mailer.php',
     __DIR__ . '/../partials/mailer_helper.php'
 ];
+
 $mailerPath = null;
 foreach ($mailerCandidates as $cand) {
     if (file_exists($cand)) { $mailerPath = $cand; break; }
 }
+
 if (!$mailerPath) {
     logit('Cron error: mailer helper not found in expected locations: ' . implode(', ', $mailerCandidates));
+    // Don't crash silently—throw so Railway logs show it
     throw new RuntimeException('Mailer helper missing; looked for: ' . implode(', ', $mailerCandidates));
 }
+
 require_once $mailerPath;
 
 /**
@@ -48,7 +51,6 @@ require_once $mailerPath;
  * Your mailjet helper might expose a different name — we detect and wrap it.
  */
 if (!function_exists('sendMail')) {
-    // Try common helper function names (adjust here if yours is different)
     if (function_exists('send_mailjet')) {
         function sendMail($to, $subject, $text, $html) { return send_mailjet($to, $subject, $text, $html); }
     } elseif (function_exists('sendMailjet')) {
@@ -56,8 +58,8 @@ if (!function_exists('sendMail')) {
     } elseif (function_exists('send_email')) {
         function sendMail($to, $subject, $text, $html) { return send_email($to, $subject, $text, $html); }
     } else {
-        logit('Cron error: No recognized mail function found in mailjet_helper.php. Expected sendMail/send_mailjet/sendMailjet/send_email');
-        throw new RuntimeException('No mail function found in mailjet_helper.php');
+        logit('Cron error: No recognized mail function found in mailer helper. Expected sendMail/send_mailjet/sendMailjet/send_email');
+        throw new RuntimeException('No mail function found in mailer helper');
     }
 }
 
@@ -72,62 +74,75 @@ function safe_json_array($s) {
 
 try {
     logit('Cron run started');
-
-    /**
-     * IMPORTANT:
-     * Your DB shows tables:
-     * - bids
-     * - bids_email (email, opted_in, preferred_days)
-     * - bids_email_sent
-     *
-     * So we join bids_email by email.
-     * ASSUMPTION: bids table has an `email` column (since your older code used $r['email']).
-     * If your bids table uses a different column name, change b.email below.
-     */
-    $sql = "
-        SELECT
-            b.bid_id AS bid_id,
-            b.bid_date,
-            b.dhss_project_number,
-            e.email,
-            e.preferred_days
-        FROM bids b
-        JOIN bids_email e ON e.email = b.email
-        WHERE
-            e.opted_in = 1
-            AND b.bid_date IS NOT NULL
-            AND b.bid_date >= CURDATE()
-    ";
-
-    // Log the resolved script path and SQL for debugging
     logit('Running script: ' . (realpath(__FILE__) ?: __FILE__));
-    logit('Executing SQL: ' . trim(preg_replace('/\s+/', ' ', $sql)));
-    // Fetch all upcoming bids
+
+    // ----------------------------
+    // Pull upcoming bids
+    // ----------------------------
+    // NOTE: We intentionally avoid comparing bid_date to '' or '0000-00-00' (can error in strict sql_mode).
+    // Since bid_date is a DATE column, NULL is the only "empty" value that can safely exist.
     $bids = [];
-    $bres = $conn->query("SELECT bid_id, bid_date, dhss_project_number FROM bids WHERE bid_date IS NOT NULL AND bid_date >= CURDATE()");
+    $bres = $conn->query("
+        SELECT bid_id, bid_date, dhss_project_number
+        FROM bids
+        WHERE bid_date IS NOT NULL
+          AND bid_date >= CURDATE()
+    ");
     while ($br = $bres->fetch_assoc()) {
         $bids[] = $br;
     }
 
-    // Fetch all opted-in users and match against bids in PHP (avoids assuming bids.email exists)
-    $toSend = [];
-    $ures = $conn->query("SELECT email, preferred_days FROM bids_email WHERE opted_in = 1");
-    $today = new DateTime('today');
+    if (!count($bids)) {
+        logit('No upcoming bids found. Cron run completed.');
+        exit(0);
+    }
+
+    // ----------------------------
+    // Pull opted-in users
+    // ----------------------------
+    $users = [];
+    $ures = $conn->query("
+        SELECT email, preferred_days
+        FROM bids_email
+        WHERE opted_in = 1
+    ");
     while ($u = $ures->fetch_assoc()) {
-        $userEmail = trim((string)$u['email']);
-        if ($userEmail === '') continue;
+        $email = trim((string)$u['email']);
+        if ($email === '') continue;
+
         $preferred = safe_json_array($u['preferred_days']);
         if (!is_array($preferred) || !count($preferred)) continue;
+
         $preferred = array_map('intval', $preferred);
 
+        $users[] = [
+            'email' => $email,
+            'preferred' => $preferred,
+        ];
+    }
+
+    if (!count($users)) {
+        logit('No opted-in users found. Cron run completed.');
+        exit(0);
+    }
+
+    // ----------------------------
+    // Build send list (user x bids)
+    // ----------------------------
+    $toSend = [];
+    $today = new DateTime('today');
+
+    foreach ($users as $usr) {
         foreach ($bids as $br) {
             if (empty($br['bid_date'])) continue;
+
             $bidDt = new DateTime($br['bid_date']);
             $days = (int)$today->diff($bidDt)->format('%r%a');
             if ($days < 0) continue;
-            if (in_array($days, $preferred, true)) {
+
+            if (in_array($days, $usr['preferred'], true)) {
                 $toSend[] = [
-                    'email' => $userEmail,
+                    'email' => $usr['email'],
                     'bid_id' => (int)$br['bid_id'],
                     'days_before' => $days,
                     'bid_date' => $br['bid_date'],
@@ -137,7 +152,14 @@ try {
         }
     }
 
-    // Group by recipient email so we send one aggregated email per user
+    if (!count($toSend)) {
+        logit('No notifications match preferred days. Cron run completed.');
+        exit(0);
+    }
+
+    // ----------------------------
+    // Group by recipient for one email per user
+    // ----------------------------
     $grouped = [];
     foreach ($toSend as $item) {
         $grouped[$item['email']][] = $item;
@@ -147,21 +169,19 @@ try {
         $lines = [];
         $toMark = [];
 
+        // Skip already-sent items
         foreach ($items as $item) {
-            // Check if it was already sent previously — we will resend regardless.
-            $chk = $conn->prepare("
-                SELECT id
-                FROM bids_email_sent
-                WHERE email = ? AND bid_id = ? AND days_before = ?
-                LIMIT 1
-            ");
+            $chk = $conn->prepare(
+                "SELECT id FROM bids_email_sent WHERE email = ? AND bid_id = ? AND days_before = ? LIMIT 1"
+            );
             $chk->bind_param('sii', $email, $item['bid_id'], $item['days_before']);
             $chk->execute();
             $found = $chk->get_result()->fetch_assoc();
             $chk->close();
 
             if ($found && isset($found['id'])) {
-                logit("Resending to {$email} for bid {$item['bid_id']} days_before {$item['days_before']} (previous id=" . $found['id'] . ")");
+                logit("Already sent to {$email} for bid {$item['bid_id']} days_before {$item['days_before']}");
+                continue;
             }
 
             $proj = $item['dhss_project_number'] ?: ('Project ' . $item['bid_id']);
@@ -171,13 +191,16 @@ try {
             } elseif ($item['days_before'] === 1) {
                 $lines[] = $proj . ': Bid date in 1 day';
             } else {
-                $lines[] = $proj . ': Bid date in ' . $item['days_before'] . ' days';
+                $lines[] = $proj . ': Bid date in ' . (int)$item['days_before'] . ' days';
             }
 
             $toMark[] = $item;
         }
 
-        if (!count($lines)) continue;
+        if (!count($lines)) {
+            // Everything for this user was already sent
+            continue;
+        }
 
         $subject = 'Bid reminder:';
 
@@ -188,27 +211,40 @@ try {
 
         $htmlLines = '';
         foreach ($lines as $ln) {
-            $htmlLines .= '<p>' . htmlspecialchars($ln) . '</p>';
+            $htmlLines .= '<p>' . htmlspecialchars($ln, ENT_QUOTES, 'UTF-8') . '</p>';
         }
-        $html = '<div><h3>Bid reminder:</h3>' . $htmlLines .
-            '<hr />' .
-            '<p>To change your notification days, go to <strong>Bid Tracking &rarr; Email Notifications</strong></p>' .
-            '<p>If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.</p>' .
+        $html =
+            '<div>' .
+                '<h3>Bid reminder:</h3>' .
+                $htmlLines .
+                '<hr />' .
+                '<p>To change your notification days, go to <strong>Bid Tracking &rarr; Email Notifications</strong></p>' .
+                '<p>If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.</p>' .
             '</div>';
 
+        // Send the email
         $sent = sendMail($email, $subject, $text, $html);
 
         if (is_array($sent) && !empty($sent['success'])) {
+            // Mark as sent (avoid duplicates)
             foreach ($toMark as $m) {
-                $ins = $conn->prepare("
-                    INSERT INTO bids_email_sent (email, bid_id, days_before)
-                    VALUES (?, ?, ?)
-                ");
+                $ins = $conn->prepare(
+                    "INSERT IGNORE INTO bids_email_sent (email, bid_id, days_before) VALUES (?, ?, ?)"
+                );
                 $ins->bind_param('sii', $email, $m['bid_id'], $m['days_before']);
-                $ins->execute();
-                $ins->close();
 
-                logit("Sent to {$email} for bid {$m['bid_id']} days_before {$m['days_before']}");
+                try {
+                    $ins->execute();
+                    if ($ins->affected_rows > 0) {
+                        logit("Sent to {$email} for bid {$m['bid_id']} days_before {$m['days_before']}");
+                    } else {
+                        logit("Insert ignored (duplicate) for {$email} bid {$m['bid_id']} days_before {$m['days_before']}");
+                    }
+                } catch (Throwable $e) {
+                    logit("Insert error for {$email} bid {$m['bid_id']} days_before {$m['days_before']}: " . $e->getMessage());
+                }
+
+                $ins->close();
             }
         } else {
             logit("Send failed for {$email} err: " . json_encode($sent));
