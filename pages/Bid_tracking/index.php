@@ -860,6 +860,64 @@ try {
         }
       }
 
+      // Columns that should show a dollar sign prefix in the UI (but not modify stored value)
+      var moneyCols = ['client_win_price','stabilizer_bid_win_price','total_price'];
+
+      function formatForDisplay(col, val) {
+        if (!val && val !== 0 && val !== '0') return '';
+        var s = (val === null || val === undefined) ? '' : String(val);
+        if (moneyCols.indexOf(col) !== -1) {
+          // avoid double prefix
+          if (s.trim().indexOf('$') === 0) return s;
+          return '$' + s;
+        }
+        return s;
+      }
+
+      function wrapMoneyInputs() {
+        try {
+          moneyCols.forEach(function(col){
+            var sel = '#editBidModal [data-col="' + col + '"]';
+            var inp = document.querySelector(sel);
+            if (!inp) return;
+            // already wrapped?
+            if (inp.parentNode && inp.parentNode.classList && inp.parentNode.classList.contains('money-wrapper')) return;
+            var wrap = document.createElement('div');
+            wrap.className = 'money-wrapper';
+            wrap.style.display = 'flex';
+            wrap.style.alignItems = 'center';
+            wrap.style.gap = '8px';
+            wrap.style.border = '1px solid #cbd5e1';
+            wrap.style.borderRadius = '6px';
+            wrap.style.padding = '4px 8px';
+            wrap.style.background = '#fff';
+            var span = document.createElement('span'); span.textContent = '$'; span.style.color = '#374151'; span.style.fontWeight = '700'; span.style.marginRight = '4px';
+            span.style.flex = '0 0 auto';
+            // move input into wrapper
+            inp.style.border = '0'; inp.style.padding = '6px 0'; inp.style.margin = '0'; inp.style.background = 'transparent'; inp.style.flex = '1 1 auto';
+            inp.parentNode.replaceChild(wrap, inp);
+            wrap.appendChild(span);
+            wrap.appendChild(inp);
+          });
+        } catch(e) { console.warn('wrapMoneyInputs failed', e); }
+      }
+
+      function applyDollarPrefixToTableCells() {
+        try {
+          moneyCols.forEach(function(col){
+            var tds = Array.from(document.querySelectorAll('#bidsTable td[data-col="' + col + '"]'));
+            tds.forEach(function(td){
+              try {
+                var txt = (td.textContent || '').toString();
+                if (!txt) return;
+                if (txt.trim().indexOf('$') === 0) return;
+                td.textContent = '$' + txt;
+              } catch(e) {}
+            });
+          });
+        } catch(e) { console.warn('applyDollarPrefixToTableCells failed', e); }
+      }
+
       // Load and render General Contractors for a given project into #gcTableList
       function loadGcList(projectKey) {
         try {
@@ -939,12 +997,16 @@ try {
                 }
                 var table = document.createElement('div');
                 table.style.display = 'grid';
-                table.style.gridTemplateColumns = '2fr 2fr 1.5fr 2fr 2fr';
+                /* add an actions column on the right for remove 'X' buttons */
+                table.style.gridTemplateColumns = '2fr 2fr 1.5fr 2fr 2fr 48px';
                 table.style.gap = '8px';
                 table.style.alignItems = 'center';
                 // header row
                 var hdrs = ['General Contractor','Name','Number','Email','Address'];
-                hdrs.forEach(function(h){ var e = document.createElement('div'); e.style.fontWeight = '600'; e.style.padding = '6px 8px'; e.style.color = '#374151'; e.textContent = h; e.style.position = 'sticky'; e.style.top = '0'; e.style.background = '#ffffff'; e.style.zIndex = '4'; e.style.borderBottom = '1px solid #e6edf0'; table.appendChild(e); });
+                hdrs.forEach(function(h){ var e = document.createElement('div'); e.style.fontWeight = '600'; e.style.padding = '6px 8px'; e.style.color = '#374151'; e.textContent = h; e.style.position = 'sticky'; e.style.top = '0'; e.style.background = '#ffffff'; e.style.zIndex = '4'; e.style.borderBottom = '1px solid #e6edf0'; e.style.textAlign = 'left'; table.appendChild(e); });
+                // Add actions header (empty but keeps layout consistent)
+                var actHdr = document.createElement('div'); actHdr.style.padding = '6px 8px'; actHdr.style.position = 'sticky'; actHdr.style.top = '0'; actHdr.style.background = '#ffffff'; actHdr.style.zIndex = '4'; actHdr.style.borderBottom = '1px solid #e6edf0'; actHdr.style.textAlign = 'left'; actHdr.textContent = '';
+                table.appendChild(actHdr);
                 // ensure container is a positioned scroll container so sticky headers work
                 container.style.position = 'relative';
 
@@ -961,6 +1023,8 @@ try {
                     var wrapper = document.createElement('div');
                     wrapper.style.padding = '6px 8px';
                     wrapper.style.borderBottom = '1px solid #eef2f7';
+                    wrapper.style.textAlign = 'left';
+                    wrapper.setAttribute('data-gc-id', id);
                     var inp = document.createElement('input');
                     inp.type = 'text';
                     inp.value = val;
@@ -968,6 +1032,7 @@ try {
                     inp.style.width = '100%';
                     inp.style.border = '0';
                     inp.style.background = 'transparent';
+                    inp.style.textAlign = 'left';
                     inp.setAttribute('data-field', nameAttr);
                     inp.setAttribute('data-id', id);
                     if (highlightColor) {
@@ -988,7 +1053,43 @@ try {
                   table.appendChild(makeCellInput(mail, 'general_contractor_email', 'Email', winnerColor));
                   table.appendChild(makeCellInput(addr, 'general_contractor_address', 'Address', winnerColor));
 
-                  // No per-row actions: edits are saved when the modal Save button is used
+                  // Action cell: remove 'X' button on the right
+                  var actionCell = document.createElement('div');
+                  actionCell.style.padding = '6px 8px';
+                  actionCell.style.borderBottom = '1px solid #eef2f7';
+                  actionCell.style.display = 'flex';
+                  actionCell.style.alignItems = 'center';
+                  actionCell.style.justifyContent = 'flex-end';
+                  actionCell.setAttribute('data-gc-id', id);
+                  var remBtn = document.createElement('button');
+                  remBtn.type = 'button';
+                  remBtn.textContent = '✕';
+                  remBtn.title = 'Remove contractor';
+                  remBtn.style.background = 'transparent';
+                  remBtn.style.border = '0';
+                  remBtn.style.color = '#ef4444';
+                  remBtn.style.fontWeight = '800';
+                  remBtn.style.cursor = 'pointer';
+                  remBtn.style.fontSize = '16px';
+                  remBtn.addEventListener('click', function(ev){
+                    ev && ev.stopPropagation && ev.stopPropagation();
+                    try {
+                      // If this contractor exists on the server (id present), mark for deletion on submit
+                      if (id) {
+                        var form = document.getElementById('editBidForm');
+                        if (form) {
+                          var hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.name = 'delete_general_contractor_ids[]'; hidden.value = id; hidden.dataset.gcHidden = '1'; form.appendChild(hidden);
+                        }
+                        // remove corresponding option from client winner select if present
+                        try { var cs = document.getElementById('editClientWinner'); if (cs) { var opt = cs.querySelector('option[value="' + id + '"]'); if (opt) opt.parentNode.removeChild(opt); } } catch(e){}
+                      }
+                      // Remove all grid cells for this contractor in the table
+                      var siblings = Array.from(table.querySelectorAll('[data-gc-id="' + id + '"]'));
+                      siblings.forEach(function(s){ s.parentNode && s.parentNode.removeChild(s); });
+                    } catch(e) { console.warn('remove gc failed', e); }
+                  });
+                  actionCell.appendChild(remBtn);
+                  table.appendChild(actionCell);
 
                 });
                 container.innerHTML = '';
@@ -1278,9 +1379,19 @@ try {
                             try {
                               var td = r.querySelector('td[data-col="' + k + '"]');
                               if (td) {
-                                var v = newBid[k];
+                                // Prefer the exact user-typed value from the open modal if present
+                                var modal = document.getElementById('editBidModal');
+                                var inputEl = null;
+                                try { if (modal) inputEl = modal.querySelector('[name="' + k + '"]') || modal.querySelector('[data-col="' + k + '"]'); } catch(e) { inputEl = null; }
+                                var v = null;
+                                if (inputEl && (typeof inputEl.value !== 'undefined')) {
+                                  v = inputEl.value;
+                                }
+                                if (v === null || v === undefined) {
+                                  v = newBid[k];
+                                }
                                 if (v === null || v === undefined) v = '';
-                                td.textContent = ('' + v);
+                                td.textContent = formatForDisplay(k, v);
                               }
                             } catch(e) {}
                           });
@@ -1889,7 +2000,10 @@ function syncGcDisplayForProjects() {
             statusFilterEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_statusFilter', this.value || ''); applyFiltersAndGrouping(); } catch(e){} });
           }
 
-          applyFiltersAndGrouping();
+            applyFiltersAndGrouping();
+            // Ensure money fields in modal are wrapped and table cells prefixed
+            try { wrapMoneyInputs(); } catch(e){}
+            try { applyDollarPrefixToTableCells(); } catch(e){}
         } catch(e) { console.warn('filters+grouping failed', e); }
 
         // Make modal subsections collapsible

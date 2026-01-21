@@ -52,7 +52,25 @@ try {
         echo json_encode(['success' => true, 'contractors' => $items]);
         exit;
       } else {
-        throw new Exception('Statement execute failed: ' . ($stmt->error ?? ''));
+        // log detailed stmt error for debugging
+        $errMsg = 'Statement execute failed: ' . ($stmt->error ?? '');
+        error_log('get_general_contractors: ' . $errMsg);
+        @file_put_contents(__DIR__ . '/get_general_contractors.log', date('c') . " EXECUTE ERR: " . $errMsg . " | GET: " . json_encode($_GET) . PHP_EOL, FILE_APPEND);
+        // Fallback: try a safe non-prepared query using escaped value
+        $items = [];
+        try {
+          $esc = $conn->real_escape_string($dhss);
+          $qr = "SELECT id, dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, winner, created_at FROM general_contractor WHERE dhss_project_number = '" . $esc . "' ORDER BY general_contractor ASC";
+          $res = $conn->query($qr);
+          if ($res) {
+            while ($row = $res->fetch_assoc()) $items[] = $row;
+          }
+          echo json_encode(['success' => true, 'contractors' => $items]);
+          exit;
+        } catch (Throwable $ex) {
+          @file_put_contents(__DIR__ . '/get_general_contractors.log', date('c') . " FALLBACK ERR: " . $ex->getMessage() . PHP_EOL, FILE_APPEND);
+          throw $ex;
+        }
       }
     }
   }
@@ -62,10 +80,15 @@ try {
   $items = [];
   if ($result) {
     while ($row = $result->fetch_assoc()) $items[] = $row;
+  } else {
+    // log fallback query error
+    @file_put_contents(__DIR__ . '/get_general_contractors.log', date('c') . " QUERY ERR: " . ($conn->error ?? '') . " | GET: " . json_encode($_GET) . PHP_EOL, FILE_APPEND);
   }
   echo json_encode(['success' => true, 'contractors' => $items]);
 } catch (Throwable $ex) {
+  // write details to a log file for easier debugging on production
   error_log('get_general_contractors exception: ' . $ex->getMessage());
+  @file_put_contents(__DIR__ . '/get_general_contractors.log', date('c') . " EXCEPTION: " . $ex->getMessage() . " | GET: " . json_encode($_GET) . " | ConnErr: " . ($conn->error ?? '') . PHP_EOL, FILE_APPEND);
   http_response_code(500);
   echo json_encode(['success' => false, 'message' => 'Database error']);
 }
