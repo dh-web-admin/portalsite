@@ -148,21 +148,20 @@ try {
         $toMark = [];
 
         foreach ($items as $item) {
-            // ensure not already sent
-            $chk = $conn->prepare("
+            // Check if it was already sent previously — we will resend regardless.
+            $chk = $conn->prepare(""
                 SELECT id
                 FROM bids_email_sent
                 WHERE email = ? AND bid_id = ? AND days_before = ?
                 LIMIT 1
-            ");
+            """);
             $chk->bind_param('sii', $email, $item['bid_id'], $item['days_before']);
             $chk->execute();
             $found = $chk->get_result()->fetch_assoc();
             $chk->close();
 
             if ($found && isset($found['id'])) {
-                logit("Already sent to {$email} for bid {$item['bid_id']} days_before {$item['days_before']}");
-                continue;
+                logit("Resending to {$email} for bid {$item['bid_id']} days_before {$item['days_before']} (previous id=" . $found['id'] . ")");
             }
 
             $proj = $item['dhss_project_number'] ?: ('Project ' . $item['bid_id']);
