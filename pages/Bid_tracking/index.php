@@ -343,6 +343,7 @@ try {
             <?php if (!empty($canEditBidTracking)) { ?>
               <button id="addProjectBtn" class="btn btn-primary">add Project +</button>
               <button id="manageColumnsBtn" class="btn" style="padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Manage Columns</button>
+              <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Enable Email Notifications</button>
             <?php } ?>
           </div>
 
@@ -742,6 +743,26 @@ try {
                   <button type="submit" id="confirmAddProject" class="btn btn-primary">Create Project</button>
                 </div>
               </form>
+            </div>
+          </div>
+
+          <!-- Email Settings Modal -->
+          <div id="emailSettingsModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);align-items:center;justify-content:center;z-index:4600;padding:20px;">
+            <div style="background:#fff;border-radius:12px;padding:16px;max-width:520px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.12);max-height:90vh;overflow-y:auto;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="font-weight:800;color:#0f172a;font-size:16px;">Email Notifications</div>
+                <button id="closeEmailSettings" style="background:transparent;border:0;font-weight:700;cursor:pointer;">✕</button>
+              </div>
+              <div style="padding:8px;border:1px solid #e6edf0;border-radius:8px;background:#fbfdfe;">
+                <p style="margin:0 0 8px 0;color:#475569;">Select how many days prior to a bid you want to receive reminders. You may select multiple values, up to 5.</p>
+                <div id="emailDaysList" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:6px;">
+                  <!-- checkboxes populated by JS -->
+                </div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+                <button type="button" id="cancelEmailSettings" style="background:#fff;border:1px solid #e6edf0;color:#0f172a;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
+                <button type="button" id="saveEmailSettings" style="background:#10b981;border:none;color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;">Save</button>
+              </div>
             </div>
           </div>
 
@@ -2041,6 +2062,69 @@ function syncGcDisplayForProjects() {
             });
           }
         } catch(e){ console.warn('initModalCollapsibles failed', e); }
+
+        // -----------------------------
+        // Email notifications modal
+        // -----------------------------
+        try {
+          var enableEmailBtn = document.getElementById('enableEmailBtn');
+          var emailModal = document.getElementById('emailSettingsModal');
+          var closeEmailBtn = document.getElementById('closeEmailSettings');
+          var cancelEmailBtn = document.getElementById('cancelEmailSettings');
+          var saveEmailBtn = document.getElementById('saveEmailSettings');
+          var emailDaysList = document.getElementById('emailDaysList');
+
+          var allowedDays = [1,2,3,5,7,14,30];
+          var maxSelect = 5;
+
+          function buildEmailDays() {
+            if (!emailDaysList) return;
+            emailDaysList.innerHTML = '';
+            allowedDays.forEach(function(d){
+              var id = 'email_day_' + d;
+              var wrap = document.createElement('label');
+              wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '8px'; wrap.style.padding = '6px'; wrap.style.border = '1px solid transparent'; wrap.style.borderRadius = '6px';
+              var chk = document.createElement('input'); chk.type = 'checkbox'; chk.value = String(d); chk.id = id; chk.name = 'email_days';
+              var span = document.createElement('span'); span.textContent = d + ' day' + (d === 1 ? '' : 's'); span.style.color = '#0f172a'; span.style.fontWeight = '600';
+              wrap.appendChild(chk); wrap.appendChild(span);
+              emailDaysList.appendChild(wrap);
+              chk.addEventListener('change', function(){
+                var checked = Array.from(emailDaysList.querySelectorAll('input[type=checkbox]:checked'));
+                if (checked.length > maxSelect) { this.checked = false; showToast('You may select up to ' + maxSelect + ' days', 'error'); }
+              });
+            });
+          }
+
+          function openEmailModal() {
+            try { buildEmailDays(); } catch(e){}
+            // restore saved selections
+            try {
+              var raw = localStorage.getItem('bids_email_days');
+              if (raw) {
+                var arr = JSON.parse(raw || '[]');
+                Array.from((emailDaysList || document).querySelectorAll('input[type=checkbox]')).forEach(function(c){ c.checked = (arr.indexOf(parseInt(c.value,10)) !== -1); });
+              }
+            } catch(e){}
+            if (emailModal) emailModal.style.display = 'flex';
+          }
+
+          function closeEmailModal() { if (emailModal) emailModal.style.display = 'none'; }
+
+          if (enableEmailBtn) enableEmailBtn.addEventListener('click', openEmailModal);
+          if (closeEmailBtn) closeEmailBtn.addEventListener('click', closeEmailModal);
+          if (cancelEmailBtn) cancelEmailBtn.addEventListener('click', closeEmailModal);
+          if (saveEmailBtn) {
+            saveEmailBtn.addEventListener('click', function(){
+              try {
+                var sel = Array.from(emailDaysList.querySelectorAll('input[type=checkbox]:checked')).map(function(c){ return parseInt(c.value,10); });
+                if (sel.length > maxSelect) return showToast('You may select up to ' + maxSelect + ' days', 'error');
+                localStorage.setItem('bids_email_days', JSON.stringify(sel));
+                showToast('Email preferences saved', 'success');
+                closeEmailModal();
+              } catch(e){ showToast('Failed to save', 'error'); }
+            });
+          }
+        } catch(e) { console.warn('email modal init failed', e); }
 
         // -----------------------------
         // Manage Columns modal (unchanged)
