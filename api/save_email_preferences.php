@@ -68,19 +68,25 @@ try {
         $ins->close();
     }
 
-    // send confirmation email if opted in
-    if ($opted) {
-        $subject = 'Email notifications enabled';
-        $text = "You have enabled email notifications for bids. You will receive reminders for: " . ($preferred ? implode(', ', $preferred) : 'no days') . " days prior to the bid.\n\nTo change this, visit your Bid Tracking notifications settings.";
-        $html = "<p>You have enabled email notifications for bids.</p><p>You will receive reminders for: <strong>" . ($preferred ? implode(', ', $preferred) : 'no days') . "</strong> days prior to the bid.</p><p>To change this, visit your Bid Tracking notifications settings.</p>";
+    // Always send a confirmation email (report success/failure in response)
+    $email_sent = false;
+    try {
+        $subject = 'Bid email notification settings updated';
+        $enabled_text = $opted ? 'Yes' : 'No';
+        $days_text = $preferred ? implode(', ', $preferred) : 'none';
+        $text = "Email notification settings updated.\nEnabled: " . $enabled_text . "\nDays before bid: " . $days_text . "\n\nWhere to change it: Bid Tracking -> Email Notifications";
+        $html = "<p>Email notification settings updated.</p><p><strong>Enabled:</strong> " . htmlspecialchars($enabled_text) . "</p><p><strong>Days before bid:</strong> " . htmlspecialchars($days_text) . "</p><p>Where to change it: <strong>Bid Tracking &rarr; Email Notifications</strong></p>";
         $sent = sendMail($userEmail, $subject, $text, $html);
-        if (!$sent || !$sent['success']) {
-            // log but still return success for upsert
+        if ($sent && isset($sent['success']) && $sent['success']) {
+            $email_sent = true;
+        } else {
             @file_put_contents(__DIR__ . '/../debug/bids_email_send.log', date('c') . " CONFIRM_SEND_FAILED " . json_encode($sent) . "\n", FILE_APPEND);
         }
+    } catch (Throwable $e) {
+        @file_put_contents(__DIR__ . '/../debug/bids_email_send.log', date('c') . " CONFIRM_EXCEPTION " . $e->getMessage() . "\n", FILE_APPEND);
     }
 
-    echo json_encode(['success' => true, 'preferred_days' => $preferred, 'opted_in' => $opted]);
+    echo json_encode(['success' => true, 'preferred_days' => $preferred, 'opted_in' => $opted, 'email_sent' => $email_sent]);
     exit();
 } catch (Throwable $e) {
     http_response_code(500);

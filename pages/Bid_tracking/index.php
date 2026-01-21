@@ -2130,7 +2130,13 @@ function syncGcDisplayForProjects() {
                   .then(function(resp){ return resp.json(); })
                   .then(function(data){
                     if (data && data.success) {
-                      showToast('Email preferences saved — confirmation sent', 'success');
+                      // API saved preferences; check whether confirmation email sent
+                      if (data.email_sent) {
+                        showToast('Email preferences saved — confirmation sent', 'success');
+                      } else {
+                        showToast('Preferences saved, but confirmation email failed', 'error');
+                        console.error('Confirmation email failed for', data);
+                      }
                       closeEmailModal();
                     } else {
                       console.error('Save email prefs failed', data);
