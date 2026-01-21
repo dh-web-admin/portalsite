@@ -343,7 +343,7 @@ try {
             <?php if (!empty($canEditBidTracking)) { ?>
               <button id="addProjectBtn" class="btn btn-primary">add Project +</button>
               <button id="manageColumnsBtn" class="btn" style="padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Manage Columns</button>
-              <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Enable Email Notifications</button>
+              <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Email Notifications</button>
             <?php } ?>
           </div>
 
@@ -2074,7 +2074,8 @@ function syncGcDisplayForProjects() {
           var saveEmailBtn = document.getElementById('saveEmailSettings');
           var emailDaysList = document.getElementById('emailDaysList');
 
-          var allowedDays = [1,2,3,5,7,14,30];
+          // Only allow 1 through 5 days as options
+          var allowedDays = [1,2,3,4,5];
           var maxSelect = 5;
 
           function buildEmailDays() {

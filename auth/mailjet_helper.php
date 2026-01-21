@@ -80,4 +80,60 @@ function sendResetCode($email, $code) {
     return ['success' => false, 'error' => $msg];
 }
 
+/**
+ * Generic email sender using Mailjet
+ * Returns ['success'=>bool,'error'=>string]
+ */
+function sendMail($toEmail, $subject, $textPart, $htmlPart = null) {
+    $api_key = getenv('MAILJET_API_KEY');
+    $api_secret = getenv('MAILJET_API_SECRET');
+
+    $logFile = __DIR__ . '/../debug/mailjet_send.log';
+    $log = function ($message) use ($logFile) {
+        $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+        @file_put_contents($logFile, $line, FILE_APPEND);
+    };
+
+    if (!$api_key || !$api_secret) {
+        $msg = 'Mailjet credentials not configured.';
+        $log($msg . ' Email: ' . $toEmail . ', Subject: ' . $subject);
+        return ['success' => false, 'error' => $msg];
+    }
+
+    $from_email = "noreply@darkhorsespreader.com";
+    $from_name = "Dark Horse Spreader";
+
+    $payload = [
+        'Messages' => [[
+            'From' => [ 'Email' => $from_email, 'Name' => $from_name ],
+            'To' => [[ 'Email' => $toEmail ]],
+            'Subject' => $subject,
+            'TextPart' => $textPart,
+            'HTMLPart' => $htmlPart ?: nl2br(htmlspecialchars($textPart))
+        ]]
+    ];
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, 'https://api.mailjet.com/v3.1/send');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_setopt($ch, CURLOPT_USERPWD, $api_key . ':' . $api_secret);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [ 'Content-Type: application/json' ]);
+
+    $response = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($http_code === 200) {
+        return ['success' => true, 'error' => ''];
+    }
+
+    $msg = 'Mailjet API error. Code: ' . $http_code . ', CurlError: ' . $curl_error . ', Response: ' . $response;
+    $log($msg . ', Email: ' . $toEmail . ', Subject: ' . $subject);
+    return ['success' => false, 'error' => $msg];
+}
+
 ?>
