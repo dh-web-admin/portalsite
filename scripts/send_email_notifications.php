@@ -86,7 +86,7 @@ try {
      */
     $sql = "
         SELECT
-            b.id AS bid_id,
+            b.bid_id AS bid_id,
             b.bid_date,
             b.dhss_project_number,
             e.email,
