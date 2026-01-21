@@ -102,36 +102,38 @@ try {
     // Log the resolved script path and SQL for debugging
     logit('Running script: ' . (realpath(__FILE__) ?: __FILE__));
     logit('Executing SQL: ' . trim(preg_replace('/\s+/', ' ', $sql)));
-    $res = $conn->query($sql);
+    // Fetch all upcoming bids
+    $bids = [];
+    $bres = $conn->query("SELECT bid_id, bid_date, dhss_project_number FROM bids WHERE bid_date IS NOT NULL AND bid_date >= CURDATE()");
+    while ($br = $bres->fetch_assoc()) {
+        $bids[] = $br;
+    }
 
+    // Fetch all opted-in users and match against bids in PHP (avoids assuming bids.email exists)
     $toSend = [];
-
-    while ($r = $res->fetch_assoc()) {
-        $bidDate = $r['bid_date'];
-        if (!$bidDate) continue;
-
-        // Days until bid date (0=today, 1=tomorrow, etc.)
-        $today = new DateTime('today');
-        $bidDt = new DateTime($bidDate);
-        $days = (int)$today->diff($bidDt)->format('%r%a');
-
-        if ($days < 0) continue;
-
-        $email = trim((string)$r['email']);
-        if ($email === '') continue;
-
-        $preferred = safe_json_array($r['preferred_days']);
-        if (!count($preferred)) continue;
+    $ures = $conn->query("SELECT email, preferred_days FROM bids_email WHERE opted_in = 1");
+    $today = new DateTime('today');
+    while ($u = $ures->fetch_assoc()) {
+        $userEmail = trim((string)$u['email']);
+        if ($userEmail === '') continue;
+        $preferred = safe_json_array($u['preferred_days']);
+        if (!is_array($preferred) || !count($preferred)) continue;
         $preferred = array_map('intval', $preferred);
 
-        if (in_array($days, $preferred, true)) {
-            $toSend[] = [
-                'email' => $email,
-                'bid_id' => (int)$r['bid_id'],
-                'days_before' => $days,
-                'bid_date' => $bidDate,
-                'dhss_project_number' => $r['dhss_project_number'] ?? ''
-            ];
+        foreach ($bids as $br) {
+            if (empty($br['bid_date'])) continue;
+            $bidDt = new DateTime($br['bid_date']);
+            $days = (int)$today->diff($bidDt)->format('%r%a');
+            if ($days < 0) continue;
+            if (in_array($days, $preferred, true)) {
+                $toSend[] = [
+                    'email' => $userEmail,
+                    'bid_id' => (int)$br['bid_id'],
+                    'days_before' => $days,
+                    'bid_date' => $br['bid_date'],
+                    'dhss_project_number' => $br['dhss_project_number'] ?? ''
+                ];
+            }
         }
     }
 
