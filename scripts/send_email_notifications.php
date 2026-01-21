@@ -5,33 +5,39 @@ require_once __DIR__ . '/../config/config.php';      // $conn (mysqli)
 require_once __DIR__ . '/../partials/mailer.php';    // sendMail($to,$subject,$text,$html)
 require_once __DIR__ . '/../partials/logger.php';    // logit($msg)
 
-// If you already enabled this elsewhere, it's fine to keep it here too.
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 function safe_json_array($s) {
     if (!$s) return [];
     $arr = json_decode($s, true);
-    return (is_array($arr)) ? $arr : [];
+    return is_array($arr) ? $arr : [];
 }
 
 try {
     logit('Cron run started');
 
-    // IMPORTANT:
-    // DO NOT compare DATE columns to '' (empty string). That can cause "Incorrect DATE value: ''".
-    // Instead, filter using proper date conditions.
+    /**
+     * Schema (confirmed):
+     * - bids
+     * - bids_email (global per-user notification preferences)
+     * - bids_email_sent (dedupe log)
+     *
+     * Logic:
+     * - For every upcoming bid
+     * - For every opted-in email
+     * - Check if (bid_date - today) matches preferred_days
+     */
     $sql = "
         SELECT
             b.id AS bid_id,
             b.bid_date,
             b.dhss_project_number,
-            n.email,
-            n.preferred_days
+            be.email,
+            be.preferred_days
         FROM bids b
-        JOIN bids_email_notifications n ON n.bid_id = b.id
+        JOIN bids_email be ON be.opted_in = 1
         WHERE
-            n.enabled = 1
-            AND b.bid_date IS NOT NULL
+            b.bid_date IS NOT NULL
             AND b.bid_date >= CURDATE()
     ";
 
@@ -43,19 +49,18 @@ try {
         $bidDate = $r['bid_date'];
         if (!$bidDate) continue;
 
-        // Days until bid date (0=today, 1=tomorrow, etc.)
         $today = new DateTime('today');
         $bidDt = new DateTime($bidDate);
         $days = (int)$today->diff($bidDt)->format('%r%a');
 
-        // Only upcoming/today bids
+        // Skip past bids
         if ($days < 0) continue;
 
-        $email = trim((string)$r['email']);
+        $email = trim($r['email']);
         if ($email === '') continue;
 
         $preferred = safe_json_array($r['preferred_days']);
-        if (!count($preferred)) continue;
+        if (!$preferred) continue;
 
         $preferred = array_map('intval', $preferred);
 
@@ -70,7 +75,7 @@ try {
         }
     }
 
-    // Group by recipient email so we send one aggregated email per user
+    // Group reminders by recipient (one email per user)
     $grouped = [];
     foreach ($toSend as $item) {
         $grouped[$item['email']][] = $item;
@@ -81,71 +86,60 @@ try {
         $toMark = [];
 
         foreach ($items as $item) {
-            // ensure not already sent
-            $chk = $conn->prepare("
-                SELECT id
-                FROM bids_email_sent
-                WHERE email = ? AND bid_id = ? AND days_before = ?
-                LIMIT 1
-            ");
+            // Check duplicate
+            $chk = $conn->prepare(
+                "SELECT id FROM bids_email_sent
+                 WHERE email = ? AND bid_id = ? AND days_before = ?
+                 LIMIT 1"
+            );
             $chk->bind_param('sii', $email, $item['bid_id'], $item['days_before']);
             $chk->execute();
             $found = $chk->get_result()->fetch_assoc();
             $chk->close();
 
-            if ($found && isset($found['id'])) {
-                logit("Already sent to {$email} for bid {$item['bid_id']} days_before {$item['days_before']}");
-                continue;
-            }
+            if ($found) continue;
 
-            $proj = $item['dhss_project_number'] ?: ('Project ' . $item['bid_id']);
+            $proj = $item['dhss_project_number'] ?: 'Project ' . $item['bid_id'];
 
             if ($item['days_before'] === 0) {
-                $lines[] = $proj . ': Bid Today';
+                $lines[] = "$proj: Bid Today";
             } elseif ($item['days_before'] === 1) {
-                $lines[] = $proj . ': Bid date in 1 day';
+                $lines[] = "$proj: Bid in 1 day";
             } else {
-                $lines[] = $proj . ': Bid date in ' . $item['days_before'] . ' days';
+                $lines[] = "$proj: Bid in {$item['days_before']} days";
             }
 
             $toMark[] = $item;
         }
 
-        if (!count($lines)) continue;
+        if (!$lines) continue;
 
-        $subject = 'Bid reminder:';
+        $subject = 'Bid reminder(s)';
+        $text = implode("\n", $lines) .
+            "\n\n----------------------------------------\n" .
+            "Manage notifications in Bid Tracking → Email Notifications.";
 
-        $text = implode("\n", $lines);
-        $text .= "\n\n----------------------------------------\n";
-        $text .= "To change your notification days, go to Bid Tracking -> Email Notifications\n";
-        $text .= "If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.";
-
-        $htmlLines = '';
+        $html = '<div><h3>Bid reminder(s)</h3>';
         foreach ($lines as $ln) {
-            $htmlLines .= '<p>' . htmlspecialchars($ln) . '</p>';
+            $html .= '<p>' . htmlspecialchars($ln) . '</p>';
         }
-        $html = '<div><h3>Bid reminder:</h3>' . $htmlLines .
-            '<hr />' .
-            '<p>To change your notification days, go to <strong>Bid Tracking &rarr; Email Notifications</strong></p>' .
-            '<p>If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.</p>' .
-            '</div>';
+        $html .= '<hr><p>Manage notifications in <strong>Bid Tracking → Email Notifications</strong>.</p></div>';
 
         $sent = sendMail($email, $subject, $text, $html);
 
         if ($sent && !empty($sent['success'])) {
             foreach ($toMark as $m) {
-                $ins = $conn->prepare("
-                    INSERT INTO bids_email_sent (email, bid_id, days_before)
-                    VALUES (?, ?, ?)
-                ");
+                $ins = $conn->prepare(
+                    "INSERT INTO bids_email_sent (email, bid_id, days_before)
+                     VALUES (?, ?, ?)"
+                );
                 $ins->bind_param('sii', $email, $m['bid_id'], $m['days_before']);
                 $ins->execute();
                 $ins->close();
-
-                logit("Sent to {$email} for bid {$m['bid_id']} days_before {$m['days_before']}");
             }
+            logit("Sent reminder to {$email}");
         } else {
-            logit("Send failed for {$email} err: " . json_encode($sent));
+            logit("Send failed for {$email}: " . json_encode($sent));
         }
     }
 
