@@ -478,6 +478,7 @@ try {
             <div style="background:#fff;border-radius:12px;padding:16px;max-width:980px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.12);max-height:90vh;overflow-y:auto;">
               <form id="editBidForm" style="display:block;">
                 <input type="hidden" id="editBidId" name="bid_id" />
+                <!-- general_contractor_id removed: GC info stored in general_contractor table only -->
                 <div style="margin-bottom:12px;text-align:center;">
                   <select id="editStatus" name="status" style="min-width:90px;padding:6px 36px 6px 6px;border:0;background:transparent;appearance:none;-webkit-appearance:none;-moz-appearance:none;color:#374151;font-weight:600;background-image:url('data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\'%3E%3Cpath fill=\'currentColor\' d=\'M7 10l5 5 5-5z\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 10px center;background-size:16px;">
                     <option value="won" style="color:#10b981;">won</option>
@@ -534,7 +535,13 @@ try {
                       $gcFields[] = $col;
                       continue;
                     }
-                    if (preg_match('/material|material_type/i', $lc) || preg_match('/total.*price|price|total_price/i', $lc)) {
+                    // Exclude explicit "total price" fields from Project Specifications
+                    if (preg_match('/total.*price|total_price/i', $lc)) {
+                      // put total price into other fields instead of specs
+                      $otherFields[] = $col;
+                      continue;
+                    }
+                    if (preg_match('/material|material_type|price/i', $lc)) {
                       $specFields[] = $col;
                       continue;
                     }
@@ -572,9 +579,9 @@ try {
                   </div>
                   <div class="section-content">
                     <?php foreach ($locFields as $col) {
-                      if ($col === 'gc_name') { $label = 'General Contractor Name'; }
-                      elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
-                      elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
+                      if ($col === 'project_city') { $label = 'Project City'; }
+                      elseif ($col === 'project_county') { $label = 'Project County'; }
+                      elseif ($col === 'project_state') { $label = 'Project State'; }
                       elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
                       else { $label = ucwords(str_replace('_',' ',$col)); }
                     ?>
@@ -595,19 +602,18 @@ try {
                     </div>
                   </div>
                   <div class="section-content">
-                    <?php foreach ($gcFields as $col) {
-                      if ($col === 'gc_name') { $label = 'General Contractor Name'; }
-                      elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
-                      elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
-                      elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
-                      else { $label = ucwords(str_replace('_',' ',$col)); }
-                    ?>
-                      <div class="field">
-                        <label><?php echo htmlspecialchars($label); ?></label>
-                        <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
-                      </div>
-                    <?php } ?>
+                    <!-- existing contractor selector removed per request -->
+                    <div style="margin-bottom:8px;">
+                      <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;">Client Winner</label>
+                      <select id="editClientWinner" data-col="client_winner" name="client_winner" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;width:100%;max-width:360px;">
+                        <option value="">--</option>
+                      </select>
+                    </div>
+                    <!-- Top GC quick-edit inputs removed; use the list below and the modal Save button instead -->
                     <div id="newGcContainer" style="grid-column:1/-1;display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+                    <div id="gcTableList" style="grid-column:1/-1;margin-top:12px;max-height:220px;overflow:auto;border-top:1px solid #e6edf0;padding-top:8px;">
+                      <!-- populated dynamically with contractors for this project -->
+                    </div>
                   </div>
                 </div>
 
@@ -641,35 +647,40 @@ try {
                   <div class="section-content">
                     <?php foreach ($otherFields as $col) {
                       if ($col === 'notes') continue;
+                      // avoid duplicate Client Winner select in Additional Information (it lives under General Contractor section)
+                      if ($col === 'client_winner') continue;
                       if ($col === 'gc_name') { $label = 'General Contractor Name'; }
                       elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
                       elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
                       elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
                       else { $label = ucwords(str_replace('_',' ',$col)); }
 
-                      // Render a custom UI for the `reason` column: a select with common values and an "Other" text input.
+                      // Render a custom UI for some specific columns
                       if ($col === 'reason') {
-                    ?>
-                      <div class="field">
-                        <label><?php echo htmlspecialchars($label); ?></label>
-                        <select data-col="reason" name="reason" class="reason-select" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;">
-                          <option value="">--</option>
-                          <option>Didn't Bid</option>
-                          <option>High</option>
-                          <option>Never Went</option>
-                          <option>Did Themselves</option>
-                          <option>Self Performed</option>
-                          <option>Don't Know</option>
-                          <option value="Other">Other</option>
-                        </select>
-                        <input type="text" data-col="reason_other" name="reason_other" placeholder="Other (specify)" style="margin-top:8px;display:none;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
-                      </div>
-                    <?php } else { ?>
-                      <div class="field">
-                        <label><?php echo htmlspecialchars($label); ?></label>
-                        <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
-                      </div>
-                    <?php }
+                        ?>
+                        <div class="field">
+                          <label><?php echo htmlspecialchars($label); ?></label>
+                          <select data-col="reason" name="reason" class="reason-select" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;">
+                            <option value="">--</option>
+                            <option>Didn't Bid</option>
+                            <option>High</option>
+                            <option>Never Went</option>
+                            <option>Did Themselves</option>
+                            <option>Self Performed</option>
+                            <option>Don't Know</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          <input type="text" data-col="reason_other" name="reason_other" placeholder="Other (specify)" style="margin-top:8px;display:none;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
+                        </div>
+                        <?php
+                      } else {
+                        ?>
+                        <div class="field">
+                          <label><?php echo htmlspecialchars($label); ?></label>
+                          <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
+                        </div>
+                        <?php
+                      }
                     } ?>
                   </div>
                 </div>
@@ -680,6 +691,8 @@ try {
                     <textarea id="editNotes" name="notes" data-col="notes" style="width:100%;min-height:120px;padding:10px;border:1px solid #cbd5e1;border-radius:6px;"></textarea>
                   </div>
                 <?php } ?>
+
+
 
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
                   <button type="button" id="closeEditBid" style="background:#fff;border:1px solid #e6edf0;color:#0f172a;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
@@ -847,6 +860,150 @@ try {
         }
       }
 
+      // Load and render General Contractors for a given project into #gcTableList
+      function loadGcList(projectKey) {
+        try {
+          var container = document.getElementById('gcTableList');
+          if (!container) return;
+          container.innerHTML = '<div style="padding:12px;color:#6b7280">Loading contractors&hellip;</div>';
+          var qs = projectKey ? '?dhss_project_number=' + encodeURIComponent(projectKey) : '';
+          fetch('../../api/get_general_contractors.php' + qs, { credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(j){
+              try {
+                var items = (j && j.contractors) ? j.contractors : [];
+                // Also populate Client Winner select if present so the dropdown is in sync with the list
+                try {
+                  var clientSel = document.getElementById('editClientWinner');
+                  var prevSelId = '';
+                  var prevSelText = '';
+                  if (clientSel) {
+                    prevSelId = clientSel.value || '';
+                    var si = clientSel.selectedIndex;
+                    if (si >= 0 && clientSel.options[si]) prevSelText = clientSel.options[si].getAttribute('data-name') || clientSel.options[si].textContent || '';
+                    clientSel.innerHTML = '';
+                    var ph = document.createElement('option'); ph.value = ''; ph.textContent = '--'; clientSel.appendChild(ph);
+                    var seenOpt = new Set();
+                    items.forEach(function(c){
+                      // Prefer the explicit contractor label, fall back to contractor_name if missing
+                      var name = (c.general_contractor || c.general_contractor_name || '').toString().trim();
+                      var id = (c.id || '').toString();
+                      // If there's no textual name, still include an option so a winner flag can be selected
+                      var display = name || ('Contractor #' + id);
+                      var norm = display.toLowerCase();
+                      if (seenOpt.has(norm)) return; seenOpt.add(norm);
+                      var o = document.createElement('option'); o.value = id; o.textContent = display; o.setAttribute('data-name', display);
+                      if (c.winner && (c.winner == 1 || c.winner === '1' || c.winner === true)) o.setAttribute('data-winner','1');
+                      clientSel.appendChild(o);
+                    });
+                    // attach onchange (overwrite safe)
+                    try {
+                      clientSel.onchange = function(){
+                        try {
+                          var selOpt = clientSel.options[clientSel.selectedIndex];
+                          var name = selOpt ? (selOpt.getAttribute('data-name') || selOpt.textContent) : '';
+                          var id = clientSel.value || '';
+                          if (!id) {
+                            var fdclear = new FormData(); fdclear.append('dhss_project_number', projectKey || ''); fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: fdclear }).catch(function(){});
+                          } else {
+                            var fd2 = new FormData(); fd2.append('id', id); fd2.append('dhss_project_number', projectKey || '');
+                            fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: fd2 }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.success) { try { loadGcList(projectKey); applyGcWinnerHighlight(projectKey, name); showToast && showToast('Winner updated', 'success'); } catch(e){} } else { showToast && showToast('Failed to set winner', 'error'); } }).catch(function(){ showToast && showToast('Failed to set winner', 'error'); });
+                          }
+                        } catch(e){}
+                      };
+                    } catch(e){}
+
+                    // try to restore previous selection or select the contractor marked winner
+                    try {
+                      var selectedSet = false;
+                      if (prevSelId) {
+                        var optById = clientSel.querySelector('option[value="' + prevSelId + '"]');
+                        if (optById) { clientSel.value = optById.value; selectedSet = true; }
+                      }
+                      if (!selectedSet && prevSelText) {
+                        Array.from(clientSel.options).forEach(function(o){ if (!selectedSet && o.textContent && o.textContent.toString().toLowerCase() === prevSelText.toString().toLowerCase()) { clientSel.value = o.value; selectedSet = true; } });
+                      }
+                      if (!selectedSet) {
+                        // try find winner flag
+                        var winOpt = clientSel.querySelector('option[data-winner="1"]');
+                        if (winOpt) { clientSel.value = winOpt.value; selectedSet = true; }
+                      }
+                      // finally apply highlight if selected
+                      try { var selText = clientSel.options[clientSel.selectedIndex] ? (clientSel.options[clientSel.selectedIndex].getAttribute('data-name') || clientSel.options[clientSel.selectedIndex].textContent) : ''; applyGcWinnerHighlight(projectKey, selText || ''); } catch(e){}
+                    } catch(e){}
+                  }
+                } catch(e) {}
+                if (!items || items.length === 0) {
+                  container.innerHTML = '<div style="padding:12px;color:#6b7280">No contractors found for this project.</div>';
+                  return;
+                }
+                var table = document.createElement('div');
+                table.style.display = 'grid';
+                table.style.gridTemplateColumns = '2fr 2fr 1.5fr 2fr 2fr';
+                table.style.gap = '8px';
+                table.style.alignItems = 'center';
+                // header row
+                var hdrs = ['General Contractor','Name','Number','Email','Address'];
+                hdrs.forEach(function(h){ var e = document.createElement('div'); e.style.fontWeight = '600'; e.style.padding = '6px 8px'; e.style.color = '#374151'; e.textContent = h; e.style.position = 'sticky'; e.style.top = '0'; e.style.background = '#ffffff'; e.style.zIndex = '4'; e.style.borderBottom = '1px solid #e6edf0'; table.appendChild(e); });
+                // ensure container is a positioned scroll container so sticky headers work
+                container.style.position = 'relative';
+
+                items.forEach(function(it){
+                  var id = it.id || '';
+                  var gc = it.general_contractor || '';
+                  var name = it.general_contractor_name || '';
+                  var num = it.general_contractor_number || '';
+                  var mail = it.general_contractor_email || '';
+                  var addr = it.general_contractor_address || '';
+                  var isWinner = (it.winner && (it.winner == 1 || it.winner === '1' || it.winner === true));
+
+                  function makeCellInput(val, nameAttr, placeholder, highlightColor) {
+                    var wrapper = document.createElement('div');
+                    wrapper.style.padding = '6px 8px';
+                    wrapper.style.borderBottom = '1px solid #eef2f7';
+                    var inp = document.createElement('input');
+                    inp.type = 'text';
+                    inp.value = val;
+                    inp.placeholder = placeholder || '';
+                    inp.style.width = '100%';
+                    inp.style.border = '0';
+                    inp.style.background = 'transparent';
+                    inp.setAttribute('data-field', nameAttr);
+                    inp.setAttribute('data-id', id);
+                    if (highlightColor) {
+                      inp.style.color = highlightColor;
+                      inp.style.fontWeight = '600';
+                    } else {
+                      // Non-winner rows: make all GC columns red
+                      inp.style.color = '#ef4444';
+                    }
+                    wrapper.appendChild(inp);
+                    return wrapper;
+                  }
+
+                  var winnerColor = isWinner ? '#10b981' : null;
+                  table.appendChild(makeCellInput(gc, 'general_contractor', 'General contractor', winnerColor));
+                  table.appendChild(makeCellInput(name, 'general_contractor_name', 'Name', winnerColor));
+                  table.appendChild(makeCellInput(num, 'general_contractor_number', 'Number', winnerColor));
+                  table.appendChild(makeCellInput(mail, 'general_contractor_email', 'Email', winnerColor));
+                  table.appendChild(makeCellInput(addr, 'general_contractor_address', 'Address', winnerColor));
+
+                  // No per-row actions: edits are saved when the modal Save button is used
+
+                });
+                container.innerHTML = '';
+                container.appendChild(table);
+              } catch(err) {
+                container.innerHTML = '<div style="padding:12px;color:#ef4444">Failed to render contractors</div>';
+                console.warn('loadGcList render failed', err);
+              }
+            }).catch(function(err){
+              try { container.innerHTML = '<div style="padding:12px;color:#ef4444">Could not load contractors</div>'; } catch(e){}
+              console.warn('loadGcList fetch failed', err);
+            });
+        } catch(e) { console.warn('loadGcList error', e); }
+      }
+
       function openEditModal(bidObj) {
         var modal = document.getElementById('editBidModal');
         if (!modal) return;
@@ -911,6 +1068,27 @@ try {
           }
         } catch(e) {}
 
+        // When project number changes in the modal, refresh client winners list
+        try {
+          var dhssInput = document.getElementById('editDhssProjectNumber');
+          if (dhssInput) {
+            dhssInput.addEventListener('input', function(){ try { if (typeof loadGcList === 'function') loadGcList(this.value); } catch(e){} });
+          }
+        } catch(e) {}
+
+        // Load and display full general contractor list for this project (this will populate Client Winner)
+        try {
+          var projKey = (bidObj.dhss_project_number || '').toString().trim();
+          try { if (typeof loadGcList === 'function') loadGcList(projKey); } catch(e){}
+        } catch(e) {}
+
+        // Ensure the select also updates if GC fields are changed live in the modal (helpful if user edits GC fields)
+        try {
+          var gcFieldsEls = modal.querySelectorAll('[data-col="gc_name"],[data-col="general_contractor"],[data-col="gc_number"]');
+          gcFieldsEls.forEach(function(el){ el.addEventListener('input', function(){ try { if (typeof loadGcList === 'function') loadGcList(document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value : ''); } catch(e){} }); });
+        } catch(e) {}
+
+
         modal.style.display = 'flex';
       }
 
@@ -966,20 +1144,110 @@ try {
               });
             }
 
+            // Also include any GC info typed into the modal's GC fields (users often edit the existing inputs)
+            try {
+              var modalGc = document.querySelector('#editBidModal');
+              if (modalGc) {
+                var mgc = (modalGc.querySelector('[data-col="general_contractor"]') || { value: '' }).value.trim();
+                var mgc_name = (modalGc.querySelector('[data-col="gc_name"]') || { value: '' }).value.trim();
+                var mgc_num = (modalGc.querySelector('[data-col="gc_number"]') || { value: '' }).value.trim();
+                if (mgc) {
+                  // avoid duplicate if already in newClones
+                  var exists = newClones.find(function(x){ return x.general_contractor && x.general_contractor.toString().trim().toLowerCase() === mgc.toLowerCase(); });
+                  if (!exists) {
+                    newClones.push({ general_contractor: mgc, gc_name: mgc_name || null, gc_number: mgc_num || null });
+                  }
+                }
+              }
+            } catch(e) {}
+
             var saveBtn = document.getElementById('saveEditBid');
             if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
 
             var theUpdateUrl = (typeof updateUrl !== 'undefined' && updateUrl) ? updateUrl : '../../api/update_bid.php';
 
+            // If there are new GC rows, save them into the general_contractor table (do NOT clone bids)
             (new Promise(function(resolve, reject){
               if (!newClones.length) return resolve(null);
-              var cloneUrl = '../../api/clone_bid_with_gc.php';
-              fetch(cloneUrl, { method: 'POST', credentials: 'same-origin', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ bid_id: fd.get('bid_id'), clones: newClones }) })
-                .then(function(r){ return r.json(); })
-                .then(function(data){ if (data && data.success) resolve(data); else reject(data); })
-                .catch(function(err){ reject(err); });
+              // For each new GC, POST to add_general_contractor.php
+              var tasks = newClones.map(function(c){
+                var form = new FormData();
+                if (c.general_contractor) form.append('general_contractor', c.general_contractor);
+                if (c.gc_name) form.append('general_contractor_name', c.gc_name);
+                if (c.gc_number) form.append('general_contractor_number', c.gc_number);
+                var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
+                if (dhss) form.append('dhss_project_number', dhss);
+                return fetch('../../api/add_general_contractor.php', { method: 'POST', credentials: 'same-origin', body: form }).then(function(r){ return r.json(); });
+              });
+              Promise.all(tasks).then(function(results){
+                // If any failed, reject
+                var bad = results.find(function(x){ return !x || !x.success; });
+                if (bad) return reject(bad);
+                resolve(results);
+              }).catch(function(err){ reject(err); });
             })).then(function(){
-              return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
+              // Now collect edits made in the GC list and send updates for existing rows
+              return new Promise(function(resolveUpdates, rejectUpdates){
+                try {
+                  var gcContainer = document.getElementById('gcTableList');
+                  var updateTasks = [];
+                  if (gcContainer) {
+                    var inputs = gcContainer.querySelectorAll('input[data-field][data-id]');
+                    var groups = {};
+                    inputs.forEach(function(inp){
+                      var id = inp.getAttribute('data-id');
+                      var field = inp.getAttribute('data-field');
+                      if (!id) return;
+                      groups[id] = groups[id] || {};
+                      groups[id][field] = inp.value || '';
+                    });
+                    Object.keys(groups).forEach(function(id){
+                      var g = groups[id];
+                      var form = new FormData();
+                      form.append('id', id);
+                      if (g.general_contractor !== undefined) form.append('general_contractor', g.general_contractor);
+                      if (g.general_contractor_name !== undefined) form.append('general_contractor_name', g.general_contractor_name);
+                      if (g.general_contractor_number !== undefined) form.append('general_contractor_number', g.general_contractor_number);
+                      if (g.general_contractor_email !== undefined) form.append('general_contractor_email', g.general_contractor_email);
+                      if (g.general_contractor_address !== undefined) form.append('general_contractor_address', g.general_contractor_address);
+                      var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
+                      if (dhss) form.append('dhss_project_number', dhss);
+                      updateTasks.push(fetch('../../api/update_general_contractor.php', { method: 'POST', credentials: 'same-origin', body: form }).then(function(r){ return r.json ? r.json() : null; }));
+                    });
+                  }
+                  if (!updateTasks.length) return resolveUpdates(null);
+                  Promise.all(updateTasks).then(function(results){
+                    var bad = results.find(function(x){ return !x || !x.success; });
+                    if (bad) return rejectUpdates(bad);
+                    resolveUpdates(results);
+                  }).catch(function(err){ rejectUpdates(err); });
+                } catch(err) { rejectUpdates(err); }
+              }).then(function(){
+                // Ensure the selected Client Winner is persisted in general_contractor table
+                return new Promise(function(resolveWinner, rejectWinner){
+                  try {
+                    var clientSel = document.getElementById('editClientWinner');
+                    var selectedId = clientSel ? (clientSel.value || '') : '';
+                    var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
+                    var fdSet = new FormData();
+                    if (selectedId) fdSet.append('id', selectedId);
+                    if (dhss) fdSet.append('dhss_project_number', dhss);
+                    fetch('../../api/set_winner_general_contractor.php', { method: 'POST', credentials: 'same-origin', body: fdSet }).then(function(r){ return r.json ? r.json() : null; }).then(function(j){ resolveWinner(j); }).catch(function(err){ console.warn('set_winner failed', err); resolveWinner(null); });
+                  } catch(e) { resolveWinner(null); }
+                }).then(function(){
+                  // Remove GC fields from the bid update - GC data should only live in general_contractor table
+                  try {
+                    fd.delete('general_contractor');
+                    fd.delete('gc_name');
+                    fd.delete('gc_number');
+                    fd.delete('general_contractor_email');
+                    fd.delete('general_contractor_address');
+                    fd.delete('general_contractor_id');
+                  } catch(e){}
+
+                  return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
+                });
+              });
             }).then(function(r){
                 var ct = (r.headers.get('content-type') || '').toLowerCase();
                 return r.text().then(function(text){
@@ -995,7 +1263,56 @@ try {
                 if (data && data.success) {
                   try { closeEditModal(); } catch(e){}
                   try { showToast('Saved', 'success'); } catch(e){}
-                  setTimeout(function(){ window.location.reload(); }, 800);
+                  try {
+                    // Update the in-memory originalRows and the row DOM so changes persist without a full reload
+                    var newBid = data.bid || null;
+                    if (newBid && window.originalRows && window.originalRows.length) {
+                      var found = window.originalRows.find(function(it){ return it && it.obj && (it.obj.bid_id && it.obj.bid_id.toString() === (newBid.bid_id || '').toString()); });
+                      if (found) {
+                        found.obj = newBid;
+                        try { found.row.setAttribute('data-bid', JSON.stringify(newBid)); } catch(e){}
+                        try {
+                          // Update visible table cells for this row from the returned bid object
+                          var r = found.row;
+                          Object.keys(newBid).forEach(function(k){
+                            try {
+                              var td = r.querySelector('td[data-col="' + k + '"]');
+                              if (td) {
+                                var v = newBid[k];
+                                if (v === null || v === undefined) v = '';
+                                td.textContent = ('' + v);
+                              }
+                            } catch(e) {}
+                          });
+                          // Ensure Project Location fields (city/county/state) reflect the modal inputs immediately
+                          try {
+                            var modal = document.getElementById('editBidModal');
+                            if (modal) {
+                              ['project_city','project_county','project_state'].forEach(function(k){
+                                try {
+                                  var inp = modal.querySelector('[name="' + k + '"]');
+                                  if (inp) {
+                                    var td = r.querySelector('td[data-col="' + k + '"]');
+                                    if (td) td.textContent = inp.value || '';
+                                  }
+                                } catch(e){}
+                              });
+                            }
+                          } catch(e){}
+                        } catch(e) {}
+                      }
+                    }
+                    try { applyFiltersAndGrouping(); } catch(e){}
+                    try {
+                      // Ensure GC display and highlights are refreshed immediately
+                      if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects();
+                      var pk = newBid ? (newBid.dhss_project_number || '') : '';
+                      var clientSel = document.getElementById('editClientWinner');
+                      var selName = '';
+                      if (clientSel && clientSel.selectedIndex >= 0) selName = clientSel.options[clientSel.selectedIndex].getAttribute('data-name') || clientSel.options[clientSel.selectedIndex].textContent || '';
+                      if (pk && selName && typeof applyGcWinnerHighlight === 'function') applyGcWinnerHighlight(pk, selName);
+                    } catch(e){}
+                  } catch(e){}
                 } else {
                   var msg = (data && data.message) ? data.message : 'Failed to save';
                   try { showToast(msg, 'error'); } catch(e){}
@@ -1213,7 +1530,20 @@ try {
   }
 
   // choose default: current year (keep your preference)
-  yearFilterEl.value = String(nowY).slice(-2);
+          // Restore saved year filter if present
+          try {
+            var savedYear = null;
+            try { savedYear = localStorage.getItem('bidTracking_yearFilter'); } catch(e) { savedYear = null; }
+            if (savedYear !== null && savedYear !== undefined && yearFilterEl.querySelector('option[value="' + savedYear + '"]')) {
+              yearFilterEl.value = savedYear;
+            } else {
+              yearFilterEl.value = String(nowY).slice(-2);
+            }
+          } catch(e) {
+            yearFilterEl.value = String(nowY).slice(-2);
+          }
+          // persist changes and trigger filtering
+          yearFilterEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_yearFilter', this.value || ''); applyFiltersAndGrouping(); } catch(e){} });
 })();
           function normStatus(raw) {
             var s = (raw || '').toString().trim().toLowerCase();
@@ -1324,16 +1654,215 @@ function applyFiltersAndGrouping() {
 
   tbody.innerHTML = '';
   tbody.appendChild(frag);
+  try { syncGcDisplayForProjects(); } catch(e){}
 
   try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
   try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
 
   // Update project separators after tbody rebuild
   try { updateProjectSeparators(); } catch(e) { console.warn('updateProjectSeparators failed', e); }
+  // re-apply GC highlight if modal is open
+  try {
+    var modalOpen = document.getElementById('editBidModal') && document.getElementById('editBidModal').style.display === 'flex';
+    if (modalOpen) {
+      var pk = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
+      var cw = document.getElementById('editClientWinner') ? document.getElementById('editClientWinner').value : '';
+      try { applyGcWinnerHighlight(pk, cw); } catch(e){}
+    }
+  } catch(e){}
+}
+
+        // Populate Client Winner select for a given project key. Keep unique order from visible rows.
+// Populate Client Winner select for a given project key using ONLY `general_contractor`
+function populateClientWinners(projectKey, selectedValue) {
+  try {
+    var clientSel = document.getElementById('editClientWinner');
+    if (!clientSel) return;
+
+    var key = (projectKey || '').toString().trim();
+
+    clientSel.innerHTML = '';
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '--';
+    clientSel.appendChild(placeholder);
+
+    // Prefer sourcing client winners from the general_contractor table via API
+    if (key) {
+      try {
+        fetch('../../api/get_general_contractors.php?dhss_project_number=' + encodeURIComponent(key), { credentials: 'same-origin' })
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            if (j && j.success && Array.isArray(j.contractors) && j.contractors.length) {
+              var seen = new Set();
+              j.contractors.forEach(function(c){
+                var name = (c.general_contractor || '').toString().trim();
+                if (!name) return;
+                var norm = name.toLowerCase();
+                if (seen.has(norm)) return; seen.add(norm);
+                // option value is contractor id; text is name
+                var opt = document.createElement('option'); opt.value = (c.id || '').toString(); opt.textContent = name; opt.setAttribute('data-name', name); clientSel.appendChild(opt);
+              });
+              // attempt to select by provided selectedValue which may be an id or a name
+              try {
+                if (selectedValue) {
+                  // try match id
+                  var matched = false;
+                  var byId = clientSel.querySelector('option[value="' + String(selectedValue) + '"]');
+                  if (byId) { clientSel.value = byId.value; matched = true; }
+                  if (!matched) {
+                    // try matching by visible text (name)
+                    Array.from(clientSel.options).forEach(function(o){ if (!matched && o.textContent && o.textContent.toString().toLowerCase() === selectedValue.toString().toLowerCase()) { clientSel.value = o.value; matched = true; } });
+                  }
+                }
+              } catch(e){}
+              try {
+                clientSel.onchange = function(){ try { var selOpt = clientSel.options[clientSel.selectedIndex]; var name = selOpt ? (selOpt.getAttribute('data-name') || selOpt.textContent) : ''; var id = clientSel.value || ''; if (!id) { /* clear winners for project */ fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: new FormData() }).catch(function(){}); } else { var fd = new FormData(); fd.append('id', id); fd.append('dhss_project_number', key); fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: fd }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.success) { try { loadGcList(key); applyGcWinnerHighlight(key, name); showToast && showToast('Winner updated', 'success'); } catch(e){} } else { showToast && showToast('Failed to set winner', 'error'); } }).catch(function(){ showToast && showToast('Failed to set winner', 'error'); }); } } catch(e){} };
+              } catch(e){}
+              try { applyGcWinnerHighlight(key, clientSel.options[clientSel.selectedIndex] ? (clientSel.options[clientSel.selectedIndex].getAttribute('data-name') || clientSel.options[clientSel.selectedIndex].textContent) : ''); } catch(e){}
+              return;
+            }
+            // fallback to scraping rows if API returned nothing
+            populateClientWinners_fallback(key, selectedValue);
+          }).catch(function(){ populateClientWinners_fallback(key, selectedValue); });
+        return;
+      } catch(e) {
+        // fallback below
+      }
+    }
+
+    // fallback: scan visible rows for general_contractor values
+    populateClientWinners_fallback(key, selectedValue);
+  } catch(e) {
+    console.warn('populateClientWinners failed', e);
+  }
+}
+
+function populateClientWinners_fallback(projectKey, selectedValue) {
+  try {
+    var clientSel = document.getElementById('editClientWinner');
+    if (!clientSel) return;
+    var key = (projectKey || '').toString().trim();
+    var seen = new Set();
+    var rows = Array.from(document.querySelectorAll('#bidsTable tbody tr[data-bid]'));
+    rows.forEach(function(r){
+      var raw = r.getAttribute('data-bid');
+      var obj = {};
+      try { obj = JSON.parse(raw || '{}') || {}; } catch(e) { obj = {}; }
+      var proj = (obj.dhss_project_number || '').toString().trim();
+      if (proj !== key) return;
+      var gc = (obj.general_contractor || '').toString().trim();
+      if (!gc) return;
+      var norm = gc.toLowerCase();
+      if (seen.has(norm)) return; seen.add(norm);
+      var opt = document.createElement('option'); opt.value = gc; opt.textContent = gc; clientSel.appendChild(opt);
+    });
+    if (selectedValue) { try { clientSel.value = selectedValue; } catch(e){} }
+    try { clientSel.onchange = function(){ try { applyGcWinnerHighlight(projectKey, this.value); } catch(e){} }; } catch(e){}
+    try { applyGcWinnerHighlight(projectKey, clientSel.value); } catch(e){}
+  } catch(e) { console.warn('populateClientWinners_fallback failed', e); }
+}
+
+// Highlight GC cells that match the chosen Client Winner for a project
+function applyGcWinnerHighlight(projectKey, selectedGc) {
+  try {
+    // remove previous highlights
+    Array.from(document.querySelectorAll('#bidsTable td[data-col="general_contractor"].gc-winner-highlight')).forEach(function(td){ td.classList.remove('gc-winner-highlight'); });
+
+    if (!projectKey || !selectedGc) return;
+    var normSel = selectedGc.toString().trim().toLowerCase();
+    var rows = Array.from(document.querySelectorAll('#bidsTable tbody tr[data-bid]'));
+    rows.forEach(function(r){
+      var raw = r.getAttribute('data-bid') || '';
+      var match = false;
+      try {
+        var obj = JSON.parse(raw || '{}') || {};
+        var proj = (obj.dhss_project_number || '').toString().trim();
+        var td = r.querySelector('td[data-col="general_contractor"]');
+        var gc = (obj.general_contractor || (td ? td.textContent : '') || '').toString().trim();
+        if (proj === projectKey && gc && gc.toLowerCase() === normSel) match = true;
+      } catch(e) {
+        // fallback: inspect cell text
+        try {
+          var td = r.querySelector('td[data-col="general_contractor"]');
+          var projTd = r.querySelector('td[data-col="dhss_project_number"]');
+          var projVal = projTd ? projTd.textContent.trim() : '';
+          var gcText = td ? td.textContent.trim() : '';
+          if (projVal === projectKey && gcText.toLowerCase() === normSel) match = true;
+        } catch(ignore){}
+      }
+
+      if (match) {
+        try {
+          var target = r.querySelector('td[data-col="general_contractor"]');
+          if (target) target.classList.add('gc-winner-highlight');
+        } catch(e){}
+      }
+    });
+  } catch(e) { console.warn('applyGcWinnerHighlight failed', e); }
+}
+
+// Sync the displayed General Contractor cell values for projects using the general_contractor table
+function syncGcDisplayForProjects() {
+  try {
+    var rows = Array.from(document.querySelectorAll('#bidsTable tbody tr[data-bid]'));
+    if (!rows.length) return;
+    var projects = Array.from(new Set(rows.map(function(r){ try { var obj = JSON.parse(r.getAttribute('data-bid') || '{}') || {}; return (obj.dhss_project_number || '').toString().trim(); } catch(e) { return ''; } }).filter(function(x){ return x; })));
+    projects.forEach(function(proj){
+      try {
+        fetch('../../api/get_general_contractors.php?dhss_project_number=' + encodeURIComponent(proj), { credentials: 'same-origin' })
+          .then(function(r){ return r.json(); })
+              .then(function(j){
+            try {
+                  // Determine which contractor to show in table cells.
+                  // If multiple contractors exist for the project, prefer the one marked `winner`.
+                  // If only one contractor exists, show that contractor's info.
+                  var chosen = null;
+                  if (j && Array.isArray(j.contractors) && j.contractors.length) {
+                    if (j.contractors.length === 1) {
+                      chosen = j.contractors[0];
+                    } else {
+                      // multiple contractors: prefer winner, otherwise fallback to first
+                      chosen = j.contractors.find(function(c){ return c.winner && (c.winner == 1 || c.winner === '1' || c.winner === true); }) || j.contractors[0];
+                    }
+                  }
+                  rows.forEach(function(r){
+                    try {
+                      var obj = JSON.parse(r.getAttribute('data-bid') || '{}') || {};
+                      if ((obj.dhss_project_number || '').toString().trim() === proj) {
+                        if (chosen) {
+                          var gcVal = (chosen.general_contractor || chosen.general_contractor_name || '').toString().trim();
+                          var nameVal = (chosen.general_contractor_name || '').toString().trim();
+                          var numVal = (chosen.general_contractor_number || '').toString().trim();
+                          var mailVal = (chosen.general_contractor_email || '').toString().trim();
+                          var addrVal = (chosen.general_contractor_address || '').toString().trim();
+                          // set both long and short column names to cover different schema/column setups
+                          var cellMap = [
+                            {k:'general_contractor', v:gcVal}, {k:'gc_name', v:nameVal}, {k:'general_contractor_name', v:nameVal},
+                            {k:'gc_number', v:numVal}, {k:'general_contractor_number', v:numVal},
+                            {k:'general_contractor_email', v:mailVal}, {k:'general_contractor_address', v:addrVal}
+                          ];
+                          cellMap.forEach(function(it){
+                            try { var td = r.querySelector('td[data-col="' + it.k + '"]'); if (td) td.textContent = it.v || ''; } catch(e){}
+                          });
+                        } else {
+                          // no contractors: clear common GC-related cells
+                          ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number','general_contractor_email','general_contractor_address'].forEach(function(k){
+                            try { var td = r.querySelector('td[data-col="' + k + '"]'); if (td) td.textContent = ''; } catch(e){}
+                          });
+                        }
+                      }
+                    } catch(e) {}
+                  });
+            } catch(e) {}
+          }).catch(function(){});
+      } catch(e) {}
+    });
+  } catch(e) { console.warn('syncGcDisplayForProjects failed', e); }
 }
 
 
-          // Delegated row click (works even after tbody rebuild)
+
           tbody.addEventListener('click', function(e){
             var tr = e.target && e.target.closest ? e.target.closest('tr[data-bid]') : null;
             if (!tr) return;
@@ -1348,7 +1877,17 @@ function applyFiltersAndGrouping() {
           });
 
           if (yearFilterEl) yearFilterEl.addEventListener('change', applyFiltersAndGrouping);
-          if (statusFilterEl) statusFilterEl.addEventListener('change', applyFiltersAndGrouping);
+          if (statusFilterEl) {
+            // Restore saved status filter if present
+            try {
+              var savedStatus = null;
+              try { savedStatus = localStorage.getItem('bidTracking_statusFilter'); } catch(e) { savedStatus = null; }
+              if (savedStatus !== null && savedStatus !== undefined && statusFilterEl.querySelector('option[value="' + savedStatus + '"]')) {
+                statusFilterEl.value = savedStatus;
+              }
+            } catch(e) {}
+            statusFilterEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_statusFilter', this.value || ''); applyFiltersAndGrouping(); } catch(e){} });
+          }
 
           applyFiltersAndGrouping();
         } catch(e) { console.warn('filters+grouping failed', e); }
@@ -1370,6 +1909,8 @@ function applyFiltersAndGrouping() {
           }
           initModalCollapsibles();
           var addGcBtn = document.getElementById('addGcBtn');
+          // existing-contractor select removed; keep add-new flow only
+
           if (addGcBtn) {
             addGcBtn.addEventListener('click', function(e){
               e.stopPropagation();
@@ -1612,6 +2153,15 @@ rows.forEach(function(tr){
 });
             try { window.setupStickyColumns && window.setupStickyColumns(4); } catch(e){}
             try { window.syncTopScroller && window.syncTopScroller(); } catch(e){}
+            // re-apply GC highlight if modal is open after column reflow
+            try {
+              var modalOpen = document.getElementById('editBidModal') && document.getElementById('editBidModal').style.display === 'flex';
+              if (modalOpen) {
+                var pk = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
+                var cw = document.getElementById('editClientWinner') ? document.getElementById('editClientWinner').value : '';
+                try { applyGcWinnerHighlight(pk, cw); } catch(e){}
+              }
+            } catch(e){}
           }
 
           if (manageBtn) manageBtn.addEventListener('click', openManageModal);

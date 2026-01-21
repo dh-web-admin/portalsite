@@ -1,6 +1,3 @@
-# Apache Configuration for PortalSite
-
-# Enable Rewrite Engine
 RewriteEngine On
 
 # Redirect to HTTPS (Railway provides SSL)
@@ -8,13 +5,14 @@ RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# --- Serve uploads directly from mounted volume and bypass app routing ---
-# If a request targets /uploads/ or /PortalSite/uploads/ serve from the mounted
-# path and stop rewrite processing so app auth/session handlers are never invoked.
+# ✅ Never route uploads through the app
+RewriteRule ^(PortalSite/)?uploads/ - [L]
+
+# ✅ Map public /uploads/* to mounted volume folder
 RewriteRule ^uploads/(.*)$ /portalsite/uploads/$1 [L,PT]
 RewriteRule ^PortalSite/uploads/(.*)$ /portalsite/uploads/$1 [L,PT]
 
-# Don't rewrite files or directories (preserve existing behavior for other assets)
+# Don't rewrite files or directories
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
@@ -24,24 +22,11 @@ RewriteCond %{REQUEST_FILENAME} !-d
     Deny from all
 </FilesMatch>
 
-# PHP settings
-php_value upload_max_filesize 10M
-php_value post_max_size 10M
-php_value max_execution_time 300
-php_value max_input_time 300
-
-# Error pages
 ErrorDocument 404 /index.php
 ErrorDocument 500 /index.php
 
-# Disable directory browsing
 Options -Indexes
 
-# Map public /uploads/ URL to mounted uploads folder (for servers where docroot is /app)
-# Adjust target path if your container uses a different path for the mount.
-RewriteRule ^uploads/(.*)$ /portalsite/uploads/$1 [L]
-
-# Enable compression
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript
 </IfModule>

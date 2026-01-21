@@ -1136,7 +1136,7 @@ $canEditMaps = can_edit_page('maps');
       populateRemoveServiceSelect();
 
       /* =========================
-         Add Supplier Modal Logic
+         Add Supplier Modal Logics
          ========================= */
       var addSupplierModal = document.getElementById('addSupplierModal');
       var addSupplierForm = document.getElementById('addSupplierForm');
