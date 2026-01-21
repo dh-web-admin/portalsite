@@ -72,10 +72,25 @@ try {
     $email_sent = false;
     try {
         $subject = 'Bid email notification settings updated';
-        $enabled_text = $opted ? 'Yes' : 'No';
-        $days_text = $preferred ? implode(', ', $preferred) : 'none';
-        $text = "Email notification settings updated.\nEnabled: " . $enabled_text . "\nDays before bid: " . $days_text . "\n\nWhere to change it: Bid Tracking -> Email Notifications";
-        $html = "<p>Email notification settings updated.</p><p><strong>Enabled:</strong> " . htmlspecialchars($enabled_text) . "</p><p><strong>Days before bid:</strong> " . htmlspecialchars($days_text) . "</p><p>Where to change it: <strong>Bid Tracking &rarr; Email Notifications</strong></p>";
+
+        // Build human-readable lines for selected days
+        if (!empty($preferred) && is_array($preferred)) {
+            $dayLines = array_map(function($d){ $n = intval($d); return $n . ' day' . ($n === 1 ? '' : 's') . ' before bid'; }, $preferred);
+            $days_text = implode(', ', $preferred);
+            $days_block_text = implode("\n", $dayLines);
+            $days_block_html = '<ul>' . implode('', array_map(function($l){ return '<li>' . htmlspecialchars($l) . '</li>'; }, $dayLines)) . '</ul>';
+        } else {
+            $days_text = 'none';
+            $days_block_text = 'none';
+            $days_block_html = '<p>none</p>';
+        }
+
+        $text = "You have changed/updated your email notification for bids.\n\nYou will be reminded on these days for bids:\n" . $days_block_text . "\n\nx y .. are the selected reminder dates";
+
+        $html = "<p>You have changed/updated your email notification for bids.</p>" .
+                "<p>Your will be reminded on these days for bids:</p>" .
+                $days_block_html .
+                "<p>x y .. are the selected reminder dates</p>";
         $sent = sendMail($userEmail, $subject, $text, $html);
         if ($sent && isset($sent['success']) && $sent['success']) {
             $email_sent = true;
