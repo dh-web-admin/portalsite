@@ -149,12 +149,12 @@ try {
 
         foreach ($items as $item) {
             // Check if it was already sent previously — we will resend regardless.
-            $chk = $conn->prepare(""
+            $chk = $conn->prepare("
                 SELECT id
                 FROM bids_email_sent
                 WHERE email = ? AND bid_id = ? AND days_before = ?
                 LIMIT 1
-            """);
+            ");
             $chk->bind_param('sii', $email, $item['bid_id'], $item['days_before']);
             $chk->execute();
             $found = $chk->get_result()->fetch_assoc();
