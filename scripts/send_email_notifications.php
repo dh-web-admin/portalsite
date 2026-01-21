@@ -13,11 +13,11 @@ $hour = (int)$now->format('H');
 $minute = (int)$now->format('i');
 $today = $now->format('Y-m-d');
 
-// Only proceed when it's 09:30
-if (!($hour === 9 && $minute === 30)) {
-    // exit silently
-    exit(0);
-}
+// // Only proceed when it's 09:30
+// if (!($hour === 9 && $minute === 30)) {
+//     // exit silently
+//     exit(0);
+// }
 
 $logFile = __DIR__ . '/../debug/email_notifications_send.log';
 function logit($m) {
