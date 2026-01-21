@@ -88,9 +88,9 @@ try {
         $text = "You have changed/updated your email notification for bids.\n\nYou will be reminded on these days for bids:\n" . $days_block_text . "\n\nx y .. are the selected reminder dates";
 
         $html = "<p>You have changed/updated your email notification for bids.</p>" .
-                "<p>Your will be reminded on these days for bids:</p>" .
+                "<p>You will be reminded on these days for bids:</p>" .
                 $days_block_html .
-                "<p>x y .. are the selected reminder dates</p>";
+                "<p>Thank you</p>";
         $sent = sendMail($userEmail, $subject, $text, $html);
         if ($sent && isset($sent['success']) && $sent['success']) {
             $email_sent = true;
