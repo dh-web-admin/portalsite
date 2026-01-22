@@ -138,6 +138,12 @@ foreach ($gcCanonical as $canon => $alts) {
     }
     #addProjectBtn:hover { transform: translateY(-2px); box-shadow: 0 12px 34px rgba(16,185,129,0.16); }
     #addProjectBtn:active { transform: translateY(0); box-shadow: 0 8px 22px rgba(16,185,129,0.12); }
+    /* Highlight applied to the selected Client Winner in the table */
+    .gc-winner-highlight,
+    .gc-winner-highlight * {
+      color: #10b981 !important;
+      font-weight: 700 !important;
+    }
     #addProjectBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
     #cancelAddProject {
@@ -326,20 +332,37 @@ foreach ($gcCanonical as $canon => $alts) {
 #bidsTable tbody tr.group-spacer td {
   padding: 6px 0 !important;
   border: 0 !important;
-  height: 12px;                 /* keep small spacing if present */
+  height: 18px;                 /* keep spacing for the separator */
   background: transparent !important;
+  position: relative;
 }
-#bidsTable tbody tr.group-spacer td::before,
-#bidsTable tbody tr.group-spacer td::after { content: none !important; }
+/* Draw a full-width horizontal rule between project groups */
+#bidsTable tbody tr.group-spacer td::before {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(188,190,194,0.9);
+}
 
 /* Project boundary separator — applied to rows where the next visible row has a different DHSS project # */
+/* project-break kept for compatibility, but hide its border when detail rows exist
+   We'll rely on the group-spacer horizontal rule for a single clear separator between projects */
 #bidsTable tbody tr.project-break td {
-  border-bottom: 1px solid rgb(188, 190, 194) !important; /* gray */
-  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset !important;
+  border-bottom: none !important;
 }
 
-#bidsTable tbody tr.project-break:hover td { /* preserve hover but keep separator visible */
-  box-shadow: 0 1px 0 rgba(255,255,255,0.9) inset !important;
+#bidsTable tbody tr.project-break:hover td {
+  box-shadow: none !important;
+}
+
+/* Ensure GC detail rows do not show borders between the main and detail rows */
+#bidsTable tbody tr.gc-detail-row td {
+  border-top: none !important;
+  border-bottom: none !important;
 }
 
     /* GC info / detail row styling — make multi-line contractor details readable */
@@ -452,12 +475,28 @@ foreach ($gcCanonical as $canon => $alts) {
                   $inList = implode(',', array_map(function($v){ return "'".addslashes($v)."'"; }, $projKeys));
                   try {
                     // Try to include a `winner` flag if present in schema; wrap in try/catch so missing column won't break page
-                    $gres2 = $conn->query("SELECT id, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, dhss_project_number, IFNULL(winner,0) AS winner FROM general_contractor WHERE dhss_project_number IN (" . $inList . ")");
+                    // Order so winner (if any) appears first, then by id to keep a deterministic first-added ordering
+                    $gres2 = $conn->query("SELECT id, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, dhss_project_number, IFNULL(winner,0) AS winner FROM general_contractor WHERE dhss_project_number IN (" . $inList . ") ORDER BY IFNULL(winner,0) DESC, id ASC");
                     if ($gres2) {
+                      // keep per-project seen set to dedupe contractors by id or normalized name+number
+                      $seenPerProject = [];
                       while ($g = $gres2->fetch_assoc()) {
                         $key = isset($g['dhss_project_number']) ? $g['dhss_project_number'] : '';
                         if ($key === '') continue;
                         if (!isset($gcByProject[$key])) $gcByProject[$key] = [];
+                        if (!isset($seenPerProject[$key])) $seenPerProject[$key] = [];
+
+                        // create a dedupe key: prefer id when present, otherwise normalized name|number
+                        $duKey = '';
+                        if (!empty($g['id'])) {
+                          $duKey = 'id:' . (string)$g['id'];
+                        } else {
+                          $nm = strtolower(trim((string)($g['general_contractor_name'] ?? $g['general_contractor'] ?? '')));
+                          $nn = strtolower(trim((string)($g['general_contractor_number'] ?? '')));
+                          $duKey = 'nm:' . $nm . '|num:' . $nn;
+                        }
+                        if (in_array($duKey, $seenPerProject[$key], true)) continue;
+                        $seenPerProject[$key][] = $duKey;
                         $gcByProject[$key][] = $g;
                       }
                     }
@@ -557,14 +596,26 @@ foreach ($gcCanonical as $canon => $alts) {
                         // Determine project key and contractors for this bid
                         $projKey = isset($r['dhss_project_number']) ? trim((string)$r['dhss_project_number']) : '';
                         $gcs = ($projKey !== '' && isset($gcByProject[$projKey])) ? $gcByProject[$projKey] : [];
-                        // pick the winner contractor per rules: winner flag -> single contractor -> otherwise blank
-                        $winnerGc = null;
+                        // pick the primary contractor per rules: winner if present, otherwise the first-added contractor (if any)
+                        $primaryGc = null;
                         if (!empty($gcs)) {
-                          foreach ($gcs as $g) { if (!empty($g['winner']) && (int)$g['winner'] === 1) { $winnerGc = $g; break; } }
-                          if ($winnerGc === null) {
-                            if (count($gcs) === 1) { $winnerGc = $gcs[0]; }
-                            else { $winnerGc = null; }
+                          // prefer explicit winner flag
+                          foreach ($gcs as $g) { if (!empty($g['winner']) && (int)$g['winner'] === 1) { $primaryGc = $g; break; } }
+                          // if no winner, choose the first contractor in the list as primary
+                          if ($primaryGc === null && count($gcs) > 0) {
+                            $primaryGc = $gcs[0];
                           }
+                        }
+                        // Determine normalized display values for the chosen primary GC (used for skipping duplicates)
+                        $primaryDisplayName = '';
+                        $primaryDisplayNumber = '';
+                        if ($primaryGc !== null) {
+                          $primaryDisplayName = strtolower(trim((string)($primaryGc['general_contractor_name'] ?? $primaryGc['general_contractor'] ?? '')));
+                          $primaryDisplayNumber = strtolower(trim((string)($primaryGc['general_contractor_number'] ?? '')));
+                        } else {
+                          // fallback to values from the bid row if no primary GC found
+                          $primaryDisplayName = strtolower(trim((string)($r['general_contractor_name'] ?? $r['gc_name'] ?? $r['general_contractor'] ?? '')));
+                          $primaryDisplayNumber = strtolower(trim((string)($r['general_contractor_number'] ?? $r['gc_number'] ?? '')));
                         }
 
                         foreach ($bidColumns as $col) {
@@ -593,15 +644,15 @@ foreach ($gcCanonical as $canon => $alts) {
                             $canon = null;
                             foreach ($gcColMap as $k => $v) { if ($v === $col) { $canon = $k; break; } }
                             $val = '';
-                            if ($winnerGc !== null) {
+                            if ($primaryGc !== null) {
                               if ($canon === 'general_contractor' || $canon === 'general_contractor_name') {
-                                $val = !empty($winnerGc['general_contractor_name']) ? $winnerGc['general_contractor_name'] : (isset($winnerGc['general_contractor']) ? $winnerGc['general_contractor'] : '');
+                                $val = !empty($primaryGc['general_contractor_name']) ? $primaryGc['general_contractor_name'] : (isset($primaryGc['general_contractor']) ? $primaryGc['general_contractor'] : '');
                               } elseif ($canon === 'general_contractor_number') {
-                                $val = isset($winnerGc['general_contractor_number']) ? $winnerGc['general_contractor_number'] : '';
+                                $val = isset($primaryGc['general_contractor_number']) ? $primaryGc['general_contractor_number'] : '';
                               } elseif ($canon === 'general_contractor_email') {
-                                $val = isset($winnerGc['general_contractor_email']) ? $winnerGc['general_contractor_email'] : '';
+                                $val = isset($primaryGc['general_contractor_email']) ? $primaryGc['general_contractor_email'] : '';
                               } elseif ($canon === 'general_contractor_address') {
-                                $val = isset($winnerGc['general_contractor_address']) ? $winnerGc['general_contractor_address'] : '';
+                                $val = isset($primaryGc['general_contractor_address']) ? $primaryGc['general_contractor_address'] : '';
                               }
                             }
                             // Fallback: if no winnerGc, try to use values from the bid row itself or client_winner lookup
@@ -622,8 +673,15 @@ foreach ($gcCanonical as $canon => $alts) {
                                 elseif (!empty($r['gc_address'])) $val = $r['gc_address'];
                               }
                             }
-                            // style winner values green
-                            $style = ($val !== '') ? 'style="color:#10b981;font-weight:700;"' : '';
+                            // style winner values green only when the primary contractor is actually marked winner
+                            $hasWinnerFlag = false;
+                            if ($primaryGc !== null && isset($primaryGc['winner']) && (int)$primaryGc['winner'] === 1) {
+                              $hasWinnerFlag = true;
+                            } elseif (!empty($r['client_winner']) && $primaryGc !== null && isset($primaryGc['id']) && is_numeric($r['client_winner']) && (int)$r['client_winner'] === (int)$primaryGc['id']) {
+                              // also treat as winner when bid row explicitly references this contractor as client_winner
+                              $hasWinnerFlag = true;
+                            }
+                            $style = ($val !== '' && $hasWinnerFlag) ? 'style="color:#10b981;font-weight:700;"' : '';
                             echo '<td data-col="' . htmlspecialchars($col) . '" ' . $style . '>' . htmlspecialchars($val) . '</td>';
                           } else {
                             // regular non-GC column: show value from bids table
@@ -673,6 +731,21 @@ foreach ($gcCanonical as $canon => $alts) {
                         // Render one contractor-detail row per contractor for this project
                         $parentId = isset($r['bid_id']) ? $r['bid_id'] : '';
                         foreach ($gcs as $g) {
+                          // skip rendering the primary contractor in the details to avoid duplicate display
+                          $skip = false;
+                          if ($primaryGc !== null) {
+                            if (isset($primaryGc['id']) && isset($g['id']) && (int)$primaryGc['id'] === (int)$g['id']) {
+                              $skip = true;
+                            } else {
+                              // fallback comparison by normalized, case-insensitive name+number when IDs are not available
+                              $gname = strtolower(trim((string)($g['general_contractor_name'] ?? $g['general_contractor'] ?? '')));
+                              $gnum = strtolower(trim((string)($g['general_contractor_number'] ?? '')));
+                              if ($primaryDisplayName !== '' && $gname !== '' && $primaryDisplayName === $gname) $skip = true;
+                              if (!$skip && $primaryDisplayNumber !== '' && $gnum !== '' && $primaryDisplayNumber === $gnum) $skip = true;
+                            }
+                          }
+                          if ($skip) continue;
+
                           echo '<tr class="gc-detail-row" data-parent-bid-id="' . htmlspecialchars($parentId) . '" style="background:rgba(249,250,251,0.6);font-size:12px;">';
                           foreach ($bidColumns as $col) {
                             if ($col === 'status') continue;
@@ -1289,11 +1362,19 @@ foreach ($gcCanonical as $canon => $alts) {
                 // ensure container is a positioned scroll container so sticky headers work
                 container.style.position = 'relative';
 
+                var seenGc = new Set();
                 items.forEach(function(it){
                   var id = it.id || '';
                   var gc = it.general_contractor || '';
                   var name = it.general_contractor_name || '';
                   var num = it.general_contractor_number || '';
+                  // dedupe identical contractor entries by normalized name+number to avoid repeated rows
+                  try {
+                    var nm = (gc || name || '').toString().trim().toLowerCase();
+                    var nn = (num || '').toString().trim().toLowerCase();
+                    var key = nm + '|' + nn;
+                    if (seenGc.has(key)) return; seenGc.add(key);
+                  } catch(e) {}
                   var mail = it.general_contractor_email || '';
                   var addr = it.general_contractor_address || '';
                   var isWinner = (it.winner && (it.winner == 1 || it.winner === '1' || it.winner === true));
@@ -2194,8 +2275,8 @@ function populateClientWinners_fallback(projectKey, selectedValue) {
 // Highlight GC cells that match the chosen Client Winner for a project
 function applyGcWinnerHighlight(projectKey, selectedGc) {
   try {
-    // remove previous highlights
-    Array.from(document.querySelectorAll('#bidsTable td[data-col="general_contractor"].gc-winner-highlight')).forEach(function(td){ td.classList.remove('gc-winner-highlight'); });
+    // remove previous highlights from any GC-related cell
+    Array.from(document.querySelectorAll('#bidsTable td.gc-winner-highlight')).forEach(function(td){ td.classList.remove('gc-winner-highlight'); });
 
     if (!projectKey || !selectedGc) return;
     var normSel = selectedGc.toString().trim().toLowerCase();
@@ -2206,24 +2287,38 @@ function applyGcWinnerHighlight(projectKey, selectedGc) {
       try {
         var obj = JSON.parse(raw || '{}') || {};
         var proj = (obj.dhss_project_number || '').toString().trim();
-        var td = r.querySelector('td[data-col="general_contractor"]');
-        var gc = (obj.general_contractor || (td ? td.textContent : '') || '').toString().trim();
-        if (proj === projectKey && gc && gc.toLowerCase() === normSel) match = true;
+        // collect candidate GC strings from the bid object and from possible GC cells
+        var candidates = [];
+        try { if (obj.general_contractor) candidates.push(String(obj.general_contractor).trim()); } catch(e){}
+        try { if (obj.general_contractor_name) candidates.push(String(obj.general_contractor_name).trim()); } catch(e){}
+        try { if (obj.gc_name) candidates.push(String(obj.gc_name).trim()); } catch(e){}
+        try { if (obj.general_contractor_number) candidates.push(String(obj.general_contractor_number).trim()); } catch(e){}
+        var cellKeys = ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number'];
+        cellKeys.forEach(function(k){ try { var td = r.querySelector('td[data-col="' + k + '"]'); if (td && td.textContent) candidates.push(String(td.textContent).trim()); } catch(e){} });
+        for (var ci = 0; ci < candidates.length; ci++) {
+          try { var c = (candidates[ci] || '').toString().toLowerCase(); if (proj === projectKey && c === normSel) { match = true; break; } } catch(e){}
+        }
       } catch(e) {
-        // fallback: inspect cell text
+        // fallback: inspect multiple GC cells for a match
         try {
-          var td = r.querySelector('td[data-col="general_contractor"]');
           var projTd = r.querySelector('td[data-col="dhss_project_number"]');
           var projVal = projTd ? projTd.textContent.trim() : '';
-          var gcText = td ? td.textContent.trim() : '';
-          if (projVal === projectKey && gcText.toLowerCase() === normSel) match = true;
+          var fallbackKeys = ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number'];
+          for (var ki = 0; ki < fallbackKeys.length; ki++) {
+            try {
+              var tdc = r.querySelector('td[data-col="' + fallbackKeys[ki] + '"]');
+              var txt = tdc ? (tdc.textContent || '').trim() : '';
+              if (projVal === projectKey && txt && txt.toLowerCase() === normSel) { match = true; break; }
+            } catch(e){}
+          }
         } catch(ignore){}
       }
 
       if (match) {
         try {
-          var target = r.querySelector('td[data-col="general_contractor"]');
-          if (target) target.classList.add('gc-winner-highlight');
+          // apply highlight to all GC-related columns in this row
+          var gcCols = ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number','general_contractor_email','general_contractor_address'];
+          gcCols.forEach(function(col){ try { var tdc = r.querySelector('td[data-col="' + col + '"]'); if (tdc) tdc.classList.add('gc-winner-highlight'); } catch(e){} });
         } catch(e){}
       }
     });
@@ -2273,6 +2368,71 @@ function syncGcDisplayForProjects() {
                           cellMap.forEach(function(it){
                             try { var td = r.querySelector('td[data-col="' + it.k + '"]'); if (td) td.textContent = it.v || ''; } catch(e){}
                           });
+                          // Also refresh the contractor-detail rows that sit under this bid row
+                          try {
+                            var parentId = obj.bid_id || '';
+                            // Build list of contractors to render in details (skip the primary contractor)
+                            var contractorsToShow = Array.isArray(j.contractors) ? j.contractors.slice() : [];
+                            if (chosen && chosen.id) {
+                              contractorsToShow = contractorsToShow.filter(function(c){ try { return !(c && c.id && String(c.id) === String(chosen.id)); } catch(e){ return true; } });
+                            }
+
+                            // Find existing detail rows for this parent bid
+                            var detailRows = [];
+                            if (parentId) {
+                              detailRows = Array.from(r.parentNode.querySelectorAll('tr.gc-detail-row[data-parent-bid-id="' + parentId + '"]')) || [];
+                            }
+
+                            // Helper: header columns order/data-col keys
+                            var headerCols = Array.from(document.querySelectorAll('#bidsTable thead th')).map(function(th){ return th.getAttribute('data-col') || ''; });
+
+                            // Ensure we have enough detail rows; clone last detail row or create new empty ones
+                            if (contractorsToShow.length > detailRows.length) {
+                              var toCreate = contractorsToShow.length - detailRows.length;
+                              var template = detailRows.length ? detailRows[detailRows.length-1] : null;
+                              for (var ci = 0; ci < toCreate; ci++) {
+                                var newTr = document.createElement('tr');
+                                newTr.className = 'gc-detail-row';
+                                if (parentId) newTr.setAttribute('data-parent-bid-id', parentId);
+                                newTr.style.background = 'rgba(249,250,251,0.6)'; newTr.style.fontSize = '12px';
+                                // create tds for each header column
+                                for (var hc = 0; hc < headerCols.length; hc++) {
+                                  var colKey = headerCols[hc] || '';
+                                  var td = document.createElement('td');
+                                  if (colKey) td.setAttribute('data-col', colKey);
+                                  newTr.appendChild(td);
+                                }
+                                // insert after last existing detail row or main row
+                                if (detailRows.length) {
+                                  var ref = detailRows[detailRows.length-1];
+                                  ref.parentNode.insertBefore(newTr, ref.nextSibling);
+                                } else {
+                                  r.parentNode.insertBefore(newTr, r.nextSibling);
+                                }
+                                detailRows.push(newTr);
+                              }
+                            }
+
+                            // Populate detail rows from contractorsToShow
+                            for (var di = 0; di < Math.max(detailRows.length, contractorsToShow.length); di++) {
+                              var dr = detailRows[di];
+                              var gc = contractorsToShow[di] || null;
+                              if (!dr) continue;
+                              // Fill GC-related cells; clear non-GC cells
+                              headerCols.forEach(function(colName){
+                                try {
+                                  var td = dr.querySelector('td[data-col="' + colName + '"]');
+                                  if (!td) return;
+                                  var isGc = ['general_contractor','general_contractor_name','gc_name','general_contractor_number','gc_number','general_contractor_email','general_contractor_address'].indexOf(colName) !== -1;
+                                  if (!gc || !isGc) { td.textContent = ''; return; }
+                                  if (colName === 'general_contractor' || colName === 'general_contractor_name' || colName === 'gc_name') td.textContent = (gc.general_contractor_name || gc.general_contractor || '') || '';
+                                  else if (colName === 'general_contractor_number' || colName === 'gc_number') td.textContent = gc.general_contractor_number || '';
+                                  else if (colName === 'general_contractor_email') td.textContent = gc.general_contractor_email || '';
+                                  else if (colName === 'general_contractor_address') td.textContent = gc.general_contractor_address || '';
+                                } catch(e){}
+                              });
+                            }
+                          } catch(e) {}
                         } else {
                           // no contractors: clear common GC-related cells
                           ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number','general_contractor_email','general_contractor_address'].forEach(function(k){
