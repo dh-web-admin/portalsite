@@ -63,7 +63,7 @@ HTML;
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes']) && isset($_POST['equipment_id'])) {
     $fields = [
-        'dhcst_equipment_number', 'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
+        'dhss_equipment_number', 'type', 'make', 'model', 'engine', 'engine_serial_number',
         'vehicle_year', 'vin', 'transmission', 'trans_serial_number', 'location', 'operating_condition'
     ];
     $updates = [];
@@ -826,93 +826,83 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
         <table class="equipment-details-table">
             <tbody>
                 <tr>
-                    <th class="equipment-label-cell">Make</th>
+                    <th class="equipment-label-cell">DHSS Equipment #</th>
                     <td class="equipment-value-cell">
-                        <?php if ($editMode) { ?>
-                            <input type="text" name="make" value="<?php echo htmlspecialchars($equipment['make'] ?? ''); ?>" class="equipment-editable-cell" />
-                        <?php } else { ?>
-                            <?php echo htmlspecialchars($equipment['make'] ?? ''); ?>
-                        <?php } ?>
-                    </td>
-                    <th class="equipment-label-cell">DHSS Equipment number</th>
-                    <td class="equipment-value-cell equipment-value-cell--border">
                         <?php if ($editMode) { ?>
                             <input type="text" name="dhss_equipment_number" value="<?php echo htmlspecialchars($equipment['dhss_equipment_number'] ?? ''); ?>" class="equipment-editable-cell" />
                         <?php } else { ?>
                             <?php echo htmlspecialchars($equipment['dhss_equipment_number'] ?? ''); ?>
                         <?php } ?>
                     </td>
-                </tr>
-                <tr>
-                    <th class="equipment-label-cell">Model</th>
-                    <td class="equipment-value-cell">
+                    <th class="equipment-label-cell">Make</th>
+                    <td class="equipment-value-cell equipment-value-cell--border">
                         <?php if ($editMode) { ?>
-                            <input type="text" name="model" value="<?php echo htmlspecialchars($equipment['model'] ?? ''); ?>" class="equipment-editable-cell" />
+                            <input type="text" name="make" value="<?php echo htmlspecialchars($equipment['make'] ?? ''); ?>" class="equipment-editable-cell" />
                         <?php } else { ?>
-                            <?php echo htmlspecialchars($equipment['model'] ?? ''); ?>
+                            <?php echo htmlspecialchars($equipment['make'] ?? ''); ?>
                         <?php } ?>
                     </td>
+                </tr>
+                <tr>
                     <th class="equipment-label-cell">Type</th>
-                    <td class="equipment-value-cell equipment-value-cell--border">
+                    <td class="equipment-value-cell">
                         <?php if ($editMode) { ?>
                             <input type="text" name="type" value="<?php echo htmlspecialchars($equipment['type'] ?? ''); ?>" class="equipment-editable-cell" />
                         <?php } else { ?>
                             <?php echo htmlspecialchars($equipment['type'] ?? ''); ?>
                         <?php } ?>
                     </td>
-                </tr>
-                <tr>
                     <th class="equipment-label-cell">Engine</th>
-                    <td class="equipment-value-cell">
+                    <td class="equipment-value-cell equipment-value-cell--border">
                         <?php if ($editMode) { ?>
                             <input type="text" name="engine" value="<?php echo htmlspecialchars($equipment['engine'] ?? ''); ?>" class="equipment-editable-cell" />
                         <?php } else { ?>
                             <?php echo htmlspecialchars($equipment['engine'] ?? ''); ?>
                         <?php } ?>
                     </td>
+                </tr>
+                <tr>
                     <th class="equipment-label-cell">Year</th>
-                    <td class="equipment-value-cell equipment-value-cell--border">
+                    <td class="equipment-value-cell">
                         <?php if ($editMode) { ?>
                             <input type="text" name="vehicle_year" value="<?php echo htmlspecialchars($equipment['vehicle_year'] ?? ''); ?>" class="equipment-editable-cell" />
                         <?php } else { ?>
                             <?php echo htmlspecialchars($equipment['vehicle_year'] ?? ''); ?>
                         <?php } ?>
                     </td>
-                </tr>
-                <tr>
                     <th class="equipment-label-cell">Engine Serial Number</th>
-                    <td class="equipment-value-cell">
+                    <td class="equipment-value-cell equipment-value-cell--border">
                         <?php if ($editMode) { ?>
                             <input type="text" name="engine_serial_number" value="<?php echo htmlspecialchars($equipment['engine_serial_number'] ?? ''); ?>" class="equipment-editable-cell" />
                         <?php } else { ?>
                             <?php echo htmlspecialchars($equipment['engine_serial_number'] ?? ''); ?>
                         <?php } ?>
                     </td>
-                    <th class="equipment-label-cell">Vin</th>
-                    <td class="equipment-value-cell equipment-value-cell--border">
+                </tr>
+                <tr>
+                    <th class="equipment-label-cell">Vin #</th>
+                    <td class="equipment-value-cell">
                         <?php if ($editMode) { ?>
                             <input type="text" name="vin" value="<?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>" class="equipment-editable-cell" />
                         <?php } else { ?>
                             <?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>
                         <?php } ?>
                     </td>
-                </tr>
-                <tr>
                     <th class="equipment-label-cell">Transmission</th>
-                    <td class="equipment-value-cell">
-                        <?php if ($editMode) { ?>
-                            <input type="text" name="transmission" value="<?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>" class="equipment-editable-cell" />
-                        <?php } else { ?>
-                            <?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>
-                        <?php } ?>
-                    </td>
-                    <th class="equipment-label-cell">Trans Serial Number</th>
                     <td class="equipment-value-cell equipment-value-cell--border">
                         <?php if ($editMode) { ?>
-                            <input type="text" name="trans_serial_number" value="<?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>" class="equipment-editable-cell" />
-                        <?php } else { ?>
-                            <?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>
-                        <?php } ?>
+                            <div style="display:flex;flex-direction:column;gap:6px;">
+                                <input type="text" name="transmission" value="<?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>" class="equipment-editable-cell" placeholder="Transmission" />
+                                <input type="text" name="trans_serial_number" value="<?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>" class="equipment-editable-cell" placeholder="Trans Serial Number" />
+                            </div>
+                        <?php } else {
+                            $transSerial = trim((string)($equipment['trans_serial_number'] ?? ''));
+                            if ($transSerial !== '') {
+                                echo htmlspecialchars($transSerial);
+                            } else {
+                                echo htmlspecialchars($equipment['transmission'] ?? '');
+                            }
+                        } ?>
                     </td>
                 </tr>
                 <tr>
@@ -958,7 +948,17 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                 echo '<button class="equipment-add-filter-btn" onclick="window.location.href=\'Airfilters.php?id=' . $equipmentId . '\'" style="display:none;">Add Filter</button>';
                                 echo '</div>';
                             } else {
-                                echo htmlspecialchars($filterVal);
+                                $fv = strtolower($filterVal);
+                                $filterSvgMap = [
+                                    'green' => 'greenfilter.svg',
+                                    'yellow' => 'yellowfilter.svg',
+                                    'red' => 'redfilter.svg'
+                                ];
+                                if (isset($filterSvgMap[$fv])) {
+                                    echo '<img src="images/' . htmlspecialchars($filterSvgMap[$fv]) . '" alt="' . htmlspecialchars($filterVal) . '" style="height:28px;vertical-align:middle;" />';
+                                } else {
+                                    echo htmlspecialchars($filterVal);
+                                }
                             }
                         ?>
                     </td>
@@ -1005,6 +1005,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                 <button class="equipment-tab">Parts</button>
                 <a class="equipment-tab" href="all_dimensions.php?id=<?php echo $equipmentId; ?>">Dimensions</a>
                 <button class="equipment-tab">Photos</button>
+                <a class="equipment-tab" id="wishlistBtn" style="margin-left:6px;pointer-events:none;opacity:0.5;">Wishlist</a>
             </div>
         </div>
 
