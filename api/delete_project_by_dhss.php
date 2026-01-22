@@ -24,25 +24,49 @@ try {
   }
 
   // Delete bids that match this DHSS project number
-  $delBids = $conn->prepare('DELETE FROM `bids` WHERE `dhss_project_number` = ?');
-  if ($delBids === false) throw new Exception('Prepare delete bids failed: ' . $conn->error);
-  $delBids->bind_param('s', $dhss);
-  if ($delBids->execute() === false) throw new Exception('Execute delete bids failed: ' . $delBids->error);
-  $delBids->close();
+  // Helper: find which column (if any) in a table stores the DHSS project number
+  $candidateCols = ['dhss_project_number','DHSS_Project_Number','DHSSProjectNumber','dhss_project','DHSS_ProjectNumber'];
+  $findDhssCol = function($table) use ($conn, $candidateCols) {
+    foreach ($candidateCols as $c) {
+      $esc = $conn->real_escape_string($c);
+      $qr = "SHOW COLUMNS FROM `" . $table . "` LIKE '" . $esc . "'";
+      $res = $conn->query($qr);
+      if ($res && $res->num_rows > 0) return $c;
+    }
+    return null;
+  };
 
-  // Delete general_contractor rows for this DHSS project
-  $delGc = $conn->prepare('DELETE FROM `general_contractor` WHERE `dhss_project_number` = ?');
-  if ($delGc === false) throw new Exception('Prepare delete general_contractor failed: ' . $conn->error);
-  $delGc->bind_param('s', $dhss);
-  if ($delGc->execute() === false) throw new Exception('Execute delete general_contractor failed: ' . $delGc->error);
-  $delGc->close();
+  $bidsCol = $findDhssCol('bids');
+  if ($bidsCol !== null) {
+    $sql = 'DELETE FROM `bids` WHERE `' . $bidsCol . '` = ?';
+    $delBids = $conn->prepare($sql);
+    if ($delBids === false) throw new Exception('Prepare delete bids failed: ' . $conn->error);
+    $delBids->bind_param('s', $dhss);
+    if ($delBids->execute() === false) throw new Exception('Execute delete bids failed: ' . $delBids->error);
+    $delBids->close();
+  }
 
-  // Also attempt to delete Projects entries that match
-  $delProj = $conn->prepare('DELETE FROM `Projects` WHERE `dhss_project_number` = ?');
-  if ($delProj === false) throw new Exception('Prepare delete Projects failed: ' . $conn->error);
-  $delProj->bind_param('s', $dhss);
-  if ($delProj->execute() === false) throw new Exception('Execute delete Projects failed: ' . $delProj->error);
-  $delProj->close();
+  // Delete general_contractor rows for this DHSS project (if column exists)
+  $gcCol = $findDhssCol('general_contractor');
+  if ($gcCol !== null) {
+    $sql = 'DELETE FROM `general_contractor` WHERE `' . $gcCol . '` = ?';
+    $delGc = $conn->prepare($sql);
+    if ($delGc === false) throw new Exception('Prepare delete general_contractor failed: ' . $conn->error);
+    $delGc->bind_param('s', $dhss);
+    if ($delGc->execute() === false) throw new Exception('Execute delete general_contractor failed: ' . $delGc->error);
+    $delGc->close();
+  }
+
+  // Also attempt to delete Projects entries that match (if column exists)
+  $projCol = $findDhssCol('Projects');
+  if ($projCol !== null) {
+    $sql = 'DELETE FROM `Projects` WHERE `' . $projCol . '` = ?';
+    $delProj = $conn->prepare($sql);
+    if ($delProj === false) throw new Exception('Prepare delete Projects failed: ' . $conn->error);
+    $delProj->bind_param('s', $dhss);
+    if ($delProj->execute() === false) throw new Exception('Execute delete Projects failed: ' . $delProj->error);
+    $delProj->close();
+  }
 
   $conn->commit();
   echo json_encode(['success' => true]);

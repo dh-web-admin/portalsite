@@ -39,15 +39,43 @@ if (array_key_exists('pictures', $_POST)) {
     }
 }
 $operating_condition = $_POST['operating_condition'] ?? '';
+// Optional override: condition to set on the equipment after repair (separate from the original issue's operating_condition)
+$condition_after_repair = isset($_POST['condition_after_repair']) ? trim((string)$_POST['condition_after_repair']) : '';
+
+// Detect whether DB has the column to persist
+$afterColRes = $conn->query("SHOW COLUMNS FROM equipment_history LIKE 'condition_after_repair'");
+$afterColExists = ($afterColRes && $afterColRes->num_rows > 0);
 
 // Update the issue record
-$stmt = $conn->prepare('UPDATE equipment_history SET mechanic_diagnosis = ?, date_repaired = ?, repair_mechanic = ?, parts_fixed = ?, pictures = ?, operating_condition = ?, equipment_hours_at_repair = NULLIF(?, "") WHERE id = ?');
+$sqlUpdate = 'UPDATE equipment_history SET mechanic_diagnosis = ?, date_repaired = ?, repair_mechanic = ?, parts_fixed = ?, pictures = ?, operating_condition = ?';
+if ($afterColExists) {
+    $sqlUpdate .= ', condition_after_repair = ?';
+}
+$sqlUpdate .= ', equipment_hours_at_repair = NULLIF(?, "") WHERE id = ?';
+
+$stmt = $conn->prepare($sqlUpdate);
 if (!$stmt) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Prepare failed.']);
     exit();
 }
-$stmt->bind_param('sssssssi', $mechanic_diagnosis, $date_repaired, $repair_mechanic, $parts_fixed, $pictures, $operating_condition, $equipment_hours_at_repair, $issue_id);
+
+// build bind params array
+$bindVars = [$mechanic_diagnosis, $date_repaired, $repair_mechanic, $parts_fixed, $pictures, $operating_condition];
+if ($afterColExists) $bindVars[] = $condition_after_repair;
+$bindVars = array_merge($bindVars, [$equipment_hours_at_repair, $issue_id]);
+
+// Build types string and bind dynamically
+$types = '';
+foreach ($bindVars as $bv) {
+    if (is_int($bv)) $types .= 'i'; else $types .= 's';
+}
+$params = array_merge([$types], $bindVars);
+$refs = [];
+foreach ($params as $key => $value) {
+    $refs[$key] = &$params[$key];
+}
+call_user_func_array([$stmt, 'bind_param'], $refs);
 $ok = $stmt->execute();
 $stmt->close();
 
@@ -71,50 +99,67 @@ if (isset($_POST['equipment_location']) && $equipmentId > 0) {
     }
 }
 
-// After updating an issue, compute equipment operating condition using latest issue
-// but prefer any worse unrepaired condition (red>yellow>green).
+// BEGIN FIX: compute equipmentWorst per RULE
+// Effective condition per row: IF TRIM(IFNULL(condition_after_repair,'')) <> '' THEN condition_after_repair ELSE operating_condition
+// Compute severity from effective condition with mapping: red/inoperable=3, yellow/minor=2, green/fully=1, else 0
+// Exclude superseded originals: NOT EXISTS (SELECT 1 FROM equipment_history eh2 WHERE eh2.original_issue_id = eh.id)
 if ($equipmentId > 0) {
-    $latestCondition = '';
-    $stmtLatest = $conn->prepare('SELECT operating_condition FROM equipment_history WHERE equipment_id = ? ORDER BY date_reported DESC, id DESC LIMIT 1');
-    if ($stmtLatest) {
-        $stmtLatest->bind_param('i', $equipmentId);
-        $stmtLatest->execute();
-        $resLatest = $stmtLatest->get_result();
-        if ($resLatest && ($rowLatest = $resLatest->fetch_assoc())) {
-            $latestCondition = $rowLatest['operating_condition'] ?? '';
-        }
-        $stmtLatest->close();
+    if ($afterColExists) {
+        $sql = "SELECT MAX(
+            CASE
+                WHEN LOWER(eff) = 'red' OR LOWER(eff) LIKE '%inoperable%' THEN 3
+                WHEN LOWER(eff) = 'yellow' OR LOWER(eff) LIKE '%minor%' THEN 2
+                WHEN LOWER(eff) = 'green' OR LOWER(eff) LIKE '%fully%' THEN 1
+                ELSE 0
+            END
+        ) AS equipmentWorst FROM (
+            SELECT (CASE WHEN TRIM(IFNULL(condition_after_repair,'')) <> '' THEN condition_after_repair ELSE operating_condition END) AS eff, id
+            FROM equipment_history eh
+            WHERE eh.equipment_id = ? AND NOT EXISTS (SELECT 1 FROM equipment_history eh2 WHERE eh2.original_issue_id = eh.id)
+        ) t";
+    } else {
+        $sql = "SELECT MAX(
+            CASE
+                WHEN LOWER(operating_condition) = 'red' OR LOWER(operating_condition) LIKE '%inoperable%' THEN 3
+                WHEN LOWER(operating_condition) = 'yellow' OR LOWER(operating_condition) LIKE '%minor%' THEN 2
+                WHEN LOWER(operating_condition) = 'green' OR LOWER(operating_condition) LIKE '%fully%' THEN 1
+                ELSE 0
+            END
+        ) AS equipmentWorst FROM equipment_history eh WHERE eh.equipment_id = ? AND NOT EXISTS (SELECT 1 FROM equipment_history eh2 WHERE eh2.original_issue_id = eh.id)";
     }
 
-    $worst = 0;
-    // Exclude original rows that have a newer edited copy (they are superseded)
-    $stmtWorst = $conn->prepare("SELECT MAX(CASE WHEN operating_condition='red' THEN 3 WHEN operating_condition='yellow' THEN 2 WHEN operating_condition='green' THEN 1 ELSE 0 END) AS worst FROM equipment_history eh WHERE eh.equipment_id = ? AND eh.date_repaired IS NULL AND NOT EXISTS (SELECT 1 FROM equipment_history eh2 WHERE eh2.original_issue_id = eh.id)");
+    $equipmentWorst = 0;
+    $stmtWorst = $conn->prepare($sql);
     if ($stmtWorst) {
         $stmtWorst->bind_param('i', $equipmentId);
         $stmtWorst->execute();
         $resWorst = $stmtWorst->get_result();
-        if ($resWorst && ($r = $resWorst->fetch_assoc())) {
-            $worst = (int)($r['worst'] ?? 0);
+        if ($resWorst && ($rw = $resWorst->fetch_assoc())) {
+            $equipmentWorst = (int)($rw['equipmentWorst'] ?? 0);
         }
         $stmtWorst->close();
     }
 
-    $map = ['red' => 3, 'yellow' => 2, 'green' => 1];
-    $latestSeverity = isset($map[$latestCondition]) ? $map[$latestCondition] : 0;
-    if ($worst > $latestSeverity) {
-        $final = $worst === 3 ? 'red' : ($worst === 2 ? 'yellow' : ($worst === 1 ? 'green' : ''));
-    } else {
-        $final = $latestCondition;
+    $final = '';
+    if ($equipmentWorst === 3) $final = 'red';
+    elseif ($equipmentWorst === 2) $final = 'yellow';
+    elseif ($equipmentWorst === 1) $final = 'green';
+
+    $stmtUpd = $conn->prepare('UPDATE equipments SET operating_condition = ? WHERE equipment_id = ?');
+    if ($stmtUpd) {
+        $stmtUpd->bind_param('si', $final, $equipmentId);
+        $stmtUpd->execute();
+        $stmtUpd->close();
     }
 
-    if ($final !== null) {
-        $stmtUpd = $conn->prepare('UPDATE equipments SET operating_condition = ? WHERE equipment_id = ?');
-        if ($stmtUpd) {
-            $stmtUpd->bind_param('si', $final, $equipmentId);
-            $stmtUpd->execute();
-            $stmtUpd->close();
-        }
+    if (!empty($_GET['debug'])) {
+        $debugInfo = ['equipment_id' => $equipmentId, 'equipmentWorst' => $equipmentWorst, 'final' => $final];
     }
 }
+// END FIX
 
-echo json_encode(['success' => true]);
+$resp = ['success' => true];
+if (!empty($debugInfo) && !empty($_GET['debug'])) {
+    $resp['debug'] = $debugInfo;
+}
+echo json_encode($resp);

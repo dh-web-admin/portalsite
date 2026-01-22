@@ -1166,6 +1166,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                             <th>Date Reported</th>
                                             <th>Equipment Location</th>
                                             <th>Operating Condition</th>
+                                            <th>Condition After Repair</th>
                                             <th>Mechanic Diagnosis</th>
                                             <th>Equipment Hours</th>
                                             <th>Date Repaired</th>
@@ -1176,10 +1177,20 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                                     </thead>
                                     <tbody>
 <?php
-    $historyStmt = $conn->prepare('SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, mechanic_diagnosis, equipment_hours_at_repair, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id FROM equipment_history WHERE equipment_id = ? ORDER BY date_reported DESC, id DESC');
-$historyStmt->bind_param('i', $equipmentId);
-$historyStmt->execute();
-$historyRes = $historyStmt->get_result();
+    // Check whether the 'condition_after_repair' column exists in this database.
+    $afterColRes = $conn->query("SHOW COLUMNS FROM equipment_history LIKE 'condition_after_repair'");
+    if ($afterColRes && $afterColRes->num_rows > 0) {
+        $afterSelect = 'condition_after_repair, ';
+    } else {
+        // Column doesn't exist on this install; return NULL for compatibility so code can continue
+        $afterSelect = "NULL AS condition_after_repair, ";
+    }
+
+    $sql = 'SELECT id, date_reported, reported_issues, reported_by, equipment_location, operating_condition, ' . $afterSelect . 'mechanic_diagnosis, equipment_hours_at_repair, date_repaired, repair_mechanic, parts_fixed, pictures, is_edited_copy, original_issue_id FROM equipment_history WHERE equipment_id = ? ORDER BY date_reported DESC, id DESC';
+    $historyStmt = $conn->prepare($sql);
+    $historyStmt->bind_param('i', $equipmentId);
+    $historyStmt->execute();
+    $historyRes = $historyStmt->get_result();
 
 // Build arrays to track the chain of edits
 $allRows = [];
@@ -1198,10 +1209,10 @@ if ($historyRes && $historyRes->num_rows > 0) {
 }
 
 // Debug helper: show counts when ?debug=1 is present
-if (!empty($_GET['debug'])) {
+    if (!empty($_GET['debug'])) {
     $fetched = $historyRes ? $historyRes->num_rows : 0;
     $hiddenIds = array_keys($hasNewerVersion);
-    echo '<tr><td colspan="12" style="background:#fff7ed;color:#92400e;padding:8px;font-weight:600;">Debug: fetched ' . intval($fetched) . ' rows; hidden originals: ' . htmlspecialchars(json_encode($hiddenIds)) . '</td></tr>';
+    echo '<tr><td colspan="13" style="background:#fff7ed;color:#92400e;padding:8px;font-weight:600;">Debug: fetched ' . intval($fetched) . ' rows; hidden originals: ' . htmlspecialchars(json_encode($hiddenIds)) . '</td></tr>';
 }
 
 if (count($allRows) > 0) {
@@ -1262,6 +1273,19 @@ if (count($allRows) > 0) {
             $opConditionDisplay = htmlspecialchars($row['operating_condition'] ?? '');
         }
         echo '<td>' . htmlspecialchars($opConditionDisplay) . '</td>';
+        // Condition After Repair column (if present)
+        $afterCond = strtolower(trim($row['condition_after_repair'] ?? ''));
+        $afterCondDisplay = '';
+        if ($afterCond === 'green') {
+            $afterCondDisplay = 'Fully operable';
+        } elseif ($afterCond === 'yellow') {
+            $afterCondDisplay = 'minor issue|operable';
+        } elseif ($afterCond === 'red') {
+            $afterCondDisplay = 'inoperable';
+        } else {
+            $afterCondDisplay = $row['condition_after_repair'] ?? '';
+        }
+        echo '<td>' . htmlspecialchars($afterCondDisplay) . '</td>';
         echo '<td>' . htmlspecialchars($row['mechanic_diagnosis'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['equipment_hours_at_repair'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['date_repaired'] ?? '') . '</td>';
@@ -1283,7 +1307,7 @@ if (count($allRows) > 0) {
         echo '</tr>';
     }
 } else {
-    echo '<tr><td colspan="11" style="text-align: center; padding: 24px; color: #94a3b8;">No history records yet. Add equipment issues and repairs to track maintenance history.</td></tr>';
+    echo '<tr><td colspan="13" style="text-align: center; padding: 24px; color: #94a3b8;">No history records yet. Add equipment issues and repairs to track maintenance history.</td></tr>';
 }
 $historyStmt->close();
 ?>
