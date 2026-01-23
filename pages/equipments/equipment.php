@@ -1289,7 +1289,17 @@ if (count($allRows) > 0) {
         echo '<td>' . htmlspecialchars($afterCondDisplay) . '</td>';
         echo '<td>' . htmlspecialchars($row['mechanic_diagnosis'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['equipment_hours_at_repair'] ?? '') . '</td>';
-        echo '<td>' . htmlspecialchars($row['date_repaired'] ?? '') . '</td>';
+        $rawDateRepaired = $row['date_repaired'] ?? '';
+        $displayDateRepaired = '';
+        if (trim((string)$rawDateRepaired) !== '') {
+            $ts = strtotime($rawDateRepaired);
+            if ($ts !== false && $ts !== -1) {
+                $displayDateRepaired = date('m/d/Y', $ts);
+            } else {
+                $displayDateRepaired = $rawDateRepaired;
+            }
+        }
+        echo '<td>' . htmlspecialchars($displayDateRepaired) . '</td>';
         echo '<td>' . htmlspecialchars($row['repair_mechanic'] ?? '') . '</td>';
         echo '<td>' . htmlspecialchars($row['parts_fixed'] ?? '') . '</td>';
         // Pictures column: show 'View pictures' button when pictures exist
