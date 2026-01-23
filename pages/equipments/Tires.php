@@ -84,30 +84,38 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
         .equipment-back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: background 0.2s ease, transform 0.1s ease; }
         .equipment-back-btn:hover { background: #1d4ed8; }
         .equipment-back-btn:active { transform: scale(0.98); }
-        .oil-page-heading { text-align: center; margin: 8px 0 8px; }
+        .oil-page-heading { text-align: center; margin: 4px 0 4px; }
         .oil-page-heading h1 { margin: 0; font-size: 26px; letter-spacing: 3px; font-weight: 800; color: #0f172a; }
         .oil-page-heading .subtitle { margin-top: 6px; color: #6b7280; font-size: 14px; }
         .selected-info { position: absolute; right: 0; top: 10px; display: flex; align-items: center; justify-content: flex-end; }
         .hours-bubble { display: inline-block; background: #ffffff; padding: 10px 16px; border-radius: 999px; border: 1px solid #e6eef6; font-weight: 700; color: #0f172a; font-size: 15px; box-shadow: 0 8px 22px rgba(2,6,23,0.05); }
-        .info-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: stretch; }
-        .info-card { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1px solid #e6eef6; border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.04); padding: 18px; margin-bottom: 0; min-height: 100%; }
+        .info-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; align-items: stretch; }
+        .info-card { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1px solid #e6eef6; border-radius: 10px; box-shadow: 0 6px 18px rgba(2,6,23,0.04); padding: 12px; margin-bottom: 0; min-height: 88%; }
         .info-card .card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
         .info-card h3 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; }
-        .info-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr; gap: 12px; }
-        .info-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border: 1px solid #eef2f7; border-radius: 10px; }
-        .info-label { color: #475569; font-weight: 700; font-size: 14px; }
-        .info-value { color: #0f172a; font-weight: 700; font-size: 15px; }
-        .edit-btn { padding: 6px 12px; font-size: 12px; font-weight: 700; border-radius: 10px; border: 1px solid #c2c7cf; background: #c2c7cf; color: #ffffff; cursor: pointer; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.15); transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; }
+        .info-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .info-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; }
+        .info-label { color: #475569; font-weight: 700; font-size: 13px; }
+        .info-value { color: #0f172a; font-weight: 700; font-size: 14px; }
+        .edit-btn { padding: 5px 10px; font-size: 12px; font-weight: 700; border-radius: 10px; border: 1px solid #c2c7cf; background: #c2c7cf; color: #ffffff; cursor: pointer; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.15); transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; }
         .edit-btn:hover { background: #aeb4bd; border-color: #aeb4bd; }
         .edit-btn:active { transform: scale(0.98); }
         .tire-guide-section { margin-top: 28px; }
-        .tire-guide-spacer { height: 321px; }
-        .tire-guide-section { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px 20px 16px; background: #ffffff; z-index: 100; display: flex; justify-content: center; }
-        .tire-guide-card { background: transparent; border: none; border-radius: 0; box-shadow: none; padding: 0; max-width: 1100px; width: 100%; }
-        .tire-guide-card h3 { margin: 0 0 6px 0; font-size: 16px; letter-spacing: 0.04em; text-transform: uppercase; color: #0f172a; }
-        .tire-guide-card p { margin: 0 0 16px 0; color: #475569; font-size: 14px; }
-        .tire-annotated { position: relative; max-width: 820px; margin: 0 auto; padding: 8px 12px 0 12px; height: 254px; overflow: hidden; }
-        .tire-arc { width: 100%; height: 506px; background: center top / auto 506px no-repeat url('images/tireguide.svg'); }
+        /* Notes panel */
+        .notes-panel { max-width: 1200px; margin: 6px auto; }
+        .notes-card { background: #fff; border: 1px solid #e6eef6; border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.04); padding: 14px; display: flex; gap: 12px; align-items: flex-start; margin-top: -6px; }
+        .notes-card .card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
+        .notes-card h3 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; }
+        .notes-display { width: 100%; min-height: 84px; padding: 12px; background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; color: #0f172a; white-space: pre-wrap; overflow: auto; }
+        .notes-editor { width: 100%; min-height: 120px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; }
+        .notes-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .tire-guide-spacer { height: 260px; }
+        .tire-guide-section { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 12px 12px 12px; background: #ffffff; z-index: 100; display: flex; justify-content: center; }
+        .tire-guide-card { background: transparent; border: none; border-radius: 0; box-shadow: none; padding: 0; max-width: 900px; width: 100%; }
+        .tire-guide-card h3 { margin: 0 0 6px 0; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: #0f172a; }
+        .tire-guide-card p { margin: 0 0 12px 0; color: #475569; font-size: 12px; }
+        .tire-annotated { position: relative; max-width: 720px; margin: 0 auto; padding: 6px 10px 0 10px; height: 200px; overflow: hidden; }
+        .tire-arc { width: 100%; height: 420px; background: center top / auto 420px no-repeat url('images/tireguide.svg'); }
         /* Modal */
         .tire-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
         .tire-modal.is-open { display: flex; }
@@ -157,7 +165,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                         <div class="subtitle">Tires Reference Sheet</div>
                     </div>
 
-                    <div class="panel-wrapper" style="margin-top: 18px;">
+                    <div class="panel-wrapper" style="margin-top: 4px;">
                         <div class="info-row">
                             <div class="info-card">
                                 <div class="card-header">
@@ -194,6 +202,25 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                                     <li><span class="info-label">Model</span><span class="info-value" id="drive-model-value"><?php echo display_cell($tire['drive_tire_model'] ?? ''); ?></span></li>
                                     <li><span class="info-label">Size</span><span class="info-value" id="drive-size-value"><?php echo display_cell($tire['drive_tire_size'] ?? ''); ?></span></li>
                                 </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="notesContainer" class="notes-panel" data-equipment-id="<?php echo (int)$equipmentId; ?>">
+                        <div class="notes-card">
+                            <div style="flex:1">
+                                <div class="card-header">
+                                    <h3>Add Notes</h3>
+                                    <button type="button" id="notesActionBtn" class="edit-btn">Add Note</button>
+                                </div>
+                                <div id="notesViewArea">
+                                    <div id="notesDisplay" class="notes-display">No notes yet.</div>
+                                    <textarea id="notesEditor" class="notes-editor" style="display:none;"></textarea>
+                                    <div id="notesActions" class="notes-actions" style="display:none;">
+                                        <button type="button" id="notesSave" class="tire-btn tire-btn--primary">Save</button>
+                                        <button type="button" id="notesCancel" class="tire-btn tire-btn--secondary">Cancel</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -293,8 +320,91 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                     } catch (err) {}
                 });
             }
-
             var CAN_EDIT = <?php echo !empty($canEditEquipments) ? 'true' : 'false'; ?>;
+
+            // Notes UI: persist to server notes table via API. data-equipment-id attribute supplies equipment id
+            (function(){
+                var notesContainer = document.getElementById('notesContainer');
+                if (!notesContainer) return;
+                var equipmentIdFromDom = parseInt(notesContainer.dataset.equipmentId || '0', 10) || 0;
+                var fieldName = 'tires';
+                var actionBtn = document.getElementById('notesActionBtn');
+                var displayEl = document.getElementById('notesDisplay');
+                var editor = document.getElementById('notesEditor');
+                var actions = document.getElementById('notesActions');
+                var saveBtn = document.getElementById('notesSave');
+                var cancelBtn = document.getElementById('notesCancel');
+
+                if (!CAN_EDIT && actionBtn) actionBtn.style.display = 'none';
+
+                function renderEmpty(){
+                    displayEl.textContent = 'No notes yet.';
+                    if (actionBtn) actionBtn.textContent = 'Add Note';
+                    displayEl.style.display = '';
+                    editor.style.display = 'none';
+                    if (actions) actions.style.display = 'none';
+                }
+
+                function fetchNote(){
+                    fetch('../../api/get_note.php?equipment_id=' + encodeURIComponent(equipmentIdFromDom) + '&field=' + encodeURIComponent(fieldName), { credentials: 'same-origin' })
+                        .then(function(r){ return r.json(); })
+                        .then(function(j){
+                            if (!j || !j.success) { renderEmpty(); return; }
+                            var note = j.note || '';
+                            if (note && note.trim() !== ''){
+                                displayEl.textContent = note;
+                                if (actionBtn) actionBtn.textContent = 'Edit Note';
+                            } else {
+                                renderEmpty();
+                            }
+                        }).catch(function(){ renderEmpty(); });
+                }
+
+                function enterEdit(current){
+                    editor.value = current || '';
+                    displayEl.style.display = 'none';
+                    editor.style.display = '';
+                    if (actions) actions.style.display = '';
+                    editor.focus();
+                }
+
+                if (actionBtn) actionBtn.addEventListener('click', function(){
+                    // fetch current and enter edit
+                    fetch('../../api/get_note.php?equipment_id=' + encodeURIComponent(equipmentIdFromDom) + '&field=' + encodeURIComponent(fieldName), { credentials: 'same-origin' })
+                        .then(function(r){ return r.json(); })
+                        .then(function(j){ enterEdit((j && j.note) ? j.note : ''); })
+                        .catch(function(){ enterEdit(''); });
+                });
+
+                if (saveBtn) saveBtn.addEventListener('click', function(){
+                    var v = editor.value || '';
+                    var fd = new FormData();
+                    fd.append('equipment_id', equipmentIdFromDom);
+                    fd.append('field', fieldName);
+                    fd.append('note', v);
+                    fetch('../../api/save_note.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(function(r){ return r.json(); })
+                        .then(function(j){
+                            if (j && j.success) {
+                                fetchNote();
+                                editor.style.display = 'none';
+                                if (actions) actions.style.display = 'none';
+                                displayEl.style.display = '';
+                            } else {
+                                alert((j && j.error) ? j.error : 'Save failed');
+                            }
+                        }).catch(function(){ alert('Save failed'); });
+                });
+
+                if (cancelBtn) cancelBtn.addEventListener('click', function(){
+                    editor.style.display = 'none';
+                    if (actions) actions.style.display = 'none';
+                    displayEl.style.display = '';
+                });
+
+                // initial load
+                fetchNote();
+            })();
             if (!CAN_EDIT) return;
 
             var modal = document.getElementById('tireEditModal');
