@@ -49,6 +49,18 @@ $tireRes = $tireStmt->get_result();
 $tire = $tireRes ? $tireRes->fetch_assoc() : null;
 $tireStmt->close();
 
+// Fetch minimal list of all equipments for the bottom selector ribbon
+$allEquipments = [];
+try {
+    $r = $conn->query("SELECT equipment_id, COALESCE(dhss_equipment_number, '') AS number, COALESCE(type,'') AS type FROM equipments ORDER BY equipment_id ASC");
+    if ($r) {
+        while ($row = $r->fetch_assoc()) { $allEquipments[] = $row; }
+        $r->free();
+    }
+} catch (Throwable $e) {
+    // ignore
+}
+
 function display_cell($value) {
     $trimmed = trim((string)($value ?? ''));
     return $trimmed === '' ? '—' : htmlspecialchars($trimmed);
@@ -103,14 +115,15 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
         .tire-guide-section { margin-top: 28px; }
         /* Notes panel */
         .notes-panel { max-width: 1200px; margin: 6px auto; }
-        .notes-card { background: #fff; border: 1px solid #e6eef6; border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.04); padding: 14px; display: flex; gap: 12px; align-items: flex-start; margin-top: -6px; }
+        .notes-card { background: #fff; border: 1px solid #e6eef6; border-radius: 12px; box-shadow: 0 6px 18px rgba(2,6,23,0.04); padding: 14px; display: flex; gap: 12px; align-items: flex-start; margin-top: -6px; position: relative; z-index: 200; }
         .notes-card .card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; }
         .notes-card h3 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em; color: #0f172a; }
         .notes-display { width: 100%; min-height: 84px; padding: 12px; background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; color: #0f172a; white-space: pre-wrap; overflow: auto; }
         .notes-editor { width: 100%; min-height: 120px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; }
-        .notes-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .notes-actions { display: flex; gap: 8px; margin-top: 10px; position: relative; z-index: 210; }
         .tire-guide-spacer { height: 260px; }
-        .tire-guide-section { position: fixed; left: 0; right: 0; bottom: 0; padding: 8px 12px 12px 12px; background: #ffffff; z-index: 100; display: flex; justify-content: center; }
+        /* Keep the guide slightly above the bottom so a fixed ribbon won't overlap it */
+        .tire-guide-section { position: fixed; left: 0; right: 0; bottom: 72px; padding: 8px 12px 12px 12px; background: #ffffff; z-index: 100; display: flex; justify-content: center; }
         .tire-guide-card { background: transparent; border: none; border-radius: 0; box-shadow: none; padding: 0; max-width: 900px; width: 100%; }
         .tire-guide-card h3 { margin: 0 0 6px 0; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: #0f172a; }
         .tire-guide-card p { margin: 0 0 12px 0; color: #475569; font-size: 12px; }
@@ -141,6 +154,7 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
         @media (max-width: 640px) {
             .info-list { grid-template-columns: 1fr; }
             .selected-info { position: static; margin-bottom: 12px; justify-content: center; }
+            .tire-guide-section { bottom: 0; }
         }
     </style>
 </head>
@@ -566,6 +580,62 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 });
             });
         })();
+    // Bottom centered equipment selector ribbon (same pattern used in other equipment pages)
+    (function(){
+        var allEquip = <?php echo json_encode($allEquipments ?: []); ?>;
+        var currentId = <?php echo (int)$equipmentId; ?>;
+        var container = document.createElement('div');
+        container.id = 'equipmentRibbon';
+        // Keep the ribbon pinned to the bottom of the viewport
+        container.style.position = 'fixed';
+        container.style.left = '50%';
+        container.style.transform = 'translateX(-50%)';
+        container.style.bottom = '18px';
+        container.style.zIndex = '999';
+        container.style.background = 'rgba(255,255,255,0.96)';
+        container.style.padding = '8px 12px';
+        container.style.borderRadius = '999px';
+        container.style.boxShadow = '0 6px 20px rgba(2,6,23,0.08)';
+        container.style.display = 'flex';
+        container.style.gap = '8px';
+        container.style.alignItems = 'center';
+        container.style.maxWidth = '95%';
+        container.style.overflow = 'auto';
+        document.body.appendChild(container);
+        // ribbon stays at bottom by default; no special responsive override needed
+
+        function buildRibbon(){
+            var ribbon = document.getElementById('equipmentRibbon');
+            if (!ribbon) return;
+            ribbon.innerHTML = '';
+            if (!allEquip || !allEquip.length) { var note = document.createElement('div'); note.style.color='#64748b'; note.textContent='No equipments found'; ribbon.appendChild(note); return; }
+            allEquip.forEach(function(eq){
+                var chip = document.createElement('button');
+                chip.className = 'equipment-chip';
+                chip.type = 'button';
+                chip.style.whiteSpace = 'nowrap';
+                chip.dataset.eid = eq.equipment_id;
+                chip.textContent = (eq.number && eq.number !== '') ? eq.number : ('#' + eq.equipment_id);
+                chip.addEventListener('click', function(){
+                    var prev = document.querySelector('.equipment-chip.is-selected');
+                    if (prev) { prev.classList.remove('is-selected'); }
+                    chip.classList.add('is-selected');
+                    var url = 'Tires.php?id=' + eq.equipment_id;
+                    window.location.href = url;
+                });
+                ribbon.appendChild(chip);
+            });
+            var currentChip = ribbon.querySelector('.equipment-chip[data-eid="' + currentId + '"]');
+            if (currentChip) currentChip.classList.add('is-selected');
+        }
+
+        // Inject minimal CSS for chips (matches other pages)
+        var style = document.createElement('style');
+        style.textContent = '.equipment-chip { padding:10px 14px; border-radius:999px; border:1px solid rgba(226,232,240,0.9); background:#f8fafc; cursor:pointer; font-size:14px; box-shadow:0 6px 18px rgba(2,6,23,0.05); color:#0f172a; transition:all .15s ease; } .equipment-chip:hover { transform:translateY(-2px); box-shadow:0 10px 26px rgba(2,6,23,0.08); } .equipment-chip.is-selected { background:#2563eb; color:#fff; border-color:#1e40af; transform:translateY(-6px); box-shadow:0 14px 34px rgba(37,99,235,0.22); }';
+        document.head.appendChild(style);
+
+        document.addEventListener('DOMContentLoaded', buildRibbon);
+    })();
     </script>
 </body>
 </html>
