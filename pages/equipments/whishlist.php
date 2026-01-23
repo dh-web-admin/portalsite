@@ -121,6 +121,11 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
             transform: translateY(0);
         }
 
+        .equipment-back-btn-wrapper--top-left { margin-top: 18px; margin-bottom: 18px; }
+        .equipment-back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px; border: none; cursor: pointer; transition: background 0.2s ease, transform 0.1s ease; }
+        .equipment-back-btn:hover { background: #1d4ed8; }
+        .equipment-back-btn:active { transform: scale(0.98); }
+
         .wishlist-form {
             background: #f8fafc;
             border: 2px dashed #cbd5e1;
@@ -438,6 +443,9 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
                 ?>
                 
                 <div class="wishlist-container">
+                    <div class="equipment-back-btn-wrapper equipment-back-btn-wrapper--top-left" style="text-align:left;">
+                        <a id="backBtn" href="index.php" class="equipment-back-btn"><span>Back ← </span></a>
+                    </div>
                     <div class="wishlist-header">
                         <div>
                             <h1 class="wishlist-title">Equipment Wishlist</h1>
@@ -453,7 +461,7 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
                     <?php if ($showDeleted) { ?>
                         <div class="delete-message">✓ Wishlist item deleted successfully!</div>
                     <?php } ?>
-
+ 
                     <form id="wishlistForm" method="POST" class="wishlist-form" style="display:none;">
                         <label class="form-label">New Wishlist Item</label>
                         <textarea name="item_text" id="item_text" rows="3" class="form-textarea" placeholder="Describe the equipment or item you'd like to add..." required></textarea>
@@ -535,6 +543,25 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
         
         document.addEventListener('DOMContentLoaded', buildRibbon);
         
+        (function(){
+            var backBtn = document.getElementById('backBtn');
+            if (backBtn) {
+                backBtn.addEventListener('click', function(e){
+                    try {
+                        var ref = document.referrer || '';
+                        var isPrevWishlist = ref && ref.indexOf(location.origin) === 0 && ref.indexOf('/pages/equipments/whishlist.php') !== -1;
+                        if (isPrevWishlist) {
+                            return;
+                        }
+                        if (ref && ref.indexOf(location.origin) === 0) {
+                            e.preventDefault();
+                            history.back();
+                        }
+                    } catch (err) {}
+                });
+            }
+        })();
+
         // Wishlist add form logic
         var addBtn = document.getElementById('addWishlistBtn');
         var form = document.getElementById('wishlistForm');
