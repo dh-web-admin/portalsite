@@ -327,6 +327,14 @@ $tireId = isset($tire['tire_id']) ? (int)$tire['tire_id'] : 0;
                 backBtn.addEventListener('click', function(e){
                     try {
                         var ref = document.referrer || '';
+                        // If the referrer is another Tires page on this site (internal equipment switch),
+                        // prefer going to the list page (the anchor's href) instead of history.back(),
+                        // which would otherwise navigate to the previously-selected equipment.
+                        var isPrevTires = ref && ref.indexOf(location.origin) === 0 && ref.indexOf('/pages/equipments/Tires.php') !== -1;
+                        if (isPrevTires) {
+                            // allow the anchor's default navigation (href="index.php")
+                            return;
+                        }
                         if (ref && ref.indexOf(location.origin) === 0) {
                             e.preventDefault();
                             history.back();
