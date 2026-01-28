@@ -103,6 +103,11 @@ try {
                 </div>
               </div>
             </div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+              <?php if ($role === 'admin' || $role === 'developer') { ?>
+                <button id="fieldAssignBtn" class="btn btn-secondary">Field Assignment</button>
+              <?php } ?>
+            </div>
           </div>
 
           <!-- Table area placed below the toolbar -->
@@ -112,6 +117,10 @@ try {
 
               <!-- Top horizontal scrollbar synced with table -->
               <div id="topScrollbar" style="height:20px;overflow-x:scroll;overflow-y:hidden;"><div></div></div>
+              <!-- Assignments row (shows assigned user per column) -->
+              <div id="assignmentsRowWrapper" style="height:44px;overflow-x:auto;overflow-y:hidden;border-bottom:1px solid rgba(15,23,42,0.04);">
+                <div id="assignmentsRowInner" style="height:44px;display:block;"></div>
+              </div>
 
               <div class="table-container" role="region" aria-label="Project checklist table">
                 <table class="project-table" role="table" aria-label="Projects checklist" data-has-status="<?php echo !empty($has_status) ? '1' : '0'; ?>">
@@ -302,6 +311,55 @@ try {
     </div>
   </div>
   
+  <!-- Field Assignment Modal (admin/developer only) -->
+  <style>
+    /* Field Assignment modal styles */
+    #fieldAssignModal { display:none; position:fixed; inset:0; background:rgba(2,6,23,0.45); align-items:center; justify-content:center; z-index:6000; padding:24px; }
+    #fieldAssignModal .modal-panel { background:#fff; border-radius:12px; padding:20px; max-width:980px; width:100%; max-height:86vh; overflow:hidden; box-shadow:0 20px 50px rgba(2,6,23,0.18); border:1px solid rgba(15,23,42,0.04); }
+    #fieldAssignModal .modal-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:6px; border-bottom:1px solid #eef2f7; }
+    #fieldAssignModal .modal-title { font-weight:700; color:#0f172a; font-size:18px; }
+    #fieldAssignModal .modal-close { background:transparent; border:0; font-size:18px; cursor:pointer; color:#475569; padding:6px; border-radius:8px; }
+    #fieldAssignModal .modal-close:hover { background:#f8fafc; }
+    #fieldAssignModal .modal-body { padding:14px 0; overflow:auto; max-height:64vh; }
+    #fieldAssignTable { width:100%; border-collapse:separate; border-spacing:0 8px; }
+    #fieldAssignTable thead th { text-align:left; padding:10px 12px; font-weight:700; color:#0f172a; border-bottom:none; background:transparent; }
+    #fieldAssignTable tbody tr { background:#ffffff; }
+    #fieldAssignTable tbody tr td { padding:10px 12px; vertical-align:middle; border-bottom:none; }
+    #fieldAssignTable tbody tr td:first-child { color:#0f172a; font-weight:500; }
+    .select-assignee { width:100%; padding:8px 10px; border:1px solid #e6eaf0; border-radius:8px; background:#fff; color:#0f172a; }
+    #fieldAssignModal .modal-actions { display:flex; justify-content:flex-end; gap:10px; padding-top:12px; border-top:1px solid #f1f5f9; margin-top:8px; }
+    #saveFieldAssign { background:#10b981; color:#fff; border:0; padding:8px 14px; border-radius:8px; box-shadow:0 8px 24px rgba(16,185,129,0.14); cursor:pointer; }
+    #cancelFieldAssign { background:#fff; color:#0f172a; border:1px solid #e6eaf0; padding:8px 14px; border-radius:8px; cursor:pointer; }
+    #cancelFieldAssign.cancel-red { background:#ef4444; color:#fff; border:0; box-shadow:0 8px 18px rgba(239,68,68,0.12); }
+    @media (max-width:720px){ #fieldAssignModal .modal-panel{ max-width:100%; padding:14px; } #fieldAssignTable thead th{ font-size:14px; } }
+    /* Make the Field Assignment toolbar button bluish (plain color) without altering other button styles */
+    #fieldAssignBtn { background-color: #2563eb; color: #ffffff; border: 0; padding:8px 12px; border-radius:8px; box-shadow: 0 8px 20px rgba(37,99,235,0.12); cursor:pointer; }
+    #fieldAssignBtn:hover { filter: brightness(0.96); transform: translateY(-1px); }
+  </style>
+
+  <div id="fieldAssignModal">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="fieldAssignTitle">
+      <div class="modal-header">
+        <div id="fieldAssignTitle" class="modal-title">Field Assignment</div>
+        <button id="closeFieldAssign" class="modal-close" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:8px;color:#475569;font-size:14px;">Assign a user to each project checklist column. Changes affect global assignments.</div>
+        <div id="fieldAssignContainer">
+          <table id="fieldAssignTable">
+            <thead><tr><th>Field</th><th>Assigned User</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="unassignAll" class="btn" type="button">Unassign All</button>
+        <button id="cancelFieldAssign" class="btn" type="button">Cancel</button>
+        <button id="saveFieldAssign" class="btn" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
   <?php if ($canEditProjectChecklist) { ?>
     <!-- New Project Modal -->
     <div id="newProjectModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.6);align-items:center;justify-content:center;z-index:60"> 
@@ -319,6 +377,86 @@ try {
     </div>
   <?php } ?>
   </div>
+  <script>
+  (function(){
+    document.addEventListener('DOMContentLoaded', function(){
+      var btn = document.getElementById('fieldAssignBtn');
+      var modal = document.getElementById('fieldAssignModal');
+      if (!btn || !modal) return;
+      var closeBtn = document.getElementById('closeFieldAssign');
+      var cancelBtn = document.getElementById('cancelFieldAssign');
+      var saveBtn = document.getElementById('saveFieldAssign');
+
+      btn.addEventListener('click', openFieldAssign);
+      if (closeBtn) closeBtn.addEventListener('click', closeFieldAssign);
+      if (cancelBtn) cancelBtn.addEventListener('click', closeFieldAssign);
+      var unassignBtn = document.getElementById('unassignAll');
+      if (unassignBtn) unassignBtn.addEventListener('click', function(){
+        try {
+          var sels = Array.from(document.querySelectorAll('#fieldAssignTable tbody select')) || [];
+          sels.forEach(function(s){ s.value = ''; var evt = new Event('change', { bubbles:true }); s.dispatchEvent(evt); });
+          try { if (typeof showToast === 'function') showToast('All selections cleared', 'info'); } catch(e){}
+        } catch(e) { console.warn('unassignAll failed', e); }
+      });
+
+      function openFieldAssign(){ modal.style.display = 'flex'; loadFieldAssign(); }
+      function closeFieldAssign(){ modal.style.display = 'none'; }
+
+      async function loadFieldAssign(){
+        try {
+          var ths = Array.from(document.querySelectorAll('.project-table thead th')) || [];
+          var fields = ths.map(function(t){ return (t.textContent || '').toString().trim(); }).filter(function(x){ return x; });
+
+          // fetch users (admin/developer only)
+          var users = [];
+          try {
+            var uresp = await fetch('../../api/get_assignable_users.php', { credentials: 'same-origin' });
+            var uj = await uresp.json(); if (uj && uj.success && Array.isArray(uj.users)) users = uj.users;
+          } catch(e) { console.warn('fetch users failed', e); }
+
+          // fetch existing assignments
+          var assignments = {};
+          try {
+            var aresp = await fetch('../../api/get_field_assignments.php', { credentials: 'same-origin' });
+            var aj = await aresp.json(); if (aj && aj.success && aj.assignments) assignments = aj.assignments;
+          } catch(e) { console.warn('fetch assignments failed', e); }
+
+          var tbody = document.querySelector('#fieldAssignTable tbody'); if (!tbody) return; tbody.innerHTML = '';
+          fields.forEach(function(f){
+            var keyCheck = (f || '').toString().trim().toLowerCase();
+            // Do not allow assigning the project name or status columns
+            if (keyCheck === 'project name' || keyCheck === 'project_name' || keyCheck === 'status') return;
+            var tr = document.createElement('tr');
+            var td1 = document.createElement('td'); td1.style.padding = '8px'; td1.textContent = f;
+            var td2 = document.createElement('td'); td2.style.padding = '8px';
+            var sel = document.createElement('select'); sel.className = 'select-assignee'; sel.dataset.field = f;
+            var opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = '-- unassigned --'; sel.appendChild(opt0);
+            users.forEach(function(u){ var o = document.createElement('option'); o.value = u.id; o.textContent = (u.name || u.email || u.id); sel.appendChild(o); });
+            // match by lowercased field key
+            var key = (f || '').toString().trim().toLowerCase();
+            if (assignments && typeof assignments[key] !== 'undefined' && assignments[key]) {
+              try { sel.value = String(assignments[key]); } catch(e){}
+            }
+            td2.appendChild(sel); tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);
+          });
+        } catch(e) { console.warn('loadFieldAssign error', e); }
+      }
+
+      if (saveBtn) saveBtn.addEventListener('click', async function(){
+        try {
+          var rows = Array.from(document.querySelectorAll('#fieldAssignTable tbody select')) || [];
+          var payload = {};
+          rows.forEach(function(s){ var f = (s.dataset.field||'').toString().trim(); var v = s.value || ''; payload[f.toLowerCase()] = v ? parseInt(v,10) : null; });
+          var fd = new FormData(); fd.append('assignments', JSON.stringify(payload));
+          var resp = await fetch('../../api/save_field_assignments.php', { method: 'POST', credentials: 'same-origin', body: fd });
+          var j = await resp.json();
+          if (j && j.success) { try { if (typeof showToast === 'function') showToast('Field assignments saved', 'success'); } catch(e){} closeFieldAssign(); }
+          else { try { if (typeof showToast === 'function') showToast((j && j.message) ? j.message : 'Failed to save', 'error'); } catch(e){} }
+        } catch(e) { console.warn('save failed', e); try { if (typeof showToast === 'function') showToast('Failed to save', 'error'); } catch(ignore){} }
+      });
+    });
+  })();
+  </script>
   <?php if ($canEditProjectChecklist) { ?>
     <!-- Inline edit menu (rename / delete / mark status) -->
     <div id="editMenu" class="edit-menu" role="dialog" aria-hidden="true">
@@ -1150,6 +1288,110 @@ editBtn.addEventListener('click', function(e){
               var ro = new ResizeObserver(updateTopScrollWidth);
               ro.observe(table);
             }
+            // Populate and sync assignments row
+            var assignmentsWrapper = document.getElementById('assignmentsRowWrapper');
+            var assignmentsInner = document.getElementById('assignmentsRowInner');
+            function updateAssignmentsWidth(){
+              if (!assignmentsInner) return; assignmentsInner.style.width = table.scrollWidth + 'px';
+            }
+            // two-way sync
+            if (assignmentsWrapper) {
+              assignmentsWrapper.addEventListener('scroll', function(){ tableContainer.scrollLeft = assignmentsWrapper.scrollLeft; topScroll.scrollLeft = assignmentsWrapper.scrollLeft; });
+              tableContainer.addEventListener('scroll', function(){ if(assignmentsWrapper) assignmentsWrapper.scrollLeft = tableContainer.scrollLeft; });
+            }
+            window.addEventListener('resize', updateAssignmentsWidth);
+            updateAssignmentsWidth();
+            if (window.ResizeObserver) {
+              var ro2 = new ResizeObserver(updateAssignmentsWidth);
+              ro2.observe(table);
+            }
+
+            async function renderAssignments(){
+              try {
+                var ths = Array.from(document.querySelectorAll('.project-table thead th')) || [];
+                if (!assignmentsInner) return;
+                // measure header widths - get actual rendered widths INCLUDING borders and padding
+                var widths = ths.map(function(t){ 
+                  var r = t.getBoundingClientRect(); 
+                  return Math.max(48, Math.round(r.width)); 
+                });
+                var fields = ths.map(function(t){ return (t.textContent || '').toString().trim(); }).filter(function(x){ return x; });
+
+                // fetch assignments and optional user map
+                var assignments = {};
+                var usersMap = {};
+                try {
+                  var aresp = await fetch('../../api/get_field_assignments.php', { credentials: 'same-origin' });
+                  var aj = await aresp.json();
+                  if (aj && aj.success) { assignments = aj.assignments || {}; if (aj.user_map) usersMap = aj.user_map; }
+                } catch(e){ console.warn('assign fetch failed', e); }
+
+                // Build flex row with fixed px widths matching headers EXACTLY
+                var container = document.createElement('div'); 
+                container.style.display = 'flex'; 
+                container.style.width = '100%'; 
+                container.style.boxSizing = 'border-box';
+                container.style.alignItems = 'stretch';
+                
+                var total = 0;
+                for (var i = 0; i < widths.length; i++) {
+                  var w = widths[i]; 
+                  total += w;
+                  var cell = document.createElement('div');
+                  
+                  // CRITICAL: Use exact same width as header (no flex-shrink, no flex-grow)
+                  cell.style.flex = '0 0 ' + w + 'px';
+                  cell.style.minWidth = w + 'px';
+                  cell.style.maxWidth = w + 'px';
+                  cell.style.width = w + 'px';
+                  
+                  // Match header padding exactly
+                  cell.style.padding = '6px 8px';
+                  cell.style.boxSizing = 'border-box';
+                  
+                  // Match header borders
+                  cell.style.borderRight = '1px solid rgba(15,23,42,0.03)';
+                  
+                  cell.style.background = '#f8fafc';
+                  cell.style.color = '#0f172a';
+                  cell.style.fontSize = '13px';
+                  cell.style.display = 'flex';
+                  cell.style.alignItems = 'center';
+                  cell.style.justifyContent = 'center';
+                  cell.style.overflow = 'hidden';
+                  cell.style.textOverflow = 'ellipsis';
+                  cell.style.whiteSpace = 'nowrap';
+                  
+                  var f = (ths[i] && ths[i].textContent) ? ths[i].textContent.trim() : '';
+                  var key = (f||'').toString().trim().toLowerCase();
+                  var uid = (assignments && assignments[key]) ? assignments[key] : null;
+                  var text = '--';
+                  
+                  // Hide first two assignment cells visually (leave blank) while preserving alignment
+                  if (i === 0 || i === 1) {
+                    text = '';
+                  } else if (uid) {
+                    var full = (usersMap && usersMap[uid]) ? usersMap[uid] : ('User #' + uid);
+                    // extract first name
+                    var first = (full || '').toString().trim().split(/\s+/)[0] || full;
+                    text = first;
+                  }
+                  cell.textContent = text;
+                  container.appendChild(cell);
+                }
+                
+                assignmentsInner.innerHTML = '';
+                
+                // NO padding-left offset - we want exact 1:1 alignment with table headers
+                // The container width must exactly match the table scroll width
+                assignmentsInner.style.width = (table.scrollWidth || total) + 'px';
+                assignmentsInner.style.paddingLeft = '0';
+                
+                assignmentsInner.appendChild(container);
+                updateAssignmentsWidth();
+              } catch(e) { console.warn('renderAssignments error', e); }
+            }
+            renderAssignments();
           })();
           </script>
 </body>
