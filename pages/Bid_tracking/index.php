@@ -700,7 +700,11 @@ foreach ($gcCanonical as $canon => $alts) {
                               // also treat as winner when bid row explicitly references this contractor as client_winner
                               $hasWinnerFlag = true;
                             }
-                            $style = ($val !== '' && $hasWinnerFlag) ? 'style="color:#10b981;font-weight:700;"' : '';
+                            // Only style the compact/general_contractor column as the winner (keep name/number/email/address black)
+                            $style = '';
+                            if ($canon === 'general_contractor' && $val !== '' && $hasWinnerFlag) {
+                              $style = 'style="color:#10b981;font-weight:700;"';
+                            }
                             echo '<td data-col="' . htmlspecialchars($col) . '" ' . $style . '>' . htmlspecialchars($val) . '</td>';
                           } else {
                             // regular non-GC column: show value from bids table
@@ -2494,13 +2498,29 @@ function applyGcWinnerHighlight(projectKey, selectedGc) {
         } catch(ignore){}
       }
 
-      if (match) {
-        try {
-          // apply highlight to all GC-related columns in this row
-          var gcCols = ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number','general_contractor_email','general_contractor_address'];
-          gcCols.forEach(function(col){ try { var tdc = r.querySelector('td[data-col="' + col + '"]'); if (tdc) tdc.classList.add('gc-winner-highlight'); } catch(e){} });
-        } catch(e){}
-      }
+        if (match) {
+          try {
+            // Highlight only the compact/general contractor column cell for winners.
+            var tdToHighlight = r.querySelector('td[data-col="general_contractor"]');
+            if (!tdToHighlight) {
+              // Find header index for the "General Contractor" column as a fallback
+              var headerIndex = null;
+              try {
+                var ths = Array.from(document.querySelectorAll('#bidsTable thead th')) || [];
+                for (var hi = 0; hi < ths.length; hi++) {
+                  try { var thtxt = (ths[hi].textContent || '').toString().trim().toLowerCase(); if (thtxt === 'general contractor') { headerIndex = hi; break; } } catch(e){}
+                }
+              } catch(e) { headerIndex = null; }
+              if (headerIndex !== null) {
+                try { var tds = r.querySelectorAll('td'); if (tds && tds.length > headerIndex) tdToHighlight = tds[headerIndex]; } catch(e){}
+              }
+            }
+            if (tdToHighlight) {
+              tdToHighlight.classList.add('gc-winner-highlight');
+              try { tdToHighlight.style.color = '#10b981'; tdToHighlight.style.fontWeight = '700'; } catch(e){}
+            }
+          } catch(e){}
+        }
     });
   } catch(e) { console.warn('applyGcWinnerHighlight failed', e); }
 }
@@ -3653,7 +3673,11 @@ rows.forEach(function(tr){
                               // also treat as winner when bid row explicitly references this contractor as client_winner
                               $hasWinnerFlag = true;
                             }
-                            $style = ($val !== '' && $hasWinnerFlag) ? 'style="color:#10b981;font-weight:700;"' : '';
+                            // Only style the compact/general_contractor column as the winner (keep name/number/email/address black)
+                            $style = '';
+                            if ($canon === 'general_contractor' && $val !== '' && $hasWinnerFlag) {
+                              $style = 'style="color:#10b981;font-weight:700;"';
+                            }
                             echo '<td data-col="' . htmlspecialchars($col) . '" ' . $style . '>' . htmlspecialchars($val) . '</td>';
                           } else {
                             // regular non-GC column: show value from bids table
