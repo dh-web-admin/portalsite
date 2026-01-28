@@ -1805,30 +1805,51 @@ foreach ($gcCanonical as $canon => $alts) {
                 var mgc = (modalGc.querySelector('[data-col="general_contractor"]') || { value: '' }).value.trim();
                 var mgc_name = (modalGc.querySelector('[data-col="gc_name"]') || { value: '' }).value.trim();
                 var mgc_num = (modalGc.querySelector('[data-col="gc_number"]') || { value: '' }).value.trim();
-                if (mgc) {
-                  try {
-                    var shouldAdd = true;
-                    var gcContainerCheck = document.getElementById('gcTableList');
-                    if (gcContainerCheck) {
-                      // look for any existing contractor row inputs with a matching name or number
-                      var existingInputs = gcContainerCheck.querySelectorAll('input[data-field][data-id], select[data-field][data-id]');
-                      existingInputs.forEach(function(ei){
-                        try {
-                          var f = ei.getAttribute('data-field');
-                          var v = (ei.value || '').toString().trim().toLowerCase();
-                          if (!v) return;
-                          if ((f === 'general_contractor' || f === 'general_contractor_name') && v === mgc.toLowerCase()) { shouldAdd = false; }
-                          if (f === 'general_contractor_number' && v === mgc_num.toLowerCase()) { shouldAdd = false; }
-                        } catch(e){}
-                      });
+                    if (mgc) {
+                      try {
+                        var shouldAdd = true;
+                        var gcContainerCheck = document.getElementById('gcTableList');
+                        if (gcContainerCheck) {
+                          // look for any existing contractor row inputs with a matching name or number
+                          var existingInputs = gcContainerCheck.querySelectorAll('input[data-field][data-id], select[data-field][data-id]');
+                          existingInputs.forEach(function(ei){
+                            try {
+                              var f = ei.getAttribute('data-field');
+                              var v = (ei.value || '').toString().trim().toLowerCase();
+                              if (!v) return;
+                              if ((f === 'general_contractor' || f === 'general_contractor_name') && v === mgc.toLowerCase()) { shouldAdd = false; }
+                              if (f === 'general_contractor_number' && v === mgc_num.toLowerCase()) { shouldAdd = false; }
+                            } catch(e){}
+                          });
+                        }
+                        // avoid duplicate if already queued in newClones
+                        var existsQueued = newClones.find(function(x){ return x.general_contractor && x.general_contractor.toString().trim().toLowerCase() === mgc.toLowerCase(); });
+                        if (!existsQueued && shouldAdd) {
+                          // also collect email/address/union from modal fields if present
+                          var mgc_email = '';
+                          var mgc_addr = '';
+                          var mgc_union = undefined;
+                          try {
+                            var emailEl = modalGc.querySelector('[data-col="general_contractor_email"]') || modalGc.querySelector('[name="general_contractor_email"]');
+                            if (emailEl) mgc_email = (emailEl.value || '').toString().trim();
+                          } catch(e){}
+                          try {
+                            var addrEl = modalGc.querySelector('[data-col="general_contractor_address"]') || modalGc.querySelector('[name="general_contractor_address"]');
+                            if (addrEl) mgc_addr = (addrEl.value || '').toString().trim();
+                          } catch(e){}
+                          try {
+                            var unionEl = modalGc.querySelector('[data-col="is_union"]') || modalGc.querySelector('[name="is_union"]') || modalGc.querySelector('[name="union"]');
+                            if (unionEl) mgc_union = (unionEl.value === '1' || unionEl.value === 1) ? '1' : '0';
+                          } catch(e){}
+
+                          var obj = { general_contractor: mgc, gc_name: mgc_name || null, gc_number: mgc_num || null };
+                          if (mgc_email) obj.general_contractor_email = mgc_email;
+                          if (mgc_addr) obj.general_contractor_address = mgc_addr;
+                          if (typeof mgc_union !== 'undefined') obj.is_union = mgc_union;
+                          newClones.push(obj);
+                        }
+                      } catch(e) {}
                     }
-                    // avoid duplicate if already queued in newClones
-                    var existsQueued = newClones.find(function(x){ return x.general_contractor && x.general_contractor.toString().trim().toLowerCase() === mgc.toLowerCase(); });
-                    if (!existsQueued && shouldAdd) {
-                      newClones.push({ general_contractor: mgc, gc_name: mgc_name || null, gc_number: mgc_num || null });
-                    }
-                  } catch(e) {}
-                }
               }
             } catch(e) {}
 
@@ -1841,14 +1862,16 @@ foreach ($gcCanonical as $canon => $alts) {
             (new Promise(function(resolve, reject){
               if (!newClones.length) return resolve(null);
               // For each new GC, POST to add_general_contractor.php
-              var tasks = newClones.map(function(c){
+              var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
+                var tasks = newClones.map(function(c){
                 var form = new FormData();
                 if (c.general_contractor) form.append('general_contractor', c.general_contractor);
                 if (c.gc_name) form.append('general_contractor_name', c.gc_name);
                 if (c.gc_number) form.append('general_contractor_number', c.gc_number);
+                if (c.general_contractor_email) form.append('general_contractor_email', c.general_contractor_email);
+                if (c.general_contractor_address) form.append('general_contractor_address', c.general_contractor_address);
                 if (typeof c.is_union !== 'undefined') form.append('is_union', c.is_union);
                 else if (typeof c.union !== 'undefined') form.append('is_union', c.union);
-                var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
                 if (dhss) form.append('dhss_project_number', dhss);
                 return fetch('../../api/add_general_contractor.php', { method: 'POST', credentials: 'same-origin', body: form }).then(function(r){ return r.json(); });
               });
@@ -1856,7 +1879,71 @@ foreach ($gcCanonical as $canon => $alts) {
                 // If any failed, reject
                 var bad = results.find(function(x){ return !x || !x.success; });
                 if (bad) return reject(bad);
-                resolve(results);
+
+                // Build created records map from results and the original newClones (same order)
+                var created = [];
+                try {
+                  for (var i = 0; i < results.length; i++) {
+                    var res = results[i] || {};
+                    var nc = newClones[i] || {};
+                    if (res && res.success && res.id) {
+                      created.push({ id: res.id, name: (nc.gc_name || nc.general_contractor || '').toString().trim(), number: (nc.gc_number || '').toString().trim() });
+                    }
+                  }
+                } catch(e) { created = []; }
+
+                // Refresh the GC list for this project so newly-created contractors appear in the DOM
+                try { if (typeof loadGcList === 'function') loadGcList(dhss); } catch(e){}
+
+                // After refreshing, try to attach returned IDs to the corresponding inputs in the GC table.
+                // Wait a short time for loadGcList to render; then match rows by name/number and set data-id attributes.
+                setTimeout(function(){
+                  try {
+                    var gcContainer = document.getElementById('gcTableList');
+                    if (gcContainer && created.length) {
+                      created.forEach(function(c){
+                        if (!c || !c.id) return;
+                        var normName = (c.name || '').toString().trim().toLowerCase();
+                        var normNum = (c.number || '').toString().trim().toLowerCase();
+                        // find any input elements that match by name or number
+                        var candidates = Array.from(gcContainer.querySelectorAll('input[data-field], select[data-field]'));
+                        for (var j = 0; j < candidates.length; j++) {
+                          var el = candidates[j];
+                          try {
+                            var f = el.getAttribute('data-field') || '';
+                            var v = (el.value || '').toString().trim().toLowerCase();
+                            if (!v) continue;
+                            var match = false;
+                            if ((f === 'general_contractor' || f === 'general_contractor_name') && normName && v === normName) match = true;
+                            if (f === 'general_contractor_number' && normNum && v === normNum) match = true;
+                            if (match) {
+                              // set data-id on all inputs/selects that belong to this contractor row
+                              var rowElems = gcContainer.querySelectorAll('[data-gc-id]');
+                              // Prefer elements with same visible text in the same row; try to walk up to parent cell
+                              // Simpler: set data-id on this element and try to set on siblings that share same parent row
+                              try { el.setAttribute('data-id', String(c.id)); } catch(e){}
+                              try {
+                                var parent = el.parentNode;
+                                if (parent) {
+                                  var siblings = parent.parentNode ? parent.parentNode.querySelectorAll('[data-field]') : [];
+                                  siblings.forEach(function(s){ try { if (!s.getAttribute('data-id')) s.setAttribute('data-id', String(c.id)); } catch(e){} });
+                                }
+                              } catch(e){}
+                              // also set on any remove button action cell in the same row
+                              try {
+                                var rem = el.parentNode && el.parentNode.parentNode ? el.parentNode.parentNode.querySelector('button[title="Remove contractor"]') : null;
+                                if (rem && !rem.getAttribute('data-id')) rem.setAttribute('data-id', String(c.id));
+                              } catch(e){}
+                              // once matched, stop scanning candidates for this created record
+                              break;
+                            }
+                          } catch(e){}
+                        }
+                      });
+                    }
+                  } catch(e) {}
+                  resolve(results);
+                }, 450);
               }).catch(function(err){ reject(err); });
             })).then(function(){
               // Now collect edits made in the GC list and send updates for existing rows
@@ -2045,6 +2132,10 @@ foreach ($gcCanonical as $canon => $alts) {
               })
               .finally(function(){
                 if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save'; }
+                try {
+                  var newGcContainer = document.getElementById('newGcContainer');
+                  if (newGcContainer) newGcContainer.innerHTML = '';
+                } catch(e) {}
               });
           });
         }

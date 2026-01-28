@@ -15,6 +15,7 @@ $name = isset($_POST['general_contractor_name']) ? trim($_POST['general_contract
 $num = isset($_POST['general_contractor_number']) ? trim($_POST['general_contractor_number']) : null;
 $email = isset($_POST['general_contractor_email']) ? trim($_POST['general_contractor_email']) : null;
 $addr = isset($_POST['general_contractor_address']) ? trim($_POST['general_contractor_address']) : null;
+$is_union = isset($_POST['is_union']) ? intval($_POST['is_union']) : null;
 $winner = isset($_POST['winner']) ? ($_POST['winner'] ? 1 : 0) : 0;
 
 if (!$id) {
@@ -24,14 +25,15 @@ if (!$id) {
 }
 
 try {
-  $sql = 'UPDATE general_contractor SET dhss_project_number = ?, general_contractor = ?, general_contractor_name = ?, general_contractor_number = ?, general_contractor_email = ?, general_contractor_address = ?, winner = ? WHERE id = ?';
+  $sql = 'UPDATE general_contractor SET dhss_project_number = ?, general_contractor = ?, general_contractor_name = ?, general_contractor_number = ?, general_contractor_email = ?, general_contractor_address = ?, is_union = ?, winner = ? WHERE id = ?';
   $stmt = $conn->prepare($sql);
   if (!$stmt) {
     http_response_code(500);
     echo json_encode(['success'=>false,'message'=>'DB prepare failed','db_error' => $conn->error ?? '']);
     exit;
   }
-  $stmt->bind_param('ssssssii', $dhss, $gc, $name, $num, $email, $addr, $winner, $id);
+  $iu = ($is_union === null) ? 0 : intval($is_union);
+  $stmt->bind_param('ssssssiii', $dhss, $gc, $name, $num, $email, $addr, $iu, $winner, $id);
   if ($stmt->execute()) {
     echo json_encode(['success'=>true,'affected'=>$stmt->affected_rows]);
   } else {

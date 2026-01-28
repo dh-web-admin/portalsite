@@ -15,17 +15,65 @@ $name = isset($_POST['general_contractor_name']) ? trim($_POST['general_contract
 $num = isset($_POST['general_contractor_number']) ? trim($_POST['general_contractor_number']) : null;
 $email = isset($_POST['general_contractor_email']) ? trim($_POST['general_contractor_email']) : null;
 $addr = isset($_POST['general_contractor_address']) ? trim($_POST['general_contractor_address']) : null;
+$is_union = isset($_POST['is_union']) ? intval($_POST['is_union']) : null;
 $winner = isset($_POST['winner']) ? ($_POST['winner'] ? 1 : 0) : 0;
 
-if (!$gc) {
+if (!$gc && !$name) {
   http_response_code(400);
   echo json_encode(['success'=>false,'message'=>'General contractor is required']);
   exit();
 }
 
 try {
-  // prepare
-  $sql = 'INSERT INTO general_contractor (dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, winner) VALUES (?, ?, ?, ?, ?, ?, ?)';
+  // Try to find an existing contractor for this project by name+number or by name+number+project
+  $foundId = null;
+  $checkSql = 'SELECT id FROM general_contractor WHERE dhss_project_number = ? AND ((general_contractor_name = ? AND general_contractor_number = ?) OR (general_contractor = ? AND general_contractor_number = ?)) LIMIT 1';
+  $chk = $conn->prepare($checkSql);
+  if ($chk) {
+    $chk->bind_param('sssss', $dhss, $name, $num, $gc, $num);
+    $chk->execute();
+    $cres = $chk->get_result();
+    if ($cres && $cres->num_rows) {
+      $r = $cres->fetch_assoc();
+      $foundId = $r['id'];
+    }
+    $chk->close();
+  }
+
+  if ($foundId) {
+    // update existing with any provided fields
+    $updates = [];
+    $types = '';
+    $params = [];
+    if ($dhss !== null) { $updates[] = 'dhss_project_number = ?'; $types .= 's'; $params[] = $dhss; }
+    if ($gc !== null) { $updates[] = 'general_contractor = ?'; $types .= 's'; $params[] = $gc; }
+    if ($name !== null) { $updates[] = 'general_contractor_name = ?'; $types .= 's'; $params[] = $name; }
+    if ($num !== null) { $updates[] = 'general_contractor_number = ?'; $types .= 's'; $params[] = $num; }
+    if ($email !== null) { $updates[] = 'general_contractor_email = ?'; $types .= 's'; $params[] = $email; }
+    if ($addr !== null) { $updates[] = 'general_contractor_address = ?'; $types .= 's'; $params[] = $addr; }
+    if ($is_union !== null) { $updates[] = 'is_union = ?'; $types .= 'i'; $params[] = $is_union; }
+    if ($winner !== null) { $updates[] = 'winner = ?'; $types .= 'i'; $params[] = $winner; }
+
+    if (!empty($updates)) {
+      $sql = 'UPDATE general_contractor SET ' . implode(', ', $updates) . ' WHERE id = ?';
+      $types .= 'i';
+      $params[] = $foundId;
+      $stmt = $conn->prepare($sql);
+      if ($stmt) {
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $stmt->close();
+      }
+    }
+
+    $out = ['success'=>true,'id'=>$foundId,'existing'=>true];
+    @file_put_contents(__DIR__ . '/add_general_contractor.log', date('c') . " UPSERT " . json_encode(['post'=>$_POST, 'result'=>$out]) . PHP_EOL, FILE_APPEND);
+    echo json_encode($out);
+    exit;
+  }
+
+  // Insert new record
+  $sql = 'INSERT INTO general_contractor (dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, is_union, winner) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
   $stmt = $conn->prepare($sql);
   if (!$stmt) {
     error_log('add_general_contractor prepare failed: ' . ($conn->error ?? ''));
@@ -34,10 +82,10 @@ try {
     exit();
   }
 
-  $stmt->bind_param('ssssssi', $dhss, $gc, $name, $num, $email, $addr, $winner);
+  $iu = ($is_union === null) ? 0 : intval($is_union);
+  $stmt->bind_param('ssssssii', $dhss, $gc, $name, $num, $email, $addr, $iu, $winner);
   if ($stmt->execute()) {
-    $out = ['success'=>true,'id'=>$stmt->insert_id];
-    // write a simple log for debugging
+    $out = ['success'=>true,'id'=>$stmt->insert_id,'existing'=>false];
     @file_put_contents(__DIR__ . '/add_general_contractor.log', date('c') . " OK " . json_encode(['post'=>$_POST, 'result'=>$out]) . PHP_EOL, FILE_APPEND);
     echo json_encode($out);
   } else {
