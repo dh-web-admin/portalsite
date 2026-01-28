@@ -366,6 +366,20 @@ foreach ($gcCanonical as $canon => $alts) {
   border-bottom: none !important;
 }
 
+    /* Layout adjustments: keep page from scrolling and confine vertical scroll to the table container */
+    html, body { height: 100%; }
+    body { overflow: hidden; }
+    .admin-container { display: flex; flex-direction: column; height: 100vh; }
+    .admin-layout { flex: 1 1 auto; display: flex; overflow: hidden; }
+    main.content-area { flex: 1 1 auto; overflow: hidden; }
+    .main-content { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+    /* pageBody wraps the table area and sits beneath the toolbar */
+    #pageBody { flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; }
+    /* make only the table container scroll vertically */
+    #tableContainer { flex: 1 1 auto; overflow-y: auto; overflow-x: auto; }
+    /* Ensure sticky table headers stick to the top of the scroller */
+    #tableContainer thead th { position: sticky; top: 0; z-index: 20; }
+
     /* GC info / detail row styling — make multi-line contractor details readable */
     #bidsTable tbody tr.gc-info-row td,
     #bidsTable tbody tr.gc-detail-row td {
@@ -451,7 +465,7 @@ foreach ($gcCanonical as $canon => $alts) {
             <?php } ?>
           </div>
 
-          <div style="padding:16px 40px;">
+          <div id="pageBody" style="padding:16px 40px;">
             <div id="tableTopScroller" style="display:none;height:12px;overflow-x:auto;overflow-y:hidden;margin-bottom:8px;border-radius:6px;width:100%;">
               <div id="tableTopScrollerInner" style="height:1px;"></div>
             </div>
