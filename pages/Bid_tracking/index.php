@@ -822,7 +822,7 @@ foreach ($gcCanonical as $canon => $alts) {
 
           <!-- Edit Bid Modal -->
           <div id="editBidModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;z-index:4500;padding:20px;overflow-y:auto;">
-            <div style="background:#fff;border-radius:12px;padding:16px;max-width:980px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.12);max-height:90vh;overflow-y:auto;">
+            <div style="background:#fff;border-radius:12px;padding:16px;max-width:1100px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.12);max-height:90vh;overflow-y:auto;">
               <form id="editBidForm" style="display:block;">
                 <input type="hidden" id="editBidId" name="bid_id" />
                 <!-- general_contractor_id removed: GC info stored in general_contractor table only -->
@@ -1460,12 +1460,12 @@ foreach ($gcCanonical as $canon => $alts) {
                 }
                 var table = document.createElement('div');
                 table.style.display = 'grid';
-                /* add an actions column on the right for remove 'X' buttons */
-                table.style.gridTemplateColumns = '2fr 2fr 1.5fr 2fr 2fr 48px';
+                /* add an actions column on the right for remove 'X' buttons; include Union column before actions */
+                table.style.gridTemplateColumns = '2fr 2fr 1.5fr 2fr 2fr 1fr 48px';
                 table.style.gap = '8px';
                 table.style.alignItems = 'center';
                 // header row
-                var hdrs = ['General Contractor','Name','Number','Email','Address'];
+                var hdrs = ['General Contractor','Name','Number','Email','Address','Union'];
                 hdrs.forEach(function(h){ var e = document.createElement('div'); e.style.fontWeight = '600'; e.style.padding = '6px 8px'; e.style.color = '#374151'; e.textContent = h; e.style.position = 'sticky'; e.style.top = '0'; e.style.background = '#ffffff'; e.style.zIndex = '4'; e.style.borderBottom = '1px solid #e6edf0'; e.style.textAlign = 'left'; table.appendChild(e); });
                 // Add actions header (empty but keeps layout consistent)
                 var actHdr = document.createElement('div'); actHdr.style.padding = '6px 8px'; actHdr.style.position = 'sticky'; actHdr.style.top = '0'; actHdr.style.background = '#ffffff'; actHdr.style.zIndex = '4'; actHdr.style.borderBottom = '1px solid #e6edf0'; actHdr.style.textAlign = 'left'; actHdr.textContent = '';
@@ -1488,6 +1488,7 @@ foreach ($gcCanonical as $canon => $alts) {
                   } catch(e) {}
                   var mail = it.general_contractor_email || '';
                   var addr = it.general_contractor_address || '';
+                  var unionVal = (typeof it.is_union !== 'undefined') ? it.is_union : ((typeof it.union !== 'undefined') ? it.union : (it.general_contractor_union || ''));
                   var isWinner = (it.winner && (it.winner == 1 || it.winner === '1' || it.winner === true));
 
                   function makeCellInput(val, nameAttr, placeholder, highlightColor) {
@@ -1496,6 +1497,25 @@ foreach ($gcCanonical as $canon => $alts) {
                     wrapper.style.borderBottom = '1px solid #eef2f7';
                     wrapper.style.textAlign = 'left';
                     wrapper.setAttribute('data-gc-id', id);
+
+                    // Render a select for union fields, otherwise a regular text input
+                    if (nameAttr === 'is_union' || nameAttr === 'union' || (nameAttr || '').toString().toLowerCase().indexOf('union') !== -1) {
+                      var sel = document.createElement('select');
+                      sel.style.width = '100%';
+                      sel.style.border = '0';
+                      sel.style.background = 'transparent';
+                      sel.style.fontWeight = highlightColor ? '600' : '400';
+                      sel.setAttribute('data-field', nameAttr === 'union' ? 'union' : 'is_union');
+                      sel.setAttribute('data-id', id);
+                      var opt1 = document.createElement('option'); opt1.value = '1'; opt1.textContent = 'Union';
+                      var opt0 = document.createElement('option'); opt0.value = '0'; opt0.textContent = 'Non-union';
+                      sel.appendChild(opt1); sel.appendChild(opt0);
+                      try { sel.value = (val === 1 || val === '1' || String(val).toLowerCase() === 'true') ? '1' : '0'; } catch(e) { sel.value = '0'; }
+                      if (highlightColor) sel.style.color = highlightColor; else sel.style.color = '#ef4444';
+                      wrapper.appendChild(sel);
+                      return wrapper;
+                    }
+
                     var inp = document.createElement('input');
                     inp.type = 'text';
                     inp.value = val;
@@ -1510,7 +1530,6 @@ foreach ($gcCanonical as $canon => $alts) {
                       inp.style.color = highlightColor;
                       inp.style.fontWeight = '600';
                     } else {
-                      // Non-winner rows: make all GC columns red
                       inp.style.color = '#ef4444';
                     }
                     wrapper.appendChild(inp);
@@ -1523,6 +1542,8 @@ foreach ($gcCanonical as $canon => $alts) {
                   table.appendChild(makeCellInput(num, 'general_contractor_number', 'Number', winnerColor));
                   table.appendChild(makeCellInput(mail, 'general_contractor_email', 'Email', winnerColor));
                   table.appendChild(makeCellInput(addr, 'general_contractor_address', 'Address', winnerColor));
+                  // Union column: editable select
+                  table.appendChild(makeCellInput(unionVal, 'is_union', 'Union', winnerColor));
 
                   // Action cell: remove 'X' button on the right
                   var actionCell = document.createElement('div');
@@ -1740,13 +1761,15 @@ foreach ($gcCanonical as $canon => $alts) {
                 var num = r.querySelector('input[name="new_gc_number"]');
                 var email = r.querySelector('input[name="new_gc_email"]');
                 var addr = r.querySelector('input[name="new_gc_address"]');
+                var unionSel = r.querySelector('select[name="new_gc_union"]');
                 var obj = {};
                 if (gc) obj['general_contractor'] = gc.value || null;
                 if (name) obj['gc_name'] = name.value || null;
                 if (num) obj['gc_number'] = num.value || null;
                 if (email) obj['general_contractor_email'] = email.value || null;
                 if (addr) obj['general_contractor_address'] = addr.value || null;
-                if (obj.general_contractor || obj.gc_name || obj.gc_number || obj.general_contractor_email || obj.general_contractor_address) newClones.push(obj);
+                if (unionSel) { var uval = (unionSel.value === '1') ? '1' : '0'; obj['union'] = uval; obj['is_union'] = uval; }
+                if (obj.general_contractor || obj.gc_name || obj.gc_number || obj.general_contractor_email || obj.general_contractor_address || obj.union || obj.is_union) newClones.push(obj);
               });
             }
 
@@ -1781,6 +1804,8 @@ foreach ($gcCanonical as $canon => $alts) {
                 if (c.general_contractor) form.append('general_contractor', c.general_contractor);
                 if (c.gc_name) form.append('general_contractor_name', c.gc_name);
                 if (c.gc_number) form.append('general_contractor_number', c.gc_number);
+                if (typeof c.is_union !== 'undefined') form.append('is_union', c.is_union);
+                else if (typeof c.union !== 'undefined') form.append('is_union', c.union);
                 var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
                 if (dhss) form.append('dhss_project_number', dhss);
                 return fetch('../../api/add_general_contractor.php', { method: 'POST', credentials: 'same-origin', body: form }).then(function(r){ return r.json(); });
@@ -1798,7 +1823,7 @@ foreach ($gcCanonical as $canon => $alts) {
                   var gcContainer = document.getElementById('gcTableList');
                   var updateTasks = [];
                   if (gcContainer) {
-                    var inputs = gcContainer.querySelectorAll('input[data-field][data-id]');
+                    var inputs = gcContainer.querySelectorAll('input[data-field][data-id], select[data-field][data-id]');
                     var groups = {};
                     inputs.forEach(function(inp){
                       var id = inp.getAttribute('data-id');
@@ -1816,6 +1841,7 @@ foreach ($gcCanonical as $canon => $alts) {
                       if (g.general_contractor_number !== undefined) form.append('general_contractor_number', g.general_contractor_number);
                       if (g.general_contractor_email !== undefined) form.append('general_contractor_email', g.general_contractor_email);
                       if (g.general_contractor_address !== undefined) form.append('general_contractor_address', g.general_contractor_address);
+                      if (g.is_union !== undefined) form.append('is_union', g.is_union);
                       var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
                       if (dhss) form.append('dhss_project_number', dhss);
                       updateTasks.push(fetch('../../api/update_general_contractor.php', { method: 'POST', credentials: 'same-origin', body: form }).then(function(r){ return r.json ? r.json() : null; }));
@@ -2715,7 +2741,11 @@ function syncGcDisplayForProjects() {
                 + '<input name="new_gc_number" placeholder="gc number" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
                 + '<input name="new_gc_email" placeholder="email" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
                 + '<input name="new_gc_address" placeholder="address" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
-                + '<button type="button" class="remove-gc" style="background:#fff;border:1px solid #e6edf0;padding:6px 8px;border-radius:6px;cursor:pointer;">Remove</button>';
+                + '<select name="new_gc_union" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;margin-left:6px;">'
+                  + '<option value="1">Union</option>'
+                  + '<option value="0" selected>Non-union</option>'
+                + '</select>'
+                + '<button type="button" class="remove-gc" style="background:#fff;border:1px solid #e6edf0;padding:6px 8px;border-radius:6px;cursor:pointer;margin-left:6px;">Remove</button>';
               container.appendChild(row);
               row.querySelector('.remove-gc').addEventListener('click', function(){ container.removeChild(row); });
             });
