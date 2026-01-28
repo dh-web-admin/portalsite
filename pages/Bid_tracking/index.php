@@ -293,6 +293,8 @@ foreach ($gcCanonical as $canon => $alts) {
       pointer-events: none; /* header is visual only */
       overflow: hidden;
     }
+    /* Force-hide the JS-created floating header to avoid duplicate headers when using an inner table scroller */
+    #floatingHeader { display: none !important; }
     #floatingHeader table { border-collapse: collapse; width: 100%; background: rgba(249,250,251,0.98); }
     #floatingHeader th { padding: 14px 16px; font-weight:800; color:#334155; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
