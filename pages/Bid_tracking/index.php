@@ -977,11 +977,11 @@ foreach ($gcCanonical as $canon => $alts) {
                       elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
                       elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
                       else { $label = ucwords(str_replace('_',' ',$col)); }
-                      $type = (strtolower($col) === 'bid_date') ? 'date' : 'text';
+                      $isDate = preg_match('/date/i', $col);
                     ?>
                       <div class="field">
                         <label><?php echo htmlspecialchars($label); ?></label>
-                        <input type="<?php echo $type; ?>" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
+                        <input type="<?php echo ($isDate ? 'date' : 'text'); ?>" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
                       </div>
                     <?php } ?>
                   </div>
@@ -1182,6 +1182,25 @@ foreach ($gcCanonical as $canon => $alts) {
         addForm.addEventListener('submit', function(e){
           e.preventDefault();
           var fd = new FormData(addForm);
+          // Ensure bid_date is converted from mm/dd/yyyy (user-facing) to ISO yyyy-mm-dd for backend
+          try {
+            var bdEl = document.getElementById('bidDate');
+            if (bdEl) {
+              var raw = (bdEl.value || '').toString().trim();
+              if (raw) {
+                var m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+                if (m) {
+                  var mm = (m[1].length===1?('0'+m[1]):m[1]);
+                  var dd = (m[2].length===1?('0'+m[2]):m[2]);
+                  var yyyy = (m[3].length===2?String(2000+parseInt(m[3],10)):m[3]);
+                  fd.set('bid_date', yyyy + '-' + mm + '-' + dd);
+                } else {
+                  // keep original if not parsable
+                  fd.set('bid_date', raw);
+                }
+              }
+            }
+          } catch(e) { }
 
           var submitBtn = document.getElementById('confirmAddProject');
           if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating...'; }
@@ -1234,16 +1253,90 @@ foreach ($gcCanonical as $canon => $alts) {
       // Note: `total_price` should accept any textual value (commas allowed) and not be forced into a numeric display/validation.
       var moneyCols = ['client_win_price','stabilizer_bid_win_price'];
 
+      // Columns that look like dates (any column name containing "date")
+      var dateCols = (bidColumns || []).filter(function(c){ return /date/i.test(c || ''); });
+
+      function pad(n){ return (n < 10) ? ('0' + n) : String(n); }
+
+      // Accepts either a Date object, an ISO string (yyyy-mm-dd) or mm/dd/yyyy string and returns mm/dd/yyyy
+      function formatDateMMDDYYYY(input) {
+        if (!input && input !== 0) return '';
+        try {
+          if (input instanceof Date) {
+            if (isNaN(input.getTime())) return '';
+            return pad(input.getMonth()+1) + '/' + pad(input.getDate()) + '/' + input.getFullYear();
+          }
+          var s = String(input).trim();
+          if (!s) return '';
+          // ISO-like yyyy-mm-dd or datetime
+          var isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (isoMatch) return pad(parseInt(isoMatch[2],10)) + '/' + pad(parseInt(isoMatch[3],10)) + '/' + isoMatch[1];
+          // mm/dd/yyyy or variations
+          var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+          if (m) {
+            var year = m[3].length === 2 ? (2000 + parseInt(m[3],10)) : parseInt(m[3],10);
+            return pad(parseInt(m[1],10)) + '/' + pad(parseInt(m[2],10)) + '/' + year;
+          }
+          // Fallback: try Date parser
+          var d = new Date(s);
+          if (!isNaN(d.getTime())) return pad(d.getMonth()+1) + '/' + pad(d.getDate()) + '/' + d.getFullYear();
+        } catch(e) {}
+        return '';
+      }
+
+      // Convert mm/dd/yyyy or yyyy-mm-dd to ISO yyyy-mm-dd for backend consumption
+      function toIsoDate(input) {
+        if (!input) return '';
+        var s = String(input).trim();
+        if (!s) return '';
+        // already ISO
+        var iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (iso) return iso[1] + '-' + iso[2] + '-' + iso[3];
+        var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (m) {
+          var mm = pad(parseInt(m[1],10));
+          var dd = pad(parseInt(m[2],10));
+          var yyyy = (m[3].length === 2) ? String(2000 + parseInt(m[3],10)) : m[3];
+          return yyyy + '-' + mm + '-' + dd;
+        }
+        // try Date parse
+        var d = new Date(s);
+        if (!isNaN(d.getTime())) return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+        return '';
+      }
+
       function formatForDisplay(col, val) {
         if (!val && val !== 0 && val !== '0') return '';
         var s = (val === null || val === undefined) ? '' : String(val);
         if (moneyCols.indexOf(col) !== -1) {
-          // avoid double prefix
           if (s.trim().indexOf('$') === 0) return s;
           return '$' + s;
         }
+        if (dateCols.indexOf(col) !== -1) {
+          var out = formatDateMMDDYYYY(s);
+          return out || s;
+        }
         return s;
       }
+
+      // Format any existing table cells for date columns on load
+      function formatTableDates() {
+        try {
+          dateCols.forEach(function(col){
+            var tds = Array.from(document.querySelectorAll('#bidsTable td[data-col="' + col + '"]'));
+            tds.forEach(function(td){
+              try {
+                var txt = (td.textContent || '').toString().trim();
+                if (!txt) return;
+                var formatted = formatDateMMDDYYYY(txt);
+                if (formatted) td.textContent = formatted;
+              } catch(e){}
+            });
+          });
+        } catch(e) { console.warn('formatTableDates failed', e); }
+      }
+
+      
 
       function wrapMoneyInputs() {
         try {
@@ -1511,7 +1604,20 @@ foreach ($gcCanonical as $canon => $alts) {
           els.forEach(function(el){
             var tag = (el.tagName || '').toLowerCase();
             if (tag === 'input' || tag === 'textarea' || tag === 'select') {
-              el.value = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : '';
+              try {
+                if (dateCols.indexOf(col) !== -1) {
+                  var raw = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : '';
+                  var iso = toIsoDate(raw || '');
+                  // If input is a native date input, it expects ISO yyyy-mm-dd
+                  if (el.type === 'date') {
+                    el.value = iso || '';
+                  } else {
+                    el.value = iso ? formatDateMMDDYYYY(iso) : '';
+                  }
+                } else {
+                  el.value = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : '';
+                }
+              } catch(e) { el.value = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : ''; }
             }
           });
         });
@@ -1566,6 +1672,23 @@ foreach ($gcCanonical as $canon => $alts) {
         try {
           var gcFieldsEls = modal.querySelectorAll('[data-col="gc_name"],[data-col="general_contractor"],[data-col="gc_number"]');
           gcFieldsEls.forEach(function(el){ el.addEventListener('input', function(){ try { if (typeof loadGcList === 'function') loadGcList(document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value : ''); } catch(e){} }); });
+        } catch(e) {}
+
+        // Ensure date companion inputs are synced for modal fields
+        try {
+          dateCols.forEach(function(col){
+            try {
+              var el = modal.querySelector('[data-col="' + col + '"]') || modal.querySelector('[name="' + col + '"]');
+              if (!el) return;
+              // set visible value to mm/dd/yyyy (already done earlier) and ensure native companion has ISO value
+              var visVal = el.value || '';
+              var iso = toIsoDate(visVal || '');
+              var comp = modal.querySelector('[data-col="' + col + '"]') ? document.querySelector('#' + (el.id || '') + '_native') : null;
+              // fallback: look for next sibling native input
+              if (!comp && el.nextElementSibling && el.nextElementSibling.type === 'date') comp = el.nextElementSibling;
+              if (comp && iso) comp.value = iso;
+            } catch(e){}
+          });
         } catch(e) {}
 
 
@@ -1725,6 +1848,22 @@ foreach ($gcCanonical as $canon => $alts) {
                     fd.delete('general_contractor_id');
                   } catch(e){}
 
+                  // Convert any user-facing date fields (mm/dd/yyyy) to ISO (yyyy-mm-dd) before sending
+                  try {
+                    if (Array.isArray(dateCols) && dateCols.length) {
+                      dateCols.forEach(function(col){
+                        try {
+                          var el = document.querySelector('#editBidModal [name="' + col + '"]') || document.querySelector('#editBidModal [data-col="' + col + '"]');
+                          var raw = el ? (el.value || '') : (fd.get(col) || '');
+                          if (raw) {
+                            var iso = toIsoDate(raw);
+                            if (iso) fd.set(col, iso);
+                          }
+                        } catch(e){}
+                      });
+                    }
+                  } catch(e) {}
+
                   return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
                 });
               });
@@ -1746,8 +1885,8 @@ foreach ($gcCanonical as $canon => $alts) {
                   try {
                     // Update the in-memory originalRows and the row DOM so changes persist without a full reload
                     var newBid = data.bid || null;
-                    if (newBid && window.originalRows && window.originalRows.length) {
-                      var found = window.originalRows.find(function(it){ return it && it.obj && (it.obj.bid_id && it.obj.bid_id.toString() === (newBid.bid_id || '').toString()); });
+                    if (newBid && originalRows && originalRows.length) {
+                      var found = originalRows.find(function(it){ return it && it.obj && (it.obj.bid_id && it.obj.bid_id.toString() === (newBid.bid_id || '').toString()); });
                       if (found) {
                         found.obj = newBid;
                         try { found.row.setAttribute('data-bid', JSON.stringify(newBid)); } catch(e){}
@@ -1794,6 +1933,28 @@ foreach ($gcCanonical as $canon => $alts) {
                     }
                     try { applyFiltersAndGrouping(); } catch(e){}
                     try {
+                      // If any GC rows were removed in the modal, delete them from the DB now
+                      (function(){
+                        try {
+                          var modalEl = document.getElementById('editBidModal');
+                          if (!modalEl) return;
+                          var dels = Array.from(modalEl.querySelectorAll('input[name="delete_general_contractor_ids[]"]')).map(function(i){ return i.value; }).filter(function(x){ return x; });
+                          if (!dels.length) return;
+                          var tasks = dels.map(function(id){
+                            try {
+                              var f = new FormData(); f.append('id', id);
+                              return fetch('../../api/delete_general_contractor.php', { method: 'POST', credentials: 'same-origin', body: f }).then(function(r){ return r.json ? r.json() : null; }).catch(function(){ return null; });
+                            } catch(e){ return null; }
+                          });
+                          Promise.all(tasks).then(function(results){
+                            // Remove any hidden delete inputs so they won't be processed again
+                            try { dels.forEach(function(id){ var inp = modalEl.querySelector('input[name="delete_general_contractor_ids[]"][value="' + id.replace(/"/g,'\"') + '"]'); if (inp && inp.parentNode) inp.parentNode.removeChild(inp); }); } catch(e){}
+                            // Refresh GC display across the table
+                            try { if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects(); } catch(e){}
+                          }).catch(function(){ try { if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects(); } catch(e){} });
+                        } catch(e) { console.warn('delete gc ids failed', e); }
+                      })();
+
                       // Ensure GC display and highlights are refreshed immediately
                       if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects();
                       var pk = newBid ? (newBid.dhss_project_number || '') : '';
@@ -2109,8 +2270,8 @@ function applyFiltersAndGrouping() {
   var selectedYear = yearFilterEl ? yearFilterEl.value : '';
   var selectedStatus = statusFilterEl ? statusFilterEl.value : 'all';
 
-  // Show status filter only when a year is selected (default is current year)
-  if (statusFilterEl) statusFilterEl.hidden = !selectedYear;
+  // Always show status filter (including when 'All Years' is selected)
+  if (statusFilterEl) statusFilterEl.hidden = false;
 
   // 1) Year filter (projects starting with YY)
   var filtered = originalRows.filter(function(it){
@@ -2496,6 +2657,8 @@ function syncGcDisplayForProjects() {
             statusFilterEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_statusFilter', this.value || ''); applyFiltersAndGrouping(); } catch(e){} });
           }
 
+            // Format any pre-rendered table date cells to mm/dd/yyyy
+            try { formatTableDates(); } catch(e){}
             applyFiltersAndGrouping();
             // Ensure money fields in modal are wrapped and table cells prefixed
             try { wrapMoneyInputs(); } catch(e){}
