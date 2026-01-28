@@ -1781,11 +1781,28 @@ foreach ($gcCanonical as $canon => $alts) {
                 var mgc_name = (modalGc.querySelector('[data-col="gc_name"]') || { value: '' }).value.trim();
                 var mgc_num = (modalGc.querySelector('[data-col="gc_number"]') || { value: '' }).value.trim();
                 if (mgc) {
-                  // avoid duplicate if already in newClones
-                  var exists = newClones.find(function(x){ return x.general_contractor && x.general_contractor.toString().trim().toLowerCase() === mgc.toLowerCase(); });
-                  if (!exists) {
-                    newClones.push({ general_contractor: mgc, gc_name: mgc_name || null, gc_number: mgc_num || null });
-                  }
+                  try {
+                    var shouldAdd = true;
+                    var gcContainerCheck = document.getElementById('gcTableList');
+                    if (gcContainerCheck) {
+                      // look for any existing contractor row inputs with a matching name or number
+                      var existingInputs = gcContainerCheck.querySelectorAll('input[data-field][data-id], select[data-field][data-id]');
+                      existingInputs.forEach(function(ei){
+                        try {
+                          var f = ei.getAttribute('data-field');
+                          var v = (ei.value || '').toString().trim().toLowerCase();
+                          if (!v) return;
+                          if ((f === 'general_contractor' || f === 'general_contractor_name') && v === mgc.toLowerCase()) { shouldAdd = false; }
+                          if (f === 'general_contractor_number' && v === mgc_num.toLowerCase()) { shouldAdd = false; }
+                        } catch(e){}
+                      });
+                    }
+                    // avoid duplicate if already queued in newClones
+                    var existsQueued = newClones.find(function(x){ return x.general_contractor && x.general_contractor.toString().trim().toLowerCase() === mgc.toLowerCase(); });
+                    if (!existsQueued && shouldAdd) {
+                      newClones.push({ general_contractor: mgc, gc_name: mgc_name || null, gc_number: mgc_num || null });
+                    }
+                  } catch(e) {}
                 }
               }
             } catch(e) {}
