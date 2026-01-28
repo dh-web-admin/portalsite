@@ -1738,11 +1738,15 @@ foreach ($gcCanonical as $canon => $alts) {
                 var gc = r.querySelector('input[name="new_gc_general"]');
                 var name = r.querySelector('input[name="new_gc_name"]');
                 var num = r.querySelector('input[name="new_gc_number"]');
+                var email = r.querySelector('input[name="new_gc_email"]');
+                var addr = r.querySelector('input[name="new_gc_address"]');
                 var obj = {};
                 if (gc) obj['general_contractor'] = gc.value || null;
                 if (name) obj['gc_name'] = name.value || null;
                 if (num) obj['gc_number'] = num.value || null;
-                if (obj.general_contractor || obj.gc_name || obj.gc_number) newClones.push(obj);
+                if (email) obj['general_contractor_email'] = email.value || null;
+                if (addr) obj['general_contractor_address'] = addr.value || null;
+                if (obj.general_contractor || obj.gc_name || obj.gc_number || obj.general_contractor_email || obj.general_contractor_address) newClones.push(obj);
               });
             }
 
@@ -2709,6 +2713,8 @@ function syncGcDisplayForProjects() {
               row.innerHTML = '<input name="new_gc_general" placeholder="general contractor" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
                 + '<input name="new_gc_name" placeholder="gc name" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
                 + '<input name="new_gc_number" placeholder="gc number" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_email" placeholder="email" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_address" placeholder="address" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
                 + '<button type="button" class="remove-gc" style="background:#fff;border:1px solid #e6edf0;padding:6px 8px;border-radius:6px;cursor:pointer;">Remove</button>';
               container.appendChild(row);
               row.querySelector('.remove-gc').addEventListener('click', function(){ container.removeChild(row); });
