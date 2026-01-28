@@ -226,14 +226,15 @@ foreach ($gcCanonical as $canon => $alts) {
     /* Make the scroll area stretch full width while allowing the table to be wider */
     #tableTopScroller { box-sizing: border-box; }
 
-    /* TABLE HEADER — modern, elevated look */
+    /* TABLE HEADER — modern, elevated look
+       Adjusted: solid white background and tighter padding so headers don't show margins */
     #bidsTable thead th {
-      padding: 14px 16px;
-      background: rgba(249,250,251,0.92);
+      padding: 10px 12px !important;
+      background: #ffffff !important;
       border-bottom: 1px solid #e5e7eb;
       font-weight: 800;
       letter-spacing: .02em;
-      box-shadow: 0 1px 0 rgba(15,23,42,.06);
+      box-shadow: none !important;
       color: #334155;
       font-size: 13px;
       text-align: left;
@@ -243,7 +244,15 @@ foreach ($gcCanonical as $canon => $alts) {
       position: sticky;
       top: 0;
       z-index: 20;
+      margin: 0 !important;
     }
+
+    /* Ensure floating header (if present) and modal section headers use solid white background and no extra margin/padding */
+    #floatingHeader, #floatingHeader table, #floatingHeader th, .modal-section .header {
+      background: #ffffff !important;
+    }
+    #floatingHeader th { padding: 10px 12px !important; }
+    .modal-section .header { padding: 8px 12px !important; margin: 0 !important; }
 
     #bidsTable thead th.col-status, #bidsTable tbody td.col-status { width: 120px; }
     #bidsTable thead th.col-dhss, #bidsTable tbody td.col-dhss { width: 90px; text-align: center; }
