@@ -2661,13 +2661,23 @@ function applyFiltersAndGrouping() {
 
   // Build fragment in sorted order
   var frag = document.createDocumentFragment();
-  flatItems.forEach(function(w){
+  var colCount = (typeof getVisibleHeaderCount === 'function') ? getVisibleHeaderCount() : (table && table.querySelectorAll('thead th').length) || 1;
+  var prevProj = null;
+  flatItems.forEach(function(w, idx){
+    var curProj = (w.it.project || '').toString();
+    if (idx !== 0 && prevProj !== curProj) {
+      var spr = document.createElement('tr');
+      spr.className = 'group-spacer';
+      var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td);
+      frag.appendChild(spr);
+    }
     frag.appendChild(w.it.row);
     try {
       if (w.it.detailRows && w.it.detailRows.length) {
         w.it.detailRows.forEach(function(d){ frag.appendChild(d); });
       }
     } catch(e) {}
+    prevProj = curProj;
   });
 
   tbody.innerHTML = '';
