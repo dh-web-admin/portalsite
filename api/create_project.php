@@ -24,6 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $city = isset($input['project_city']) ? trim($input['project_city']) : null;
     $county = isset($input['project_county']) ? trim($input['project_county']) : null;
     $state = isset($input['project_state']) ? trim($input['project_state']) : null;
+    $status = isset($input['status']) ? trim($input['status']) : '';
 
     if ($projectName === '') {
         http_response_code(400);
@@ -31,8 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // Insert into bids table
-    $sql = 'INSERT INTO bids (dhss_project_number, project_name, bid_date, project_city, project_county, project_state) VALUES (?,?,?,?,?,?)';
+    // Default status for newly created projects
+    if (!$status) $status = 'bidding';
+
+    // Insert into bids table (set initial status)
+    $sql = 'INSERT INTO bids (dhss_project_number, project_name, bid_date, project_city, project_county, project_state, status) VALUES (?,?,?,?,?,?,?)';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         http_response_code(500);
@@ -47,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($county === '') $county = null;
     if ($state === '') $state = null;
 
-    $stmt->bind_param('ssssss', $dhss, $projectName, $bidDate, $city, $county, $state);
+    $stmt->bind_param('sssssss', $dhss, $projectName, $bidDate, $city, $county, $state, $status);
 
     // Attempt insert with retry on duplicate DHSS number
     $maxRetries = 10;

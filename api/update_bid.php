@@ -75,6 +75,13 @@ if ($colsRes) {
     }
 }
 
+// DEBUG: log the schema info for the `status` column so we know its runtime type
+$stypeRes = $conn->query("SHOW FULL COLUMNS FROM bids LIKE 'status'");
+if ($stypeRes) {
+    $sinfo = $stypeRes->fetch_assoc();
+    @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " STATUS_COLUMN: " . json_encode($sinfo) . "\n", FILE_APPEND);
+}
+
 // Build update list from provided input keys intersecting allowed columns
 $updateFields = [];
 $values = [];
@@ -87,6 +94,11 @@ foreach ($allowed as $col) {
         $values[] = $v;
     }
 }
+
+// DEBUG: dump input and computed update fields to a debug log to diagnose missing keys
+@file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " INPUT: " . json_encode(array_keys($input)) . "\n", FILE_APPEND);
+@file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " UPDATE_FIELDS: " . json_encode($updateFields) . "\n", FILE_APPEND);
+@file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " VALUES: " . json_encode($values) . "\n", FILE_APPEND);
 
 if (empty($updateFields)) {
     http_response_code(400);
@@ -143,6 +155,7 @@ if ($rstmt) {
     $rstmt->execute();
     $res = $rstmt->get_result();
     $row = $res ? $res->fetch_assoc() : null;
+    @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " RETURNED_ROW: " . json_encode($row) . "\n", FILE_APPEND);
     $rstmt->close();
 
     @ob_end_clean();

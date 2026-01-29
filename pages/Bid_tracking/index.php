@@ -214,9 +214,10 @@ foreach ($gcCanonical as $canon => $alts) {
     /* Status pill style for table */
     .status-pill { display:inline-block; padding:6px 12px; border-radius:999px; font-weight:700; font-size:13px; line-height:1; background: #f1f5f9; color:#0f172a; box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset; }
     .status-pill.status-won { background: rgba(16,185,129,0.12); color:#065f46; }
-    .status-pill.status-completed { background: rgba(59,130,246,0.08); color:#1e40af; }
+    .status-pill.status-completed { background: rgba(2,6,23,0.04); color:#0f172a; }
     .status-pill.status-lost { background: rgba(239,68,68,0.08); color:#7f1d1d; }
     .status-pill.status-pending { background: rgba(99,102,241,0.04); color:#334155; }
+    .status-pill.status-bidding { background: rgba(59,130,246,0.08); color:#1e40af; }
 
     /* Ensure the bids table can expand to its content width */
     #tableContainer { overflow-x: auto; overflow-y: auto; box-sizing:border-box; }
@@ -229,14 +230,14 @@ foreach ($gcCanonical as $canon => $alts) {
     /* TABLE HEADER — modern, elevated look
        Adjusted: solid white background and tighter padding so headers don't show margins */
     #bidsTable thead th {
-      padding: 10px 12px !important;
+      padding: 22px 14px !important;
       background: #ffffff !important;
       border-bottom: 1px solid #e5e7eb;
       font-weight: 800;
       letter-spacing: .02em;
       box-shadow: none !important;
       color: #334155;
-      font-size: 13px;
+      font-size: 14px;
       text-align: left;
       white-space: nowrap;
       overflow: hidden;
@@ -251,11 +252,12 @@ foreach ($gcCanonical as $canon => $alts) {
     #floatingHeader, #floatingHeader table, #floatingHeader th, .modal-section .header {
       background: #ffffff !important;
     }
-    #floatingHeader th { padding: 10px 12px !important; }
+    #floatingHeader th { padding: 22px 14px !important; font-size:14px; }
     .modal-section .header { padding: 8px 12px !important; margin: 0 !important; }
 
-    #bidsTable thead th.col-status, #bidsTable tbody td.col-status { width: 120px; }
-    #bidsTable thead th.col-dhss, #bidsTable tbody td.col-dhss { width: 90px; text-align: center; }
+    /* increase fixed column widths by ~30% to expand header width */
+    #bidsTable thead th.col-status, #bidsTable tbody td.col-status { width: 156px; }
+    #bidsTable thead th.col-dhss, #bidsTable tbody td.col-dhss { width: 117px; text-align: center; }
 
     /* BODY CELLS — roomier reading space */
     #bidsTable tbody td {
@@ -305,7 +307,14 @@ foreach ($gcCanonical as $canon => $alts) {
     /* Force-hide the JS-created floating header to avoid duplicate headers when using an inner table scroller */
     #floatingHeader { display: none !important; }
     #floatingHeader table { border-collapse: collapse; width: 100%; background: rgba(249,250,251,0.98); }
-    #floatingHeader th { padding: 14px 16px; font-weight:800; color:#334155; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #floatingHeader th { padding: 22px 14px; font-weight:800; color:#334155; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px; }
+
+    /* Top scroller visuals: ensure visible track/thumb for better discoverability */
+    #tableTopScroller { -webkit-overflow-scrolling: touch; }
+    #tableTopScroller::-webkit-scrollbar { height: 14px; }
+    #tableTopScroller::-webkit-scrollbar-track { background: #f3f4f6; border-radius:8px; }
+    #tableTopScroller::-webkit-scrollbar-thumb { background: #6b7280; border-radius:8px; }
+    #tableTopScroller::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
     /* Manage Columns modal button styles */
     .manage-columns-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:12px; }
@@ -468,17 +477,49 @@ foreach ($gcCanonical as $canon => $alts) {
       <main class="content-area">
         <div class="main-content">
 
-          <div class="toolbar" style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:nowrap;min-height:48px;padding:16px 0 8px 40px;">
-            <?php if (!empty($canEditBidTracking)) { ?>
-              <button id="addProjectBtn" class="btn btn-primary">add Project +</button>
+            <div class="toolbar" style="display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:nowrap;min-height:48px;padding:16px 0 8px 40px;">
+              <?php if (!empty($canEditBidTracking)) { ?>
+                <button id="addProjectBtn" class="btn btn-primary">add Project +</button>
+              <?php } ?>
               <button id="manageColumnsBtn" class="btn" style="padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Manage Columns</button>
-              <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Email Notifications</button>
-            <?php } ?>
-          </div>
+              <!-- Compact top filters placed inline in toolbar between Manage Columns and Email Notifications (visible to all roles) -->
+              <div id="compactFilters" style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:10px;background:#f3f4f6;border:1px solid rgba(15,23,42,0.06);margin-left:8px;flex:1 1 auto;max-width:760px;">
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-right:1px solid rgba(15,23,42,0.06);">
+                  <label for="statusFilterTop" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">Status</label>
+                  <select id="statusFilterTop" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:110px;"> 
+                    <option value="all">All</option>
+                    <option value="won">Won</option>
+                    <option value="lost">Lost</option>
+                    <option value="bidding">Bidding</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-right:1px solid rgba(15,23,42,0.06);">
+                  <label for="yearFilterTop" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">DHSS Project#</label>
+                  <select id="yearFilterTop" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:120px;"></select>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;margin-left:auto;">
+                  <label for="orderBySelect" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">order by:</label>
+                  <select id="orderBySelect" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:140px;">
+                    <option value="date_asc">Bid Date: Low → High</option>
+                    <option value="projectnum_asc">Project #: Low → High</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <button id="clearFiltersBtn" type="button" style="background:#fff;border:1px solid rgba(15,23,42,0.06);color:#0f172a;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer;height:34px;font-size:13px;">Clear</button>
+                </div>
+              </div>
+            <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Email Notifications</button>
+            </div>
 
           <div id="pageBody" style="padding:16px 40px;">
-            <div id="tableTopScroller" style="display:none;height:12px;overflow-x:auto;overflow-y:hidden;margin-bottom:8px;border-radius:6px;width:100%;">
-              <div id="tableTopScrollerInner" style="height:1px;"></div>
+
+            
+
+            <div id="tableTopScroller" style="position:relative;height:26px;overflow-x:hidden;overflow-y:hidden;margin-bottom:14px;border-radius:6px;width:100%;z-index:30;background:#fff;border:1px solid rgba(15,23,42,0.04);">
+              <div id="tableTopScrollerInner" style="height:100%;display:block;"></div>
+              <div id="tableTopCustomThumb" style="position:absolute;top:3px;height:20px;background:#6b7280;border-radius:8px;cursor:grab;z-index:40;left:0;width:80px;box-shadow:0 1px 2px rgba(0,0,0,0.12);"></div>
             </div>
 
             <div id="tableContainer" style="overflow:auto;border:1px solid #e6edf0;border-radius:8px;padding:8px;background:#fff;">
@@ -565,10 +606,11 @@ foreach ($gcCanonical as $canon => $alts) {
                           // Insert status header cell before DHSS project # (NEW: status filter dropdown)
                           if ($col === 'dhss_project_number') {
                             echo '<th class="col-status" data-col="status">
-                                    <select id="statusFilter" class="th-filter" title="Filter status">
+                                    <select id="statusFilter" class="th-filter" title="Filter status" hidden style="display:none;">
                                       <option value="all" selected>All</option>
                                       <option value="won">Won</option>
                                       <option value="lost">Lost</option>
+                                      <option value="bidding">Bidding</option>
                                       <option value="pending">Pending</option>
                                       <option value="completed">Completed</option>
                                     </select>
@@ -597,7 +639,7 @@ foreach ($gcCanonical as $canon => $alts) {
                             echo '<th class="col-dhss" data-col="' . htmlspecialchars($col) . '">
                                     <div class="th-with-filter" style="flex-direction:column;align-items:flex-start;gap:2px;">
                                       <span class="th-label">' . htmlspecialchars($label) . '</span>
-                                      <select id="yearFilter" class="th-filter" title="Filter by year" style="margin-top:2px;"></select>
+                                      <select id="yearFilter" class="th-filter" title="Filter by year" hidden style="margin-top:2px;display:none;"></select>
                                     </div>
                                   </th>';
                           } else {
@@ -855,9 +897,10 @@ foreach ($gcCanonical as $canon => $alts) {
                   <select id="editStatus" name="status" style="min-width:90px;padding:6px 36px 6px 6px;border:0;background:transparent;appearance:none;-webkit-appearance:none;-moz-appearance:none;color:#374151;font-weight:600;background-image:url('data:image/svg+xml;utf8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' width=\'16\' height=\'16\'%3E%3Cpath fill=\'currentColor\' d=\'M7 10l5 5 5-5z\'/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 10px center;background-size:16px;">
                     <option value="won" style="color:#10b981;">won</option>
                     <option value="lost" style="color:#ef4444;">lost</option>
-                    <option value="pending" selected style="color:#374151;">pending</option>
+                    <option value="bidding" style="color:#1e40af;">bidding</option>
+                    <option value="pending" selected style="color:#334155;">pending</option>
                     <option value="didn't bid" style="color:#f97316;">didn't bid</option>
-                    <option value="completed" style="color:#3b82f6;">completed</option>
+                    <option value="completed" style="color:#0f172a;">completed</option>
                   </select>
                 </div>
 
@@ -1265,6 +1308,7 @@ foreach ($gcCanonical as $canon => $alts) {
         else if (s === 'completed') { color = '#3b82f6'; font = 'Tahoma, Verdana, Segoe UI, sans-serif'; }
         else if (s === 'lost') { color = '#ef4444'; font = 'Georgia, "Times New Roman", Times, serif'; }
         else if (s === 'didntbid' || s === 'didnt') { color = '#f97316'; font = '"Courier New", Courier, monospace'; }
+        else if (s === 'bidding') { color = '#334155'; }
         else { font = 'Arial, sans-serif'; }
         var el = document.getElementById('editStatus');
         if (el) {
@@ -2046,6 +2090,18 @@ foreach ($gcCanonical as $canon => $alts) {
                     if (newBid && originalRows && originalRows.length) {
                       var found = originalRows.find(function(it){ return it && it.obj && (it.obj.bid_id && it.obj.bid_id.toString() === (newBid.bid_id || '').toString()); });
                       if (found) {
+                        // Preserve user-selected status values that may not round-trip through the DB (e.g., new 'bidding' state)
+                        try {
+                          var modal = document.getElementById('editBidModal');
+                          if (modal) {
+                            var statusInput = modal.querySelector('[name="status"]');
+                            var userStatus = statusInput ? (statusInput.value || '') : '';
+                            if (userStatus && userStatus.toString().toLowerCase() === 'bidding') {
+                              // If server didn't persist unknown status, reflect user's choice in the local model
+                              newBid.status = userStatus;
+                            }
+                          }
+                        } catch(e) {}
                         found.obj = newBid;
                         try { found.row.setAttribute('data-bid', JSON.stringify(newBid)); } catch(e){}
                         try {
@@ -2204,6 +2260,7 @@ foreach ($gcCanonical as $canon => $alts) {
           var table = document.getElementById('bidsTable');
           var topScroller = document.getElementById('tableTopScroller');
           var topInner = document.getElementById('tableTopScrollerInner');
+          var topThumb = document.getElementById('tableTopCustomThumb');
 
           // Floating header element (cloned thead) for viewport-anchored header
           var floatingHeader = document.createElement('div');
@@ -2268,16 +2325,69 @@ foreach ($gcCanonical as $canon => $alts) {
 
           function syncTopScroller() {
             if (!container || !table || !topScroller || !topInner) return;
-            topInner.style.width = table.scrollWidth + 'px';
-            topScroller.style.display = (table.scrollWidth > container.clientWidth) ? 'block' : 'none';
+            try {
+              // Force inner width to be at least slightly larger than the visible container
+              // so the scrollbar will always render even when table fits.
+              var minWidth = (container.clientWidth || 0) + 24;
+              var targetWidth = Math.max(table.scrollWidth || 0, minWidth);
+              topInner.style.width = targetWidth + 'px';
+              // Ensure the inner element height matches the visible scroller so the
+              // entire area is interactive (hover anywhere activates scrollbar).
+              try { topInner.style.height = (topScroller.clientHeight || 26) + 'px'; } catch(e){}
+              // Always show the scroller (keep layout space) and allow interaction
+              topScroller.style.visibility = 'visible';
+              topScroller.style.pointerEvents = 'auto';
+              // update custom thumb position/size (if present)
+              if (topThumb) {
+                try {
+                  var scrollerW = (topScroller.clientWidth || 0);
+                  var scale = (table.scrollWidth && scrollerW) ? (scrollerW / table.scrollWidth) : 0;
+                  var thumbW = Math.max(30, Math.round((container.clientWidth || 0) * scale));
+                  var maxLeft = Math.max(0, scrollerW - thumbW);
+                  var left = (table.scrollWidth ? Math.round((container.scrollLeft || 0) * (scrollerW / table.scrollWidth)) : 0);
+                  left = Math.max(0, Math.min(left, maxLeft));
+                  topThumb.style.width = thumbW + 'px';
+                  topThumb.style.left = left + 'px';
+                } catch(e) { console.warn('update thumb failed', e); }
+              }
+            } catch(e) { console.warn('syncTopScroller error', e); }
           }
           window.syncTopScroller = syncTopScroller; // expose for later calls
 
           if (topScroller && container) {
-            topScroller.addEventListener('scroll', function(){ container.scrollLeft = topScroller.scrollLeft; });
-            container.addEventListener('scroll', function(){ topScroller.scrollLeft = container.scrollLeft; });
+            // Keep native two-way sync for cases where native scroll is used,
+            // but primary syncing will be driven by container and custom thumb.
+            topScroller.addEventListener('scroll', function(){ try { container.scrollLeft = topScroller.scrollLeft; } catch(e){} });
+            container.addEventListener('scroll', function(){ try { syncTopScroller(); } catch(e){} });
+
+            // Click on scroller track should jump container scroll
+            topScroller.addEventListener('click', function(ev){
+              try {
+                if (!table || !topScroller) return;
+                var rect = topScroller.getBoundingClientRect();
+                var x = ev.clientX - rect.left;
+                var scrollerW = topScroller.clientWidth || 1;
+                var target = Math.round((x / scrollerW) * table.scrollWidth);
+                container.scrollLeft = target;
+                syncTopScroller();
+              } catch(e){}
+            });
+
+            // Drag support for thumb
+            if (topThumb) {
+              (function(){
+                var dragging = false, startX = 0, startLeft = 0;
+                topThumb.addEventListener('pointerdown', function(e){ try { dragging = true; startX = e.clientX; startLeft = parseInt(topThumb.style.left || '0',10) || 0; topThumb.setPointerCapture && topThumb.setPointerCapture(e.pointerId); topThumb.style.cursor = 'grabbing'; } catch(er){} });
+                window.addEventListener('pointermove', function(e){ if (!dragging) return; try { var dx = e.clientX - startX; var scrollerW = topScroller.clientWidth || 1; var thumbW = topThumb.clientWidth || 1; var maxLeft = Math.max(0, scrollerW - thumbW); var newLeft = Math.max(0, Math.min(startLeft + dx, maxLeft)); topThumb.style.left = newLeft + 'px'; var proportion = newLeft / (scrollerW - thumbW || 1); container.scrollLeft = Math.round(proportion * (table.scrollWidth - container.clientWidth)); } catch(er){} });
+                window.addEventListener('pointerup', function(e){ if (!dragging) return; try { dragging = false; topThumb.releasePointerCapture && topThumb.releasePointerCapture(e.pointerId); topThumb.style.cursor = 'grab'; } catch(er){} });
+              })();
+            }
             window.addEventListener('resize', syncTopScroller);
+            // Initial sync shortly after init
             setTimeout(syncTopScroller, 60);
+            // Extra sync after window load and a longer timeout to cover late layout changes
+            window.addEventListener('load', function(){ try { setTimeout(syncTopScroller, 120); setTimeout(syncTopScroller, 600); } catch(e){} });
+            setTimeout(syncTopScroller, 600);
           }
 
           function setupStickyColumns(count) {
@@ -2345,6 +2455,9 @@ foreach ($gcCanonical as $canon => $alts) {
 
           var yearFilterEl = document.getElementById('yearFilter');
           var statusFilterEl = document.getElementById('statusFilter');
+          var yearFilterTopEl = document.getElementById('yearFilterTop');
+          var statusFilterTopEl = document.getElementById('statusFilterTop');
+          var orderByEl = document.getElementById('orderBySelect');
 
           // Build last 5 years dropdown (auto updates each year)
         (function initYearOptions(){
@@ -2383,6 +2496,83 @@ foreach ($gcCanonical as $canon => $alts) {
           // persist changes and trigger filtering
           yearFilterEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_yearFilter', this.value || ''); applyFiltersAndGrouping(); } catch(e){} });
 })();
+          // Mirror year options to the compact top selector (if present)
+          try {
+            if (yearFilterTopEl && yearFilterEl) {
+              yearFilterTopEl.innerHTML = yearFilterEl.innerHTML;
+              yearFilterTopEl.value = yearFilterEl.value;
+              yearFilterTopEl.addEventListener('change', function(){ try { if (yearFilterEl) { yearFilterEl.value = this.value; yearFilterEl.dispatchEvent(new Event('change')); } saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+              // Keep header year select in sync when header changes
+              yearFilterEl.addEventListener('change', function(){ try { if (yearFilterTopEl) yearFilterTopEl.value = yearFilterEl.value; } catch(e){} });
+            }
+          } catch(e){}
+
+          // Top-filter session persistence (per-browser-session; not global/local)
+          var TOP_STATUS_KEY = 'bidTracking_top_status';
+          var TOP_YEAR_KEY = 'bidTracking_top_year';
+          var TOP_ORDER_KEY = 'bidTracking_top_orderBy';
+
+          function saveTopFiltersToSession() {
+            try {
+              if (window.sessionStorage) {
+                if (statusFilterTopEl) sessionStorage.setItem(TOP_STATUS_KEY, statusFilterTopEl.value || 'all');
+                if (yearFilterTopEl) sessionStorage.setItem(TOP_YEAR_KEY, yearFilterTopEl.value || '');
+                if (orderByEl) sessionStorage.setItem(TOP_ORDER_KEY, orderByEl.value || 'date_asc');
+              }
+            } catch(e) { }
+          }
+
+          function restoreTopFiltersFromSession() {
+            try {
+              if (window.sessionStorage) {
+                var s = sessionStorage.getItem(TOP_STATUS_KEY);
+                var y = sessionStorage.getItem(TOP_YEAR_KEY);
+                var o = sessionStorage.getItem(TOP_ORDER_KEY);
+                if (s !== null && statusFilterTopEl) {
+                  statusFilterTopEl.value = s;
+                  if (statusFilterEl) { statusFilterEl.value = s; statusFilterEl.dispatchEvent(new Event('change')); }
+                }
+                if (y !== null && yearFilterTopEl) {
+                  yearFilterTopEl.value = y;
+                  if (yearFilterEl) { yearFilterEl.value = y; yearFilterEl.dispatchEvent(new Event('change')); }
+                }
+                if (o !== null && orderByEl) {
+                  orderByEl.value = o;
+                  try { localStorage.setItem('bidTracking_orderBy', o); } catch(e){}
+                }
+              }
+            } catch(e) {}
+          }
+
+          function clearTopFiltersSessionDefaults() {
+            try {
+              if (window.sessionStorage) {
+                sessionStorage.removeItem(TOP_STATUS_KEY);
+                sessionStorage.removeItem(TOP_YEAR_KEY);
+                sessionStorage.removeItem(TOP_ORDER_KEY);
+              }
+              if (statusFilterTopEl) {
+                statusFilterTopEl.value = 'all';
+                if (statusFilterEl) { statusFilterEl.value = 'all'; statusFilterEl.dispatchEvent(new Event('change')); }
+              }
+              if (yearFilterTopEl) {
+                yearFilterTopEl.value = '';
+                if (yearFilterEl) { yearFilterEl.value = ''; yearFilterEl.dispatchEvent(new Event('change')); }
+              }
+              if (orderByEl) {
+                orderByEl.value = 'date_asc';
+                try { localStorage.setItem('bidTracking_orderBy', 'date_asc'); } catch(e){}
+                applyFiltersAndGrouping();
+              }
+            } catch(e) {}
+          }
+
+          // Wire Clear button (if present)
+          try {
+            var clearBtn = document.getElementById('clearFiltersBtn');
+            if (clearBtn) clearBtn.addEventListener('click', function(){ try { clearTopFiltersSessionDefaults(); saveTopFiltersToSession(); } catch(e){} });
+          } catch(e) {}
+
           function normStatus(raw) {
             var s = (raw || '').toString().trim().toLowerCase();
             s = s.replace(/[^a-z0-9]/g,'');
@@ -2446,61 +2636,38 @@ function applyFiltersAndGrouping() {
     filtered = filtered.filter(function(it){ return it.status === selectedStatus; });
   }
 
-  // 3) Group by DHSS Project #.
-  //    Sort PROJECTS globally by the earliest bid_date in the project (due-date style).
-  //    Sort ROWS inside each project by bid_date ascending.
-  var groups = new Map();
+  // 3) Default rendering: group rows by status in the requested order
+  //    and sort rows within each status by bid_date ascending (nulls last).
+  //    Status rendering order: bidding -> pending -> win -> lost -> completed
+  var statusOrder = ['bidding','pending','win','lost','completed'];
+  function statusIndex(s) { var idx = statusOrder.indexOf((s||'').toString()); return idx === -1 ? statusOrder.length : idx; }
 
-  filtered.forEach(function(it){
-    var key = (it.project || '').toString();
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push({ it: it, date: it.date });
+  // Determine current ordering preference; but default rendering groups by status
+  var _order = (orderByEl && orderByEl.value) ? orderByEl.value : (localStorage.getItem ? localStorage.getItem('bidTracking_orderBy') || 'date_asc' : 'date_asc');
+  try { if (orderByEl) { try { orderByEl.value = _order; } catch(e){} } } catch(e){}
+
+  // Flattened list of items (preserve detailRows reference)
+  var flatItems = filtered.map(function(it){ return { it: it, date: it.date }; });
+
+  // Sort first by status order, then by date ascending
+  flatItems.sort(function(a, b){
+    var si = statusIndex(a.it.status);
+    var sj = statusIndex(b.it.status);
+    if (si !== sj) return si - sj;
+    var ad = a.date ? a.date.getTime() : Number.POSITIVE_INFINITY;
+    var bd = b.date ? b.date.getTime() : Number.POSITIVE_INFINITY;
+    return ad - bd;
   });
 
-  var groupEntries = Array.from(groups.entries()).map(function(ent){
-    var key = ent[0];
-    var items = ent[1];
-
-    // Sort rows within project by bid_date ascending (nulls last)
-    items.sort(function(a, b){
-      var ad = a.date ? a.date.getTime() : Number.POSITIVE_INFINITY;
-      var bd = b.date ? b.date.getTime() : Number.POSITIVE_INFINITY;
-      return ad - bd;
-    });
-
-    // Project "due date" = earliest bid_date in project (nulls go to bottom)
-    var projectDue = (items.length && items[0].date) ? items[0].date.getTime() : Number.POSITIVE_INFINITY;
-
-    return { key: key, items: items, projectDue: projectDue };
-  });
-
-  // Sort ALL projects by earliest bid_date (earliest first), tie-break by project id
-  groupEntries.sort(function(a, b){
-    if (a.projectDue !== b.projectDue) return a.projectDue - b.projectDue;
-    return (a.key || '').localeCompare(b.key || '');
-  });
-
-  // 4) Rebuild tbody with spacer rows between groups
+  // Build fragment in sorted order
   var frag = document.createDocumentFragment();
-  var colCount = getVisibleHeaderCount();
-
-  groupEntries.forEach(function(g, gi){
-    if (gi !== 0) {
-      var spr = document.createElement('tr');
-      spr.className = 'group-spacer';
-      var td = document.createElement('td');
-      td.colSpan = colCount;
-      spr.appendChild(td);
-      frag.appendChild(spr);
-    }
-    g.items.forEach(function(w){ 
-      frag.appendChild(w.it.row);
-      try {
-        if (w.it.detailRows && w.it.detailRows.length) {
-          w.it.detailRows.forEach(function(d){ frag.appendChild(d); });
-        }
-      } catch(e) {}
-    });
+  flatItems.forEach(function(w){
+    frag.appendChild(w.it.row);
+    try {
+      if (w.it.detailRows && w.it.detailRows.length) {
+        w.it.detailRows.forEach(function(d){ frag.appendChild(d); });
+      }
+    } catch(e) {}
   });
 
   tbody.innerHTML = '';
@@ -2809,6 +2976,7 @@ function syncGcDisplayForProjects() {
 
 
 
+          <?php if (!empty($canEditBidTracking)) { ?>
           tbody.addEventListener('click', function(e){
             var tr = e.target && e.target.closest ? e.target.closest('tr[data-bid]') : null;
             if (!tr) return;
@@ -2821,6 +2989,7 @@ function syncGcDisplayForProjects() {
               console.error('Row JSON parse failed', err);
             }
           });
+          <?php } ?>
 
           if (yearFilterEl) yearFilterEl.addEventListener('change', applyFiltersAndGrouping);
           if (statusFilterEl) {
@@ -2832,9 +3001,31 @@ function syncGcDisplayForProjects() {
                 statusFilterEl.value = savedStatus;
               }
             } catch(e) {}
+
+            // Mirror status to the compact top status selector
+            try {
+              if (statusFilterTopEl) {
+                statusFilterTopEl.value = statusFilterEl.value || 'all';
+                statusFilterTopEl.addEventListener('change', function(){ try { if (statusFilterEl) { statusFilterEl.value = this.value; statusFilterEl.dispatchEvent(new Event('change')); } saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+                statusFilterEl.addEventListener('change', function(){ try { statusFilterTopEl.value = statusFilterEl.value; } catch(e){} });
+              }
+            } catch(e){}
             statusFilterEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_statusFilter', this.value || ''); applyFiltersAndGrouping(); } catch(e){} });
+            try { if (statusFilterTopEl) statusFilterTopEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_statusFilter', this.value || ''); saveTopFiltersToSession(); } catch(e){} }); } catch(e){}
           }
 
+          // Order-by control: restore and wire change events
+          try {
+            if (orderByEl) {
+              var savedOrder = null;
+              try { savedOrder = localStorage.getItem('bidTracking_orderBy'); } catch(e) { savedOrder = null; }
+              if (savedOrder) orderByEl.value = savedOrder;
+              orderByEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_orderBy', this.value || 'date_asc'); saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+            }
+          } catch(e) {}
+
+            // Restore any top-filter session values (per-user session)
+            try { restoreTopFiltersFromSession(); } catch(e){}
             // Format any pre-rendered table date cells to mm/dd/yyyy
             try { formatTableDates(); } catch(e){}
             applyFiltersAndGrouping();
