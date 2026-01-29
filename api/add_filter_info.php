@@ -115,8 +115,10 @@ $filter_name = isset($_POST['filter_name']) ? trim((string) $_POST['filter_name'
 $filter_date = isset($_POST['filter_date']) ? trim((string) $_POST['filter_date']) : '';
 $hours_input = isset($_POST['hours']) ? trim((string) $_POST['hours']) : '';
 $filter_life_input = isset($_POST['filter_life']) ? trim((string) $_POST['filter_life']) : '';
-$part_number = isset($_POST['part_number']) ? trim((string) $_POST['part_number']) : '';
-$make = isset($_POST['make']) ? trim((string) $_POST['make']) : '';
+$part_number_1 = isset($_POST['part_number_1']) ? trim((string) $_POST['part_number_1']) : '';
+$make_1 = isset($_POST['make_1']) ? trim((string) $_POST['make_1']) : '';
+$part_number_2 = isset($_POST['part_number_2']) ? trim((string) $_POST['part_number_2']) : '';
+$make_2 = isset($_POST['make_2']) ? trim((string) $_POST['make_2']) : '';
 
 if (!$equipment_id || $filter_name === '') {
     json_exit_add_filter(['success' => false, 'error' => 'Missing equipment_id or filter_name'], 400);
@@ -137,12 +139,12 @@ $equipment_hours = fetch_equipment_hours($conn, $equipment_id);
 $base_hours = $hours_input === '' ? 0.0 : (float) $hours_input;
 $filter_hours_val = max(0, $equipment_hours - $base_hours);
 
-$sql = 'INSERT INTO filter_info (equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours) VALUES (?, ?, ?, NULLIF(?, ""), NULLIF(?, ""), ?, ?, ?)';
+$sql = 'INSERT INTO filter_info (equipment_id, filter_name, filter_date, hours, filter_life, part_number_1, make_1, part_number_2, make_2, filter_hours) VALUES (?, ?, ?, NULLIF(?, ""), NULLIF(?, ""), ?, ?, ?, ?, ?)';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     json_exit_add_filter(['success' => false, 'error' => 'Failed to prepare statement'], 500);
 }
-$stmt->bind_param('issssssd', $equipment_id, $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make, $filter_hours_val);
+$stmt->bind_param('issssssssd', $equipment_id, $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number_1, $make_1, $part_number_2, $make_2, $filter_hours_val);
 $ok = $stmt->execute();
 $insertId = $stmt->insert_id;
 if (!$ok) {
@@ -153,7 +155,7 @@ if (!$ok) {
 $stmt->close();
 
 $row = null;
-if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours FROM filter_info WHERE filter_id = ? LIMIT 1')) {
+if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number_1, make_1, part_number_2, make_2, filter_hours FROM filter_info WHERE filter_id = ? LIMIT 1')) {
     $rowStmt->bind_param('i', $insertId);
     $rowStmt->execute();
     $res = $rowStmt->get_result();

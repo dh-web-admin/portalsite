@@ -112,8 +112,10 @@ $filter_name = isset($_POST['filter_name']) ? trim((string) $_POST['filter_name'
 $filter_date = isset($_POST['filter_date']) ? trim((string) $_POST['filter_date']) : '';
 $hours_input = isset($_POST['hours']) ? trim((string) $_POST['hours']) : '';
 $filter_life_input = isset($_POST['filter_life']) ? trim((string) $_POST['filter_life']) : '';
-$part_number = isset($_POST['part_number']) ? trim((string) $_POST['part_number']) : '';
-$make = isset($_POST['make']) ? trim((string) $_POST['make']) : '';
+$part_number_1 = isset($_POST['part_number_1']) ? trim((string) $_POST['part_number_1']) : '';
+$make_1 = isset($_POST['make_1']) ? trim((string) $_POST['make_1']) : '';
+$part_number_2 = isset($_POST['part_number_2']) ? trim((string) $_POST['part_number_2']) : '';
+$make_2 = isset($_POST['make_2']) ? trim((string) $_POST['make_2']) : '';
 
 if ($filter_id <= 0) {
     json_exit_update_filter(['success' => false, 'error' => 'Missing filter_id.'], 400);
@@ -149,12 +151,12 @@ if ($equipment_id > 0 && ($hStmt = $conn->prepare('SELECT COALESCE(current_hours
 $base_hours = $hours_input === '' ? 0.0 : (float) $hours_input;
 $filter_hours_val = max(0, $equipment_hours - $base_hours);
 
-$sql = 'UPDATE filter_info SET filter_name = ?, filter_date = ?, hours = NULLIF(?, ""), filter_life = NULLIF(?, ""), part_number = ?, make = ?, filter_hours = ? WHERE filter_id = ?';
+$sql = 'UPDATE filter_info SET filter_name = ?, filter_date = ?, hours = NULLIF(?, ""), filter_life = NULLIF(?, ""), part_number_1 = ?, make_1 = ?, part_number_2 = ?, make_2 = ?, filter_hours = ? WHERE filter_id = ?';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     json_exit_update_filter(['success' => false, 'error' => 'Prepare failed: ' . $conn->error], 500);
 }
-$stmt->bind_param('ssssssdi', $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number, $make, $filter_hours_val, $filter_id);
+$stmt->bind_param('ssssssssdi', $filter_name, $filter_date, $hours_param, $filter_life_param, $part_number_1, $make_1, $part_number_2, $make_2, $filter_hours_val, $filter_id);
 $ok = $stmt->execute();
 if (!$ok) {
     $err = $stmt->error;
@@ -164,7 +166,7 @@ if (!$ok) {
 $stmt->close();
 
 $row = null;
-if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours FROM filter_info WHERE filter_id = ? LIMIT 1')) {
+if ($rowStmt = $conn->prepare('SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number_1, make_1, part_number_2, make_2, filter_hours FROM filter_info WHERE filter_id = ? LIMIT 1')) {
     $rowStmt->bind_param('i', $filter_id);
     $rowStmt->execute();
     $res = $rowStmt->get_result();

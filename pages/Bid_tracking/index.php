@@ -517,9 +517,8 @@ foreach ($gcCanonical as $canon => $alts) {
 
             
 
-            <div id="tableTopScroller" style="position:relative;height:26px;overflow-x:hidden;overflow-y:hidden;margin-bottom:14px;border-radius:6px;width:100%;z-index:30;background:#fff;border:1px solid rgba(15,23,42,0.04);">
+            <div id="tableTopScroller" style="position:relative;height:26px;overflow-x:auto;overflow-y:hidden;margin-bottom:14px;border-radius:6px;width:100%;z-index:30;background:#fff;border:1px solid rgba(15,23,42,0.04);">
               <div id="tableTopScrollerInner" style="height:100%;display:block;"></div>
-              <div id="tableTopCustomThumb" style="position:absolute;top:3px;height:20px;background:#6b7280;border-radius:8px;cursor:grab;z-index:40;left:0;width:80px;box-shadow:0 1px 2px rgba(0,0,0,0.12);"></div>
             </div>
 
             <div id="tableContainer" style="overflow:auto;border:1px solid #e6edf0;border-radius:8px;padding:8px;background:#fff;">
@@ -2326,62 +2325,24 @@ foreach ($gcCanonical as $canon => $alts) {
           function syncTopScroller() {
             if (!container || !table || !topScroller || !topInner) return;
             try {
-              // Force inner width to be at least slightly larger than the visible container
-              // so the scrollbar will always render even when table fits.
-              var minWidth = (container.clientWidth || 0) + 24;
-              var targetWidth = Math.max(table.scrollWidth || 0, minWidth);
-              topInner.style.width = targetWidth + 'px';
-              // Ensure the inner element height matches the visible scroller so the
-              // entire area is interactive (hover anywhere activates scrollbar).
+              // Make inner width track the table's scrollWidth so native scrollbar thumb matches table width
+              topInner.style.width = (table.scrollWidth || 0) + 'px';
+              // Match inner height to scroller so clicking anywhere on the track is interactive
               try { topInner.style.height = (topScroller.clientHeight || 26) + 'px'; } catch(e){}
-              // Always show the scroller (keep layout space) and allow interaction
+              // Ensure the scroller is visible and interactive
               topScroller.style.visibility = 'visible';
               topScroller.style.pointerEvents = 'auto';
-              // update custom thumb position/size (if present)
-              if (topThumb) {
-                try {
-                  var scrollerW = (topScroller.clientWidth || 0);
-                  var scale = (table.scrollWidth && scrollerW) ? (scrollerW / table.scrollWidth) : 0;
-                  var thumbW = Math.max(30, Math.round((container.clientWidth || 0) * scale));
-                  var maxLeft = Math.max(0, scrollerW - thumbW);
-                  var left = (table.scrollWidth ? Math.round((container.scrollLeft || 0) * (scrollerW / table.scrollWidth)) : 0);
-                  left = Math.max(0, Math.min(left, maxLeft));
-                  topThumb.style.width = thumbW + 'px';
-                  topThumb.style.left = left + 'px';
-                } catch(e) { console.warn('update thumb failed', e); }
-              }
+              // Keep top scroller position in sync with container
+              try { topScroller.scrollLeft = container.scrollLeft || 0; } catch(e){}
             } catch(e) { console.warn('syncTopScroller error', e); }
           }
           window.syncTopScroller = syncTopScroller; // expose for later calls
 
-          if (topScroller && container) {
-            // Keep native two-way sync for cases where native scroll is used,
-            // but primary syncing will be driven by container and custom thumb.
+            if (topScroller && container) {
+            // Two-way native scroll sync
             topScroller.addEventListener('scroll', function(){ try { container.scrollLeft = topScroller.scrollLeft; } catch(e){} });
-            container.addEventListener('scroll', function(){ try { syncTopScroller(); } catch(e){} });
+            container.addEventListener('scroll', function(){ try { topScroller.scrollLeft = container.scrollLeft; syncTopScroller(); } catch(e){} });
 
-            // Click on scroller track should jump container scroll
-            topScroller.addEventListener('click', function(ev){
-              try {
-                if (!table || !topScroller) return;
-                var rect = topScroller.getBoundingClientRect();
-                var x = ev.clientX - rect.left;
-                var scrollerW = topScroller.clientWidth || 1;
-                var target = Math.round((x / scrollerW) * table.scrollWidth);
-                container.scrollLeft = target;
-                syncTopScroller();
-              } catch(e){}
-            });
-
-            // Drag support for thumb
-            if (topThumb) {
-              (function(){
-                var dragging = false, startX = 0, startLeft = 0;
-                topThumb.addEventListener('pointerdown', function(e){ try { dragging = true; startX = e.clientX; startLeft = parseInt(topThumb.style.left || '0',10) || 0; topThumb.setPointerCapture && topThumb.setPointerCapture(e.pointerId); topThumb.style.cursor = 'grabbing'; } catch(er){} });
-                window.addEventListener('pointermove', function(e){ if (!dragging) return; try { var dx = e.clientX - startX; var scrollerW = topScroller.clientWidth || 1; var thumbW = topThumb.clientWidth || 1; var maxLeft = Math.max(0, scrollerW - thumbW); var newLeft = Math.max(0, Math.min(startLeft + dx, maxLeft)); topThumb.style.left = newLeft + 'px'; var proportion = newLeft / (scrollerW - thumbW || 1); container.scrollLeft = Math.round(proportion * (table.scrollWidth - container.clientWidth)); } catch(er){} });
-                window.addEventListener('pointerup', function(e){ if (!dragging) return; try { dragging = false; topThumb.releasePointerCapture && topThumb.releasePointerCapture(e.pointerId); topThumb.style.cursor = 'grab'; } catch(er){} });
-              })();
-            }
             window.addEventListener('resize', syncTopScroller);
             // Initial sync shortly after init
             setTimeout(syncTopScroller, 60);

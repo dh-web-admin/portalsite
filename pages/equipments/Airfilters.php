@@ -101,13 +101,73 @@ function ensure_filter_hours_column($conn) {
     }
 }
 
+function ensure_make_and_part_columns($conn) {
+    static $ensured = false;
+    if ($ensured) return;
+    try {
+        // check existing columns
+        $cols = [];
+        $res = $conn->query("SHOW COLUMNS FROM filter_info");
+        if ($res) {
+            while ($r = $res->fetch_assoc()) { $cols[$r['Field']] = true; }
+            $res->free();
+        }
+
+        // If legacy `make` exists but `make_1` does not, rename it to `make_1`.
+        if (empty($cols['make_1'])) {
+            if (!empty($cols['make'])) {
+                $conn->query("ALTER TABLE filter_info CHANGE `make` `make_1` VARCHAR(255) NULL");
+                $cols['make_1'] = true;
+                unset($cols['make']);
+            } else {
+                // add make_1 if missing
+                $conn->query("ALTER TABLE filter_info ADD COLUMN make_1 VARCHAR(255) NULL AFTER part_number");
+                $cols['make_1'] = true;
+            }
+        }
+
+        // If legacy `part_number` exists but `part_number_1` does not, rename it to `part_number_1`.
+        if (empty($cols['part_number_1'])) {
+            if (!empty($cols['part_number'])) {
+                $conn->query("ALTER TABLE filter_info CHANGE `part_number` `part_number_1` VARCHAR(255) NULL");
+                $cols['part_number_1'] = true;
+                unset($cols['part_number']);
+            } else {
+                $conn->query("ALTER TABLE filter_info ADD COLUMN part_number_1 VARCHAR(255) NULL AFTER make_1");
+                $cols['part_number_1'] = true;
+            }
+        }
+
+        // Ensure second set of columns exist
+        if (empty($cols['make_2'])) {
+            $conn->query("ALTER TABLE filter_info ADD COLUMN make_2 VARCHAR(255) NULL AFTER make_1");
+            $cols['make_2'] = true;
+        }
+        if (empty($cols['part_number_2'])) {
+            $conn->query("ALTER TABLE filter_info ADD COLUMN part_number_2 VARCHAR(255) NULL AFTER part_number_1");
+            $cols['part_number_2'] = true;
+        }
+    } catch (Throwable $e) {
+        error_log('[airfilters] Unable to ensure make/part columns: ' . $e->getMessage());
+    }
+    $ensured = true;
+}
+
+ensure_make_and_part_columns($conn);
+
 ensure_filter_life_column($conn);
 ensure_filter_hours_column($conn);
 
 $filtersByEquip = [];
 $filterNames = [];
 try {
-    $sql = "SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life, part_number, make, filter_hours FROM filter_info ORDER BY equipment_id ASC, filter_name ASC";
+    $sql = "SELECT filter_id, equipment_id, filter_name, filter_date, hours, filter_life,
+                COALESCE(part_number_1, '') AS part_number_1,
+                COALESCE(make_1, '') AS make_1,
+                COALESCE(make_2, '') AS make_2,
+                COALESCE(part_number_2, '') AS part_number_2,
+                filter_hours
+            FROM filter_info ORDER BY equipment_id ASC, filter_name ASC";
     $res = $conn->query($sql);
     if ($res) {
         while ($row = $res->fetch_assoc()) {
@@ -122,8 +182,10 @@ try {
                 'filter_date' => $row['filter_date'] ?? null,
                 'hours' => $row['hours'],
                 'filter_life' => $row['filter_life'],
-                'part_number' => $row['part_number'] ?? '',
-                'make' => $row['make'] ?? '',
+                'part_number_1' => $row['part_number_1'] ?? '',
+                'make_1' => $row['make_1'] ?? '',
+                'make_2' => $row['make_2'] ?? '',
+                'part_number_2' => $row['part_number_2'] ?? '',
                 'filter_hours' => $row['filter_hours'] ?? null
             ];
             if (!empty($row['filter_name'])) {
@@ -218,8 +280,10 @@ $filterNames = array_values(array_unique($filterNames));
                                     <thead>
                                         <tr>
                                             <th>Filter</th>
-                                            <th>Make</th>
-                                            <th>Part Number</th>
+                                            <th>Make-1</th>
+                                            <th>Part Number -1</th>
+                                            <th>Make-2</th>
+                                            <th>Part Number -2</th>
                                             <th>Last Changed</th>
                                             <th>Last reset hour</th>
                                             <th>Current Hours</th>
@@ -241,8 +305,10 @@ $filterNames = array_values(array_unique($filterNames));
                                     <input list="existingFiltersList" id="filterNameInput" name="filter_name" placeholder="Filter name" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;">
                                     <datalist id="existingFiltersList"></datalist>
                                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                        <input id="makeInput" name="make" placeholder="Make" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
-                                        <input id="partNumberInput" name="part_number" placeholder="Part Number" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <input id="makeInput1" name="make_1" placeholder="Make-1" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <input id="partNumberInput1" name="part_number_1" placeholder="Part Number -1" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <input id="makeInput2" name="make_2" placeholder="Make-2" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <input id="partNumberInput2" name="part_number_2" placeholder="Part Number -2" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
                                         <input id="filterLifeInput" name="filter_life" placeholder="Filter Life (hours)" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
                                     </div>
                                     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
@@ -258,9 +324,11 @@ $filterNames = array_values(array_unique($filterNames));
                                 <input type="hidden" id="editFilterId">
                                 <div style="display:flex;flex-direction:column;gap:8px;">
                                     <input id="editFilterName" placeholder="Filter name" list="existingFiltersList" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;">
-                                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                                        <input id="editMake" placeholder="Make" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
-                                        <input id="editPartNumber" placeholder="Part Number" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                        <input id="editMake1" placeholder="Make-1" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <input id="editPartNumber1" placeholder="Part Number -1" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <input id="editMake2" placeholder="Make-2" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
+                                        <input id="editPartNumber2" placeholder="Part Number -2" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
                                         <input id="editFilterLife" placeholder="Filter Life (hours)" style="padding:8px;border-radius:6px;border:1px solid #e6eef6;min-width:160px;">
                                     </div>
                                     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
@@ -373,8 +441,8 @@ $filterNames = array_values(array_unique($filterNames));
             var currentHours = equipment ? formatCell(equipment.current_hours) : '—';
             var warnAlerts = [];
             var urgentAlerts = [];
-            if (!filters.length) {
-                tbody.innerHTML = '<tr><td colspan="8" style="color:#64748b">No filters for this equipment yet.</td></tr>';
+                if (!filters.length) {
+                tbody.innerHTML = '<tr><td colspan="10" style="color:#64748b">No filters for this equipment yet.</td></tr>';
                 updateHeading(equipment, equipmentId);
                 setSelectedInfo(currentHours);
                 updateFilterAlerts([], []);
@@ -395,8 +463,10 @@ $filterNames = array_values(array_unique($filterNames));
                 var tr = document.createElement('tr');
                 var editBtn = IS_ADMIN ? '<button type="button" class="parts-action-btn" onclick="openEditFilterModal(' + (filter.filter_id || 0) + ',' + equipmentId + ')">Edit</button>' : '';
                 tr.innerHTML = '<td><div class="filter-name-cell"><span>' + formatCell(filter.filter_name) + '</span>' + editBtn + '</div></td>' +
-                    '<td>' + formatCell(filter.make) + '</td>' +
-                    '<td>' + formatCell(filter.part_number) + '</td>' +
+                    '<td>' + formatCell(filter.make_1) + '</td>' +
+                    '<td>' + formatCell(filter.part_number_1) + '</td>' +
+                    '<td>' + formatCell(filter.make_2) + '</td>' +
+                    '<td>' + formatCell(filter.part_number_2) + '</td>' +
                     '<td>' + formatCell(filter.filter_date) + '</td>' +
                     '<td>' + resetHoursDisplay + '</td>' +
                     '<td>' + (metrics.hoursSince ? metrics.hoursSince.toFixed(1) : '0.0') + '</td>' +
@@ -511,7 +581,7 @@ $filterNames = array_values(array_unique($filterNames));
         function closeAddFilterModal() {
             var modal = document.getElementById('addFilterModal');
             if (modal) { modal.style.display = 'none'; }
-            ['filterNameInput','makeInput','partNumberInput','filterLifeInput'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
+            ['filterNameInput','makeInput1','partNumberInput1','makeInput2','partNumberInput2','filterLifeInput'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
         }
 
         function closeEditFilterModal() {
@@ -539,8 +609,10 @@ $filterNames = array_values(array_unique($filterNames));
             var data = new FormData();
             data.append('equipment_id', CURRENT_EQUIPMENT_ID);
             data.append('filter_name', nameVal);
-            data.append('make', document.getElementById('makeInput').value);
-            data.append('part_number', document.getElementById('partNumberInput').value);
+            data.append('make_1', document.getElementById('makeInput1').value);
+            data.append('part_number_1', document.getElementById('partNumberInput1').value);
+            data.append('make_2', document.getElementById('makeInput2').value);
+            data.append('part_number_2', document.getElementById('partNumberInput2').value);
             data.append('filter_life', document.getElementById('filterLifeInput').value);
             fetch(API_BASE + 'api/add_filter_info.php', { method:'POST', body:data, credentials:'same-origin' })
                 .then(function(resp){ return resp.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text }; } }); })
@@ -576,8 +648,10 @@ $filterNames = array_values(array_unique($filterNames));
             renderExistingFiltersDatalist();
             document.getElementById('editFilterId').value = filter.filter_id;
             document.getElementById('editFilterName').value = filter.filter_name || '';
-            document.getElementById('editMake').value = filter.make || '';
-            document.getElementById('editPartNumber').value = filter.part_number || '';
+            document.getElementById('editMake1').value = filter.make_1 || '';
+            document.getElementById('editPartNumber1').value = filter.part_number_1 || '';
+            document.getElementById('editMake2').value = filter.make_2 || '';
+            document.getElementById('editPartNumber2').value = filter.part_number_2 || '';
             document.getElementById('editFilterLife').value = filter.filter_life || '';
             var modal = document.getElementById('editFilterModal');
             if (modal) { modal.style.display = 'flex'; }
@@ -591,8 +665,10 @@ $filterNames = array_values(array_unique($filterNames));
             var data = new FormData();
             data.append('filter_id', id);
             data.append('filter_name', nameVal);
-            data.append('make', document.getElementById('editMake').value);
-            data.append('part_number', document.getElementById('editPartNumber').value);
+            data.append('make_1', document.getElementById('editMake1').value);
+            data.append('part_number_1', document.getElementById('editPartNumber1').value);
+            data.append('make_2', document.getElementById('editMake2').value);
+            data.append('part_number_2', document.getElementById('editPartNumber2').value);
             data.append('filter_life', document.getElementById('editFilterLife').value);
             fetch(API_BASE + 'api/update_filter_info.php', { method:'POST', body:data, credentials:'same-origin' })
                 .then(function(resp){ return resp.text().then(function(text){ try { return JSON.parse(text); } catch(e){ throw { type:'parse', text:text }; } }); })
@@ -682,8 +758,8 @@ $filterNames = array_values(array_unique($filterNames));
                     var opt = document.createElement('option');
                     opt.value = f.filter_id || '';
                     opt.textContent = f.filter_name || '(Unnamed filter)';
-                    opt.setAttribute('data-make', f.make || '');
-                    opt.setAttribute('data-part-number', f.part_number || '');
+                    opt.setAttribute('data-make', f.make_1 || '');
+                    opt.setAttribute('data-part-number', f.part_number_1 || '');
                     sel.appendChild(opt);
                 });
             }
