@@ -1362,8 +1362,8 @@ foreach ($gcCanonical as $canon => $alts) {
       }
 
       // Columns that should show a dollar sign prefix in the UI (but not modify stored value)
-      // Note: `total_price` should accept any textual value (commas allowed) and not be forced into a numeric display/validation.
-      var moneyCols = ['client_win_price','stabilizer_bid_win_price'];
+      // Make `total_price` behave the same as other money columns (display $ prefix, wrapped input, and sanitized on submit)
+      var moneyCols = ['client_win_price','stabilizer_bid_win_price','total_price'];
 
       // Columns that look like dates (any column name containing "date")
       var dateCols = (bidColumns || []).filter(function(c){ return /date/i.test(c || ''); });
@@ -2110,7 +2110,26 @@ foreach ($gcCanonical as $canon => $alts) {
                     }
                   } catch(e) {}
 
-                  return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
+                    // Sanitize monetary inputs for all moneyCols: allow users to type $ and commas, but send clean numeric values to server
+                    try {
+                      if (Array.isArray(moneyCols) && moneyCols.length) {
+                        moneyCols.forEach(function(col){
+                          try {
+                            var v = null;
+                            try { v = fd.get(col); } catch(e) { v = null; }
+                            if (v === null || typeof v === 'undefined') {
+                              try { var el = editForm.querySelector('[name="' + col + '"], [data-col="' + col + '"]'); if (el && typeof el.value !== 'undefined') v = el.value; } catch(e) { v = null; }
+                            }
+                            if (v !== null && typeof v !== 'undefined') {
+                              var cleaned = ('' + v).replace(/[^0-9.\-]/g, '');
+                              if (cleaned === '') { fd.delete(col); } else { fd.set(col, cleaned); }
+                            }
+                          } catch(e) {}
+                        });
+                      }
+                    } catch(e) { /* ignore sanitization failures */ }
+
+                    return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
                 });
               });
             }).then(function(r){
