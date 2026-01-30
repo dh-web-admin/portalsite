@@ -502,6 +502,7 @@ foreach ($gcCanonical as $canon => $alts) {
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;margin-left:auto;">
                   <label for="orderBySelect" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">order by:</label>
                   <select id="orderBySelect" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:140px;">
+                    <option value="grouped">Default</option>
                     <option value="date_asc">Bid Date: Low → High</option>
                     <option value="projectnum_asc">Project #: Low → High</option>
                   </select>
@@ -2521,8 +2522,8 @@ foreach ($gcCanonical as $canon => $alts) {
                 if (yearFilterEl) { yearFilterEl.value = ''; yearFilterEl.dispatchEvent(new Event('change')); }
               }
               if (orderByEl) {
-                orderByEl.value = 'date_asc';
-                try { localStorage.setItem('bidTracking_orderBy', 'date_asc'); } catch(e){}
+                orderByEl.value = 'grouped';
+                try { localStorage.setItem('bidTracking_orderBy', 'grouped'); } catch(e){}
                 applyFiltersAndGrouping();
               }
             } catch(e) {}
@@ -2610,36 +2611,73 @@ function applyFiltersAndGrouping() {
   // Flattened list of items (preserve detailRows reference)
   var flatItems = filtered.map(function(it){ return { it: it, date: it.date }; });
 
-  // Sort first by status order, then by date ascending
-  flatItems.sort(function(a, b){
-    var si = statusIndex(a.it.status);
-    var sj = statusIndex(b.it.status);
-    if (si !== sj) return si - sj;
-    var ad = a.date ? a.date.getTime() : Number.POSITIVE_INFINITY;
-    var bd = b.date ? b.date.getTime() : Number.POSITIVE_INFINITY;
+  // If no filters are applied (year == '' and status == 'all'), show the
+  // legacy grouped-by-status view. Otherwise respect the user's order selection
+  // and perform a global sort.
+  var doGlobalSort = ((orderByEl && orderByEl.value && orderByEl.value !== 'grouped') || !(selectedYear === '' && selectedStatus === 'all'));
+
+  // helpers for comparisons
+  function cmpDateItems(pa, pb){
+    var ad = pa && pa.date ? (pa.date instanceof Date ? pa.date.getTime() : new Date(pa.date).getTime()) : Number.POSITIVE_INFINITY;
+    var bd = pb && pb.date ? (pb.date instanceof Date ? pb.date.getTime() : new Date(pb.date).getTime()) : Number.POSITIVE_INFINITY;
     return ad - bd;
-  });
+  }
+  function cmpProjectItems(pa, pb){
+    var aproj = (pa.it && (pa.it.project || pa.it.dhss_project_number)) ? String(pa.it.project || pa.it.dhss_project_number).trim() : '';
+    var bproj = (pb.it && (pb.it.project || pb.it.dhss_project_number)) ? String(pb.it.project || pb.it.dhss_project_number).trim() : '';
+    var na = parseFloat(aproj);
+    var nb = parseFloat(bproj);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    return aproj.localeCompare(bproj);
+  }
 
   // Build fragment in sorted order
   var frag = document.createDocumentFragment();
   var colCount = (typeof getVisibleHeaderCount === 'function') ? getVisibleHeaderCount() : (table && table.querySelectorAll('thead th').length) || 1;
-  var prevProj = null;
-  flatItems.forEach(function(w, idx){
-    var curProj = (w.it.project || '').toString();
-    if (idx !== 0 && prevProj !== curProj) {
-      var spr = document.createElement('tr');
-      spr.className = 'group-spacer';
-      var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td);
-      frag.appendChild(spr);
-    }
-    frag.appendChild(w.it.row);
-    try {
-      if (w.it.detailRows && w.it.detailRows.length) {
-        w.it.detailRows.forEach(function(d){ frag.appendChild(d); });
+
+  if (doGlobalSort) {
+    // perform global sort according to _order
+    flatItems.sort(function(a,b){
+      try {
+        if (typeof _order === 'string' && _order.indexOf('projectnum') === 0) {
+          var pr = cmpProjectItems(a,b);
+          return (_order.indexOf('_desc') !== -1) ? -pr : pr;
+        }
+        var dcmp = cmpDateItems(a,b);
+        return (_order === 'date_desc') ? -dcmp : dcmp;
+      } catch(e) { return cmpDateItems(a,b); }
+    });
+
+    var prevProj = null;
+    flatItems.forEach(function(w, idx){
+      var curProj = (w.it.project || '').toString();
+      if (idx !== 0 && prevProj !== curProj) {
+        var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
       }
-    } catch(e) {}
-    prevProj = curProj;
-  });
+      frag.appendChild(w.it.row);
+      try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
+      prevProj = curProj;
+    });
+  } else {
+    // grouped-by-status (legacy behavior)
+    var prevProj = null;
+    // Sort by status order, then date ascending
+    flatItems.sort(function(a,b){
+      var si = statusIndex(a.it.status);
+      var sj = statusIndex(b.it.status);
+      if (si !== sj) return si - sj;
+      return cmpDateItems(a,b);
+    });
+    flatItems.forEach(function(w, idx){
+      var curProj = (w.it.project || '').toString();
+      if (idx !== 0 && prevProj !== curProj) {
+        var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
+      }
+      frag.appendChild(w.it.row);
+      try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
+      prevProj = curProj;
+    });
+  }
 
   tbody.innerHTML = '';
   tbody.appendChild(frag);
@@ -2990,8 +3028,8 @@ function syncGcDisplayForProjects() {
             if (orderByEl) {
               var savedOrder = null;
               try { savedOrder = localStorage.getItem('bidTracking_orderBy'); } catch(e) { savedOrder = null; }
-              if (savedOrder) orderByEl.value = savedOrder;
-              orderByEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_orderBy', this.value || 'date_asc'); saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+              if (savedOrder) orderByEl.value = savedOrder; else orderByEl.value = 'grouped';
+              orderByEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_orderBy', this.value || 'grouped'); saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
             }
           } catch(e) {}
 
