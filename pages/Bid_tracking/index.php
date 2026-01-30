@@ -3303,9 +3303,9 @@ function syncGcDisplayForProjects() {
                 if (yearMatch && statusMatch) keep.push(r);
               }
 
-              // Build items array (objects) for preview based on ordering choice
+              // Build items array (use the captured `originalRows` so we also have detailRows)
               var order = (printOrder && printOrder.value) ? printOrder.value : 'grouped';
-              var items = keep.map(function(r){ var obj = {}; try{ obj = JSON.parse(r.getAttribute('data-bid')||'{}'); }catch(e){}; var d = null; if (obj.bid_date) { var dt = new Date(obj.bid_date); if (!isNaN(dt)) d = dt; } var status = (obj.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending'; return { obj: obj, date: d, status: status }; });
+              var items = (typeof originalRows !== 'undefined' ? originalRows.slice() : []).filter(function(it){ return keep.indexOf(it.row) !== -1; }).map(function(it){ return { obj: it.obj || {}, date: it.date || null, status: (it.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending', detailRows: it.detailRows || [] }; });
 
               function cmpDate(a,b){ var ad = a.date? a.date.getTime():Number.POSITIVE_INFINITY; var bd = b.date? b.date.getTime():Number.POSITIVE_INFINITY; return ad-bd; }
               function cmpProj(a,b){ var pa = (a.obj.dhss_project_number||'').toString().trim(); var pb = (b.obj.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
@@ -3375,6 +3375,37 @@ function syncGcDisplayForProjects() {
                   tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
+
+                // If there are contractor detail rows for this project, add them beneath the main row
+                try {
+                  var gcColsRe = /(^gc[_a-z]*|general_contractor)/i;
+                  if (it.detailRows && it.detailRows.length) {
+                    it.detailRows.forEach(function(dtr){
+                      try {
+                        var detTr = document.createElement('tr');
+                        selectedCols.forEach(function(col){
+                          var td = document.createElement('td');
+                          // non-GC columns remain empty for detail rows
+                          if (!gcColsRe.test(col)) {
+                            td.textContent = '';
+                          } else {
+                            var src = dtr.querySelector('td[data-col="' + col + '"]');
+                            td.textContent = src ? (src.textContent || '').trim() : '';
+                          }
+                          td.style.padding = '2px 6px';
+                          td.style.border = '1px solid #d1d5db';
+                          td.style.borderTop = '0';
+                          td.style.whiteSpace = 'normal';
+                          td.style.wordBreak = 'break-word';
+                          td.style.overflow = 'visible';
+                          td.style.height = '20px';
+                          detTr.appendChild(td);
+                        });
+                        tbody.appendChild(detTr);
+                      } catch(e){}
+                    });
+                  }
+                } catch(e) {}
               });
               tbl.appendChild(tbody);
 
@@ -3405,25 +3436,19 @@ function syncGcDisplayForProjects() {
                   if (!selectedCols || selectedCols.length === 0) selectedCols = ['dhss_project_number','project_name','bid_date','project_city'];
                   var stat = (printStatus && printStatus.value) ? printStatus.value : 'all';
                   var yr = (printYear && printYear.value) ? printYear.value : '';
-                  var rows = Array.from((tableSrc||document).querySelectorAll('tbody tr'));
-                  var keep = [];
-                  for (var i=0;i<rows.length;i++){
-                    var r = rows[i];
-                    if (r.classList && r.classList.contains('group-spacer')) continue;
-                    if (!r.hasAttribute('data-bid')) continue;
-                    var obj = {};
-                    try { obj = JSON.parse(r.getAttribute('data-bid')||'{}'); } catch(e){}
-                    var rowStatus = (obj.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending';
-                    var proj = (obj.dhss_project_number||'').toString().trim();
+                  // Use originalRows so we can include contractor detailRows in print output
+                  var keepRows = (typeof originalRows !== 'undefined' ? originalRows.slice() : []).filter(function(it){
+                    var proj = (it.project || '').toString().trim();
+                    var rowStatus = (it.status || '').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending';
                     var yearMatch = true; if (yr) yearMatch = proj.indexOf(yr) === 0;
                     var statusMatch = (stat === 'all') || (rowStatus === stat);
-                    if (yearMatch && statusMatch) keep.push(obj);
-                  }
+                    return yearMatch && statusMatch;
+                  });
                   var order = (printOrder && printOrder.value) ? printOrder.value : 'grouped';
                   function cmpDateObj(a,b){ var ad = a.bid_date? new Date(a.bid_date).getTime():Number.POSITIVE_INFINITY; var bd = b.bid_date? new Date(b.bid_date).getTime():Number.POSITIVE_INFINITY; return ad-bd; }
                   function cmpProjObj(a,b){ var pa = (a.dhss_project_number||'').toString().trim(); var pb = (b.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
-                  if (order === 'date_asc' || order === 'date_desc') { keep.sort(cmpDateObj); if (order === 'date_desc') keep.reverse(); }
-                  else if (order.indexOf('projectnum') === 0) { keep.sort(cmpProjObj); if (order.indexOf('_desc') !== -1) keep.reverse(); }
+                  if (order === 'date_asc' || order === 'date_desc') { keepRows.sort(cmpDateObj); if (order === 'date_desc') keepRows.reverse(); }
+                  else if (order.indexOf('projectnum') === 0) { keepRows.sort(cmpProjObj); if (order.indexOf('_desc') !== -1) keepRows.reverse(); }
                   else {
                     // grouped default: mirror page grouping order by status and sort each group by date asc
                     var statusOrder = ['bidding','pending','win','lost','completed'];
@@ -3449,14 +3474,37 @@ function syncGcDisplayForProjects() {
                     var parts = String(label).split(/\s+/).filter(function(p){return p.length>0;}); headerHtml += '<th>' + parts.join('<br>') + '</th>';
                   }
                   var rowsHtml = '';
-                  for (var ri=0; ri<keep.length; ri++){
-                    var o = keep[ri]; rowsHtml += '<tr>';
+                  var gcColsRe = /(^gc[_a-z]*|general_contractor)/i;
+                  for (var ri=0; ri<keepRows.length; ri++){
+                    var o = keep[ri];
+                    // main row
+                    rowsHtml += '<tr>';
                     for (var ci2=0; ci2<selectedCols.length; ci2++){
                       var col = selectedCols[ci2]; var v = '';
                       try { if (col === 'bid_date' && o[col]) v = formatDateMMDDYYYY(o[col]); else v = (o[col]!==undefined && o[col]!==null) ? String(o[col]) : ''; } catch(e){ v=''; }
                       rowsHtml += '<td>' + (v||'') + '</td>';
                     }
                     rowsHtml += '</tr>';
+                    // contractor detail rows (from originalRows entry)
+                    try {
+                      var det = (keepRows[ri] && keepRows[ri].detailRows) ? keepRows[ri].detailRows : [];
+                      for (var di=0; di<det.length; di++){
+                        var dtr = det[di]; rowsHtml += '<tr class="print-detail">';
+                            for (var cii=0; cii<selectedCols.length; cii++){
+                              var coln = selectedCols[cii];
+                              if (!gcColsRe.test(coln)) {
+                                rowsHtml += '<td style="border-top:0;padding:6px;border-left:1px solid #e6edf0;border-right:1px solid #e6edf0;border-bottom:1px solid #e6edf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>';
+                              } else {
+                                try {
+                                  var src = dtr.querySelector ? dtr.querySelector('td[data-col="' + coln + '"]') : null;
+                                  var val = src ? (src.textContent || '').trim() : '';
+                                  rowsHtml += '<td style="border-top:0;padding:6px;border-left:1px solid #e6edf0;border-right:1px solid #e6edf0;border-bottom:1px solid #e6edf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (val||'') + '</td>';
+                                } catch(e){ rowsHtml += '<td style="border-top:0;padding:6px;border-left:1px solid #e6edf0;border-right:1px solid #e6edf0;border-bottom:1px solid #e6edf0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></td>'; }
+                              }
+                            }
+                        rowsHtml += '</tr>';
+                      }
+                    } catch(e){}
                   }
                   var tableHtml = '<table>' + colsHtml + '<thead><tr>' + headerHtml + '</tr></thead><tbody>' + rowsHtml + '</tbody></table>';
                   var html = '<!doctype html><html><head><title>Print</title>' +
