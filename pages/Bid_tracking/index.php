@@ -3305,7 +3305,7 @@ function syncGcDisplayForProjects() {
 
               // Build items array (objects) for preview based on ordering choice
               var order = (printOrder && printOrder.value) ? printOrder.value : 'grouped';
-              var items = keep.map(function(r){ var obj = {}; try{ obj = JSON.parse(r.getAttribute('data-bid')||'{}'); }catch(e){}; var d = null; if (obj.bid_date) { var dt = new Date(obj.bid_date); if (!isNaN(dt)) d = dt; } return { obj: obj, date: d }; });
+              var items = keep.map(function(r){ var obj = {}; try{ obj = JSON.parse(r.getAttribute('data-bid')||'{}'); }catch(e){}; var d = null; if (obj.bid_date) { var dt = new Date(obj.bid_date); if (!isNaN(dt)) d = dt; } var status = (obj.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending'; return { obj: obj, date: d, status: status }; });
 
               function cmpDate(a,b){ var ad = a.date? a.date.getTime():Number.POSITIVE_INFINITY; var bd = b.date? b.date.getTime():Number.POSITIVE_INFINITY; return ad-bd; }
               function cmpProj(a,b){ var pa = (a.obj.dhss_project_number||'').toString().trim(); var pb = (b.obj.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
@@ -3317,8 +3317,18 @@ function syncGcDisplayForProjects() {
                 items.sort(function(a,b){ return cmpProj(a,b); });
                 if (order.indexOf('_desc') !== -1) items.reverse();
               } else {
-                // grouped default: keep original DOM order but ensure date asc within group by project
-                items.sort(function(a,b){ return cmpDate(a,b); });
+                // grouped default: group by status (desired default order) and sort each group by date asc
+                var statusOrder = ['bidding','pending','win','lost','completed'];
+                var grouped = [];
+                statusOrder.forEach(function(s){
+                  var group = items.filter(function(it){ return it.status === s; });
+                  group.sort(function(a,b){ return cmpDate(a,b); });
+                  grouped = grouped.concat(group);
+                });
+                // append any items with unknown statuses at the end
+                var others = items.filter(function(it){ return statusOrder.indexOf(it.status) === -1; });
+                others.sort(function(a,b){ return cmpDate(a,b); });
+                items = grouped.concat(others);
               }
 
               // Build a simple, Excel-like table for preview
@@ -3414,6 +3424,21 @@ function syncGcDisplayForProjects() {
                   function cmpProjObj(a,b){ var pa = (a.dhss_project_number||'').toString().trim(); var pb = (b.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
                   if (order === 'date_asc' || order === 'date_desc') { keep.sort(cmpDateObj); if (order === 'date_desc') keep.reverse(); }
                   else if (order.indexOf('projectnum') === 0) { keep.sort(cmpProjObj); if (order.indexOf('_desc') !== -1) keep.reverse(); }
+                  else {
+                    // grouped default: mirror page grouping order by status and sort each group by date asc
+                    var statusOrder = ['bidding','pending','win','lost','completed'];
+                    var groupedKeep = [];
+                    statusOrder.forEach(function(s){
+                      var grp = keep.filter(function(o){ var st = (o.status||o.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,''); return st === s; });
+                      // sort grp by date if present
+                      grp.sort(function(a,b){ return cmpDateObj(a,b); });
+                      groupedKeep = groupedKeep.concat(grp);
+                    });
+                    // include any others
+                    var others = keep.filter(function(o){ var st = (o.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,''); return statusOrder.indexOf(st) === -1; });
+                    others.sort(function(a,b){ return cmpDateObj(a,b); });
+                    keep = groupedKeep.concat(others);
+                  }
                   // build html table with fixed layout and equal column widths so it fits
                   var colWidth = Math.floor(100/selectedCols.length);
                   var colsHtml = '';
