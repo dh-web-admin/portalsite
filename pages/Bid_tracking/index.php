@@ -512,6 +512,7 @@ foreach ($gcCanonical as $canon => $alts) {
                 </div>
               </div>
             <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Email Notifications</button>
+            <button id="printBtn" class="btn" style="padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;margin-left:8px;">Print</button>
             </div>
 
           <div id="pageBody" style="padding:16px 40px;">
@@ -1178,6 +1179,49 @@ foreach ($gcCanonical as $canon => $alts) {
               <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
                 <button type="button" id="cancelEmailSettings" style="background:#fff;border:1px solid #e6edf0;color:#0f172a;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
                 <button type="button" id="saveEmailSettings" style="background:#10b981;border:none;color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;">Save</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Print Modal (full viewport) -->
+          <div id="printModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);align-items:stretch;justify-content:stretch;z-index:4700;padding:0;">
+            <div style="position:fixed;inset:0;background:#fff;border-radius:0;padding:12px;box-shadow:none;overflow:hidden;display:flex;gap:12px;font-size:70%;box-sizing:border-box;width:100vw;height:100vh;">
+              <div style="flex:0 0 320px;overflow:auto;padding:16px;max-width:360px;">
+                <div style="font-weight:800;color:#0f172a;font-size:16px;margin-bottom:8px;">Print Options</div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+                  <label style="font-weight:700;color:#0f172a;">Status</label>
+                  <select id="printStatus" style="padding:6px;border-radius:8px;border:1px solid #e6edf0;">
+                    <option value="all">All</option>
+                    <option value="won">Won</option>
+                    <option value="lost">Lost</option>
+                    <option value="bidding">Bidding</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+                  <label style="font-weight:700;color:#0f172a;">DHSS Project#</label>
+                  <select id="printYear" style="padding:6px;border-radius:8px;border:1px solid #e6edf0;"></select>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+                  <label style="font-weight:700;color:#0f172a;">Order By</label>
+                  <select id="printOrder" style="padding:6px;border-radius:8px;border:1px solid #e6edf0;min-width:160px;">
+                    <option value="grouped">Default</option>
+                    <option value="date_asc">Bid Date: Low → High</option>
+                    <option value="projectnum_asc">Project #: Low → High</option>
+                  </select>
+                </div>
+
+                <div style="margin-top:12px;font-weight:800;color:#0f172a;margin-bottom:8px;">Columns</div>
+                <div id="printColumnsList" style="display:grid;grid-template-columns:1fr;gap:6px;max-height:360px;overflow:auto;padding-right:6px;border:1px solid #eef2f7;border-radius:6px;padding:8px;background:#fbfdfe;"></div>
+                <div style="display:flex;justify-content:space-between;gap:8px;margin-top:12px;">
+                  <button id="printCancel" class="btn" style="background:#fff;border:1px solid #e6edf0;padding:8px 12px;border-radius:8px;font-weight:700;">Cancel</button>
+                  <button id="printConfirm" class="btn" style="background:#10b981;border:none;color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;">Print</button>
+                </div>
+              </div>
+              <div style="flex:1 1 auto;overflow:auto;border-left:1px solid #e6edf0;padding-left:12px;padding-right:12px;">
+                <div style="font-weight:800;color:#0f172a;margin-bottom:8px;">Preview</div>
+                <div id="printPreview" style="border:1px solid #e6edf0;border-radius:6px;overflow:auto;padding:8px;min-height:320px;background:#fff;"></div>
               </div>
             </div>
           </div>
@@ -3171,6 +3215,240 @@ function syncGcDisplayForProjects() {
             });
           }
         } catch(e) { console.warn('email modal init failed', e); }
+
+        // -----------------------------
+        // Print modal
+        // -----------------------------
+        try {
+          var printBtn = document.getElementById('printBtn');
+          var printModal = document.getElementById('printModal');
+          var printCancel = document.getElementById('printCancel');
+          var printConfirm = document.getElementById('printConfirm');
+          var printColumnsList = document.getElementById('printColumnsList');
+          var printPreview = document.getElementById('printPreview');
+          var printStatus = document.getElementById('printStatus');
+          var printYear = document.getElementById('printYear');
+          var printOrder = document.getElementById('printOrder');
+
+          function buildPrintColumns() {
+            if (!printColumnsList) return;
+            printColumnsList.innerHTML = '';
+            try {
+              (bidColumns || []).forEach(function(col){
+                var id = 'pc_' + col;
+                var wrap = document.createElement('label');
+                wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '8px';
+                var chk = document.createElement('input'); chk.type = 'checkbox'; chk.id = id; chk.value = col; chk.checked = true; chk.style.width='16px'; chk.style.height='16px';
+                var span = document.createElement('span'); span.textContent = (col === 'dhss_project_number') ? 'DHSS Project #' : (col === 'gc_name' || col === 'general_contractor_name') ? 'General Contractor Name' : col.replace(/_/g,' ');
+                span.style.fontWeight = '600'; span.style.color = '#0f172a';
+                wrap.appendChild(chk); wrap.appendChild(span);
+                printColumnsList.appendChild(wrap);
+              });
+            } catch(e) { printColumnsList.innerHTML = '<div style="color:#ef4444">Failed to build columns</div>'; }
+          }
+
+          function buildPrintYearOptions(){
+            if (!printYear) return;
+            printYear.innerHTML = '';
+            var nowY = new Date().getFullYear();
+            var ph = document.createElement('option'); ph.value = ''; ph.textContent = 'All Years'; printYear.appendChild(ph);
+            for (var i=0;i<5;i++){ var y = nowY - i; var opt = document.createElement('option'); opt.value = String(y).slice(-2); opt.textContent = String(y); printYear.appendChild(opt); }
+          }
+
+          function openPrintModal(){
+            if (!printModal) return;
+            buildPrintColumns(); buildPrintYearOptions();
+            // default filter values mirror current selections
+            try { if (printStatus && statusFilterEl) printStatus.value = statusFilterEl.value || 'all'; } catch(e){}
+            try { if (printYear && yearFilterEl) printYear.value = yearFilterEl.value || ''; } catch(e){}
+            try { if (printOrder && orderByEl) printOrder.value = orderByEl.value || 'grouped'; } catch(e){}
+            // build initial preview
+            buildPrintPreview();
+            printModal.style.display = 'flex';
+          }
+
+          function closePrintModal(){ if (printModal) printModal.style.display = 'none'; }
+
+          function buildPrintPreview(){
+            if (!printPreview) return;
+            // clone the table and apply filters + column visibility + ordering
+              try {
+              var table = document.getElementById('bidsTable');
+              if (!table) { printPreview.innerHTML = '<div style="color:#ef4444">No table</div>'; return; }
+              // collect selected columns
+              var selectedCols = Array.from((printColumnsList || document).querySelectorAll('input[type=checkbox]:checked')).map(function(i){ return i.value; });
+              // ensure status/dhss column stay if no columns selected
+              if (selectedCols.length === 0) { selectedCols = bidColumns.slice(0,3); }
+
+              // If none selected, pick a sensible default subset
+              if (selectedCols.length === 0) selectedCols = ['dhss_project_number','project_name','bid_date','project_city'];
+
+              // filter visible data rows according to modal filters
+              var stat = (printStatus && printStatus.value) ? printStatus.value : 'all';
+              var yr = (printYear && printYear.value) ? printYear.value : '';
+              // collect data rows and their detail rows
+              var rows = Array.from(table.querySelectorAll('tbody tr'));
+              var keep = [];
+              for (var i=0;i<rows.length;i++){
+                var r = rows[i];
+                if (r.classList && r.classList.contains('group-spacer')) continue;
+                var isData = r.hasAttribute('data-bid');
+                if (!isData) continue;
+                var obj = {};
+                try { obj = JSON.parse(r.getAttribute('data-bid')||'{}'); } catch(e){}
+                var rowStatus = (obj.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending';
+                var proj = (obj.dhss_project_number||'').toString().trim();
+                var yearMatch = true; if (yr) yearMatch = proj.indexOf(yr) === 0;
+                var statusMatch = (stat === 'all') || (rowStatus === stat);
+                if (yearMatch && statusMatch) keep.push(r);
+              }
+
+              // Build items array (objects) for preview based on ordering choice
+              var order = (printOrder && printOrder.value) ? printOrder.value : 'grouped';
+              var items = keep.map(function(r){ var obj = {}; try{ obj = JSON.parse(r.getAttribute('data-bid')||'{}'); }catch(e){}; var d = null; if (obj.bid_date) { var dt = new Date(obj.bid_date); if (!isNaN(dt)) d = dt; } return { obj: obj, date: d }; });
+
+              function cmpDate(a,b){ var ad = a.date? a.date.getTime():Number.POSITIVE_INFINITY; var bd = b.date? b.date.getTime():Number.POSITIVE_INFINITY; return ad-bd; }
+              function cmpProj(a,b){ var pa = (a.obj.dhss_project_number||'').toString().trim(); var pb = (b.obj.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
+
+              if (order === 'date_asc' || order === 'date_desc') {
+                items.sort(function(a,b){ return cmpDate(a,b); });
+                if (order === 'date_desc') items.reverse();
+              } else if (order.indexOf('projectnum') === 0) {
+                items.sort(function(a,b){ return cmpProj(a,b); });
+                if (order.indexOf('_desc') !== -1) items.reverse();
+              } else {
+                // grouped default: keep original DOM order but ensure date asc within group by project
+                items.sort(function(a,b){ return cmpDate(a,b); });
+              }
+
+              // Build a simple, Excel-like table for preview
+              var tbl = document.createElement('table');
+              tbl.style.borderCollapse = 'collapse';
+              tbl.style.width = '100%';
+              tbl.style.fontSize = '8px';
+              tbl.style.tableLayout = 'auto';
+
+              // header
+              var thead = document.createElement('thead');
+              var htr = document.createElement('tr');
+              selectedCols.forEach(function(c){
+                var th = document.createElement('th');
+                var label = (function(k){ if (!k) return ''; if (k === 'dhss_project_number') return 'DHSS Project #'; if (k === 'gc_name' || k === 'general_contractor_name') return 'General Contractor Name'; if (k === 'gc_number' || k === 'general_contractor_number') return 'General Contractor Number'; if (k === 'bid_date') return 'Bid Date'; return k.replace(/_/g,' '); })(c);
+                // split header words onto separate lines to reduce column width
+                var parts = String(label).split(/\s+/).filter(function(p){ return p.length>0; });
+                th.innerHTML = parts.join('<br>');
+                th.style.border='1px solid #bfc7cc'; th.style.padding='6px 8px'; th.style.background='#f8fafc'; th.style.fontWeight='700'; th.style.whiteSpace='normal'; th.style.wordBreak='break-word'; th.style.overflow='visible';
+                htr.appendChild(th);
+              });
+              thead.appendChild(htr); tbl.appendChild(thead);
+
+              var tbody = document.createElement('tbody');
+              // Add rows with compact cell height (no spacer rows)
+              items.forEach(function(it){
+                var obj = it.obj || {};
+                var tr = document.createElement('tr');
+                tr.style.borderSpacing = '0';
+                selectedCols.forEach(function(col){
+                  var td = document.createElement('td');
+                  var v = '';
+                  try {
+                    if (col === 'bid_date' && obj[col]) v = formatDateMMDDYYYY(obj[col]);
+                    else v = (obj[col] !== undefined && obj[col] !== null) ? String(obj[col]) : '';
+                  } catch(e) { v = '' }
+                  td.textContent = v;
+                  td.style.padding = '2px 6px';
+                  td.style.border = '1px solid #d1d5db';
+                  td.style.whiteSpace = 'normal';
+                  td.style.wordBreak = 'break-word';
+                  td.style.overflow = 'visible';
+                  td.style.height = '20px';
+                  tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+              });
+              tbl.appendChild(tbody);
+
+              var tableWrap = document.createElement('div'); tableWrap.style.overflow = 'auto'; tableWrap.appendChild(tbl);
+              printPreview.innerHTML = '';
+              printPreview.appendChild(tableWrap);
+            } catch(e) { printPreview.innerHTML = '<div style="color:#ef4444">Preview failed</div>'; }
+          }
+
+          // wire events
+          if (printBtn) printBtn.addEventListener('click', openPrintModal);
+          if (printCancel) printCancel.addEventListener('click', closePrintModal);
+          if (printColumnsList) printColumnsList.addEventListener('change', buildPrintPreview);
+          if (printStatus) printStatus.addEventListener('change', buildPrintPreview);
+          if (printYear) printYear.addEventListener('change', buildPrintPreview);
+          if (printOrder) printOrder.addEventListener('change', buildPrintPreview);
+
+          if (printConfirm) {
+            printConfirm.addEventListener('click', function(){
+              try {
+                // create a print window and write preview content
+                var w = window.open('','_blank');
+                if (!w) { showToast && showToast('Pop-up blocked', 'error'); return; }
+                // Build a clean, print-optimized table so browser printing fits columns
+                try {
+                  var tableSrc = document.getElementById('bidsTable');
+                  var selectedCols = Array.from((printColumnsList || document).querySelectorAll('input[type=checkbox]:checked')).map(function(i){ return i.value; });
+                  if (!selectedCols || selectedCols.length === 0) selectedCols = ['dhss_project_number','project_name','bid_date','project_city'];
+                  var stat = (printStatus && printStatus.value) ? printStatus.value : 'all';
+                  var yr = (printYear && printYear.value) ? printYear.value : '';
+                  var rows = Array.from((tableSrc||document).querySelectorAll('tbody tr'));
+                  var keep = [];
+                  for (var i=0;i<rows.length;i++){
+                    var r = rows[i];
+                    if (r.classList && r.classList.contains('group-spacer')) continue;
+                    if (!r.hasAttribute('data-bid')) continue;
+                    var obj = {};
+                    try { obj = JSON.parse(r.getAttribute('data-bid')||'{}'); } catch(e){}
+                    var rowStatus = (obj.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending';
+                    var proj = (obj.dhss_project_number||'').toString().trim();
+                    var yearMatch = true; if (yr) yearMatch = proj.indexOf(yr) === 0;
+                    var statusMatch = (stat === 'all') || (rowStatus === stat);
+                    if (yearMatch && statusMatch) keep.push(obj);
+                  }
+                  var order = (printOrder && printOrder.value) ? printOrder.value : 'grouped';
+                  function cmpDateObj(a,b){ var ad = a.bid_date? new Date(a.bid_date).getTime():Number.POSITIVE_INFINITY; var bd = b.bid_date? new Date(b.bid_date).getTime():Number.POSITIVE_INFINITY; return ad-bd; }
+                  function cmpProjObj(a,b){ var pa = (a.dhss_project_number||'').toString().trim(); var pb = (b.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
+                  if (order === 'date_asc' || order === 'date_desc') { keep.sort(cmpDateObj); if (order === 'date_desc') keep.reverse(); }
+                  else if (order.indexOf('projectnum') === 0) { keep.sort(cmpProjObj); if (order.indexOf('_desc') !== -1) keep.reverse(); }
+                  // build html table with fixed layout and equal column widths so it fits
+                  var colWidth = Math.floor(100/selectedCols.length);
+                  var colsHtml = '';
+                  for (var ci=0; ci<selectedCols.length; ci++){ colsHtml += '<col style="width:' + colWidth + '%">'; }
+                  var headerHtml = '';
+                  for (var hi=0; hi<selectedCols.length; hi++){
+                    var k = selectedCols[hi]; var label = (function(k2){ if (!k2) return ''; if (k2 === 'dhss_project_number') return 'DHSS Project #'; if (k2 === 'gc_name' || k2 === 'general_contractor_name') return 'General Contractor Name'; if (k2 === 'gc_number' || k2 === 'general_contractor_number') return 'General Contractor Number'; if (k2 === 'bid_date') return 'Bid Date'; return k2.replace(/_/g,' '); })(k);
+                    var parts = String(label).split(/\s+/).filter(function(p){return p.length>0;}); headerHtml += '<th>' + parts.join('<br>') + '</th>';
+                  }
+                  var rowsHtml = '';
+                  for (var ri=0; ri<keep.length; ri++){
+                    var o = keep[ri]; rowsHtml += '<tr>';
+                    for (var ci2=0; ci2<selectedCols.length; ci2++){
+                      var col = selectedCols[ci2]; var v = '';
+                      try { if (col === 'bid_date' && o[col]) v = formatDateMMDDYYYY(o[col]); else v = (o[col]!==undefined && o[col]!==null) ? String(o[col]) : ''; } catch(e){ v=''; }
+                      rowsHtml += '<td>' + (v||'') + '</td>';
+                    }
+                    rowsHtml += '</tr>';
+                  }
+                  var tableHtml = '<table>' + colsHtml + '<thead><tr>' + headerHtml + '</tr></thead><tbody>' + rowsHtml + '</tbody></table>';
+                  var html = '<!doctype html><html><head><title>Print</title>' +
+                    '<style>@page{size:landscape;}body{font-family:Arial,Helvetica,sans-serif;padding:12px;color:#0f172a;font-size:70%}table{border-collapse:collapse;width:100%;table-layout:fixed}col{vertical-align:top}th,td{padding:6px;border:1px solid #e6edf0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}th{background:#f8fafc;font-weight:700}</style>' +
+                    '</head><body>' + tableHtml + '</body></html>';
+                } catch(e) {
+                  var html = '<!doctype html><html><head><title>Print</title>' +
+                    '<style>@page{size:landscape;}body{font-family:Arial,Helvetica,sans-serif;padding:12px;color:#0f172a;font-size:70%}table{border-collapse:collapse;width:100%}th,td{padding:6px;border:1px solid #e6edf0;text-align:left}</style>' +
+                    '</head><body>' + (printPreview ? printPreview.innerHTML : '') + '</body></html>';
+                }
+                w.document.open(); w.document.write(html); w.document.close();
+                setTimeout(function(){ try { w.focus(); w.print(); } catch(e){} }, 300);
+                closePrintModal();
+              } catch(e){ showToast && showToast('Print failed', 'error'); }
+            });
+          }
+        } catch(e) { console.warn('print modal init failed', e); }
 
         // -----------------------------
         // Manage Columns modal (unchanged)
