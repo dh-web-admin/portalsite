@@ -1002,7 +1002,7 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                 <a class="equipment-tab" href="oil_status.php?id=<?php echo $equipmentId; ?>">Oil</a>
                 <button class="equipment-tab">Manuals</button>
                 <a class="equipment-tab" href="Warranty.php?id=<?php echo $equipmentId; ?>">Warranty</a>
-                <button class="equipment-tab">Parts</button>
+                <a class="equipment-tab" href="parts.php?id=<?php echo $equipmentId; ?>">Parts</a>
                 <a class="equipment-tab" href="all_dimensions.php?id=<?php echo $equipmentId; ?>">Dimensions</a>
                 <button class="equipment-tab">Photos</button>
                 <a class="equipment-tab" id="wishlistBtn" href="whishlist.php?id=<?php echo (int)$equipmentId; ?>" style="margin-left:6px;">Wishlist</a>
