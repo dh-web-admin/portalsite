@@ -57,7 +57,7 @@ $lngVal = floatval($longitude);
 // Insert supplier
 // Include latitude and longitude in the insert
 // Include new columns `supply_method` and `location_phone` in the insert
-$stmt = $conn->prepare('INSERT INTO suppliers (name, location_name, pin_color, material, sales_contact, contact_number, location_phone, email, address, city, state, location_type, supply_method, notes, service, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+$stmt = $conn->prepare('INSERT INTO suppliers (name, location_name, pin_color, material, sales_contact, contact_number, location_phone, email, address, city, state, location_type, supply_method, notes, service, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
 if (!$stmt) {
   http_response_code(500);
@@ -65,7 +65,7 @@ if (!$stmt) {
   exit;
 }
 
-$stmt->bind_param('sssssssssssssssssdd', $name, $location_name, $pin_color, $material, $sales_contact, $contact_number, $location_phone, $email, $address, $city, $state, $location_type, $supply_method, $notes, $service, $latVal, $lngVal);
+$stmt->bind_param('sssssssssssssssdd', $name, $location_name, $pin_color, $material, $sales_contact, $contact_number, $location_phone, $email, $address, $city, $state, $location_type, $supply_method, $notes, $service, $latVal, $lngVal);
 
 if ($stmt->execute()) {
   echo json_encode(['success' => true, 'message' => 'Supplier added successfully', 'supplier_id' => $stmt->insert_id]);
