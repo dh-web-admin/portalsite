@@ -3322,6 +3322,9 @@ function syncGcDisplayForProjects() {
               // If none selected, pick a sensible default subset
               if (selectedCols.length === 0) selectedCols = ['dhss_project_number','project_name','bid_date','project_city'];
 
+              // treat any GC-related column (name/number/email/address/etc) as part of the GC block
+              var gcColsRe = /(^gc[_a-z]*|general_contractor)/i;
+
               // filter visible data rows according to modal filters
               var stat = (printStatus && printStatus.value) ? printStatus.value : 'all';
               var yr = (printYear && printYear.value) ? printYear.value : '';
@@ -3344,7 +3347,15 @@ function syncGcDisplayForProjects() {
 
               // Build items array (use the captured `originalRows` so we also have detailRows)
               var order = (printOrder && printOrder.value) ? printOrder.value : 'grouped';
-              var items = (typeof originalRows !== 'undefined' ? originalRows.slice() : []).filter(function(it){ return keep.indexOf(it.row) !== -1; }).map(function(it){ return { obj: it.obj || {}, date: it.date || null, status: (it.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending', detailRows: it.detailRows || [] }; });
+              var items = (typeof originalRows !== 'undefined' ? originalRows.slice() : []).filter(function(it){ return keep.indexOf(it.row) !== -1; }).map(function(it){
+                return {
+                  row: it.row,
+                  obj: it.obj || {},
+                  date: it.date || null,
+                  status: (it.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'') || 'pending',
+                  detailRows: it.detailRows || []
+                };
+              });
 
               function cmpDate(a,b){ var ad = a.date? a.date.getTime():Number.POSITIVE_INFINITY; var bd = b.date? b.date.getTime():Number.POSITIVE_INFINITY; return ad-bd; }
               function cmpProj(a,b){ var pa = (a.obj.dhss_project_number||'').toString().trim(); var pb = (b.obj.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
@@ -3395,14 +3406,22 @@ function syncGcDisplayForProjects() {
               // Add rows with compact cell height (no spacer rows)
               items.forEach(function(it){
                 var obj = it.obj || {};
+                var baseRow = it.row || null;
                 var tr = document.createElement('tr');
                 tr.style.borderSpacing = '0';
                 selectedCols.forEach(function(col){
                   var td = document.createElement('td');
                   var v = '';
                   try {
-                    if (col === 'bid_date' && obj[col]) v = formatDateMMDDYYYY(obj[col]);
-                    else v = (obj[col] !== undefined && obj[col] !== null) ? String(obj[col]) : '';
+                    if (gcColsRe.test(col)) {
+                      // For any GC-related column, always mirror what is visibly rendered in the table cell
+                      var src = baseRow && baseRow.querySelector ? baseRow.querySelector('td[data-col="' + col + '"]') : null;
+                      v = src ? (src.textContent || '').trim() : '';
+                    } else if (col === 'bid_date' && obj[col]) {
+                      v = formatDateMMDDYYYY(obj[col]);
+                    } else {
+                      v = (obj[col] !== undefined && obj[col] !== null) ? String(obj[col]) : '';
+                    }
                   } catch(e) { v = '' }
                   td.textContent = v;
                   td.style.padding = '2px 6px';
@@ -3417,7 +3436,6 @@ function syncGcDisplayForProjects() {
 
                 // If there are contractor detail rows for this project, add them beneath the main row
                 try {
-                  var gcColsRe = /(^gc[_a-z]*|general_contractor)/i;
                   if (it.detailRows && it.detailRows.length) {
                     it.detailRows.forEach(function(dtr){
                       try {
@@ -3484,24 +3502,43 @@ function syncGcDisplayForProjects() {
                     return yearMatch && statusMatch;
                   });
                   var order = (printOrder && printOrder.value) ? printOrder.value : 'grouped';
-                  function cmpDateObj(a,b){ var ad = a.bid_date? new Date(a.bid_date).getTime():Number.POSITIVE_INFINITY; var bd = b.bid_date? new Date(b.bid_date).getTime():Number.POSITIVE_INFINITY; return ad-bd; }
-                  function cmpProjObj(a,b){ var pa = (a.dhss_project_number||'').toString().trim(); var pb = (b.dhss_project_number||'').toString().trim(); var na=parseFloat(pa), nb=parseFloat(pb); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return pa.localeCompare(pb); }
-                  if (order === 'date_asc' || order === 'date_desc') { keepRows.sort(cmpDateObj); if (order === 'date_desc') keepRows.reverse(); }
-                  else if (order.indexOf('projectnum') === 0) { keepRows.sort(cmpProjObj); if (order.indexOf('_desc') !== -1) keepRows.reverse(); }
-                  else {
+                  function cmpDateObj(a,b){
+                    var ad = a && a.date ? (a.date instanceof Date ? a.date.getTime() : new Date(a.date).getTime()) : Number.POSITIVE_INFINITY;
+                    var bd = b && b.date ? (b.date instanceof Date ? b.date.getTime() : new Date(b.date).getTime()) : Number.POSITIVE_INFINITY;
+                    return ad - bd;
+                  }
+                  function cmpProjObj(a,b){
+                    var pa = (a && (a.project || (a.obj && a.obj.dhss_project_number))) ? String(a.project || a.obj.dhss_project_number).trim() : '';
+                    var pb = (b && (b.project || (b.obj && b.obj.dhss_project_number))) ? String(b.project || b.obj.dhss_project_number).trim() : '';
+                    var na = parseFloat(pa), nb = parseFloat(pb);
+                    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+                    return pa.localeCompare(pb);
+                  }
+                  if (order === 'date_asc' || order === 'date_desc') {
+                    keepRows.sort(cmpDateObj);
+                    if (order === 'date_desc') keepRows.reverse();
+                  } else if (typeof order === 'string' && order.indexOf('projectnum') === 0) {
+                    keepRows.sort(cmpProjObj);
+                    if (order.indexOf('_desc') !== -1) keepRows.reverse();
+                  } else {
                     // grouped default: mirror page grouping order by status and sort each group by date asc
                     var statusOrder = ['bidding','pending','win','lost','completed'];
                     var groupedKeep = [];
                     statusOrder.forEach(function(s){
-                      var grp = keep.filter(function(o){ var st = (o.status||o.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,''); return st === s; });
-                      // sort grp by date if present
+                      var grp = keepRows.filter(function(o){
+                        var st = (o.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'');
+                        return st === s;
+                      });
                       grp.sort(function(a,b){ return cmpDateObj(a,b); });
                       groupedKeep = groupedKeep.concat(grp);
                     });
                     // include any others
-                    var others = keep.filter(function(o){ var st = (o.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,''); return statusOrder.indexOf(st) === -1; });
+                    var others = keepRows.filter(function(o){
+                      var st = (o.status||'').toString().toLowerCase().replace(/[^a-z0-9]/g,'');
+                      return statusOrder.indexOf(st) === -1;
+                    });
                     others.sort(function(a,b){ return cmpDateObj(a,b); });
-                    keep = groupedKeep.concat(others);
+                    keepRows = groupedKeep.concat(others);
                   }
                   // build html table with fixed layout and equal column widths so it fits
                   var colWidth = Math.floor(100/selectedCols.length);
@@ -3515,18 +3552,30 @@ function syncGcDisplayForProjects() {
                   var rowsHtml = '';
                   var gcColsRe = /(^gc[_a-z]*|general_contractor)/i;
                   for (var ri=0; ri<keepRows.length; ri++){
-                    var o = keep[ri];
+                    var rowInfo = keepRows[ri] || {};
+                    var o = rowInfo.obj || {};
+                    var baseRow = rowInfo.row || null;
                     // main row
                     rowsHtml += '<tr>';
                     for (var ci2=0; ci2<selectedCols.length; ci2++){
                       var col = selectedCols[ci2]; var v = '';
-                      try { if (col === 'bid_date' && o[col]) v = formatDateMMDDYYYY(o[col]); else v = (o[col]!==undefined && o[col]!==null) ? String(o[col]) : ''; } catch(e){ v=''; }
+                      try {
+                        if (gcColsRe.test(col)) {
+                          // For GC-related columns, mirror whatever is displayed in the main table cell
+                          var src = baseRow && baseRow.querySelector ? baseRow.querySelector('td[data-col="' + col + '"]') : null;
+                          v = src ? (src.textContent || '').trim() : '';
+                        } else if (col === 'bid_date' && o[col]) {
+                          v = formatDateMMDDYYYY(o[col]);
+                        } else {
+                          v = (o[col]!==undefined && o[col]!==null) ? String(o[col]) : '';
+                        }
+                      } catch(e){ v=''; }
                       rowsHtml += '<td>' + (v||'') + '</td>';
                     }
                     rowsHtml += '</tr>';
                     // contractor detail rows (from originalRows entry)
                     try {
-                      var det = (keepRows[ri] && keepRows[ri].detailRows) ? keepRows[ri].detailRows : [];
+                      var det = (rowInfo && rowInfo.detailRows) ? rowInfo.detailRows : [];
                       for (var di=0; di<det.length; di++){
                         var dtr = det[di]; rowsHtml += '<tr class="print-detail">';
                             for (var cii=0; cii<selectedCols.length; cii++){
