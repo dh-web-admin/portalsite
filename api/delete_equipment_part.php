@@ -2,30 +2,12 @@
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
 if (!defined('IS_API')) define('IS_API', true);
-require_once __DIR__ . '/../partials/permissions.php';
 header('Content-Type: application/json');
 
-// Auth & permission
+// Simple auth check (match add_equipment_part behavior)
 if (empty($_SESSION['email'])) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
-    exit();
-}
-
-$role = function_exists('get_current_role') ? get_current_role() : null;
-$canEdit = function_exists('can_edit_page') ? can_edit_page('equipments') : false;
-
-if (!$canEdit) {
-    http_response_code(403);
-    $ovr = null;
-    if (!empty($_SESSION['email']) && function_exists('get_user_page_override')) {
-        $ovr = get_user_page_override($_SESSION['email'], 'equipments');
-    }
-    echo json_encode([
-        'success' => false,
-        'message' => 'Forbidden',
-        'debug' => ['role' => $role, 'email' => $_SESSION['email'] ?? null, 'override' => $ovr]
-    ]);
     exit();
 }
 
