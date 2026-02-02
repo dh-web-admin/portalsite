@@ -704,10 +704,22 @@ $canEditMaps = can_edit_page('maps');
         } catch (e) { console.warn('Vertical wrap initialization failed', e); }
       })();
       
+      // Normalize color from supplier object
+      function normalizeSupplierColor(s) {
+        try {
+          var c = (s && (s.color || s.pin_color)) ? (s.color || s.pin_color) : '';
+          if (typeof c === 'string') c = c.trim();
+          // Accept hex like #RRGGBB or hsl(...)
+          if (c && (/^#([0-9a-fA-F]{6})$/.test(c) || /^hsl\(/i.test(c))) return c;
+          // Fallback to name-based color
+          return getColorForSupplier(s && s.name ? s.name : '');
+        } catch(e) { return getColorForSupplier(s && s.name ? s.name : ''); }
+      }
+
       // Function to plot marker on map
       function plotMarker(supplier, popupContent, lat, lng) {
-        // Use explicit color if present on the supplier record, otherwise derive from name
-        var markerColor = (supplier && supplier.color) ? supplier.color : getColorForSupplier(supplier.name);
+        // Prefer explicit DB color; otherwise derive from name
+        var markerColor = normalizeSupplierColor(supplier);
         var customIcon = createColoredIcon(markerColor);
         
         // Note: action buttons are intentionally only shown in the supplier details box,
@@ -767,7 +779,11 @@ $canEditMaps = can_edit_page('maps');
         .then(function(data) {
           if (data.success && data.suppliers) {
             // Keep a cache of suppliers (so UI lists can show suppliers before geocoding completes)
-            suppliersCache = data.suppliers;
+            suppliersCache = (data.suppliers || []).map(function(s){
+              // Normalize color property from API (color or pin_color)
+              if (s && s.pin_color && !s.color) s.color = s.pin_color;
+              return s;
+            });
             if (data.suppliers.length === 0) {
               // No suppliers for this service
               updateSupplierCount();
@@ -778,6 +794,7 @@ $canEditMaps = can_edit_page('maps');
             
             // Separate suppliers with and without coordinates
             data.suppliers.forEach(function(supplier) {
+              if (supplier && supplier.pin_color && !supplier.color) supplier.color = supplier.pin_color;
               if (supplier.latitude && supplier.longitude) {
                 suppliersWithCoords.push(supplier);
               } else {
@@ -1284,7 +1301,7 @@ $canEditMaps = can_edit_page('maps');
               if (!targetName) return;
               supplierColorOverrides[targetName] = color;
               // update cache
-              (suppliersCache || []).forEach(function(s){ if (s && s.name === targetName) s.color = color; });
+              (suppliersCache || []).forEach(function(s){ if (s && s.name === targetName) { s.color = color; s.pin_color = color; } });
               // update markers on map immediately
               (currentMarkers || []).forEach(function(m){ try { if (m && m.supplierData && m.supplierData.name === targetName) { m.setIcon(createColoredIcon(color)); } } catch(e){} });
               // persist server-side for the name
@@ -1298,7 +1315,7 @@ $canEditMaps = can_edit_page('maps');
             addSupplierNameInput.addEventListener('input', function(){
               var nm = (this.value || '').trim();
               var known = null;
-              (suppliersCache || []).some(function(s){ if (s && s.name === nm && s.color) { known = s.color; return true; } return false; });
+              (suppliersCache || []).some(function(s){ if (s && s.name === nm && (s.color || s.pin_color)) { known = (s.color || s.pin_color); return true; } return false; });
               var col = known || getColorForSupplier(nm || '');
               try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = col; } catch(e){}
               try { if (addSupplierColorHidden) addSupplierColorHidden.value = known || ''; } catch(e){}
@@ -1537,7 +1554,7 @@ $canEditMaps = can_edit_page('maps');
         document.getElementById('editSupplierNotes').value = supplier.notes || '';
         // populate color swatch/hidden input (use supplier.color if available, otherwise leave empty)
         try {
-          var col = supplier.color || '';
+          var col = supplier.color || supplier.pin_color || '';
           if (col) {
             if (editSupplierColorSwatch) editSupplierColorSwatch.style.background = col;
             if (editSupplierColorInput) editSupplierColorInput.value = col;
