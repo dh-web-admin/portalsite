@@ -187,7 +187,7 @@ $canEditMaps = can_edit_page('maps');
           <div style="font-size:13px;color:#475569;font-weight:600;">Service: <span id="addSupplierServiceName" style="font-weight:700;color:#0f172a;">—</span></div>
           <div style="display:flex;align-items:center;gap:8px; position:relative;">
             <button type="button" id="addSupplierColorBtn" title="Set color for all suppliers with this name" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6edf0;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;">
-              <span id="addSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);"></span>
+              <span id="addSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);cursor:pointer;"></span>
             </button>
             <input type="color" id="addSupplierColorInput" style="display:none;" />
             <!-- Modern color popover (Add) -->
@@ -314,7 +314,7 @@ $canEditMaps = can_edit_page('maps');
         <div style="display:flex;align-items:center;gap:8px; position:relative;">
           <!-- Color picker icon: clicking the swatch will open the native color picker -->
           <button type="button" id="editSupplierColorBtn" title="Set color for all suppliers with this name" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6edf0;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;">
-            <span id="editSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);"></span>
+            <span id="editSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);cursor:pointer;"></span>
           </button>
           <input type="color" id="editSupplierColorInput" style="display:none;" />
           <!-- Modern color popover (Edit) -->
@@ -1410,16 +1410,16 @@ $canEditMaps = can_edit_page('maps');
               closePopover(addPopover);
             });
           }
-          if (addSupplierColorBtn) {
-            addSupplierColorBtn.addEventListener('click', function(e){ e.preventDefault();
+          var openAddPopover = function(e){ if(e) e.preventDefault();
               var currentHex = (addSupplierColorHidden && addSupplierColorHidden.value) ? addSupplierColorHidden.value : (addSupplierColorSwatch ? window.getComputedStyle(addSupplierColorSwatch).backgroundColor : '#3b82f6');
               // Convert rgb(..) to hex if needed
               if ((currentHex||'').indexOf('rgb')===0) {
                 try { var m=currentHex.match(/\d+/g); var r=parseInt(m[0]),g=parseInt(m[1]),b=parseInt(m[2]); currentHex='#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); } catch(_) { currentHex='#3b82f6'; }
               }
               openColorPopover(addPopover, currentHex);
-            });
-          }
+          };
+          if (addSupplierColorBtn) addSupplierColorBtn.addEventListener('click', openAddPopover);
+          if (addSupplierColorSwatch) addSupplierColorSwatch.addEventListener('click', openAddPopover);
           if (addSupplierNameInput) {
             addSupplierNameInput.addEventListener('input', function(){
               var nm = (this.value || '').trim();
@@ -1612,8 +1612,10 @@ $canEditMaps = can_edit_page('maps');
           document.addEventListener('click', function(e){
             var addPop=document.getElementById('addColorPopover'); var editPop=document.getElementById('editColorPopover');
             var addBtn=document.getElementById('addSupplierColorBtn'); var editBtn=document.getElementById('editSupplierColorBtn');
-            if (addPop && addPop.style.display==='block' && !addPop.contains(e.target) && e.target!==addBtn) closePopover(addPop);
-            if (editPop && editPop.style.display==='block' && !editPop.contains(e.target) && e.target!==editBtn) closePopover(editPop);
+            var clickInAddButton = addBtn && addBtn.contains(e.target);
+            var clickInEditButton = editBtn && editBtn.contains(e.target);
+            if (addPop && addPop.style.display==='block' && !addPop.contains(e.target) && !clickInAddButton) closePopover(addPop);
+            if (editPop && editPop.style.display==='block' && !editPop.contains(e.target) && !clickInEditButton) closePopover(editPop);
           });
           document.addEventListener('keydown', function(e){ if (e.key==='Escape'){ closePopover(document.getElementById('addColorPopover')); closePopover(document.getElementById('editColorPopover')); }});
         }catch(_){}
@@ -1710,15 +1712,15 @@ $canEditMaps = can_edit_page('maps');
               closePopover(editPopover);
             });
           }
-          if (editSupplierColorBtn) {
-            editSupplierColorBtn.addEventListener('click', function(e){ e.preventDefault();
+          var openEditPopover = function(e){ if(e) e.preventDefault();
               var currentHex = (editSupplierColorHidden && editSupplierColorHidden.value) ? editSupplierColorHidden.value : (editSupplierColorSwatch ? window.getComputedStyle(editSupplierColorSwatch).backgroundColor : '#3b82f6');
               if ((currentHex||'').indexOf('rgb')===0) {
                 try { var m=currentHex.match(/\d+/g); var r=parseInt(m[0]),g=parseInt(m[1]),b=parseInt(m[2]); currentHex='#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); } catch(_) { currentHex='#3b82f6'; }
               }
               openColorPopover(editPopover, currentHex);
-            });
-          }
+          };
+          if (editSupplierColorBtn) editSupplierColorBtn.addEventListener('click', openEditPopover);
+          if (editSupplierColorSwatch) editSupplierColorSwatch.addEventListener('click', openEditPopover);
 
           editSupplierColorInput.addEventListener('input', function(e){
             var color = (this.value || '').trim();
