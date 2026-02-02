@@ -261,13 +261,30 @@ $canEditMaps = can_edit_page('maps');
   <!-- Edit Supplier Modal -->
   <div id="editSupplierModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
-      <h3 style="margin:0 0 20px 0;font-size:20px;color:#1e293b;">Edit Supplier</h3>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 20px 0;">
+        <h3 style="margin:0;font-size:20px;color:#1e293b;">Edit Supplier</h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <!-- Color picker icon: clicking the swatch will open the native color picker -->
+          <button type="button" id="editSupplierColorBtn" title="Set color for all suppliers with this name" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6edf0;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;">
+            <span id="editSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);"></span>
+          </button>
+          <input type="color" id="editSupplierColorInput" style="display:none;" />
+        </div>
+      </div>
       <form id="editSupplierForm" style="display:grid;gap:16px;">
         <input type="hidden" name="id" id="editSupplierId" />
-        <div style="position:relative;">
-          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Name *</label>
-          <input type="text" name="name" id="editSupplierName" required autocomplete="off" class="autocomplete-input" data-field="name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
-          <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+        <input type="hidden" name="color" id="editSupplierColor" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="position:relative;">
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Name *</label>
+            <input type="text" name="name" id="editSupplierName" required autocomplete="off" class="autocomplete-input" data-field="name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+            <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+          </div>
+          <div style="position:relative;">
+            <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Location Name</label>
+            <input type="text" name="location_name" id="editSupplierLocationName" autocomplete="off" class="autocomplete-input" data-field="location_name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+            <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+          </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
@@ -1395,6 +1412,10 @@ $canEditMaps = can_edit_page('maps');
       // Edit supplier modal elements
       var editSupplierModal = document.getElementById('editSupplierModal');
       var editSupplierForm = document.getElementById('editSupplierForm');
+      var editSupplierColorBtn = document.getElementById('editSupplierColorBtn');
+      var editSupplierColorSwatch = document.getElementById('editSupplierColorSwatch');
+      var editSupplierColorInput = document.getElementById('editSupplierColorInput');
+      var editSupplierColorHidden = document.getElementById('editSupplierColor');
       var cancelEditBtn = document.getElementById('cancelEditBtn');
       var currentEditSupplier = null;
       
@@ -1441,10 +1462,68 @@ $canEditMaps = can_edit_page('maps');
         document.getElementById('editSupplierState').value = supplier.state || '';
         document.getElementById('editSupplierService').value = supplier.service || '';
         document.getElementById('editSupplierNotes').value = supplier.notes || '';
+        // populate color swatch/hidden input (use supplier.color if available, otherwise leave empty)
+        try {
+          var col = supplier.color || '';
+          if (col) {
+            if (editSupplierColorSwatch) editSupplierColorSwatch.style.background = col;
+            if (editSupplierColorInput) editSupplierColorInput.value = col;
+            if (editSupplierColorHidden) editSupplierColorHidden.value = col;
+          } else {
+            // derive default from name hashing but do not persist until user chooses
+            if (editSupplierColorSwatch) editSupplierColorSwatch.style.background = getColorForSupplier(supplier.name || '');
+            if (editSupplierColorInput) editSupplierColorInput.value = '';
+            if (editSupplierColorHidden) editSupplierColorHidden.value = '';
+          }
+        } catch(e) {}
         
         // Show modal
         editSupplierModal.style.display = 'flex';
       };
+
+      // Color pick behavior: clicking the swatch opens the native color input; changing color updates all suppliers with same name
+      try {
+        if (editSupplierColorBtn && editSupplierColorInput) {
+          editSupplierColorBtn.addEventListener('click', function(e){
+            e.preventDefault();
+            try { editSupplierColorInput.click(); } catch(ex) { }
+          });
+
+          editSupplierColorInput.addEventListener('input', function(e){
+            var color = (this.value || '').trim();
+            if (!color) return;
+            // update swatch and hidden field
+            try { if (editSupplierColorSwatch) editSupplierColorSwatch.style.background = color; } catch(e){}
+            try { if (editSupplierColorHidden) editSupplierColorHidden.value = color; } catch(e){}
+
+            // If we have a current supplier in edit, update all suppliers with same name
+            try {
+              var targetName = (currentEditSupplier && currentEditSupplier.name) ? currentEditSupplier.name : (document.getElementById('editSupplierName') ? document.getElementById('editSupplierName').value : '');
+              if (!targetName) return;
+              // Optimistically update UI first
+              supplierColorOverrides = supplierColorOverrides || {};
+              supplierColorOverrides[targetName] = color;
+              // Update cached suppliers
+              suppliersCache = suppliersCache || [];
+              suppliersCache.forEach(function(s){ if (s && s.name === targetName) s.color = color; });
+              // Update markers on map
+              currentMarkers.forEach(function(m){ try { if (m && m.supplierData && m.supplierData.name === targetName) { var newIcon = createColoredIcon(color); m.setIcon(newIcon); } } catch(e){} });
+
+              // Persist change server-side (update all suppliers with this name)
+              fetch('../../api/set_supplier_color.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'name=' + encodeURIComponent(targetName) + '&color=' + encodeURIComponent(color),
+                credentials: 'same-origin'
+              }).then(function(resp){ return resp.json(); }).then(function(data){
+                if (!data || !data.success) {
+                  console.warn('set_supplier_color failed', data);
+                }
+              }).catch(function(err){ console.error('set_supplier_color error', err); });
+            } catch(e) { console.error(e); }
+          });
+        }
+      } catch(e) { console.warn('color picker init failed', e); }
       
       // Function to delete supplier - make it global
       window.deleteSupplier = function(supplierId, supplierName) {
