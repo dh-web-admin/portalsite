@@ -162,6 +162,22 @@ $canEditMaps = can_edit_page('maps');
     </div>
   </div>
   
+  <!-- Modern Color Picker Styles -->
+  <style>
+    .color-popover { position:absolute; top:44px; right:0; background:#fff; border:1px solid #e2e8f0; border-radius:12px; width:280px; padding:12px; box-shadow:0 12px 32px rgba(2,6,23,0.18); display:none; z-index:6000; }
+    .color-popover .swatches { display:grid; grid-template-columns:repeat(8, 1fr); gap:6px; margin-bottom:10px; }
+    .color-popover .swatch { width:24px; height:24px; border-radius:6px; border:1px solid rgba(15,23,42,0.08); cursor:pointer; }
+    .color-popover .row { display:flex; align-items:center; gap:10px; margin:8px 0; }
+    .color-popover .preview { width:28px; height:28px; border-radius:8px; border:1px solid rgba(15,23,42,0.08); }
+    .color-popover input[type="text"] { flex:1; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:12px; }
+    .color-popover input[type="range"] { width:100%; height:8px; border-radius:999px; outline:none; -webkit-appearance:none; background:linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+    .color-popover .sat { background:linear-gradient(90deg, #bbb, #fff); }
+    .color-popover .light { background:linear-gradient(90deg, #000, #aaa, #fff); }
+    .color-popover .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+    .color-popover .btn { padding:6px 10px; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a; cursor:pointer; font-size:12px; }
+    .color-popover .btn.primary { background:#0ea5e9; border-color:#0ea5e9; color:#fff; }
+  </style>
+  
   <!-- Add Supplier Modal -->
   <div id="addSupplierModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,0.35);backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);align-items:center;justify-content:center;z-index:4000;padding:20px;overflow-y:auto;">
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
@@ -169,11 +185,25 @@ $canEditMaps = can_edit_page('maps');
         <div style="font-size:20px;color:#1e293b;font-weight:700;">Add New Supplier</div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="font-size:13px;color:#475569;font-weight:600;">Service: <span id="addSupplierServiceName" style="font-weight:700;color:#0f172a;">—</span></div>
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px; position:relative;">
             <button type="button" id="addSupplierColorBtn" title="Set color for all suppliers with this name" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6edf0;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;">
               <span id="addSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);"></span>
             </button>
             <input type="color" id="addSupplierColorInput" style="display:none;" />
+            <!-- Modern color popover (Add) -->
+            <div id="addColorPopover" class="color-popover">
+              <div class="swatches" id="addPickerSwatches"></div>
+              <div class="row"><div class="preview" id="addPickerPreview"></div><input type="text" id="addPickerHex" placeholder="#RRGGBB" /></div>
+              <div class="row" style="flex-direction:column; align-items:stretch; gap:8px;">
+                <input type="range" min="0" max="360" value="210" id="addPickerHue" />
+                <input class="sat" type="range" min="0" max="100" value="100" id="addPickerSat" />
+                <input class="light" type="range" min="0" max="100" value="50" id="addPickerLight" />
+              </div>
+              <div class="actions">
+                <button type="button" class="btn" data-role="close">Cancel</button>
+                <button type="button" class="btn primary" data-role="apply">Apply</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -281,12 +311,26 @@ $canEditMaps = can_edit_page('maps');
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 20px 0;">
         <h3 style="margin:0;font-size:20px;color:#1e293b;">Edit Supplier</h3>
-        <div style="display:flex;align-items:center;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px; position:relative;">
           <!-- Color picker icon: clicking the swatch will open the native color picker -->
           <button type="button" id="editSupplierColorBtn" title="Set color for all suppliers with this name" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6edf0;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;">
             <span id="editSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);"></span>
           </button>
           <input type="color" id="editSupplierColorInput" style="display:none;" />
+          <!-- Modern color popover (Edit) -->
+          <div id="editColorPopover" class="color-popover">
+            <div class="swatches" id="editPickerSwatches"></div>
+            <div class="row"><div class="preview" id="editPickerPreview"></div><input type="text" id="editPickerHex" placeholder="#RRGGBB" /></div>
+            <div class="row" style="flex-direction:column; align-items:stretch; gap:8px;">
+              <input type="range" min="0" max="360" value="210" id="editPickerHue" />
+              <input class="sat" type="range" min="0" max="100" value="100" id="editPickerSat" />
+              <input class="light" type="range" min="0" max="100" value="50" id="editPickerLight" />
+            </div>
+            <div class="actions">
+              <button type="button" class="btn" data-role="close">Cancel</button>
+              <button type="button" class="btn primary" data-role="apply">Apply</button>
+            </div>
+          </div>
         </div>
       </div>
       <form id="editSupplierForm" style="display:grid;gap:16px;">
@@ -1189,6 +1233,67 @@ $canEditMaps = can_edit_page('maps');
       // Populate remove-service select on load (sidebar present only on maps page)
       populateRemoveServiceSelect();
 
+      // ===== Modern Color Picker Utilities =====
+      function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+      function hslToHex(h, s, l){
+        h = (Number(h)||0)/360; s = clamp(Number(s)||0,0,100)/100; l = clamp(Number(l)||0,0,100)/100;
+        var r, g, b;
+        if (s === 0) { r = g = b = l; }
+        else {
+          var hue2rgb = function(p, q, t){ if (t<0) t+=1; if (t>1) t-=1; if (t<1/6) return p+(q-p)*6*t; if (t<1/2) return q; if (t<2/3) return p+(q-p)*(2/3 - t)*6; return p; };
+          var q = l < 0.5 ? l * (1 + s) : l + s - l * s; var p = 2 * l - q;
+          r = hue2rgb(p, q, h + 1/3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1/3);
+        }
+        var toHex = function(x){ var v = Math.round(x*255).toString(16).padStart(2,'0'); return v; };
+        return '#' + toHex(r) + toHex(g) + toHex(b);
+      }
+      function hexToHsl(hex){
+        try{
+          var m = (hex||'').trim().replace('#','');
+          if (m.length===3) m = m.split('').map(function(c){return c+c;}).join('');
+          if (m.length!==6) return {h:210,s:100,l:50};
+          var r=parseInt(m.substr(0,2),16)/255, g=parseInt(m.substr(2,2),16)/255, b=parseInt(m.substr(4,2),16)/255;
+          var max=Math.max(r,g,b), min=Math.min(r,g,b); var h,s,l=(max+min)/2;
+          if (max===min){ h=s=0; } else {
+            var d=max-min; s=l>0.5? d/(2-max-min) : d/(max+min);
+            switch(max){ case r: h=(g-b)/d + (g<b?6:0); break; case g: h=(b-r)/d + 2; break; case b: h=(r-g)/d + 4; break; }
+            h/=6;
+          }
+          return {h:Math.round(h*360), s:Math.round(s*100), l:Math.round(l*100)};
+        }catch(e){ return {h:210,s:100,l:50}; }
+      }
+      function normalizeHex(v){ v=(v||'').trim(); if(!v) return ''; if(v[0]!=='#') v='#'+v; if(v.length===4){ v='#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3]; } return v.toUpperCase(); }
+      function buildSwatches(container, onPick){
+        var colors=['#ef4444','#f97316','#f59e0b','#84cc16','#10b981','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899','#f43f5e','#14b8a6','#22c55e','#a3e635','#fde047','#fbbf24','#fb923c','#fda4af','#f0abfc','#c084fc','#93c5fd','#60a5fa','#34d399','#2dd4bf'];
+        container.innerHTML='';
+        colors.forEach(function(c){ var d=document.createElement('div'); d.className='swatch'; d.style.background=c; d.addEventListener('click',function(){ onPick(c); }); container.appendChild(d); });
+      }
+      function openColorPopover(pop, initialHex){
+        if (!pop) return; pop.style.display='block';
+        var hex = normalizeHex(initialHex||'#3b82f6');
+        var hsl = hexToHsl(hex);
+        var hue=pop.querySelector('[id$="Hue"]'); var sat=pop.querySelector('[id$="Sat"]'); var light=pop.querySelector('[id$="Light"]'); var hexIn=pop.querySelector('[id$="Hex"]'); var prev=pop.querySelector('[id$="Preview"]');
+        if (hue) hue.value=hsl.h; if (sat) sat.value=hsl.s; if (light) light.value=hsl.l; if (hexIn) hexIn.value=hex; if (prev) prev.style.background=hex;
+      }
+      function closePopover(pop){ if(pop) pop.style.display='none'; }
+      function wirePopover(pop, onApply){
+        if (!pop || pop._wired) return; pop._wired=true;
+        var hue=pop.querySelector('[id$="Hue"]'); var sat=pop.querySelector('[id$="Sat"]'); var light=pop.querySelector('[id$="Light"]'); var hexIn=pop.querySelector('[id$="Hex"]'); var prev=pop.querySelector('[id$="Preview"]');
+        function refresh(){ var hex=hslToHex(hue.value, sat.value, light.value); if(prev) prev.style.background=hex; if(hexIn) hexIn.value=hex; }
+        ;['input','change'].forEach(function(ev){ if(hue) hue.addEventListener(ev, refresh); if(sat) sat.addEventListener(ev, refresh); if(light) light.addEventListener(ev, refresh); });
+        if (hexIn) hexIn.addEventListener('input', function(){ var hsl=hexToHsl(hexIn.value); if(hue) hue.value=hsl.h; if(sat) sat.value=hsl.s; if(light) light.value=hsl.l; refresh(); });
+        var closeBtn=pop.querySelector('[data-role="close"]'); var applyBtn=pop.querySelector('[data-role="apply"]');
+        if (closeBtn) closeBtn.addEventListener('click', function(){ closePopover(pop); });
+        if (applyBtn) applyBtn.addEventListener('click', function(){ var hex=(hexIn?normalizeHex(hexIn.value):''); if(hex) onApply(hex); closePopover(pop); });
+      }
+      function applySupplierColorByName(targetName, color){
+        if (!targetName || !color) return;
+        supplierColorOverrides = supplierColorOverrides || {}; supplierColorOverrides[targetName] = color;
+        (suppliersCache||[]).forEach(function(s){ if(s && s.name===targetName){ s.color=color; s.pin_color=color; } });
+        (currentMarkers||[]).forEach(function(m){ try{ if(m && m.supplierData && m.supplierData.name===targetName){ m.setIcon(createColoredIcon(color)); } }catch(e){} });
+        fetch('../../api/set_supplier_color.php', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'name='+encodeURIComponent(targetName)+'&color='+encodeURIComponent(color), credentials:'same-origin' }).catch(function(err){ console.error('set_supplier_color error', err); });
+      }
+
       /* =========================
          Add Supplier Modal Logics
          ========================= */
@@ -1288,34 +1393,37 @@ $canEditMaps = can_edit_page('maps');
 
       // Submit handler
       if (addSupplierForm) {
-        // Wire color picker interactions and defaulting based on name
+        // Wire modern color picker + defaulting based on name
         try {
-          if (addSupplierColorBtn && addSupplierColorInput) {
-            addSupplierColorBtn.addEventListener('click', function(e){ e.preventDefault(); try { addSupplierColorInput.click(); } catch(ex){} });
-            addSupplierColorInput.addEventListener('input', function(){
-              var color = (this.value || '').trim();
-              if (!color) return;
-              try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = color; } catch(e){}
-              try { if (addSupplierColorHidden) addSupplierColorHidden.value = color; } catch(e){}
-              var targetName = (addSupplierNameInput && addSupplierNameInput.value) ? addSupplierNameInput.value.trim() : '';
-              if (!targetName) return;
-              supplierColorOverrides[targetName] = color;
-              // update cache
-              (suppliersCache || []).forEach(function(s){ if (s && s.name === targetName) { s.color = color; s.pin_color = color; } });
-              // update markers on map immediately
-              (currentMarkers || []).forEach(function(m){ try { if (m && m.supplierData && m.supplierData.name === targetName) { m.setIcon(createColoredIcon(color)); } } catch(e){} });
-              // persist server-side for the name
-              fetch('../../api/set_supplier_color.php', {
-                method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'name=' + encodeURIComponent(targetName) + '&color=' + encodeURIComponent(color), credentials: 'same-origin'
-              }).catch(function(err){ console.error('set_supplier_color error', err); });
+          var addPopover = document.getElementById('addColorPopover');
+          if (addPopover) { wirePopover(addPopover, function(hex){
+            try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = hex; } catch(e){}
+            try { if (addSupplierColorHidden) addSupplierColorHidden.value = hex; } catch(e){}
+            var targetName = (addSupplierNameInput && addSupplierNameInput.value) ? addSupplierNameInput.value.trim() : '';
+            if (targetName) applySupplierColorByName(targetName, hex);
+          });
+            var sw = document.getElementById('addPickerSwatches'); if (sw) buildSwatches(sw, function(c){
+              try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = c; } catch(e){}
+              try { if (addSupplierColorHidden) addSupplierColorHidden.value = c; } catch(e){}
+              var nm = (addSupplierNameInput && addSupplierNameInput.value) ? addSupplierNameInput.value.trim() : '';
+              if (nm) applySupplierColorByName(nm, c);
+              closePopover(addPopover);
+            });
+          }
+          if (addSupplierColorBtn) {
+            addSupplierColorBtn.addEventListener('click', function(e){ e.preventDefault();
+              var currentHex = (addSupplierColorHidden && addSupplierColorHidden.value) ? addSupplierColorHidden.value : (addSupplierColorSwatch ? window.getComputedStyle(addSupplierColorSwatch).backgroundColor : '#3b82f6');
+              // Convert rgb(..) to hex if needed
+              if ((currentHex||'').indexOf('rgb')===0) {
+                try { var m=currentHex.match(/\d+/g); var r=parseInt(m[0]),g=parseInt(m[1]),b=parseInt(m[2]); currentHex='#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); } catch(_) { currentHex='#3b82f6'; }
+              }
+              openColorPopover(addPopover, currentHex);
             });
           }
           if (addSupplierNameInput) {
             addSupplierNameInput.addEventListener('input', function(){
               var nm = (this.value || '').trim();
-              var known = null;
-              (suppliersCache || []).some(function(s){ if (s && s.name === nm && (s.color || s.pin_color)) { known = (s.color || s.pin_color); return true; } return false; });
+              var known = null; (suppliersCache || []).some(function(s){ if (s && s.name === nm && (s.color || s.pin_color)) { known = (s.color || s.pin_color); return true; } return false; });
               var col = known || getColorForSupplier(nm || '');
               try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = col; } catch(e){}
               try { if (addSupplierColorHidden) addSupplierColorHidden.value = known || ''; } catch(e){}
@@ -1498,6 +1606,18 @@ $canEditMaps = can_edit_page('maps');
           });
         });
       }
+      // Close color popovers on outside click or ESC
+      (function(){
+        try{
+          document.addEventListener('click', function(e){
+            var addPop=document.getElementById('addColorPopover'); var editPop=document.getElementById('editColorPopover');
+            var addBtn=document.getElementById('addSupplierColorBtn'); var editBtn=document.getElementById('editSupplierColorBtn');
+            if (addPop && addPop.style.display==='block' && !addPop.contains(e.target) && e.target!==addBtn) closePopover(addPop);
+            if (editPop && editPop.style.display==='block' && !editPop.contains(e.target) && e.target!==editBtn) closePopover(editPop);
+          });
+          document.addEventListener('keydown', function(e){ if (e.key==='Escape'){ closePopover(document.getElementById('addColorPopover')); closePopover(document.getElementById('editColorPopover')); }});
+        }catch(_){}
+      })();
       
       // Edit supplier modal elements
       var editSupplierModal = document.getElementById('editSupplierModal');
@@ -1571,13 +1691,34 @@ $canEditMaps = can_edit_page('maps');
         editSupplierModal.style.display = 'flex';
       };
 
-      // Color pick behavior: clicking the swatch opens the native color input; changing color updates all suppliers with same name
+      // Color pick behavior: open modern popover; native input remains as fallback
       try {
-        if (editSupplierColorBtn && editSupplierColorInput) {
-          editSupplierColorBtn.addEventListener('click', function(e){
-            e.preventDefault();
-            try { editSupplierColorInput.click(); } catch(ex) { }
-          });
+        if (true) {
+          var editPopover = document.getElementById('editColorPopover');
+          if (editPopover) {
+            wirePopover(editPopover, function(hex){
+              try { if (editSupplierColorSwatch) editSupplierColorSwatch.style.background = hex; } catch(e){}
+              try { if (editSupplierColorHidden) editSupplierColorHidden.value = hex; } catch(e){}
+              var targetName = (currentEditSupplier && currentEditSupplier.name) ? currentEditSupplier.name : (document.getElementById('editSupplierName') ? document.getElementById('editSupplierName').value : '');
+              if (targetName) applySupplierColorByName(targetName, hex);
+            });
+            var sw2 = document.getElementById('editPickerSwatches'); if (sw2) buildSwatches(sw2, function(c){
+              try { if (editSupplierColorSwatch) editSupplierColorSwatch.style.background = c; } catch(e){}
+              try { if (editSupplierColorHidden) editSupplierColorHidden.value = c; } catch(e){}
+              var nm = (currentEditSupplier && currentEditSupplier.name) ? currentEditSupplier.name : (document.getElementById('editSupplierName') ? document.getElementById('editSupplierName').value : '');
+              if (nm) applySupplierColorByName(nm, c);
+              closePopover(editPopover);
+            });
+          }
+          if (editSupplierColorBtn) {
+            editSupplierColorBtn.addEventListener('click', function(e){ e.preventDefault();
+              var currentHex = (editSupplierColorHidden && editSupplierColorHidden.value) ? editSupplierColorHidden.value : (editSupplierColorSwatch ? window.getComputedStyle(editSupplierColorSwatch).backgroundColor : '#3b82f6');
+              if ((currentHex||'').indexOf('rgb')===0) {
+                try { var m=currentHex.match(/\d+/g); var r=parseInt(m[0]),g=parseInt(m[1]),b=parseInt(m[2]); currentHex='#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); } catch(_) { currentHex='#3b82f6'; }
+              }
+              openColorPopover(editPopover, currentHex);
+            });
+          }
 
           editSupplierColorInput.addEventListener('input', function(e){
             var color = (this.value || '').trim();
@@ -1590,26 +1731,7 @@ $canEditMaps = can_edit_page('maps');
             try {
               var targetName = (currentEditSupplier && currentEditSupplier.name) ? currentEditSupplier.name : (document.getElementById('editSupplierName') ? document.getElementById('editSupplierName').value : '');
               if (!targetName) return;
-              // Optimistically update UI first
-              supplierColorOverrides = supplierColorOverrides || {};
-              supplierColorOverrides[targetName] = color;
-              // Update cached suppliers
-              suppliersCache = suppliersCache || [];
-              suppliersCache.forEach(function(s){ if (s && s.name === targetName) s.color = color; });
-              // Update markers on map
-              currentMarkers.forEach(function(m){ try { if (m && m.supplierData && m.supplierData.name === targetName) { var newIcon = createColoredIcon(color); m.setIcon(newIcon); } } catch(e){} });
-
-              // Persist change server-side (update all suppliers with this name)
-              fetch('../../api/set_supplier_color.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: 'name=' + encodeURIComponent(targetName) + '&color=' + encodeURIComponent(color),
-                credentials: 'same-origin'
-              }).then(function(resp){ return resp.json(); }).then(function(data){
-                if (!data || !data.success) {
-                  console.warn('set_supplier_color failed', data);
-                }
-              }).catch(function(err){ console.error('set_supplier_color error', err); });
+              applySupplierColorByName(targetName, color);
             } catch(e) { console.error(e); }
           });
         }
