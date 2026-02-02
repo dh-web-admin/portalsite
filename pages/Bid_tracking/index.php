@@ -3101,6 +3101,26 @@ function syncGcDisplayForProjects() {
             // Format any pre-rendered table date cells to mm/dd/yyyy
             try { formatTableDates(); } catch(e){}
             applyFiltersAndGrouping();
+            // Clear saved filter keys (localStorage/sessionStorage) after initial apply
+            // so a browser refresh does not reapply the previously selected filters.
+            try {
+              (function clearSavedFiltersOnce(){
+                try {
+                  if (window.localStorage) {
+                    try { localStorage.removeItem('bidTracking_yearFilter'); } catch(e){}
+                    try { localStorage.removeItem('bidTracking_statusFilter'); } catch(e){}
+                    try { localStorage.removeItem('bidTracking_orderBy'); } catch(e){}
+                  }
+                } catch(e) {}
+                try {
+                  if (window.sessionStorage) {
+                    try { sessionStorage.removeItem(TOP_STATUS_KEY); } catch(e){}
+                    try { sessionStorage.removeItem(TOP_YEAR_KEY); } catch(e){}
+                    try { sessionStorage.removeItem(TOP_ORDER_KEY); } catch(e){}
+                  }
+                } catch(e) {}
+              })();
+            } catch(e) {}
             // Ensure money fields in modal are wrapped and table cells prefixed
             try { wrapMoneyInputs(); } catch(e){}
             try { applyDollarPrefixToTableCells(); } catch(e){}
