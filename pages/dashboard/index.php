@@ -132,6 +132,10 @@ switch ($role) {
                         </a>
                     <?php endforeach; ?>
                 </div>
+                <!-- Fun scroll easter egg placed far below the main tiles -->
+                <div style="margin-top: 2000px; text-align: center; color: #9ca3af; font-size: 12px;">
+                    easter egg
+                </div>
                 </div>
             </main>
         </div>
@@ -155,7 +159,91 @@ switch ($role) {
                 devGroup.classList.toggle('open');
             });
         }
-        
+
+        // Require at least 5 scroll attempts before enabling page scroll
+        var scrollAttempts = 0;
+        var scrollUnlocked = false;
+        var requiredScrolls = 50;
+        var lastTouchY = null;
+
+        function reallyUnlockScroll() {
+            if (scrollUnlocked) return;
+            scrollUnlocked = true;
+            try {
+                document.body.style.overflowY = '';
+            } catch (e) {}
+            try {
+                window.removeEventListener('wheel', onWheelAttempt, wheelOpts);
+            } catch (e) {}
+            try {
+                window.removeEventListener('touchmove', onTouchAttempt, touchOpts);
+                window.removeEventListener('touchstart', onTouchStart, touchOpts);
+            } catch (e) {}
+            try {
+                window.removeEventListener('keydown', onKeyAttempt, true);
+            } catch (e) {}
+        }
+
+        function registerAttempt(e) {
+            if (scrollUnlocked) return true;
+            scrollAttempts++;
+            if (scrollAttempts >= requiredScrolls) {
+                reallyUnlockScroll();
+                return true;
+            }
+            if (e && typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            return false;
+        }
+
+        var wheelOpts = { passive: false };
+        var touchOpts = { passive: false };
+
+        function onWheelAttempt(e) {
+            // Only count downward scroll (positive deltaY)
+            if (!e || typeof e.deltaY === 'undefined' || e.deltaY <= 0) return;
+            registerAttempt(e);
+        }
+
+        function onTouchAttempt(e) {
+            if (!e || !e.touches || e.touches.length === 0) return;
+            var currentY = e.touches[0].clientY;
+            if (lastTouchY === null) {
+                lastTouchY = currentY;
+                return;
+            }
+            // Finger moving up (currentY < lastTouchY) typically causes page to scroll down
+            var isDownwardScroll = currentY < lastTouchY;
+            lastTouchY = currentY;
+            if (!isDownwardScroll) return;
+            registerAttempt(e);
+        }
+
+        function onTouchStart(e) {
+            if (!e || !e.touches || e.touches.length === 0) return;
+            lastTouchY = e.touches[0].clientY;
+        }
+
+        function onKeyAttempt(e) {
+            // Only treat navigation keys as scroll attempts
+            var code = e.keyCode || e.which;
+            // Keys that scroll down: space, PageDown, End, ArrowDown
+            var downKeys = [32,34,35,40];
+            if (downKeys.indexOf(code) === -1) return;
+            registerAttempt(e);
+        }
+
+        // On initial load, lock vertical scroll just for this dashboard page
+        try {
+            // At this point in the document, body exists, so we can lock immediately
+            document.body.style.overflowY = 'hidden';
+            window.addEventListener('wheel', onWheelAttempt, wheelOpts);
+            window.addEventListener('touchmove', onTouchAttempt, touchOpts);
+            window.addEventListener('touchstart', onTouchStart, touchOpts);
+            window.addEventListener('keydown', onKeyAttempt, true);
+        } catch (e) {}
+
         // Dev preview mode removed
     })();
     </script>
