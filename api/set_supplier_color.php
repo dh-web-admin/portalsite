@@ -28,7 +28,7 @@ if (!preg_match('/^#([0-9a-fA-F]{6})$/', $color)) {
 }
 
 try {
-  $sql = "UPDATE suppliers SET color = ? WHERE name = ?";
+  $sql = "UPDATE suppliers SET pin_color = ? WHERE name = ?";
   $stmt = $conn->prepare($sql);
   if (!$stmt) throw new Exception('Prepare failed: ' . $conn->error);
   $stmt->bind_param('ss', $color, $name);

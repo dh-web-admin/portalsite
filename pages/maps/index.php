@@ -167,13 +167,31 @@ $canEditMaps = can_edit_page('maps');
     <div style="background:#fff;border-radius:12px;padding:24px;max-width:600px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.2);max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin:0 0 20px 0;">
         <div style="font-size:20px;color:#1e293b;font-weight:700;">Add New Supplier</div>
-        <div style="font-size:13px;color:#475569;font-weight:600;">Service: <span id="addSupplierServiceName" style="font-weight:700;color:#0f172a;">—</span></div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:13px;color:#475569;font-weight:600;">Service: <span id="addSupplierServiceName" style="font-weight:700;color:#0f172a;">—</span></div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button type="button" id="addSupplierColorBtn" title="Set color for all suppliers with this name" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6edf0;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;">
+              <span id="addSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);"></span>
+            </button>
+            <input type="color" id="addSupplierColorInput" style="display:none;" />
+          </div>
+        </div>
       </div>
       <form id="addSupplierForm" style="display:grid;gap:16px;">
         <div style="position:relative;">
-          <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Name *</label>
-          <input type="text" name="name" required autocomplete="off" class="autocomplete-input" data-field="name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
-          <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="position:relative;">
+              <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Name *</label>
+              <input type="text" name="name" id="addSupplierName" required autocomplete="off" class="autocomplete-input" data-field="name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+              <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+            </div>
+            <div style="position:relative;">
+              <label style="display:block;font-size:13px;margin-bottom:6px;color:#475569;font-weight:600;">Location Name</label>
+              <input type="text" name="location_name" id="addSupplierLocationName" autocomplete="off" class="autocomplete-input" data-field="location_name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+              <div class="autocomplete-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #cbd5e1;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:1000;"></div>
+            </div>
+          </div>
+          <input type="hidden" name="color" id="addSupplierColor" />
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
@@ -522,6 +540,8 @@ $canEditMaps = can_edit_page('maps');
       var suppliersCache = [];
       // Cache for generated marker icons by color to avoid recreating identical SVGs
       var iconCache = {};
+      // Per-name color overrides selected by the user
+      var supplierColorOverrides = {};
       var currentService = null;
       
       function showSupplierDetails(supplier) {
@@ -532,7 +552,7 @@ $canEditMaps = can_edit_page('maps');
         var html = '';
         html += '<div class="supplier-details-left">';
         html += '<div class="supplier-grid">';
-        html += '<div class="supplier-name">' + (supplier.name || 'Unknown') + '</div>';
+        html += '<div class="supplier-name">' + (supplier.name || 'Unknown') + (supplier.location_name ? ' — <span style="font-weight:600;color:#475569;">' + supplier.location_name + '</span>' : '') + '</div>';
         html += '<div class="supplier-contact">' + (supplier.sales_contact || '') + '</div>';
         html += '<div class="supplier-label">Material:</div><div>' + (supplier.material || '') + '</div>';
         html += '<div class="supplier-label">Type:</div><div>' + (supplier.location_type || '') + '</div>';
@@ -686,8 +706,8 @@ $canEditMaps = can_edit_page('maps');
       
       // Function to plot marker on map
       function plotMarker(supplier, popupContent, lat, lng) {
-        // Get color for this supplier and create custom icon
-        var markerColor = getColorForSupplier(supplier.name);
+        // Use explicit color if present on the supplier record, otherwise derive from name
+        var markerColor = (supplier && supplier.color) ? supplier.color : getColorForSupplier(supplier.name);
         var customIcon = createColoredIcon(markerColor);
         
         // Note: action buttons are intentionally only shown in the supplier details box,
@@ -1159,6 +1179,12 @@ $canEditMaps = can_edit_page('maps');
       var addSupplierForm = document.getElementById('addSupplierForm');
       var cancelSupplierBtn = document.getElementById('cancelSupplierBtn');
       var addSupplierOpenBtn = document.getElementById('addSupplierBtn');
+      // Add Supplier color picker elements
+      var addSupplierColorBtn = document.getElementById('addSupplierColorBtn');
+      var addSupplierColorSwatch = document.getElementById('addSupplierColorSwatch');
+      var addSupplierColorInput = document.getElementById('addSupplierColorInput');
+      var addSupplierColorHidden = document.getElementById('addSupplierColor');
+      var addSupplierNameInput = document.getElementById('addSupplierName');
 
       // Open modal and set service label
       if (addSupplierOpenBtn && addSupplierModal) {
@@ -1172,6 +1198,15 @@ $canEditMaps = can_edit_page('maps');
             // Also ensure map resizes to avoid clipping
             setTimeout(function(){ if (typeof map !== 'undefined' && map && map.invalidateSize) map.invalidateSize(); }, 60);
           } catch (e) { /* ignore */ }
+          // Initialize color swatch/default for the typed name
+          try {
+            var nm = (addSupplierNameInput && addSupplierNameInput.value) ? addSupplierNameInput.value.trim() : '';
+            var known = null;
+            (suppliersCache || []).some(function(s){ if (s && s.name === nm && s.color) { known = s.color; return true; } return false; });
+            var col = known || getColorForSupplier(nm || '');
+            if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = col;
+            if (addSupplierColorHidden) addSupplierColorHidden.value = known || '';
+          } catch(e){}
         });
       }
 
@@ -1236,6 +1271,40 @@ $canEditMaps = can_edit_page('maps');
 
       // Submit handler
       if (addSupplierForm) {
+        // Wire color picker interactions and defaulting based on name
+        try {
+          if (addSupplierColorBtn && addSupplierColorInput) {
+            addSupplierColorBtn.addEventListener('click', function(e){ e.preventDefault(); try { addSupplierColorInput.click(); } catch(ex){} });
+            addSupplierColorInput.addEventListener('input', function(){
+              var color = (this.value || '').trim();
+              if (!color) return;
+              try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = color; } catch(e){}
+              try { if (addSupplierColorHidden) addSupplierColorHidden.value = color; } catch(e){}
+              var targetName = (addSupplierNameInput && addSupplierNameInput.value) ? addSupplierNameInput.value.trim() : '';
+              if (!targetName) return;
+              supplierColorOverrides[targetName] = color;
+              // update cache
+              (suppliersCache || []).forEach(function(s){ if (s && s.name === targetName) s.color = color; });
+              // update markers on map immediately
+              (currentMarkers || []).forEach(function(m){ try { if (m && m.supplierData && m.supplierData.name === targetName) { m.setIcon(createColoredIcon(color)); } } catch(e){} });
+              // persist server-side for the name
+              fetch('../../api/set_supplier_color.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'name=' + encodeURIComponent(targetName) + '&color=' + encodeURIComponent(color), credentials: 'same-origin'
+              }).catch(function(err){ console.error('set_supplier_color error', err); });
+            });
+          }
+          if (addSupplierNameInput) {
+            addSupplierNameInput.addEventListener('input', function(){
+              var nm = (this.value || '').trim();
+              var known = null;
+              (suppliersCache || []).some(function(s){ if (s && s.name === nm && s.color) { known = s.color; return true; } return false; });
+              var col = known || getColorForSupplier(nm || '');
+              try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = col; } catch(e){}
+              try { if (addSupplierColorHidden) addSupplierColorHidden.value = known || ''; } catch(e){}
+            });
+          }
+        } catch(e) { console.warn('Add Supplier color picker init failed', e); }
         addSupplierForm.addEventListener('submit', function(e) {
           e.preventDefault();
 
@@ -1285,6 +1354,8 @@ $canEditMaps = can_edit_page('maps');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Adding...';
           }
+          // include selected color if present
+          try { var cval = addSupplierColorHidden ? (addSupplierColorHidden.value || '').trim() : ''; if (cval) formData.set('color', cval); } catch(e){}
 
           // Determine latitude and longitude: prefer hidden fields, fallback to parsing the combined coords input
           var latHiddenEl = addSupplierForm.querySelector('[name="latitude"]');
@@ -1344,6 +1415,7 @@ $canEditMaps = can_edit_page('maps');
                   var supplierObj = {
                     id: newId,
                     name: form.querySelector('[name="name"]').value || '',
+                    location_name: form.querySelector('[name="location_name"]').value || '',
                     material: form.querySelector('[name="material"]').value || '',
                     sales_contact: form.querySelector('[name="sales_contact"]').value || '',
                     contact_number: form.querySelector('[name="contact_number"]').value || '',
@@ -1357,7 +1429,8 @@ $canEditMaps = can_edit_page('maps');
                     notes: form.querySelector('[name="notes"]').value || '',
                     latitude: form.querySelector('[name="latitude"]').value || '',
                     longitude: form.querySelector('[name="longitude"]').value || '',
-                    service: currentService
+                    service: currentService,
+                    color: (addSupplierColorHidden ? (addSupplierColorHidden.value || '') : '')
                   };
 
                   // Insert into suppliersCache so UI shows it immediately

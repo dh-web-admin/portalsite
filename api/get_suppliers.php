@@ -22,7 +22,7 @@ if ($service === '') {
 }
 
 // Fetch suppliers filtered by service (case-insensitive fallback)
-$stmt = $conn->prepare('SELECT id, name, material, sales_contact, contact_number, location_phone, email, address, city, state, location_type, supply_method, notes, service, latitude, longitude FROM suppliers WHERE service = ? ORDER BY name ASC');
+$stmt = $conn->prepare('SELECT id, name, material, sales_contact, contact_number, location_phone, email, address, city, state, location_type, supply_method, notes, service, latitude, longitude, pin_color AS color, location_name FROM suppliers WHERE service = ? ORDER BY name ASC');
 if ($stmt) {
   $stmt->bind_param('s', $service);
   $stmt->execute();
@@ -40,7 +40,7 @@ if ($stmt) {
 
 // If no suppliers found, try a case-insensitive match as a fallback
 if (empty($suppliers)) {
-  $stmt2 = $conn->prepare('SELECT id, name, material, sales_contact, contact_number, location_phone, email, address, city, state, location_type, supply_method, notes, service, latitude, longitude FROM suppliers WHERE LOWER(service) = LOWER(?) ORDER BY name ASC');
+  $stmt2 = $conn->prepare('SELECT id, name, material, sales_contact, contact_number, location_phone, email, address, city, state, location_type, supply_method, notes, service, latitude, longitude, pin_color AS color, location_name FROM suppliers WHERE LOWER(service) = LOWER(?) ORDER BY name ASC');
   if ($stmt2) {
     $stmt2->bind_param('s', $service);
     $stmt2->execute();

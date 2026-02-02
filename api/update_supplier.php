@@ -31,6 +31,8 @@ try {
   $id = intval($_POST['id']);
   $name = trim($_POST['name']);
   $material = isset($_POST['material']) ? trim($_POST['material']) : null;
+  $location_name = isset($_POST['location_name']) ? trim($_POST['location_name']) : null;
+  $color = isset($_POST['color']) ? trim($_POST['color']) : null;
   $sales_contact = isset($_POST['sales_contact']) ? trim($_POST['sales_contact']) : null;
   $contact_number = isset($_POST['contact_number']) ? trim($_POST['contact_number']) : null;
   $email = isset($_POST['email']) ? trim($_POST['email']) : null;
@@ -45,9 +47,11 @@ try {
   $notes = isset($_POST['notes']) ? trim($_POST['notes']) : null;
   $service = isset($_POST['service']) ? trim($_POST['service']) : null;
   
-  // Prepare UPDATE statement
+  // Prepare UPDATE statement (include location_name and color)
       $sql = "UPDATE suppliers SET 
         name = ?,
+        location_name = ?,
+        pin_color = ?,
         material = ?,
         sales_contact = ?,
         contact_number = ?,
@@ -68,11 +72,13 @@ try {
   $latParam = is_numeric($latitude) ? floatval($latitude) : null;
   $lngParam = is_numeric($longitude) ? floatval($longitude) : null;
 
-  // Types: 13 strings, 2 doubles, 1 integer
-  $types = "sssssssssssssddi";
+  // Types: 15 strings, 2 doubles, 1 integer (added location_name and color)
+  $types = "sssssssssssssssddi";
   $stmt->bind_param(
     $types,
     $name,
+    $location_name,
+    $color,
     $material,
     $sales_contact,
     $contact_number,
