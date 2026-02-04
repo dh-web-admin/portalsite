@@ -78,6 +78,11 @@ $canEditMaps = can_edit_page('maps');
     .supplier-details-placeholder { color:#94a3b8; font-size:13px; padding:6px 0; }
     .supplier-details-container a { color: #059669; }
 
+    /* Legend active state */
+    .legend-item { cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+    .legend-item.active { background: #e2e8f0; }
+    .legend-item.active .legend-supplier-name { font-weight: 700; }
+
     /* Slim action buttons (Maps page) */
     .btn-slim {
       padding: 8px 12px !important;
@@ -600,6 +605,8 @@ $canEditMaps = can_edit_page('maps');
       // Per-name color overrides selected by the user
       var supplierColorOverrides = {};
       var currentService = null;
+      var activeLegendName = '';
+      var legendSuppliersCache = [];
       
       function showSupplierDetails(supplier) {
         var detailsBox = document.getElementById('supplierDetailsBox');
@@ -816,6 +823,8 @@ $canEditMaps = can_edit_page('maps');
       function updateSupplierLegend(suppliers) {
         var legendContent = document.getElementById('supplierLegendContent');
         if (!legendContent) return;
+
+        legendSuppliersCache = Array.isArray(suppliers) ? suppliers.slice() : [];
         
         if (!suppliers || suppliers.length === 0) {
           legendContent.innerHTML = '<div style="padding: 8px; color: #94a3b8; text-align: center;">No suppliers loaded</div>';
@@ -844,6 +853,9 @@ $canEditMaps = can_edit_page('maps');
           var color = uniqueSuppliers[name];
           var itemDiv = document.createElement('div');
           itemDiv.className = 'legend-item';
+          if (activeLegendName && activeLegendName.toLowerCase() === name.toLowerCase()) {
+            itemDiv.classList.add('active');
+          }
           itemDiv.style.display = 'flex';
           itemDiv.style.alignItems = 'center';
           itemDiv.style.gap = '10px';
@@ -866,6 +878,16 @@ $canEditMaps = can_edit_page('maps');
           
           itemDiv.appendChild(swatch);
           itemDiv.appendChild(nameDiv);
+          itemDiv.addEventListener('click', function(){
+            var clicked = name.toString();
+            if (activeLegendName && activeLegendName.toLowerCase() === clicked.toLowerCase()) {
+              activeLegendName = '';
+            } else {
+              activeLegendName = clicked;
+            }
+            updateSupplierLegend(legendSuppliersCache);
+            applyFilters(true);
+          });
           legendContent.appendChild(itemDiv);
         });
       }
@@ -2100,12 +2122,14 @@ $canEditMaps = can_edit_page('maps');
           name: (document.getElementById('filterName')?.value || '').trim().toLowerCase(),
           material: (document.getElementById('filterMaterial')?.value || '').trim().toLowerCase(),
           city: (document.getElementById('filterCity')?.value || '').trim().toLowerCase(),
-          state: (document.getElementById('filterState')?.value || '').trim().toLowerCase()
+          state: (document.getElementById('filterState')?.value || '').trim().toLowerCase(),
+          legendName: (activeLegendName || '').trim().toLowerCase()
         };
       }
 
       function markerMatchesFilters(supplier, filters) {
         if (!supplier) return false;
+        if (filters.legendName && (!supplier.name || supplier.name.toLowerCase() !== filters.legendName)) return false;
         // Name
         if (filters.name && (!supplier.name || supplier.name.toLowerCase().indexOf(filters.name) === -1)) return false;
         // Material
@@ -2333,6 +2357,8 @@ $canEditMaps = can_edit_page('maps');
       if (clearBtn) {
         clearBtn.addEventListener('click', function(){
           filterInputs.forEach(function(id){ var el = document.getElementById(id); if (el) el.value=''; });
+          activeLegendName = '';
+          updateSupplierLegend(legendSuppliersCache);
           applyFilters(true);
         });
       }
