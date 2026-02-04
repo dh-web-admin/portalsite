@@ -155,8 +155,21 @@ $canEditMaps = can_edit_page('maps');
 
           </div>
           
-          <!-- Map Container -->
-          <div id="map" style="width: 100%; flex: 1; min-height: 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; border-bottom: 2px solid #cbd5e1;"></div>
+          <!-- Map and Legend Wrapper -->
+          <div style="display: flex; gap: 12px; flex: 1; min-height: 0; margin-bottom: 20px;">
+            <!-- Map Container -->
+            <div id="map" style="flex: 1; min-height: 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-bottom: 2px solid #cbd5e1;"></div>
+            
+            <!-- Legend Box -->
+            <div id="supplierLegend" style="width: 280px; background: #e8e8e8; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.12);">
+              <div style="padding: 14px 16px; font-weight: 600; color: #1e293b; font-size: 13px;">
+                Supplier Legend
+              </div>
+              <div id="supplierLegendContent" style="flex: 1; overflow-y: auto; padding: 10px 14px; font-size: 12px; color: #334155;">
+                <div style="padding: 8px; color: #94a3b8; text-align: center;">No suppliers loaded</div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
@@ -799,6 +812,64 @@ $canEditMaps = can_edit_page('maps');
       }
       
       // Function to clear all markers from map / cluster
+      // Function to update the supplier legend
+      function updateSupplierLegend(suppliers) {
+        var legendContent = document.getElementById('supplierLegendContent');
+        if (!legendContent) return;
+        
+        if (!suppliers || suppliers.length === 0) {
+          legendContent.innerHTML = '<div style="padding: 8px; color: #94a3b8; text-align: center;">No suppliers loaded</div>';
+          return;
+        }
+        
+        // Get unique suppliers and their colors
+        var uniqueSuppliers = {};
+        suppliers.forEach(function(supplier) {
+          if (supplier && supplier.name) {
+            if (!uniqueSuppliers[supplier.name]) {
+              var color = normalizeSupplierColor(supplier);
+              // Ensure we have a valid color
+              if (!color) color = '#667eea';
+              uniqueSuppliers[supplier.name] = color;
+            }
+          }
+        });
+        
+        // Sort by name for consistent display
+        var sortedNames = Object.keys(uniqueSuppliers).sort();
+        
+        // Build legend items as DOM elements
+        legendContent.innerHTML = '';
+        sortedNames.forEach(function(name) {
+          var color = uniqueSuppliers[name];
+          var itemDiv = document.createElement('div');
+          itemDiv.className = 'legend-item';
+          itemDiv.style.display = 'flex';
+          itemDiv.style.alignItems = 'center';
+          itemDiv.style.gap = '10px';
+          
+          var swatch = document.createElement('div');
+          swatch.className = 'legend-color-swatch';
+          swatch.style.width = '12px';
+          swatch.style.height = '12px';
+          swatch.style.borderRadius = '50%';
+          swatch.style.backgroundColor = color;
+          swatch.style.flexShrink = '0';
+          swatch.style.display = 'inline-block';
+          
+          var nameDiv = document.createElement('div');
+          nameDiv.className = 'legend-supplier-name';
+          nameDiv.style.fontSize = '13px';
+          nameDiv.style.color = '#000000';
+          nameDiv.textContent = name;
+          nameDiv.title = name;
+          
+          itemDiv.appendChild(swatch);
+          itemDiv.appendChild(nameDiv);
+          legendContent.appendChild(itemDiv);
+        });
+      }
+      
       function clearMarkers() {
         if (markerCluster) {
           markerCluster.clearLayers();
@@ -808,6 +879,7 @@ $canEditMaps = can_edit_page('maps');
           });
         }
         currentMarkers = [];
+        updateSupplierLegend([]);
       }
       
       // Function to load suppliers for a given service
@@ -830,6 +902,7 @@ $canEditMaps = can_edit_page('maps');
             });
             if (data.suppliers.length === 0) {
               // No suppliers for this service
+              updateSupplierLegend([]);
               updateSupplierCount();
               return map.setView([39.8283, -98.5795], 5);
             }
@@ -875,6 +948,7 @@ $canEditMaps = can_edit_page('maps');
                 setTimeout(addNextBatch, 10);
               } else {
                 // All markers added; continue with filters and UI updates
+                updateSupplierLegend(suppliersWithCoords);
                 applyFilters(true);
                 updateSupplierDropdown();
               }
@@ -889,11 +963,13 @@ $canEditMaps = can_edit_page('maps');
             // applyFilters and updateSupplierDropdown are called after batch plotting completes
           } else {
             // No suppliers found - set default US center view
+            updateSupplierLegend([]);
             map.setView([39.8283, -98.5795], 5);
           }
         })
         .catch(function(error) {
           console.error('Error loading suppliers:', error);
+          updateSupplierLegend([]);
           map.setView([39.8283, -98.5795], 5);
         });
       }

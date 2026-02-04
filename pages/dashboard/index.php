@@ -37,10 +37,9 @@ $allPages = [
     'employee_information' => 'Employee Information',
     'for_sale' => 'For Sale',
     'project_checklist' => 'Project Checklist',
-    'pictures' => 'Pictures',
     'forms' => 'Forms',
-    'manuals' => 'Manuals',
-    'videos' => 'Videos',
+    'company_policies' => 'Company Policies',
+    'sops' => 'S.O.Ps',
     'maps' => 'Maps'
 ];
 
@@ -59,7 +58,7 @@ switch ($role) {
     case 'operator':
     case 'laborer':
         // Only show these 3 pages
-        $allowedPages = ['employee_information', 'manuals', 'videos'];
+        $allowedPages = ['employee_information', 'company_policies', 'sops'];
         $hiddenPages = array_diff(array_keys($allPages), $allowedPages);
         break;
     case 'guest':

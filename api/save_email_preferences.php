@@ -43,6 +43,10 @@ if (isset($raw['preferred_days'])) {
 // limit to 1-5 values and max 5 entries
 $preferred = array_values(array_filter(array_unique($preferred), function($v){ return $v >=1 && $v <=5; }));
 if (count($preferred) > 5) $preferred = array_slice($preferred, 0, 5);
+if ($opted === 0) {
+    // Turning off: ignore any preferred days
+    $preferred = [];
+}
 
 // upsert into bids_email
 try {
@@ -53,44 +57,58 @@ try {
     $row = $res ? $res->fetch_assoc() : null;
     $stmt->close();
 
-    if ($row && isset($row['id'])) {
-        $id = intval($row['id']);
-        $up = $conn->prepare('UPDATE bids_email SET opted_in = ?, preferred_days = ? WHERE id = ?');
-        $pd_json = json_encode($preferred);
-        $up->bind_param('isi', $opted, $pd_json, $id);
-        $ok = $up->execute();
-        $up->close();
+    if ($opted === 0) {
+        // Turning off: delete by email regardless of existing row
+        $del = $conn->prepare('DELETE FROM bids_email WHERE email = ?');
+        $del->bind_param('s', $userEmail);
+        $ok = $del->execute();
+        $del->close();
     } else {
-        $ins = $conn->prepare('INSERT INTO bids_email (`email`,`opted_in`,`preferred_days`) VALUES (?,?,?)');
-        $pd_json = json_encode($preferred);
-        $ins->bind_param('sis', $userEmail, $opted, $pd_json);
-        $ok = $ins->execute();
-        $ins->close();
+        if ($row && isset($row['id'])) {
+            $id = intval($row['id']);
+            $up = $conn->prepare('UPDATE bids_email SET opted_in = ?, preferred_days = ? WHERE id = ?');
+            $pd_json = json_encode($preferred);
+            $up->bind_param('isi', $opted, $pd_json, $id);
+            $ok = $up->execute();
+            $up->close();
+        } else {
+            $ins = $conn->prepare('INSERT INTO bids_email (`email`,`opted_in`,`preferred_days`) VALUES (?,?,?)');
+            $pd_json = json_encode($preferred);
+            $ins->bind_param('sis', $userEmail, $opted, $pd_json);
+            $ok = $ins->execute();
+            $ins->close();
+        }
     }
 
     // Always send a confirmation email (report success/failure in response)
     $email_sent = false;
     try {
-        $subject = 'Bid email notification settings updated';
-
-        // Build human-readable lines for selected days
-        if (!empty($preferred) && is_array($preferred)) {
-            $dayLines = array_map(function($d){ $n = intval($d); return $n . ' day' . ($n === 1 ? '' : 's') . ' before bid'; }, $preferred);
-            $days_text = implode(', ', $preferred);
-            $days_block_text = implode("\n", $dayLines);
-            $days_block_html = '<ul>' . implode('', array_map(function($l){ return '<li>' . htmlspecialchars($l) . '</li>'; }, $dayLines)) . '</ul>';
+        if ($opted === 0) {
+            $subject = 'Bid email notifications turned off';
+            $text = "You have turned off bid email notifications.";
+            $html = "<p>You have turned off bid email notifications.</p>";
         } else {
-            $days_text = 'none';
-            $days_block_text = 'none';
-            $days_block_html = '<p>none</p>';
+            $subject = 'Bid email notification settings updated';
+
+            // Build human-readable lines for selected days
+            if (!empty($preferred) && is_array($preferred)) {
+                $dayLines = array_map(function($d){ $n = intval($d); return $n . ' day' . ($n === 1 ? '' : 's') . ' before bid'; }, $preferred);
+                $days_text = implode(', ', $preferred);
+                $days_block_text = implode("\n", $dayLines);
+                $days_block_html = '<ul>' . implode('', array_map(function($l){ return '<li>' . htmlspecialchars($l) . '</li>'; }, $dayLines)) . '</ul>';
+            } else {
+                $days_text = 'none';
+                $days_block_text = 'none';
+                $days_block_html = '<p>none</p>';
+            }
+
+            $text = "You have changed/updated your email notification for bids.\n\nYou will be reminded on these days for bids:\n" . $days_block_text . "\n\nx y .. are the selected reminder dates";
+
+            $html = "<p>You have changed/updated your email notification for bids.</p>" .
+                    "<p>You will be reminded on these days for bids:</p>" .
+                    $days_block_html .
+                    "<p>Thank you</p>";
         }
-
-        $text = "You have changed/updated your email notification for bids.\n\nYou will be reminded on these days for bids:\n" . $days_block_text . "\n\nx y .. are the selected reminder dates";
-
-        $html = "<p>You have changed/updated your email notification for bids.</p>" .
-                "<p>You will be reminded on these days for bids:</p>" .
-                $days_block_html .
-                "<p>Thank you</p>";
         $sent = sendMail($userEmail, $subject, $text, $html);
         if ($sent && isset($sent['success']) && $sent['success']) {
             $email_sent = true;

@@ -18,11 +18,12 @@ $stmt->bind_param('s', $email);
 $stmt->execute();
 $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
-$role = $user ? $user['role'] : 'laborer';
+$actualRole = $user ? $user['role'] : 'laborer';
+$role = $actualRole;
 $stmt->close();
 
 // Enforce access control for this page
-if (!can_access($role, 'pictures')) {
+if (!can_access($role, 'company_policies')) {
   header('Location: /pages/dashboard/');
   exit();
 }
@@ -32,7 +33,7 @@ if (!can_access($role, 'pictures')) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pictures</title>
+  <title>Company Policies</title>
   <link rel="stylesheet" href="../../assets/css/base.css" />
   <link rel="stylesheet" href="../../assets/css/admin-layout.css" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
@@ -45,7 +46,7 @@ if (!can_access($role, 'pictures')) {
       <?php include __DIR__ . '/../../partials/sidebar.php'; ?>
       <main class="content-area">
         <div class="main-content">
- <div class="maintenance-wrap">
+  <div class="maintenance-wrap">
            <img src="<?php echo htmlspecialchars(base_url('/assets/images/maintenance.png')); ?>" alt="Maintenance Image" class="maintenance-image large" />
           </div>
         </div>

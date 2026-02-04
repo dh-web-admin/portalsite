@@ -175,10 +175,9 @@ function portal_all_pages(): array {
         'employee_information',
         'for_sale',
         'project_checklist',
-        'pictures',
         'forms',
-        'manuals',
-        'videos',
+        'company_policies',
+        'sops',
         'maps',
     ];
 }
@@ -209,7 +208,7 @@ function allowed_pages_for_role(string $role): array {
             return array_values(array_diff($all, ['Bid_tracking','maps','engineering','forms','project_checklist']));
         case 'operator':
         case 'laborer':
-            return ['employee_information','manuals','videos'];
+            return ['employee_information','company_policies','sops'];
         default:
             // Unknown role: safest minimal access
             return ['employee_information'];

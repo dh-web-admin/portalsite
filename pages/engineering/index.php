@@ -94,7 +94,7 @@ if ($bidTableExists) {
 
 $gcCanonical = [
   'general_contractor' => ['general_contractor','client_winner'],
-  'general_contractor_name' => ['general_contractor_name','gc_name','gcname','general_contractor'],
+  'general_contractor_name' => ['general_contractor_name','gc_name','gcname'],
   'general_contractor_number' => ['general_contractor_number','gc_number','gcnumber'],
   'general_contractor_email' => ['general_contractor_email','gc_email','gcemail'],
   'general_contractor_address' => ['general_contractor_address','gc_address','gcaddress'],
