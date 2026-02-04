@@ -1735,11 +1735,11 @@ foreach ($bidColumns as $c) {
                 var table = document.createElement('div');
                 table.style.display = 'grid';
                 /* add an actions column on the right for remove 'X' buttons; include Union column before actions */
-                table.style.gridTemplateColumns = '2fr 2fr 1.5fr 2fr 2fr 1fr 48px';
+                table.style.gridTemplateColumns = '2fr 2fr 1.5fr 2fr 2fr 1.2fr 1fr 48px';
                 table.style.gap = '8px';
                 table.style.alignItems = 'center';
                 // header row
-                var hdrs = ['General Contractor','Name','Number','Email','Address','Union'];
+                var hdrs = ['General Contractor','Name','Number','Email','Address','Client Win Price','Union'];
                 hdrs.forEach(function(h){ var e = document.createElement('div'); e.style.fontWeight = '600'; e.style.padding = '6px 8px'; e.style.color = '#374151'; e.textContent = h; e.style.position = 'sticky'; e.style.top = '0'; e.style.background = '#ffffff'; e.style.zIndex = '4'; e.style.borderBottom = '1px solid #e6edf0'; e.style.textAlign = 'left'; table.appendChild(e); });
                 // Add actions header (empty but keeps layout consistent)
                 var actHdr = document.createElement('div'); actHdr.style.padding = '6px 8px'; actHdr.style.position = 'sticky'; actHdr.style.top = '0'; actHdr.style.background = '#ffffff'; actHdr.style.zIndex = '4'; actHdr.style.borderBottom = '1px solid #e6edf0'; actHdr.style.textAlign = 'left'; actHdr.textContent = '';
@@ -1763,6 +1763,7 @@ foreach ($bidColumns as $c) {
                   var mail = it.general_contractor_email || '';
                   var addr = it.general_contractor_address || '';
                   var unionVal = (typeof it.is_union !== 'undefined') ? it.is_union : ((typeof it.union !== 'undefined') ? it.union : (it.general_contractor_union || ''));
+                  var cwp = (typeof it.client_win_price !== 'undefined') ? it.client_win_price : '';
                   var isWinner = (it.winner && (it.winner == 1 || it.winner === '1' || it.winner === true));
 
                   function makeCellInput(val, nameAttr, placeholder, highlightColor) {
@@ -1816,6 +1817,7 @@ foreach ($bidColumns as $c) {
                   table.appendChild(makeCellInput(num, 'general_contractor_number', 'Number', winnerColor));
                   table.appendChild(makeCellInput(mail, 'general_contractor_email', 'Email', winnerColor));
                   table.appendChild(makeCellInput(addr, 'general_contractor_address', 'Address', winnerColor));
+                  table.appendChild(makeCellInput(cwp, 'client_win_price', 'Client win price', winnerColor));
                   // Union column: editable select
                   table.appendChild(makeCellInput(unionVal, 'is_union', 'Union', winnerColor));
 
@@ -2226,6 +2228,7 @@ foreach ($bidColumns as $c) {
                       if (g.general_contractor_number !== undefined) form.append('general_contractor_number', g.general_contractor_number);
                       if (g.general_contractor_email !== undefined) form.append('general_contractor_email', g.general_contractor_email);
                       if (g.general_contractor_address !== undefined) form.append('general_contractor_address', g.general_contractor_address);
+                      if (g.client_win_price !== undefined) form.append('client_win_price', g.client_win_price);
                       if (g.is_union !== undefined) form.append('is_union', g.is_union);
                       var dhss = document.getElementById('editDhssProjectNumber') ? document.getElementById('editDhssProjectNumber').value.trim() : '';
                       if (dhss) form.append('dhss_project_number', dhss);

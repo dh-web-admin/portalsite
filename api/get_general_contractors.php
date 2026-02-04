@@ -17,7 +17,7 @@ $dhss = isset($_GET['dhss_project_number']) ? trim($_GET['dhss_project_number'])
 
 try {
   if ($dhss !== '') {
-    $stmt = $conn->prepare('SELECT id, dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, winner, created_at FROM general_contractor WHERE dhss_project_number = ? ORDER BY general_contractor ASC');
+    $stmt = $conn->prepare('SELECT id, dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, client_win_price, is_union, winner, created_at FROM general_contractor WHERE dhss_project_number = ? ORDER BY general_contractor ASC');
     if ($stmt) {
       $stmt->bind_param('s', $dhss);
       if ($stmt->execute()) {
@@ -60,7 +60,7 @@ try {
         $items = [];
         try {
           $esc = $conn->real_escape_string($dhss);
-          $qr = "SELECT id, dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, winner, created_at FROM general_contractor WHERE dhss_project_number = '" . $esc . "' ORDER BY general_contractor ASC";
+          $qr = "SELECT id, dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, client_win_price, is_union, winner, created_at FROM general_contractor WHERE dhss_project_number = '" . $esc . "' ORDER BY general_contractor ASC";
           $res = $conn->query($qr);
           if ($res) {
             while ($row = $res->fetch_assoc()) $items[] = $row;
@@ -76,7 +76,7 @@ try {
   }
 
   // fallback: return all contractors
-  $result = $conn->query('SELECT id, dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, winner, created_at FROM general_contractor ORDER BY general_contractor ASC');
+  $result = $conn->query('SELECT id, dhss_project_number, general_contractor, general_contractor_name, general_contractor_number, general_contractor_email, general_contractor_address, client_win_price, is_union, winner, created_at FROM general_contractor ORDER BY general_contractor ASC');
   $items = [];
   if ($result) {
     while ($row = $result->fetch_assoc()) $items[] = $row;
