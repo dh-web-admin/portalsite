@@ -60,11 +60,18 @@ try {
 
     // Insert into part_specifications for each make
     if (!empty($makes) && is_array($makes)) {
-        $stmt = $conn->prepare("INSERT INTO part_specifications (part_name, make, model) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE make = VALUES(make), model = VALUES(model)");
+        $stmt = $conn->prepare("INSERT INTO part_specifications (part_name, make, model, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE make = VALUES(make), model = VALUES(model), supplier = VALUES(supplier), supplier_name = VALUES(supplier_name), supplier_number = VALUES(supplier_number), supplier_email = VALUES(supplier_email), supplier_address = VALUES(supplier_address), supplier_price = VALUES(supplier_price)");
         
         foreach ($makes as $make) {
             if (!empty($make['make']) && !empty($make['partNumber'])) {
-                $stmt->bind_param('sss', $partNumber, $make['make'], $make['partNumber']);
+                $supplier = isset($make['supplier']) ? trim($make['supplier']) : '';
+                $supplierName = isset($make['supplierName']) ? trim($make['supplierName']) : '';
+                $supplierNumber = isset($make['supplierNumber']) ? trim($make['supplierNumber']) : '';
+                $supplierEmail = isset($make['supplierEmail']) ? trim($make['supplierEmail']) : '';
+                $supplierAddress = isset($make['supplierAddress']) ? trim($make['supplierAddress']) : '';
+                $supplierPrice = isset($make['supplierPrice']) ? trim($make['supplierPrice']) : '';
+                
+                $stmt->bind_param('sssssssss', $partNumber, $make['make'], $make['partNumber'], $supplier, $supplierName, $supplierNumber, $supplierEmail, $supplierAddress, $supplierPrice);
                 $stmt->execute();
             }
         }

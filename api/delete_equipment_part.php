@@ -20,6 +20,8 @@ if ($equipment_id <= 0 || $part_name === '') {
     exit();
 }
 
+$conn->begin_transaction();
+
 $stmt = $conn->prepare('DELETE FROM equipment_parts WHERE equipment_id = ? AND part_name = ?');
 if (!$stmt) {
     http_response_code(500);
@@ -32,9 +34,31 @@ $ok = $stmt->execute();
 $stmt->close();
 
 if (!$ok) {
+    $conn->rollback();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Failed to delete part.']);
     exit();
 }
+
+$stmt = $conn->prepare('DELETE FROM part_specifications WHERE part_name = ?');
+if (!$stmt) {
+    $conn->rollback();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Failed to prepare delete specs statement.']);
+    exit();
+}
+
+$stmt->bind_param('s', $part_name);
+$ok = $stmt->execute();
+$stmt->close();
+
+if (!$ok) {
+    $conn->rollback();
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Failed to delete part specifications.']);
+    exit();
+}
+
+$conn->commit();
 
 echo json_encode(['success' => true]);

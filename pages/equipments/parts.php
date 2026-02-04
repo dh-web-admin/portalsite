@@ -49,7 +49,7 @@ $partsList = [];
 if ($equipmentId > 0) {
 	try {
 		$stmt = $conn->prepare("
-			SELECT ep.part_name, ps.make, ps.model, ep.quantity, ep.notes
+			SELECT ep.part_name, ps.make, ps.model, ps.supplier, ps.supplier_name, ps.supplier_number, ps.supplier_email, ps.supplier_address, ps.supplier_price, ep.quantity, ep.notes
 			FROM equipment_parts ep
 			LEFT JOIN part_specifications ps ON ep.part_name = ps.part_name
 			WHERE ep.equipment_id = ?
@@ -72,7 +72,13 @@ if ($equipmentId > 0) {
 				if ($row['make']) {
 					$partsList[$partName]['makes'][] = [
 						'make' => $row['make'],
-						'model' => $row['model']
+						'model' => $row['model'],
+						'supplier' => $row['supplier'],
+						'supplier_name' => $row['supplier_name'],
+						'supplier_number' => $row['supplier_number'],
+						'supplier_email' => $row['supplier_email'],
+						'supplier_address' => $row['supplier_address'],
+						'supplier_price' => $row['supplier_price']
 					];
 				}
 			}
@@ -196,6 +202,12 @@ function equipment_label($row) {
 								$cardMakes[] = [
 									'make' => $mk['make'],
 									'partNumber' => $mk['model'],
+									'supplier' => isset($mk['supplier']) ? $mk['supplier'] : '',
+									'supplierName' => isset($mk['supplier_name']) ? $mk['supplier_name'] : '',
+									'supplierNumber' => isset($mk['supplier_number']) ? $mk['supplier_number'] : '',
+									'supplierEmail' => isset($mk['supplier_email']) ? $mk['supplier_email'] : '',
+									'supplierAddress' => isset($mk['supplier_address']) ? $mk['supplier_address'] : '',
+									'supplierPrice' => isset($mk['supplier_price']) ? $mk['supplier_price'] : '',
 								];
 							}
 						}
@@ -262,7 +274,7 @@ function equipment_label($row) {
 			<input type="hidden" id="partEditMode" value="0" />
 			<input type="hidden" id="originalPartName" value="" />
 			<div>
-				<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Part Number *</label>
+				<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Part Name *</label>
 				<input type="text" id="partNumber" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 			</div>
 			
@@ -270,15 +282,53 @@ function equipment_label($row) {
 				<div class="make-item" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
 					<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
 						<span style="font-size:13px;font-weight:700;color:#0f172a;">Make #1</span>
+						<button type="button" class="remove-make-btn" aria-label="Remove make" style="background:transparent;color:#ef4444;border:none;padding:0;font-size:16px;cursor:pointer;line-height:1;">&times;</button>
 					</div>
-					<div style="display:flex;flex-direction:column;gap:10px;">
-						<div>
+					<div style="display:flex;gap:10px;">
+						<div style="flex:1;">
 							<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Make *</label>
 							<input type="text" class="make-input" required style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 						</div>
-						<div>
+						<div style="flex:1;">
 							<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Part Number for this Make *</label>
 							<input type="text" class="make-part-number" required style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+						</div>
+					</div>
+					<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">
+						<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">
+							<div style="font-size:12px;font-weight:600;color:#0f172a;">Supplier Details:</div>
+							<span style="font-size:14px;color:#475569;transition:transform 0.2s ease;transform:rotate(-90deg);" class="toggle-icon">▾</span>
+						</div>
+						<div style="display:none;" class="supplier-details-content">
+							<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Supplier</label>
+									<input type="text" class="make-supplier" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Price</label>
+									<div style="display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;background:#fff;">
+										<span style="color:#374151;font-weight:700;margin-right:4px;flex:0 0 auto;">$</span>
+										<input type="text" class="make-supplier-price" placeholder="0.00" style="border:0;padding:6px 0;margin:0;background:transparent;flex:1 1 auto;font-size:14px;" />
+									</div>
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Name</label>
+									<input type="text" class="make-supplier-name" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Number</label>
+									<input type="text" class="make-supplier-number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Email</label>
+									<input type="text" class="make-supplier-email" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Address</label>
+									<input type="text" class="make-supplier-address" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -356,6 +406,100 @@ document.addEventListener('DOMContentLoaded', function(){
 	
 	if (closeBtn) closeBtn.addEventListener('click', closeModal);
 	if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+	
+	function deleteMakeSpecification(partName, makeVal, modelVal) {
+		if (!partName || !makeVal || !modelVal) return;
+		var data = new FormData();
+		data.append('part_name', partName);
+		data.append('make', makeVal);
+		data.append('model', modelVal);
+		fetch('../../api/delete_part_specification.php', {
+			method: 'POST',
+			body: data,
+			credentials: 'same-origin'
+		})
+		.then(function(r){
+			return r.text().then(function(text){
+				try { return JSON.parse(text); }
+				catch (err) { throw { type: 'parse', text: text, status: r.status }; }
+			});
+		})
+		.then(function(json){
+			if (!json || !json.success) throw new Error((json && json.message) ? json.message : 'Delete failed');
+		})
+		.catch(function(err){
+			console.error('Delete make specification error', err);
+		});
+	}
+
+	function bindMakeRemoveHandler(makeItem) {
+		if (!makeItem) return;
+		var removeBtn = makeItem.querySelector('.remove-make-btn');
+		if (!removeBtn || removeBtn.getAttribute('data-bound') === '1') return;
+		removeBtn.setAttribute('data-bound', '1');
+		removeBtn.addEventListener('click', function(){
+			if (isEditMode) {
+				var partNameField = document.getElementById('partNumber');
+				var partName = (originalPartName || (partNameField ? partNameField.value.trim() : ''));
+				var makeVal = '';
+				var modelVal = '';
+				var makeInput = makeItem.querySelector('.make-input');
+				var modelInput = makeItem.querySelector('.make-part-number');
+				if (makeInput) makeVal = makeInput.value.trim();
+				if (modelInput) modelVal = modelInput.value.trim();
+				deleteMakeSpecification(partName, makeVal, modelVal);
+			}
+			makeItem.remove();
+		});
+	}
+
+	if (makesList) {
+		makesList.addEventListener('click', function(e){
+			var btn = e.target.closest('.remove-make-btn');
+			if (!btn) return;
+			var makeItem = btn.closest('.make-item');
+			if (!makeItem) return;
+			if (isEditMode) {
+				var partNameField = document.getElementById('partNumber');
+				var partName = (originalPartName || (partNameField ? partNameField.value.trim() : ''));
+				var makeVal = '';
+				var modelVal = '';
+				var makeInput = makeItem.querySelector('.make-input');
+				var modelInput = makeItem.querySelector('.make-part-number');
+				if (makeInput) makeVal = makeInput.value.trim();
+				if (modelInput) modelVal = modelInput.value.trim();
+				deleteMakeSpecification(partName, makeVal, modelVal);
+			}
+			makeItem.remove();
+		});
+	}
+	
+	// Add collapse/expand functionality to supplier details
+	function initSupplierDetailsToggle() {
+		var toggles = document.querySelectorAll('.supplier-details-toggle');
+		toggles.forEach(function(toggle) {
+			toggle.addEventListener('click', function() {
+				var content = this.nextElementSibling;
+				var icon = this.querySelector('.toggle-icon');
+				if (content) {
+					var isVisible = content.style.display !== 'none';
+					content.style.display = isVisible ? 'none' : 'block';
+					if (icon) {
+						icon.style.transform = isVisible ? 'rotate(-90deg)' : 'rotate(0deg)';
+					}
+				}
+			});
+		});
+	}
+	
+	// Initialize toggles on modal open
+	var origOpenBtn = openBtn;
+	if (openBtn) {
+		openBtn.addEventListener('click', function() {
+			setTimeout(function() { initSupplierDetailsToggle(); }, 100);
+		});
+	}
+	
 	if (modal) {
 		modal.addEventListener('click', function(e){
 			if (e.target === modal) closeModal();
@@ -370,26 +514,51 @@ document.addEventListener('DOMContentLoaded', function(){
 			makeItem.style.cssText = 'padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;position:relative;';
 			makeItem.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
 				'<span style="font-size:13px;font-weight:700;color:#0f172a;">Make #' + makeCounter + '</span>' +
-				'<button type="button" class="remove-make-btn" style="background:#ef4444;color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:11px;cursor:pointer;">&times; Remove</button>' +
+				'<button type="button" class="remove-make-btn" aria-label="Remove make" style="background:transparent;color:#ef4444;border:none;padding:0;font-size:16px;cursor:pointer;line-height:1;">&times;</button>' +
 			'</div>' +
-			'<div style="display:flex;flex-direction:column;gap:10px;">' +
-				'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Make *</label>' +
+			'<div style="display:flex;gap:10px;">' +
+				'<div style="flex:1;"><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Make *</label>' +
 				'<input type="text" class="make-input" required style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
-				'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Part Number for this Make *</label>' +
+				'<div style="flex:1;"><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Part Number for this Make *</label>' +
 				'<input type="text" class="make-part-number" required style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+			'</div>' +
+			'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">' +
+				'<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">' +
+				'<div style="font-size:12px;font-weight:600;color:#0f172a;">Supplier Details:</div>' +
+				'<span style="font-size:14px;color:#475569;transition:transform 0.2s ease;transform:rotate(-90deg);" class="toggle-icon">▾</span>' +
+				'</div>' +
+				'<div style="display:none;" class="supplier-details-content">' +
+				'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Supplier</label>' +
+					'<input type="text" class="make-supplier" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Price</label>' +
+					'<div style="display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;background:#fff;">' +
+					'<span style="color:#374151;font-weight:700;margin-right:4px;flex:0 0 auto;">$</span>' +
+					'<input type="text" class="make-supplier-price" placeholder="0.00" style="border:0;padding:6px 0;margin:0;background:transparent;flex:1 1 auto;font-size:14px;" /></div></div>' +
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Name</label>' +
+					'<input type="text" class="make-supplier-name" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Number</label>' +
+					'<input type="text" class="make-supplier-number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Email</label>' +
+					'<input type="text" class="make-supplier-email" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Address</label>' +
+					'<input type="text" class="make-supplier-address" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+				'</div>' +
+				'</div>' +
 			'</div>';
 			
 			makesList.appendChild(makeItem);
 			
+			// Initialize toggle for the newly added make item
+			initSupplierDetailsToggle();
+			
 			// Add remove handler
-			var removeBtn = makeItem.querySelector('.remove-make-btn');
-			if (removeBtn) {
-				removeBtn.addEventListener('click', function(){
-					makeItem.remove();
-				});
-			}
+			bindMakeRemoveHandler(makeItem);
 		});
 	}
+
+	// Bind remove handler for the initial make item
+	bindMakeRemoveHandler(makesList ? makesList.querySelector('.make-item') : null);
 
 	// Open modal in "edit" mode when clicking an existing part card
 	if (partCards && partCards.length && modal) {
@@ -408,6 +577,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
 				// Open modal
 				modal.style.display = 'flex';
+				
+				// Initialize toggle functionality
+				setTimeout(function() { initSupplierDetailsToggle(); }, 100);
 
 				// Set title to Edit Part
 				var titleEl = modal.querySelector('h3');
@@ -432,8 +604,20 @@ document.addEventListener('DOMContentLoaded', function(){
 					if (firstItem) {
 						var mi = firstItem.querySelector('.make-input');
 						var pn = firstItem.querySelector('.make-part-number');
+						var sup = firstItem.querySelector('.make-supplier');
+						var sname = firstItem.querySelector('.make-supplier-name');
+						var snum = firstItem.querySelector('.make-supplier-number');
+						var semail = firstItem.querySelector('.make-supplier-email');
+						var saddr = firstItem.querySelector('.make-supplier-address');
+						var sprice = firstItem.querySelector('.make-supplier-price');
 						if (mi) mi.value = first.make || '';
 						if (pn) pn.value = first.partNumber || '';
+						if (sup) sup.value = first.supplier || '';
+						if (sname) sname.value = first.supplierName || '';
+						if (snum) snum.value = first.supplierNumber || '';
+						if (semail) semail.value = first.supplierEmail || '';
+						if (saddr) saddr.value = first.supplierAddress || '';
+						if (sprice) sprice.value = first.supplierPrice || '';
 					}
 
 					// Remaining makes: add extra blocks
@@ -445,11 +629,26 @@ document.addEventListener('DOMContentLoaded', function(){
 						if (last) {
 							var mi2 = last.querySelector('.make-input');
 							var pn2 = last.querySelector('.make-part-number');
+							var sup2 = last.querySelector('.make-supplier');
+							var sname2 = last.querySelector('.make-supplier-name');
+							var snum2 = last.querySelector('.make-supplier-number');
+							var semail2 = last.querySelector('.make-supplier-email');
+							var saddr2 = last.querySelector('.make-supplier-address');
+							var sprice2 = last.querySelector('.make-supplier-price');
 							if (mi2) mi2.value = m2.make || '';
 							if (pn2) pn2.value = m2.partNumber || '';
+							if (sup2) sup2.value = m2.supplier || '';
+							if (sname2) sname2.value = m2.supplierName || '';
+							if (snum2) snum2.value = m2.supplierNumber || '';
+							if (semail2) semail2.value = m2.supplierEmail || '';
+							if (saddr2) saddr2.value = m2.supplierAddress || '';
+							if (sprice2) sprice2.value = m2.supplierPrice || '';
 						}
 					}
 				}
+				
+				// Re-initialize toggles after all makes have been added and populated
+				initSupplierDetailsToggle();
 			});
 		});
 	}
@@ -506,9 +705,18 @@ document.addEventListener('DOMContentLoaded', function(){
 				var makeInput = item.querySelector('.make-input');
 				var partInput = item.querySelector('.make-part-number');
 				if (makeInput && partInput && makeInput.value.trim() && partInput.value.trim()) {
+					var priceVal = (item.querySelector('.make-supplier-price') || {}).value?.trim() || '';
+					// Sanitize price: remove commas but keep decimal
+					priceVal = priceVal.replace(/,/g, '');
 					makes.push({
 						make: makeInput.value.trim(),
-						partNumber: partInput.value.trim()
+						partNumber: partInput.value.trim(),
+						supplier: (item.querySelector('.make-supplier') || {}).value?.trim() || '',
+						supplierName: (item.querySelector('.make-supplier-name') || {}).value?.trim() || '',
+						supplierNumber: (item.querySelector('.make-supplier-number') || {}).value?.trim() || '',
+						supplierEmail: (item.querySelector('.make-supplier-email') || {}).value?.trim() || '',
+						supplierAddress: (item.querySelector('.make-supplier-address') || {}).value?.trim() || '',
+						supplierPrice: priceVal
 					});
 				}
 			});
