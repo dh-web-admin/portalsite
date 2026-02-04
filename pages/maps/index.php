@@ -878,7 +878,8 @@ $canEditMaps = can_edit_page('maps');
           
           itemDiv.appendChild(swatch);
           itemDiv.appendChild(nameDiv);
-          itemDiv.addEventListener('click', function(){
+          itemDiv.addEventListener('click', function(e){
+            e.stopPropagation(); // Prevent document click listener from firing
             var clicked = name.toString();
             if (activeLegendName && activeLegendName.toLowerCase() === clicked.toLowerCase()) {
               activeLegendName = '';
@@ -891,6 +892,18 @@ $canEditMaps = can_edit_page('maps');
           legendContent.appendChild(itemDiv);
         });
       }
+      
+      // Close legend filter when clicking outside the legend
+      document.addEventListener('click', function(e) {
+        var supplierLegend = document.getElementById('supplierLegend');
+        if (supplierLegend && !supplierLegend.contains(e.target)) {
+          if (activeLegendName) {
+            activeLegendName = '';
+            updateSupplierLegend(legendSuppliersCache);
+            applyFilters(true);
+          }
+        }
+      });
       
       function clearMarkers() {
         if (markerCluster) {

@@ -1894,8 +1894,11 @@ foreach ($bidColumns as $c) {
         }
 
         // fill other fields (supports inputs, selects, and textareas)
+        // Location fields (project_city, project_county, project_state) are NOT auto-filled
+        var locationFields = ['project_city', 'project_county', 'project_state'];
         bidColumns.forEach(function(col){
           if (col === 'project_name') return;
+          if (locationFields.indexOf(col) !== -1) return; // Skip location fields
           var els = modal.querySelectorAll('[data-col="' + col + '"]');
           els.forEach(function(el){
             var tag = (el.tagName || '').toLowerCase();
