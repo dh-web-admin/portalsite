@@ -169,6 +169,7 @@ function portal_all_pages(): array {
     return [
         'admin_panel',
         'equipments',
+        'client_profile',
         'Bid_tracking',
         'scheduling',
         'engineering',
@@ -208,7 +209,7 @@ function allowed_pages_for_role(string $role): array {
             return array_values(array_diff($all, ['Bid_tracking','maps','engineering','forms','project_checklist']));
         case 'operator':
         case 'laborer':
-            return ['employee_information','company_policies','sops'];
+            return ['employee_information','company_policies','sops','client_profile'];
         default:
             // Unknown role: safest minimal access
             return ['employee_information'];

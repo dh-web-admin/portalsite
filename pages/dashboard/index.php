@@ -31,6 +31,7 @@ $role = $actualRole;
 // Define page access by role
 $allPages = [
     'equipments' => 'Equipment',
+    'client_profile' => 'Client Profile',
     'Bid_tracking' => 'Bid Tracking',
     'scheduling' => 'Scheduling',
     'engineering' => 'Engineering',

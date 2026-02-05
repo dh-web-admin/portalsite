@@ -49,7 +49,7 @@ $partsList = [];
 if ($equipmentId > 0) {
 	try {
 		$stmt = $conn->prepare("
-			SELECT ep.part_name, ps.make, ps.model, ps.supplier, ps.supplier_name, ps.supplier_number, ps.supplier_email, ps.supplier_address, ps.supplier_price, ep.quantity, ep.notes
+			SELECT ep.part_name, ep.nsn_number, ps.make, ps.model, ps.other_numbers, ps.supplier, ps.supplier_name, ps.supplier_number, ps.supplier_email, ps.supplier_address, ps.supplier_price, ep.quantity, ep.notes
 			FROM equipment_parts ep
 			LEFT JOIN part_specifications ps ON ep.part_name = ps.part_name
 			WHERE ep.equipment_id = ?
@@ -64,6 +64,7 @@ if ($equipmentId > 0) {
 				if (!isset($partsList[$partName])) {
 					$partsList[$partName] = [
 						'part_name' => $partName,
+						'nsn_number' => isset($row['nsn_number']) ? $row['nsn_number'] : '',
 						'quantity' => $row['quantity'],
 						'notes' => $row['notes'],
 						'makes' => []
@@ -73,6 +74,7 @@ if ($equipmentId > 0) {
 					$partsList[$partName]['makes'][] = [
 						'make' => $row['make'],
 						'model' => $row['model'],
+						'other_numbers' => $row['other_numbers'],
 						'supplier' => $row['supplier'],
 						'supplier_name' => $row['supplier_name'],
 						'supplier_number' => $row['supplier_number'],
@@ -202,6 +204,7 @@ function equipment_label($row) {
 								$cardMakes[] = [
 									'make' => $mk['make'],
 									'partNumber' => $mk['model'],
+									'otherNumbers' => $mk['other_numbers'],
 									'supplier' => isset($mk['supplier']) ? $mk['supplier'] : '',
 									'supplierName' => isset($mk['supplier_name']) ? $mk['supplier_name'] : '',
 									'supplierNumber' => isset($mk['supplier_number']) ? $mk['supplier_number'] : '',
@@ -212,7 +215,7 @@ function equipment_label($row) {
 							}
 						}
 					?>
-					<div class="part-card" data-part-name="<?php echo htmlspecialchars($part['part_name']); ?>" data-part-makes='<?php echo json_encode($cardMakes); ?>'>
+					<div class="part-card" data-part-name="<?php echo htmlspecialchars($part['part_name']); ?>" data-part-nsn="<?php echo htmlspecialchars($part['nsn_number']); ?>" data-part-makes='<?php echo json_encode($cardMakes); ?>'>
 						<div class="part-header">
 							<div class="part-name"><?php echo htmlspecialchars($part['part_name']); ?></div>
 							<?php if (!empty($part['quantity']) && $part['quantity'] > 1): ?>
@@ -273,9 +276,15 @@ function equipment_label($row) {
 		<form id="addPartForm" style="display:flex;flex-direction:column;gap:16px;">
 			<input type="hidden" id="partEditMode" value="0" />
 			<input type="hidden" id="originalPartName" value="" />
-			<div>
-				<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Part Name *</label>
-				<input type="text" id="partNumber" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+			<div style="display:flex;gap:12px;flex-wrap:wrap;">
+				<div style="flex:1;min-width:220px;">
+					<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Part Name *</label>
+					<input type="text" id="partNumber" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+				</div>
+				<div style="flex:1;min-width:220px;">
+					<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">NSN Number</label>
+					<input type="text" id="partNsn" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+				</div>
 			</div>
 			
 			<div id="makesList" style="display:flex;flex-direction:column;gap:12px;">
@@ -293,6 +302,10 @@ function equipment_label($row) {
 							<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Part Number for this Make *</label>
 							<input type="text" class="make-part-number" required style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 						</div>
+					</div>
+					<div style="margin-top:10px;">
+						<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Other Numbers</label>
+						<input type="text" class="make-other-numbers" placeholder="12345, 45657, 76876876" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 					</div>
 					<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">
 						<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">
@@ -478,6 +491,8 @@ document.addEventListener('DOMContentLoaded', function(){
 	function initSupplierDetailsToggle() {
 		var toggles = document.querySelectorAll('.supplier-details-toggle');
 		toggles.forEach(function(toggle) {
+			if (toggle.getAttribute('data-bound') === '1') return;
+			toggle.setAttribute('data-bound', '1');
 			toggle.addEventListener('click', function() {
 				var content = this.nextElementSibling;
 				var icon = this.querySelector('.toggle-icon');
@@ -522,6 +537,10 @@ document.addEventListener('DOMContentLoaded', function(){
 				'<div style="flex:1;"><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Part Number for this Make *</label>' +
 				'<input type="text" class="make-part-number" required style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
 			'</div>' +
+			'<div style="margin-top:10px;">' +
+				'<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Other Numbers</label>' +
+				'<input type="text" class="make-other-numbers" placeholder="12345, 45657, 76876876" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />' +
+			'</div>' +
 			'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">' +
 				'<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">' +
 				'<div style="font-size:12px;font-weight:600;color:#0f172a;">Supplier Details:</div>' +
@@ -565,6 +584,7 @@ document.addEventListener('DOMContentLoaded', function(){
 		partCards.forEach(function(card){
 			card.addEventListener('click', function(){
 				var partName = card.getAttribute('data-part-name') || '';
+				var partNsn = card.getAttribute('data-part-nsn') || '';
 				var makesJson = card.getAttribute('data-part-makes') || '[]';
 				var parsedMakes = [];
 				try { parsedMakes = JSON.parse(makesJson); } catch(e) { parsedMakes = []; }
@@ -595,6 +615,8 @@ document.addEventListener('DOMContentLoaded', function(){
 				// Fill in part name
 				var partInput = document.getElementById('partNumber');
 				if (partInput) partInput.value = partName;
+				var nsnInput = document.getElementById('partNsn');
+				if (nsnInput) nsnInput.value = partNsn;
 
 				// Fill in makes
 				if (parsedMakes && parsedMakes.length) {
@@ -604,6 +626,7 @@ document.addEventListener('DOMContentLoaded', function(){
 					if (firstItem) {
 						var mi = firstItem.querySelector('.make-input');
 						var pn = firstItem.querySelector('.make-part-number');
+						var on = firstItem.querySelector('.make-other-numbers');
 						var sup = firstItem.querySelector('.make-supplier');
 						var sname = firstItem.querySelector('.make-supplier-name');
 						var snum = firstItem.querySelector('.make-supplier-number');
@@ -612,6 +635,7 @@ document.addEventListener('DOMContentLoaded', function(){
 						var sprice = firstItem.querySelector('.make-supplier-price');
 						if (mi) mi.value = first.make || '';
 						if (pn) pn.value = first.partNumber || '';
+						if (on) on.value = first.otherNumbers || '';
 						if (sup) sup.value = first.supplier || '';
 						if (sname) sname.value = first.supplierName || '';
 						if (snum) snum.value = first.supplierNumber || '';
@@ -629,6 +653,7 @@ document.addEventListener('DOMContentLoaded', function(){
 						if (last) {
 							var mi2 = last.querySelector('.make-input');
 							var pn2 = last.querySelector('.make-part-number');
+							var on2 = last.querySelector('.make-other-numbers');
 							var sup2 = last.querySelector('.make-supplier');
 							var sname2 = last.querySelector('.make-supplier-name');
 							var snum2 = last.querySelector('.make-supplier-number');
@@ -637,6 +662,7 @@ document.addEventListener('DOMContentLoaded', function(){
 							var sprice2 = last.querySelector('.make-supplier-price');
 							if (mi2) mi2.value = m2.make || '';
 							if (pn2) pn2.value = m2.partNumber || '';
+							if (on2) on2.value = m2.otherNumbers || '';
 							if (sup2) sup2.value = m2.supplier || '';
 							if (sname2) sname2.value = m2.supplierName || '';
 							if (snum2) snum2.value = m2.supplierNumber || '';
@@ -698,19 +724,30 @@ document.addEventListener('DOMContentLoaded', function(){
 			e.preventDefault();
 			
 			var partNumber = document.getElementById('partNumber').value.trim();
+			var partNsn = (document.getElementById('partNsn') || {}).value?.trim() || '';
 			var makes = [];
 			
 			var makeItems = makesList.querySelectorAll('.make-item');
 			makeItems.forEach(function(item){
 				var makeInput = item.querySelector('.make-input');
 				var partInput = item.querySelector('.make-part-number');
+				var otherInput = item.querySelector('.make-other-numbers');
 				if (makeInput && partInput && makeInput.value.trim() && partInput.value.trim()) {
 					var priceVal = (item.querySelector('.make-supplier-price') || {}).value?.trim() || '';
 					// Sanitize price: remove commas but keep decimal
 					priceVal = priceVal.replace(/,/g, '');
+					var otherVal = otherInput ? otherInput.value.trim() : '';
+					if (otherVal) {
+						otherVal = otherVal
+							.split(',')
+							.map(function(v){ return v.trim(); })
+							.filter(function(v){ return v.length > 0; })
+							.join(', ');
+					}
 					makes.push({
 						make: makeInput.value.trim(),
 						partNumber: partInput.value.trim(),
+						otherNumbers: otherVal,
 						supplier: (item.querySelector('.make-supplier') || {}).value?.trim() || '',
 						supplierName: (item.querySelector('.make-supplier-name') || {}).value?.trim() || '',
 						supplierNumber: (item.querySelector('.make-supplier-number') || {}).value?.trim() || '',
@@ -735,6 +772,7 @@ document.addEventListener('DOMContentLoaded', function(){
 			var formData = new FormData();
 			formData.append('equipment_id', <?php echo (int)($equipmentId ?: 0); ?>);
 			formData.append('part_number', partNumber);
+			formData.append('nsn_number', partNsn);
 			formData.append('quantity', 1);
 			formData.append('notes', '');
 			formData.append('makes', JSON.stringify(makes));

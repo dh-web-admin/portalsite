@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 try {
     $equipmentId = isset($_POST['equipment_id']) ? (int)$_POST['equipment_id'] : 0;
     $partNumber = isset($_POST['part_number']) ? trim($_POST['part_number']) : '';
+    $nsnNumber = isset($_POST['nsn_number']) ? trim($_POST['nsn_number']) : '';
     $quantity = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
     $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
     $makes = isset($_POST['makes']) ? json_decode($_POST['makes'], true) : [];
@@ -50,8 +51,8 @@ try {
     }
 
     // Insert into equipment_parts (new or updated name)
-    $stmt = $conn->prepare("INSERT INTO equipment_parts (equipment_id, part_name, quantity, notes) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param('isis', $equipmentId, $partNumber, $quantity, $notes);
+    $stmt = $conn->prepare("INSERT INTO equipment_parts (equipment_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param('issis', $equipmentId, $partNumber, $nsnNumber, $quantity, $notes);
     
     if (!$stmt->execute()) {
         throw new Exception('Failed to add part: ' . $stmt->error);
@@ -60,10 +61,11 @@ try {
 
     // Insert into part_specifications for each make
     if (!empty($makes) && is_array($makes)) {
-        $stmt = $conn->prepare("INSERT INTO part_specifications (part_name, make, model, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE make = VALUES(make), model = VALUES(model), supplier = VALUES(supplier), supplier_name = VALUES(supplier_name), supplier_number = VALUES(supplier_number), supplier_email = VALUES(supplier_email), supplier_address = VALUES(supplier_address), supplier_price = VALUES(supplier_price)");
+        $stmt = $conn->prepare("INSERT INTO part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE make = VALUES(make), model = VALUES(model), other_numbers = VALUES(other_numbers), supplier = VALUES(supplier), supplier_name = VALUES(supplier_name), supplier_number = VALUES(supplier_number), supplier_email = VALUES(supplier_email), supplier_address = VALUES(supplier_address), supplier_price = VALUES(supplier_price)");
         
         foreach ($makes as $make) {
             if (!empty($make['make']) && !empty($make['partNumber'])) {
+                $otherNumbers = isset($make['otherNumbers']) ? trim($make['otherNumbers']) : '';
                 $supplier = isset($make['supplier']) ? trim($make['supplier']) : '';
                 $supplierName = isset($make['supplierName']) ? trim($make['supplierName']) : '';
                 $supplierNumber = isset($make['supplierNumber']) ? trim($make['supplierNumber']) : '';
@@ -71,7 +73,7 @@ try {
                 $supplierAddress = isset($make['supplierAddress']) ? trim($make['supplierAddress']) : '';
                 $supplierPrice = isset($make['supplierPrice']) ? trim($make['supplierPrice']) : '';
                 
-                $stmt->bind_param('sssssssss', $partNumber, $make['make'], $make['partNumber'], $supplier, $supplierName, $supplierNumber, $supplierEmail, $supplierAddress, $supplierPrice);
+                $stmt->bind_param('ssssssssss', $partNumber, $make['make'], $make['partNumber'], $otherNumbers, $supplier, $supplierName, $supplierNumber, $supplierEmail, $supplierAddress, $supplierPrice);
                 $stmt->execute();
             }
         }
