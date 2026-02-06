@@ -43,10 +43,7 @@ if ($clientStmt) {
 	<link rel="stylesheet" href="../../assets/css/admin-layout.css" />
 	<link rel="stylesheet" href="../../assets/css/dashboard.css" />
 	<style>
-		.admin-container { text-align: left; }
-		.welcome-section { justify-content: flex-start; }
-		.welcome-logo { margin-left: 0; }
-		.header-actions { justify-content: flex-start; }
+		/* Match header alignment with other admin pages (see bid_tracking). */
 		#viewClientModal { display:none; position:fixed; inset:0; background:rgba(2,6,23,0.6); z-index:9999; width:100vw; height:100vh; left:0; top:0; }
 		#viewClientModal .modal-shell { position:fixed; inset:0; background:#f8fafc; display:flex; flex-direction:column; width:100vw; height:100vh; }
 		#viewClientModal .modal-header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid #e2e8f0; background:#fff; flex-shrink:0; }
