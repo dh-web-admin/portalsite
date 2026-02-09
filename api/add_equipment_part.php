@@ -71,7 +71,16 @@ try {
                 $supplierNumber = isset($make['supplierNumber']) ? trim($make['supplierNumber']) : '';
                 $supplierEmail = isset($make['supplierEmail']) ? trim($make['supplierEmail']) : '';
                 $supplierAddress = isset($make['supplierAddress']) ? trim($make['supplierAddress']) : '';
-                $supplierPrice = isset($make['supplierPrice']) ? trim($make['supplierPrice']) : '';
+                $supplierPrice = null;
+                if (array_key_exists('supplierPrice', $make)) {
+                    $supplierPrice = $make['supplierPrice'];
+                    if (is_string($supplierPrice)) {
+                        $supplierPrice = trim($supplierPrice);
+                        if ($supplierPrice === '') {
+                            $supplierPrice = null;
+                        }
+                    }
+                }
                 
                 $stmt->bind_param('ssssssssss', $partNumber, $make['make'], $make['partNumber'], $otherNumbers, $supplier, $supplierName, $supplierNumber, $supplierEmail, $supplierAddress, $supplierPrice);
                 $stmt->execute();

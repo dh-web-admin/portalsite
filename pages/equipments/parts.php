@@ -736,6 +736,9 @@ document.addEventListener('DOMContentLoaded', function(){
 					var priceVal = (item.querySelector('.make-supplier-price') || {}).value?.trim() || '';
 					// Sanitize price: remove commas but keep decimal
 					priceVal = priceVal.replace(/,/g, '');
+					if (priceVal === '') {
+						priceVal = null;
+					}
 					var otherVal = otherInput ? otherInput.value.trim() : '';
 					if (otherVal) {
 						otherVal = otherVal
