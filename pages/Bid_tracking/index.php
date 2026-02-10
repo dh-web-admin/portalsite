@@ -1131,6 +1131,9 @@ foreach ($bidColumns as $c) {
                   .modal-section .field input { padding:8px; border:1px solid #cbd5e1; border-radius:6px; }
                   .modal-section.collapsed .section-content { display:none; }
                   .modal-section.collapsed .toggle .chev { transform: rotate(-90deg); }
+                  .gc-suggest { position:absolute; background:#ffffff; border:1px solid #e6edf0; border-radius:8px; box-shadow:0 10px 24px rgba(2,6,23,0.12); z-index:20050; max-height:180px; overflow:auto; }
+                  .gc-suggest-item { padding:6px 10px; cursor:pointer; font-size:12px; color:#0f172a; }
+                  .gc-suggest-item:hover { background:#f8fafc; }
                 </style>
 
                 <div class="modal-section collapsed" id="section-location">
@@ -1655,6 +1658,168 @@ foreach ($bidColumns as $c) {
         } catch(e) { console.warn('applyDollarPrefixToTableCells failed', e); }
       }
 
+      var gcDirectoryCache = null;
+      var gcDirectoryPromise = null;
+
+      function normText(v) {
+        return (v || '').toString().trim().toLowerCase();
+      }
+
+      function unionToValue(v) {
+        var s = normText(v);
+        if (!s) return '';
+        if (s === '1' || s === 'true' || s === 'yes' || s === 'union') return '1';
+        if (s === '0' || s === 'false' || s === 'no' || s === 'non-union' || s === 'nonunion') return '0';
+        return '';
+      }
+
+      function fetchGcDirectory() {
+        if (gcDirectoryCache) return Promise.resolve(gcDirectoryCache);
+        if (gcDirectoryPromise) return gcDirectoryPromise;
+        gcDirectoryPromise = fetch('../../api/get_gc_clients.php', { credentials: 'same-origin' })
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            if (j && j.success && Array.isArray(j.clients)) {
+              gcDirectoryCache = j.clients;
+            } else {
+              gcDirectoryCache = [];
+            }
+            return gcDirectoryCache;
+          })
+          .catch(function(){
+            gcDirectoryCache = [];
+            return gcDirectoryCache;
+          })
+          .finally(function(){ gcDirectoryPromise = null; });
+        return gcDirectoryPromise;
+      }
+
+      function getCompanyList(clients) {
+        var seen = new Set();
+        var list = [];
+        (clients || []).forEach(function(c){
+          var emp = (c.current_employer || '').toString().trim();
+          if (!emp) return;
+          var key = emp.toLowerCase();
+          if (seen.has(key)) return;
+          seen.add(key);
+          list.push(emp);
+        });
+        return list;
+      }
+
+      function isKnownCompany(company, companies) {
+        var cmp = normText(company);
+        if (!cmp) return false;
+        return (companies || []).some(function(c){ return normText(c) === cmp; });
+      }
+
+      function removeSuggest(input) {
+        try {
+          if (input && input._gcSuggestEl && input._gcSuggestEl.parentNode) {
+            input._gcSuggestEl.parentNode.removeChild(input._gcSuggestEl);
+          }
+          if (input) input._gcSuggestEl = null;
+        } catch(e) {}
+      }
+
+      function showSuggest(input, items, renderLabel, onPick) {
+        if (!input) return;
+        removeSuggest(input);
+        if (!items || !items.length) return;
+        var box = document.createElement('div');
+        box.className = 'gc-suggest';
+        items.slice(0, 8).forEach(function(item){
+          var label = renderLabel ? renderLabel(item) : String(item);
+          var row = document.createElement('div');
+          row.className = 'gc-suggest-item';
+          row.textContent = label;
+          row.addEventListener('mousedown', function(ev){
+            ev.preventDefault();
+            try { onPick && onPick(item); } catch(e) {}
+            removeSuggest(input);
+          });
+          box.appendChild(row);
+        });
+        var rect = input.getBoundingClientRect();
+        box.style.left = (rect.left + window.scrollX) + 'px';
+        box.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+        box.style.width = rect.width + 'px';
+        document.body.appendChild(box);
+        input._gcSuggestEl = box;
+      }
+
+      function wireGcRowAutocomplete(companyInput, nameInput, numberInput, emailInput, addressInput, unionInput) {
+        if (companyInput && !companyInput.dataset.gcSuggestWired) {
+          companyInput.dataset.gcSuggestWired = '1';
+          var handleCompanySuggest = function(){
+            fetchGcDirectory().then(function(clients){
+              var companies = getCompanyList(clients);
+              var q = (companyInput.value || '').toString().trim();
+              if (!q) { removeSuggest(companyInput); return; }
+              var matches = companies.filter(function(c){ return normText(c).indexOf(normText(q)) !== -1; });
+              showSuggest(companyInput, matches, function(x){ return x; }, function(sel){
+                companyInput.value = sel;
+                if (nameInput) nameInput.focus();
+              });
+            });
+          };
+          companyInput.addEventListener('input', handleCompanySuggest);
+          companyInput.addEventListener('focus', handleCompanySuggest);
+          companyInput.addEventListener('blur', function(){ setTimeout(function(){ removeSuggest(companyInput); }, 140); });
+        }
+
+        if (nameInput && !nameInput.dataset.gcSuggestWired) {
+          nameInput.dataset.gcSuggestWired = '1';
+          var handleNameSuggest = function(){
+            fetchGcDirectory().then(function(clients){
+              var companies = getCompanyList(clients);
+              var companyVal = companyInput ? (companyInput.value || '') : '';
+              if (!isKnownCompany(companyVal, companies)) { removeSuggest(nameInput); return; }
+              var q = (nameInput.value || '').toString().trim();
+              var people = (clients || []).filter(function(c){ return normText(c.current_employer) === normText(companyVal); });
+              if (q) {
+                people = people.filter(function(c){ return normText(c.client_name).indexOf(normText(q)) !== -1; });
+              }
+              showSuggest(nameInput, people, function(c){ return (c && c.client_name) ? c.client_name : ''; }, function(sel){
+                if (!sel) return;
+                if (sel.client_name) nameInput.value = sel.client_name;
+                if (emailInput) emailInput.value = sel.client_email ? sel.client_email : '';
+                if (addressInput) addressInput.value = sel.client_address ? sel.client_address : '';
+                if (numberInput) numberInput.value = sel.contact_phone ? sel.contact_phone : '';
+                if (unionInput) {
+                  var u = unionToValue(sel.union_status);
+                  unionInput.value = u !== '' ? u : unionInput.value;
+                }
+              });
+            });
+          };
+          nameInput.addEventListener('input', handleNameSuggest);
+          nameInput.addEventListener('focus', handleNameSuggest);
+          nameInput.addEventListener('blur', function(){ setTimeout(function(){ removeSuggest(nameInput); }, 140); });
+        }
+      }
+
+      function attachGcDirectoryAutocomplete(container) {
+        if (!container) return;
+        var companyInputs = container.querySelectorAll('input[data-field="general_contractor"][data-id]');
+        companyInputs.forEach(function(ci){
+          var id = ci.getAttribute('data-id');
+          if (!id) return;
+          var nameInput = container.querySelector('input[data-field="general_contractor_name"][data-id="' + id + '"]') ||
+                         container.querySelector('input[data-field="gc_name"][data-id="' + id + '"]');
+          var numberInput = container.querySelector('input[data-field="general_contractor_number"][data-id="' + id + '"]') ||
+                           container.querySelector('input[data-field="gc_number"][data-id="' + id + '"]');
+          var emailInput = container.querySelector('input[data-field="general_contractor_email"][data-id="' + id + '"]') ||
+                          container.querySelector('input[data-field="gc_email"][data-id="' + id + '"]');
+          var addressInput = container.querySelector('input[data-field="general_contractor_address"][data-id="' + id + '"]') ||
+                            container.querySelector('input[data-field="gc_address"][data-id="' + id + '"]');
+          var unionInput = container.querySelector('select[data-field="is_union"][data-id="' + id + '"]') ||
+                           container.querySelector('select[data-field="union"][data-id="' + id + '"]');
+          wireGcRowAutocomplete(ci, nameInput, numberInput, emailInput, addressInput, unionInput);
+        });
+      }
+
       // Load and render General Contractors for a given project into #gcTableList
       function loadGcList(projectKey) {
         try {
@@ -1761,7 +1926,7 @@ foreach ($bidColumns as $c) {
                     if (seenGc.has(key)) return; seenGc.add(key);
                   } catch(e) {}
                   var mail = it.general_contractor_email || '';
-                  var addr = it.general_contractor_address || '';
+                  var addr = it.general_contractor_address || ''; 
                   var unionVal = (typeof it.is_union !== 'undefined') ? it.is_union : ((typeof it.union !== 'undefined') ? it.union : (it.general_contractor_union || ''));
                   var cwp = (typeof it.client_win_price !== 'undefined') ? it.client_win_price : '';
                   var isWinner = (it.winner && (it.winner == 1 || it.winner === '1' || it.winner === true));
@@ -1795,6 +1960,7 @@ foreach ($bidColumns as $c) {
                     inp.type = 'text';
                     inp.value = val;
                     inp.placeholder = placeholder || '';
+                    inp.autocomplete = 'off';
                     inp.style.width = '100%';
                     inp.style.border = '0';
                     inp.style.background = 'transparent';
@@ -1862,6 +2028,7 @@ foreach ($bidColumns as $c) {
                 });
                 container.innerHTML = '';
                 container.appendChild(table);
+                try { attachGcDirectoryAutocomplete(container); } catch(e) {}
               } catch(err) {
                 container.innerHTML = '<div style="padding:12px;color:#ef4444">Failed to render contractors</div>';
                 console.warn('loadGcList render failed', err);
@@ -2017,6 +2184,61 @@ foreach ($bidColumns as $c) {
             e.preventDefault();
 
             var fd = new FormData(editForm);
+
+            function collectGcClientPayload() {
+              var gcContainer = document.getElementById('gcTableList');
+              if (!gcContainer) return [];
+              var projId = '';
+              try {
+                var dhssEl = document.getElementById('editDhssProjectNumber');
+                projId = dhssEl ? (dhssEl.value || '').toString().trim() : '';
+              } catch(e) { projId = ''; }
+              var inputs = gcContainer.querySelectorAll('input[data-field][data-id], select[data-field][data-id]');
+              var groups = {};
+              inputs.forEach(function(inp){
+                var id = inp.getAttribute('data-id');
+                var field = inp.getAttribute('data-field');
+                if (!id || !field) return;
+                groups[id] = groups[id] || {};
+                groups[id][field] = inp.value || '';
+              });
+              var list = [];
+              Object.keys(groups).forEach(function(id){
+                var g = groups[id] || {};
+                var name = (g.general_contractor_name || '').toString().trim();
+                var gc = (g.general_contractor || '').toString().trim();
+                if (!name && !gc) return;
+                list.push({
+                  general_contractor: gc,
+                  general_contractor_name: name,
+                  general_contractor_number: g.general_contractor_number || '',
+                  general_contractor_email: g.general_contractor_email || '',
+                  general_contractor_address: g.general_contractor_address || '',
+                  is_union: (typeof g.is_union !== 'undefined') ? g.is_union : (g.union || ''),
+                  dhss_project_number: projId
+                });
+              });
+              return list;
+            }
+
+            function syncGcClientsToDirectory() {
+              try {
+                var payload = collectGcClientPayload();
+                if (!payload.length) return Promise.resolve(null);
+                return fetch('../../api/save_gc_clients.php', {
+                  method: 'POST',
+                  credentials: 'same-origin',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ clients: payload })
+                }).then(function(r){ return r.json(); }).catch(function(err){
+                  console.warn('save_gc_clients failed', err);
+                  return null;
+                });
+              } catch (e) {
+                console.warn('save_gc_clients exception', e);
+                return Promise.resolve(null);
+              }
+            }
 
             // If reason select is set to "Other", send the typed `reason_other` value as `reason` instead
             try {
@@ -2303,7 +2525,9 @@ foreach ($bidColumns as $c) {
                       }
                     } catch(e) { /* ignore sanitization failures */ }
 
-                    return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
+                    return syncGcClientsToDirectory().then(function(){
+                      return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
+                    });
                 });
               });
             }).then(function(r){
@@ -3252,7 +3476,7 @@ function syncGcDisplayForProjects() {
 
 
           <?php if (!empty($canEditBidTracking)) { ?>
-          tbody.addEventListener('click', function(e){
+          if (table) table.addEventListener('click', function(e){
             var tr = e.target && e.target.closest ? e.target.closest('tr[data-bid]') : null;
             if (!tr) return;
             // prevent header dropdown clicks from triggering row (extra safe)
@@ -3355,11 +3579,11 @@ function syncGcDisplayForProjects() {
               if (!container) return;
               var row = document.createElement('div'); row.className = 'new-gc-row';
               row.style.display = 'flex'; row.style.gap = '8px'; row.style.alignItems = 'center';
-              row.innerHTML = '<input name="new_gc_general" placeholder="general contractor" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
-                + '<input name="new_gc_name" placeholder="gc name" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
-                + '<input name="new_gc_number" placeholder="gc number" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
-                + '<input name="new_gc_email" placeholder="email" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
-                + '<input name="new_gc_address" placeholder="address" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+              row.innerHTML = '<input name="new_gc_general" autocomplete="off" placeholder="general contractor" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_name" autocomplete="off" placeholder="gc name" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_number" autocomplete="off" placeholder="gc number" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_email" autocomplete="off" placeholder="email" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
+                + '<input name="new_gc_address" autocomplete="off" placeholder="address" style="flex:1;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />'
                 + '<div class="money-wrapper" style="display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:6px;padding:4px 8px;background:#fff;flex:1;">'
                     + '<span style="color:#374151;font-weight:700;flex:0 0 auto;">$</span>'
                     + '<input name="new_gc_client_win_price" placeholder="client win price" style="flex:1;border:0;padding:6px 0;margin:0;background:transparent;" />'
@@ -3370,6 +3594,15 @@ function syncGcDisplayForProjects() {
                 + '</select>'
                 + '<button type="button" class="remove-gc" style="background:#fff;border:1px solid #e6edf0;padding:6px 8px;border-radius:6px;cursor:pointer;margin-left:6px;">Remove</button>';
               container.appendChild(row);
+              try {
+                var companyInput = row.querySelector('input[name="new_gc_general"]');
+                var nameInput = row.querySelector('input[name="new_gc_name"]');
+                var numberInput = row.querySelector('input[name="new_gc_number"]');
+                var emailInput = row.querySelector('input[name="new_gc_email"]');
+                var addressInput = row.querySelector('input[name="new_gc_address"]');
+                var unionInput = row.querySelector('select[name="new_gc_union"]');
+                wireGcRowAutocomplete(companyInput, nameInput, numberInput, emailInput, addressInput, unionInput);
+              } catch(e) {}
               row.querySelector('.remove-gc').addEventListener('click', function(){ container.removeChild(row); });
             });
           }

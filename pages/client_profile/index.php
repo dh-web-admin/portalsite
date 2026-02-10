@@ -31,6 +31,42 @@ if ($clientStmt) {
 	}
 	$clientStmt->close();
 }
+
+// Fetch distinct client types for autocomplete/select list
+$clientTypes = [];
+$typeStmt = $conn->prepare("SELECT DISTINCT client_type FROM clients WHERE client_type IS NOT NULL AND client_type <> '' ORDER BY client_type ASC");
+if ($typeStmt) {
+	$typeStmt->execute();
+	$typeRes = $typeStmt->get_result();
+	while ($row = $typeRes->fetch_assoc()) {
+		$clientTypes[] = $row['client_type'];
+	}
+	$typeStmt->close();
+}
+
+// Fetch distinct current employers for autocomplete list
+$currentEmployers = [];
+$empStmt = $conn->prepare("SELECT DISTINCT current_employer FROM clients WHERE current_employer IS NOT NULL AND current_employer <> '' ORDER BY current_employer ASC");
+if ($empStmt) {
+	$empStmt->execute();
+	$empRes = $empStmt->get_result();
+	while ($row = $empRes->fetch_assoc()) {
+		$currentEmployers[] = $row['current_employer'];
+	}
+	$empStmt->close();
+}
+
+// Fetch distinct client names for autocomplete list
+$clientNames = [];
+$nameStmt = $conn->prepare("SELECT DISTINCT client_name FROM clients WHERE client_name IS NOT NULL AND client_name <> '' ORDER BY client_name ASC");
+if ($nameStmt) {
+	$nameStmt->execute();
+	$nameRes = $nameStmt->get_result();
+	while ($row = $nameRes->fetch_assoc()) {
+		$clientNames[] = $row['client_name'];
+	}
+	$nameStmt->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -66,6 +102,13 @@ if ($clientStmt) {
 		#clientSearchSuggestions .suggestion-item:hover { background: #f8fafc; }
 		#clientSearchSuggestions .suggestion-item.highlight { background: #eff6ff; color: #0c63e4; font-weight: 600; }
 		.hidden-row { display: none !important; }
+		.type-suggestions { position: relative; }
+		.type-suggestions-list { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; max-height: 220px; overflow-y: auto; display: none; z-index: 1200; box-shadow: 0 4px 12px rgba(2,6,23,0.1); }
+		.type-suggestions-list .type-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f1f3; font-size: 13px; color: #0f172a; }
+		.type-suggestions-list .type-item:last-child { border-bottom: none; }
+		.type-suggestions-list .type-item:hover { background: #f8fafc; }
+		.type-suggestions-list .type-item.is-active { background: #eff6ff; color: #0c63e4; font-weight: 600; }
+		.type-suggestions-list .type-empty { padding: 8px 12px; color: #94a3b8; font-size: 13px; }
 	</style>
 </head>
 <body class="admin-page">
@@ -143,9 +186,10 @@ if ($clientStmt) {
 						<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0;">Personal Detail</h3>
 						<form id="addClientForm" style="display:contents;">
 							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
-								<div>
+								<div class="type-suggestions">
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Name</label>
-									<input type="text" id="clientNameInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" required />
+									<input type="text" id="clientNameInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" autocomplete="off" required />
+									<div id="clientNameSuggestions" class="type-suggestions-list"></div>
 								</div>
 								<div>
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Number</label>
@@ -259,21 +303,23 @@ if ($clientStmt) {
 					<div style="background:#e2e8f0;width:1px;height:100%;"></div>
 					<div>
 						<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0;">Employment Details</h3>
-						<div style="margin-bottom:16px;">
+						<div style="margin-bottom:16px;" class="type-suggestions">
 							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Client Type</h4>
-							<input type="text" id="clientTypeInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+							<input type="text" id="clientTypeInput" list="clientTypeOptions" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" autocomplete="off" />
+							<div id="clientTypeSuggestions" class="type-suggestions-list"></div>
 						</div>
-						<div style="margin-bottom:16px;">						<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Employer</h4>
-						<input type="text" id="currentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current employer" />
-					</div>
+						<div style="margin-bottom:16px;" class="type-suggestions">
+							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Employer</h4>
+							<input type="text" id="currentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current employer" autocomplete="off" />
+							<div id="currentEmployerSuggestions" class="type-suggestions-list"></div>
+						</div>
 				<div style="margin-bottom:16px;">							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Previous Employment</h4>
 					<textarea id="previousEmploymentInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;resize:vertical;min-height:100px;" placeholder="Add previous employment details..."></textarea>
 						</div>
 						<div style="margin-top:24px;padding-top:16px;border-top:2px solid #e2e8f0;">
 							<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;">Past Projects/Interactions</h3>
-							<div style="margin-bottom:16px;">
-								<textarea id="pastProjectsInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;resize:vertical;min-height:100px;" placeholder="Add details about past projects or interactions..."></textarea>
-							</div>
+							<div id="pastProjectsContainer" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+							<button type="button" id="addPastProjectBtn" style="align-self:flex-start;padding:8px 12px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-weight:600;cursor:pointer;">+ Add More</button>
 						</div>
 				</div>
 			</div>
@@ -296,9 +342,10 @@ if ($clientStmt) {
 						<form id="editClientForm" style="display:contents;">
 							<input type="hidden" id="editClientId" />
 							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
-								<div>
+								<div class="type-suggestions">
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Name</label>
-									<input type="text" id="editClientNameInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" required />
+									<input type="text" id="editClientNameInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" autocomplete="off" required />
+									<div id="editClientNameSuggestions" class="type-suggestions-list"></div>
 								</div>
 								<div>
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Number</label>
@@ -412,26 +459,34 @@ if ($clientStmt) {
 					<div style="background:#e2e8f0;width:1px;height:100%;"></div>
 					<div>
 						<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0;">Employment Details</h3>
-						<div style="margin-bottom:16px;">
+						<div style="margin-bottom:16px;" class="type-suggestions">
 							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Client Type</h4>
-							<input type="text" id="editClientTypeInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+							<input type="text" id="editClientTypeInput" list="clientTypeOptions" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" autocomplete="off" />
+							<div id="editClientTypeSuggestions" class="type-suggestions-list"></div>
 						</div>
-						<div style="margin-bottom:16px;">						<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Employer</h4>
-						<input type="text" id="editCurrentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current employer" />
-					</div>
+						<div style="margin-bottom:16px;" class="type-suggestions">
+							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Employer</h4>
+							<input type="text" id="editCurrentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current employer" autocomplete="off" />
+							<div id="editCurrentEmployerSuggestions" class="type-suggestions-list"></div>
+						</div>
 				<div style="margin-bottom:16px;">							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Previous Employment</h4>
 					<textarea id="editPreviousEmploymentInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;resize:vertical;min-height:100px;" placeholder="Add previous employment details..."></textarea>
 						</div>
 						<div style="margin-top:24px;padding-top:16px;border-top:2px solid #e2e8f0;">
 							<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;">Past Projects/Interactions</h3>
-							<div style="margin-bottom:16px;">
-								<textarea id="editPastProjectsInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;resize:vertical;min-height:100px;" placeholder="Add details about past projects or interactions..."></textarea>
-							</div>
+							<div id="editPastProjectsContainer" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+							<button type="button" id="editAddPastProjectBtn" style="align-self:flex-start;padding:8px 12px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;font-weight:600;cursor:pointer;">+ Add More</button>
 						</div>
 				</div>
 			</div>
 		</div>
 	</div>
+
+	<datalist id="clientTypeOptions">
+		<?php foreach ($clientTypes as $type): ?>
+			<option value="<?php echo htmlspecialchars((string)$type); ?>"></option>
+		<?php endforeach; ?>
+	</datalist>
 
 	<div id="viewClientModal" aria-hidden="true">
 		<div class="modal-shell">
@@ -528,6 +583,9 @@ if ($clientStmt) {
 
 	<script>
 		(function(){
+			var clientTypeOptions = <?php echo json_encode(array_values(array_unique($clientTypes)), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
+			var currentEmployerOptions = <?php echo json_encode(array_values(array_unique($currentEmployers)), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
+			var clientNameOptions = <?php echo json_encode(array_values(array_unique($clientNames)), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
 			var addModal = document.getElementById('addClientModal');
 			var openAddBtn = document.getElementById('openAddClientModal');
 			var cancelAddBtn = document.getElementById('cancelAddClientModal');
@@ -538,6 +596,22 @@ if ($clientStmt) {
 			var cancelEditBtn = document.getElementById('cancelEditClientModal');
 			var saveEditBtn = document.getElementById('saveEditClientModal');
 			var editForm = document.getElementById('editClientForm');
+			var clientNameInput = document.getElementById('clientNameInput');
+			var clientNameSuggestions = document.getElementById('clientNameSuggestions');
+			var editClientNameInput = document.getElementById('editClientNameInput');
+			var editClientNameSuggestions = document.getElementById('editClientNameSuggestions');
+			var clientTypeInput = document.getElementById('clientTypeInput');
+			var clientTypeSuggestions = document.getElementById('clientTypeSuggestions');
+			var editClientTypeInput = document.getElementById('editClientTypeInput');
+			var editClientTypeSuggestions = document.getElementById('editClientTypeSuggestions');
+			var currentEmployerInput = document.getElementById('currentRoleInput');
+			var currentEmployerSuggestions = document.getElementById('currentEmployerSuggestions');
+			var editCurrentEmployerInput = document.getElementById('editCurrentRoleInput');
+			var editCurrentEmployerSuggestions = document.getElementById('editCurrentEmployerSuggestions');
+			var pastProjectsContainer = document.getElementById('pastProjectsContainer');
+			var addPastProjectBtn = document.getElementById('addPastProjectBtn');
+			var editPastProjectsContainer = document.getElementById('editPastProjectsContainer');
+			var editAddPastProjectBtn = document.getElementById('editAddPastProjectBtn');
 			
 			var viewModal = document.getElementById('viewClientModal');
 			var closeViewBtn = document.getElementById('closeViewClientModal');
@@ -550,6 +624,172 @@ if ($clientStmt) {
 			var searchSuggestions = document.getElementById('clientSearchSuggestions');
 			var clientRows = document.querySelectorAll('.client-row');
 			var allClients = [];
+
+			function normalizeType(val) {
+				return (val || '').toString().trim();
+			}
+
+			function normalizeLower(val) {
+				return normalizeType(val).toLowerCase();
+			}
+
+			function hasExactMatch(options, value) {
+				var needle = normalizeLower(value);
+				if (!needle) return false;
+				return options.some(function(opt){ return normalizeLower(opt) === needle; });
+			}
+
+			function buildMatches(options, term) {
+				var q = normalizeType(term).toLowerCase();
+				if (!q) return options.slice(0, 8);
+				var starts = [];
+				var contains = [];
+				options.forEach(function(t){
+					var raw = normalizeType(t);
+					var low = raw.toLowerCase();
+					if (!low) return;
+					if (low.indexOf(q) === 0) starts.push(raw);
+					else if (low.indexOf(q) !== -1) contains.push(raw);
+				});
+				return starts.concat(contains).slice(0, 8);
+			}
+
+			function renderSuggestions(listEl, matches, emptyText) {
+				if (!listEl) return;
+				if (!matches || matches.length === 0) {
+					listEl.innerHTML = '<div class="type-empty">' + escapeHtml(emptyText) + '</div>';
+					listEl.style.display = 'block';
+					return;
+				}
+				listEl.innerHTML = matches.map(function(t){
+					return '<div class="type-item" data-value="' + escapeHtml(t) + '">' + escapeHtml(t) + '</div>';
+				}).join('');
+				listEl.style.display = 'block';
+			}
+
+			function attachAutocomplete(inputEl, listEl, options, emptyText) {
+				if (!inputEl || !listEl) return;
+				var activeIndex = -1;
+				var currentItems = [];
+
+				function syncItems() {
+					currentItems = Array.prototype.slice.call(listEl.querySelectorAll('.type-item'));
+					if (activeIndex >= currentItems.length) activeIndex = -1;
+					currentItems.forEach(function(item, idx){
+						item.classList.toggle('is-active', idx === activeIndex);
+					});
+				}
+
+				function openList() {
+					if (listEl.style.display !== 'block') {
+						listEl.style.display = 'block';
+					}
+					syncItems();
+				}
+
+				function closeList() {
+					listEl.style.display = 'none';
+					activeIndex = -1;
+				}
+
+				inputEl.addEventListener('input', function(){
+					var matches = buildMatches(options, this.value);
+					renderSuggestions(listEl, matches, emptyText);
+					activeIndex = -1;
+					openList();
+				});
+				inputEl.addEventListener('focus', function(){
+					var matches = buildMatches(options, this.value);
+					renderSuggestions(listEl, matches, emptyText);
+					activeIndex = -1;
+					openList();
+				});
+				inputEl.addEventListener('keydown', function(e){
+					if (listEl.style.display !== 'block') return;
+					if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						syncItems();
+						if (currentItems.length === 0) return;
+						activeIndex = (activeIndex + 1) % currentItems.length;
+						syncItems();
+						currentItems[activeIndex].scrollIntoView({ block: 'nearest' });
+					}
+					if (e.key === 'ArrowUp') {
+						e.preventDefault();
+						syncItems();
+						if (currentItems.length === 0) return;
+						activeIndex = (activeIndex <= 0) ? currentItems.length - 1 : activeIndex - 1;
+						syncItems();
+						currentItems[activeIndex].scrollIntoView({ block: 'nearest' });
+					}
+					if (e.key === 'Enter') {
+						if (activeIndex >= 0 && currentItems[activeIndex]) {
+							e.preventDefault();
+							var value = currentItems[activeIndex].getAttribute('data-value') || '';
+							inputEl.value = value;
+							closeList();
+						}
+					}
+					if (e.key === 'Escape') {
+						closeList();
+					}
+				});
+				listEl.addEventListener('click', function(e){
+					var item = e.target.closest('.type-item');
+					if (!item) return;
+					var value = item.getAttribute('data-value') || '';
+					inputEl.value = value;
+					closeList();
+				});
+				document.addEventListener('click', function(e){
+					if (e.target === inputEl || listEl.contains(e.target)) return;
+					closeList();
+				});
+			}
+
+			function splitPastProjects(raw) {
+				return (raw || '')
+					.split(',')
+					.map(function(x){ return x.trim(); })
+					.filter(function(x){ return x.length > 0; });
+			}
+
+			function createPastProjectRow(value) {
+				var row = document.createElement('div');
+				row.style.cssText = 'display:flex;gap:8px;align-items:center;';
+				var input = document.createElement('input');
+				input.type = 'text';
+				input.className = 'past-project-input';
+				input.value = value || '';
+				input.placeholder = 'Enter past project/interaction';
+				input.style.cssText = 'flex:1;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;';
+				var removeBtn = document.createElement('button');
+				removeBtn.type = 'button';
+				removeBtn.setAttribute('aria-label', 'Remove');
+				removeBtn.textContent = 'X';
+				removeBtn.style.cssText = 'border:none;background:transparent;color:#ef4444;font-size:16px;font-weight:700;cursor:pointer;line-height:1;';
+				removeBtn.addEventListener('click', function(){
+					row.remove();
+				});
+				row.appendChild(input);
+				row.appendChild(removeBtn);
+				return row;
+			}
+
+			function resetPastProjects(container, values) {
+				if (!container) return;
+				container.innerHTML = '';
+				var items = Array.isArray(values) ? values : [];
+				if (items.length === 0) items = [''];
+				items.forEach(function(v){ container.appendChild(createPastProjectRow(v)); });
+			}
+
+			function readPastProjects(container) {
+				if (!container) return '';
+				var inputs = Array.prototype.slice.call(container.querySelectorAll('input.past-project-input'));
+				var parts = inputs.map(function(i){ return i.value.trim(); }).filter(function(v){ return v.length > 0; });
+				return parts.join(', ');
+			}
 
 			// Build client list for autocomplete
 			clientRows.forEach(function(row) {
@@ -670,6 +910,28 @@ if ($clientStmt) {
 				return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 			}
 
+			attachAutocomplete(clientNameInput, clientNameSuggestions, clientNameOptions, 'No matching client names');
+			attachAutocomplete(editClientNameInput, editClientNameSuggestions, clientNameOptions, 'No matching client names');
+			attachAutocomplete(clientTypeInput, clientTypeSuggestions, clientTypeOptions, 'No matching client types');
+			attachAutocomplete(editClientTypeInput, editClientTypeSuggestions, clientTypeOptions, 'No matching client types');
+			attachAutocomplete(currentEmployerInput, currentEmployerSuggestions, currentEmployerOptions, 'No matching employers');
+			attachAutocomplete(editCurrentEmployerInput, editCurrentEmployerSuggestions, currentEmployerOptions, 'No matching employers');
+
+			if (addPastProjectBtn) {
+				addPastProjectBtn.addEventListener('click', function(){
+					if (!pastProjectsContainer) return;
+					pastProjectsContainer.appendChild(createPastProjectRow(''));
+				});
+			}
+			if (editAddPastProjectBtn) {
+				editAddPastProjectBtn.addEventListener('click', function(){
+					if (!editPastProjectsContainer) return;
+					editPastProjectsContainer.appendChild(createPastProjectRow(''));
+				});
+			}
+
+			resetPastProjects(pastProjectsContainer, []);
+
 			// Search input event listeners
 			if (clientSearch) {
 				clientSearch.addEventListener('input', function() {
@@ -706,7 +968,7 @@ if ($clientStmt) {
 			});
 			
 			function openAddModal(){ if (addModal) { addModal.style.display = 'block'; addModal.setAttribute('aria-hidden', 'false'); } }
-			function closeAddModal(){ if (addModal) { addModal.style.display = 'none'; addModal.setAttribute('aria-hidden', 'true'); } if (addForm) addForm.reset(); }
+			function closeAddModal(){ if (addModal) { addModal.style.display = 'none'; addModal.setAttribute('aria-hidden', 'true'); } if (addForm) addForm.reset(); resetPastProjects(pastProjectsContainer, []); }
 			function openEditModal(clientId, data){ 
 				document.getElementById('editClientId').value = clientId;
 				document.getElementById('editClientNameInput').value = data.client_name || '';
@@ -723,7 +985,7 @@ if ($clientStmt) {
 				document.getElementById('editFamilyDetailsInput').value = data.family_details || '';
 				document.getElementById('editCurrentRoleInput').value = data.current_employer || '';
 				document.getElementById('editPreviousEmploymentInput').value = data.previous_employment || '';
-				document.getElementById('editPastProjectsInput').value = data.past_projects || '';
+				resetPastProjects(editPastProjectsContainer, splitPastProjects(data.past_projects || ''));
 				if (editModal) {
 					// Move modal to body to avoid container constraints
 					if (editModal.parentElement !== document.body) {
@@ -892,6 +1154,9 @@ if ($clientStmt) {
 				saveAddBtn.addEventListener('click', function(){
 					var clientName = document.getElementById('clientNameInput').value.trim();
 					if (!clientName) { alert('Client Name is required'); return; }
+					if (hasExactMatch(clientNameOptions, clientName)) {
+						alert('Warning: a client with this name already exists.');
+					}
 					
 					var formData = new FormData();
 					formData.append('client_name', clientName);
@@ -908,7 +1173,7 @@ if ($clientStmt) {
 					formData.append('family_details', document.getElementById('familyDetailsInput').value.trim());
 					formData.append('current_employer', document.getElementById('currentRoleInput').value.trim());
 					formData.append('previous_employment', document.getElementById('previousEmploymentInput').value.trim());
-					formData.append('past_projects', document.getElementById('pastProjectsInput').value.trim());
+					formData.append('past_projects', readPastProjects(pastProjectsContainer));
 					
 					saveAddBtn.disabled = true;
 					saveAddBtn.textContent = 'Saving...';
@@ -973,7 +1238,7 @@ if ($clientStmt) {
 					formData.append('family_details', document.getElementById('editFamilyDetailsInput').value.trim());
 					formData.append('current_employer', document.getElementById('editCurrentRoleInput').value.trim());
 					formData.append('previous_employment', document.getElementById('editPreviousEmploymentInput').value.trim());
-					formData.append('past_projects', document.getElementById('editPastProjectsInput').value.trim());
+					formData.append('past_projects', readPastProjects(editPastProjectsContainer));
 					
 					saveEditBtn.disabled = true;
 					saveEditBtn.textContent = 'Saving...';
