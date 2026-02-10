@@ -155,7 +155,13 @@
   border-bottom: 1px solid rgba(15, 23, 42, 0.04);
 }
 .project-table tbody tr:last-child td {
-  padding-bottom: 24px;
+  padding-bottom: 48px;
+}
+.project-table tr.project-bottom-spacer td {
+  padding: 0 !important;
+  border: none !important;
+  height: 40px;
+  background: transparent;
 }
 .project-table .col-name {
   font-weight: 700;

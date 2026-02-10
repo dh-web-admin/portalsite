@@ -292,6 +292,10 @@ try {
                         }
                         // Skip rendering empty placeholder rows - only render actual data rows
                       }
+                      // Add a spacer row at the very bottom so the last
+                      // real project row is never visually cut off by the
+                      // scroll container's bottom edge.
+                      echo '<tr class="project-bottom-spacer"><td colspan="'.count($columns).'"></td></tr>';
                       $projects_stmt->close();
                     } else {
                       // In case prepare fails, show a friendly message but keep page usable
