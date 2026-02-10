@@ -5,7 +5,9 @@
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../session_init.php';
 
-if (!isset($_SESSION['user_id'])) {
+// Require a logged-in user, but don't depend strictly on user_id since
+// some login flows only guarantee email/name in the session.
+if (empty($_SESSION['email'])) {
     http_response_code(403);
     exit;
 }
@@ -52,6 +54,13 @@ $sql = "
 ";
 
 $stmt = $conn->prepare($sql);
+if (!$stmt) {
+    echo "event: error\n";
+    echo "data: db_prepare_failed\n\n";
+    flush();
+    exit;
+}
+
 $stmt->bind_param('ii', $projectId, $since);
 $stmt->execute();
 $res = $stmt->get_result();

@@ -733,7 +733,7 @@ try {
         var fd = new FormData();
         fd.append('project_name', name);
 
-        fetch('../../api/create_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+        fetch('../../api/create_project_checklist.php', { method: 'POST', body: fd, credentials: 'same-origin' })
           .then(function(resp){ return resp.json(); })
           .then(function(json){
             if (json && json.success) {
@@ -1204,7 +1204,6 @@ editBtn.addEventListener('click', function(e){
     var url = window.APP_BASE + '/pages/project_checklist/events.php?project_id=' + encodeURIComponent(projectId) + '&since=' + encodeURIComponent(since);
     if (es) es.close();
     es = new EventSource(url);
-    console.log('[SSE] Connecting:', url);
 
     es.addEventListener('projectUpdate', function (ev) {
       try {
@@ -1241,8 +1240,10 @@ editBtn.addEventListener('click', function(e){
       // no-op, just to keep connection alive
     });
 
+    // On network/connection error, silently reconnect after a short delay.
+    // The backend endpoint is intentionally short-lived, so frequent
+    // reconnects are expected and shouldn't spam the console.
     es.onerror = function () {
-      console.warn('[SSE] connection lost, retrying…');
       es.close();
       setTimeout(connectSSE, 3000);
     };

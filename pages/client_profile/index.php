@@ -22,7 +22,7 @@ $stmt->close();
 
 // Fetch all clients
 $clients = [];
-$clientStmt = $conn->prepare('SELECT client_id, client_name, client_number, client_email, client_address, city, state, notes, family_details, `current_role`, previous_employment, past_projects FROM clients ORDER BY client_name ASC');
+$clientStmt = $conn->prepare('SELECT client_id, client_name, client_number, client_type, union_status, contact_phone, client_email, client_address, city, state, website, notes, family_details, current_employer, previous_employment, past_projects FROM clients ORDER BY client_name ASC');
 if ($clientStmt) {
 	$clientStmt->execute();
 	$clientResult = $clientStmt->get_result();
@@ -86,28 +86,36 @@ if ($clientStmt) {
 						<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
 							<thead>
 								<tr style="background:#f8fafc;text-align:left;">
+									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Client Type</th>
 									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Client Name</th>
 									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Client Number</th>
+									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Union Status</th>
+									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Client Phone</th>
 									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Client Email</th>
-									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Client Address</th>
+									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Address</th>
 									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">City</th>
 									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">State</th>
+									<th style="padding:12px 14px;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Website</th>
 								</tr>
 							</thead>
 							<tbody>
 								<?php if (empty($clients)): ?>
 								<tr>
-									<td colspan="6" style="padding:12px 14px;text-align:center;color:#64748b;">No clients found</td>
+									<td colspan="10" style="padding:12px 14px;text-align:center;color:#64748b;">No clients found</td>
 								</tr>
 								<?php else: ?>
 									<?php foreach ($clients as $client): ?>
-									<tr class="client-row" data-client-id="<?php echo htmlspecialchars($client['client_id']); ?>" data-client-name="<?php echo htmlspecialchars($client['client_name']); ?>" data-client-number="<?php echo htmlspecialchars($client['client_number'] ?? ''); ?>" data-client-email="<?php echo htmlspecialchars($client['client_email'] ?? ''); ?>" data-client-address="<?php echo htmlspecialchars($client['client_address'] ?? ''); ?>" data-city="<?php echo htmlspecialchars($client['city'] ?? ''); ?>" data-state="<?php echo htmlspecialchars($client['state'] ?? ''); ?>" data-notes="<?php echo htmlspecialchars($client['notes'] ?? ''); ?>" data-family-details="<?php echo htmlspecialchars($client['family_details'] ?? ''); ?>" data-current-role="<?php echo htmlspecialchars($client['current_role'] ?? ''); ?>" data-previous-employment="<?php echo htmlspecialchars($client['previous_employment'] ?? ''); ?>" data-past-projects="<?php echo htmlspecialchars($client['past_projects'] ?? ''); ?>" style="border-bottom:1px solid #e2e8f0;cursor:pointer;transition:background 0.2s ease;" onmouseover="this.style.background='#f8fafc';" onmouseout="this.style.background='';">
+									<tr class="client-row" data-client-id="<?php echo htmlspecialchars($client['client_id']); ?>" data-client-name="<?php echo htmlspecialchars($client['client_name']); ?>" data-client-number="<?php echo htmlspecialchars($client['client_number'] ?? ''); ?>" data-client-type="<?php echo htmlspecialchars($client['client_type'] ?? ''); ?>" data-union-status="<?php echo htmlspecialchars($client['union_status'] ?? ''); ?>" data-contact-phone="<?php echo htmlspecialchars($client['contact_phone'] ?? ''); ?>" data-client-email="<?php echo htmlspecialchars($client['client_email'] ?? ''); ?>" data-client-address="<?php echo htmlspecialchars($client['client_address'] ?? ''); ?>" data-city="<?php echo htmlspecialchars($client['city'] ?? ''); ?>" data-state="<?php echo htmlspecialchars($client['state'] ?? ''); ?>" data-website="<?php echo htmlspecialchars($client['website'] ?? ''); ?>" data-notes="<?php echo htmlspecialchars($client['notes'] ?? ''); ?>" data-family-details="<?php echo htmlspecialchars($client['family_details'] ?? ''); ?>" data-current-employer="<?php echo htmlspecialchars($client['current_employer'] ?? ''); ?>" data-previous-employment="<?php echo htmlspecialchars($client['previous_employment'] ?? ''); ?>" data-past-projects="<?php echo htmlspecialchars($client['past_projects'] ?? ''); ?>" style="border-bottom:1px solid #e2e8f0;cursor:pointer;transition:background 0.2s ease;" onmouseover="this.style.background='#f8fafc';" onmouseout="this.style.background='';">
+										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['client_type'] ?? ''); ?></td>
 										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['client_name']); ?></td>
 										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['client_number'] ?? ''); ?></td>
+										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['union_status'] ?? ''); ?></td>
+										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['contact_phone'] ?? ''); ?></td>
 										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['client_email'] ?? ''); ?></td>
 										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['client_address'] ?? ''); ?></td>
 										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['city'] ?? ''); ?></td>
 										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['state'] ?? ''); ?></td>
+										<td style="padding:12px 14px;color:#0f172a;"><?php echo htmlspecialchars($client['website'] ?? ''); ?></td>
 									</tr>
 									<?php endforeach; ?>
 								<?php endif; ?>
@@ -143,10 +151,33 @@ if ($clientStmt) {
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Number</label>
 									<input type="text" id="clientNumberInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
 								</div>
+								<div></div>
+							</div>
+							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
+								<div>
+									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Union Status</label>
+									<select id="unionStatusInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;background:#fff;">
+										<option value="">Select Status</option>
+										<option value="Union">Union</option>
+										<option value="Non-Union">Non-Union</option>
+									</select>
+								</div>
+								<div></div>
+								<div>
+									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Phone</label>
+									<input type="text" id="contactPhoneInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+								</div>
+							</div>
+							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
 								<div>
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Email</label>
 									<input type="email" id="clientEmailInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
 								</div>
+								<div>
+									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Website</label>
+									<input type="text" id="websiteInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+								</div>
+								<div></div>
 							</div>
 							<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;">
 								<div>
@@ -228,9 +259,13 @@ if ($clientStmt) {
 					<div style="background:#e2e8f0;width:1px;height:100%;"></div>
 					<div>
 						<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0;">Employment Details</h3>
-						<div style="margin-bottom:16px;">					<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Role</h4>
-					<input type="text" id="currentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current role" />
-				</div>
+						<div style="margin-bottom:16px;">
+							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Client Type</h4>
+							<input type="text" id="clientTypeInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+						</div>
+						<div style="margin-bottom:16px;">						<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Employer</h4>
+						<input type="text" id="currentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current employer" />
+					</div>
 				<div style="margin-bottom:16px;">							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Previous Employment</h4>
 					<textarea id="previousEmploymentInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;resize:vertical;min-height:100px;" placeholder="Add previous employment details..."></textarea>
 						</div>
@@ -269,10 +304,33 @@ if ($clientStmt) {
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Number</label>
 									<input type="text" id="editClientNumberInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
 								</div>
+								<div></div>
+							</div>
+							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
+								<div>
+									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Union Status</label>
+									<select id="editUnionStatusInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;background:#fff;">
+										<option value="">Select Status</option>
+										<option value="Union">Union</option>
+										<option value="Non-Union">Non-Union</option>
+									</select>
+								</div>
+								<div></div>
+								<div>
+									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Phone</label>
+									<input type="text" id="editContactPhoneInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+								</div>
+							</div>
+							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
 								<div>
 									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Client Email</label>
 									<input type="email" id="editClientEmailInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
 								</div>
+								<div>
+									<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Website</label>
+									<input type="text" id="editWebsiteInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+								</div>
+								<div></div>
 							</div>
 							<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;">
 								<div>
@@ -354,9 +412,13 @@ if ($clientStmt) {
 					<div style="background:#e2e8f0;width:1px;height:100%;"></div>
 					<div>
 						<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0;">Employment Details</h3>
-						<div style="margin-bottom:16px;">					<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Role</h4>
-					<input type="text" id="editCurrentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current role" />
-				</div>
+						<div style="margin-bottom:16px;">
+							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Client Type</h4>
+							<input type="text" id="editClientTypeInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" />
+						</div>
+						<div style="margin-bottom:16px;">						<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Current Employer</h4>
+						<input type="text" id="editCurrentRoleInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;" placeholder="Enter current employer" />
+					</div>
 				<div style="margin-bottom:16px;">							<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 12px 0;">Previous Employment</h4>
 					<textarea id="editPreviousEmploymentInput" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;resize:vertical;min-height:100px;" placeholder="Add previous employment details..."></textarea>
 						</div>
@@ -392,8 +454,22 @@ if ($clientStmt) {
 							</div>
 							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
 								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;">Client Type</label>
+									<p style="margin:0;color:#0f172a;font-size:14px;" id="viewClientType">-</p>
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;">Union Status</label>
+									<p style="margin:0;color:#0f172a;font-size:14px;" id="viewUnionStatus">-</p>
+								</div>
+								<div>
 									<label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;">Client Number</label>
 									<p style="margin:0;color:#0f172a;font-size:14px;" id="viewClientNumber">-</p>
+								</div>
+							</div>
+							<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px;">
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;">Client Phone</label>
+									<p style="margin:0;color:#0f172a;font-size:14px;" id="viewContactPhone">-</p>
 								</div>
 								<div>
 									<label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;">Client Email</label>
@@ -416,6 +492,10 @@ if ($clientStmt) {
 								</div>
 							</div>
 							<div style="margin-bottom:16px;">
+								<label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;">Website</label>
+								<p style="margin:0;color:#0f172a;font-size:14px;" id="viewWebsite">-</p>
+							</div>
+							<div style="margin-bottom:16px;">
 								<label style="display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:4px;">Notes</label>
 								<p style="margin:0;color:#0f172a;font-size:14px;white-space:pre-wrap;" id="viewClientNotes">-</p>
 							</div>
@@ -428,7 +508,7 @@ if ($clientStmt) {
 						<div>
 							<h3 style="font-size:16px;font-weight:600;color:#0f172a;margin:0 0 16px 0;padding-bottom:8px;border-bottom:2px solid #e2e8f0;">Employment Details</h3>
 							<div style="margin-bottom:16px;">
-								<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 8px 0;">Current Role</h4>
+								<h4 style="font-size:14px;font-weight:600;color:#64748b;margin:0 0 8px 0;">Current Employer</h4>
 								<p style="margin:0;color:#0f172a;font-size:14px;" id="viewCurrentRole">-</p>
 							</div>
 							<div style="margin-bottom:16px;">
@@ -477,10 +557,14 @@ if ($clientStmt) {
 					id: row.getAttribute('data-client-id'),
 					name: row.getAttribute('data-client-name'),
 					number: row.getAttribute('data-client-number'),
+					type: row.getAttribute('data-client-type'),
+					unionStatus: row.getAttribute('data-union-status'),
+					contactPhone: row.getAttribute('data-contact-phone'),
 					email: row.getAttribute('data-client-email'),
 					address: row.getAttribute('data-client-address'),
 					city: row.getAttribute('data-city'),
 					state: row.getAttribute('data-state'),
+					website: row.getAttribute('data-website'),
 					element: row
 				});
 			});
@@ -557,12 +641,17 @@ if ($clientStmt) {
 				clientRows.forEach(function(row) {
 					var name = row.getAttribute('data-client-name').toLowerCase();
 					var number = row.getAttribute('data-client-number').toLowerCase();
+					var type = row.getAttribute('data-client-type').toLowerCase();
+					var unionStatus = row.getAttribute('data-union-status').toLowerCase();
+					var contactPhone = row.getAttribute('data-contact-phone').toLowerCase();
 					var email = row.getAttribute('data-client-email').toLowerCase();
 					var address = row.getAttribute('data-client-address').toLowerCase();
 					var city = row.getAttribute('data-city').toLowerCase();
+					var website = row.getAttribute('data-website').toLowerCase();
 
-					if (name.includes(term) || number.includes(term) || 
-						email.includes(term) || address.includes(term) || city.includes(term)) {
+					if (name.includes(term) || number.includes(term) || type.includes(term) || unionStatus.includes(term) ||
+						contactPhone.includes(term) || email.includes(term) ||
+						address.includes(term) || city.includes(term) || website.includes(term)) {
 						row.classList.remove('hidden-row');
 					} else {
 						row.classList.add('hidden-row');
@@ -622,13 +711,17 @@ if ($clientStmt) {
 				document.getElementById('editClientId').value = clientId;
 				document.getElementById('editClientNameInput').value = data.client_name || '';
 				document.getElementById('editClientNumberInput').value = data.client_number || '';
+				document.getElementById('editClientTypeInput').value = data.client_type || '';
+				document.getElementById('editUnionStatusInput').value = data.union_status || '';
+				document.getElementById('editContactPhoneInput').value = data.contact_phone || '';
 				document.getElementById('editClientEmailInput').value = data.client_email || '';
 				document.getElementById('editClientAddressInput').value = data.client_address || '';
 				document.getElementById('editClientCityInput').value = data.city || '';
 				document.getElementById('editClientStateInput').value = data.state || '';
+				document.getElementById('editWebsiteInput').value = data.website || '';
 				document.getElementById('editClientNotesInput').value = data.notes || '';
 				document.getElementById('editFamilyDetailsInput').value = data.family_details || '';
-				document.getElementById('editCurrentRoleInput').value = data.current_role || '';
+				document.getElementById('editCurrentRoleInput').value = data.current_employer || '';
 				document.getElementById('editPreviousEmploymentInput').value = data.previous_employment || '';
 				document.getElementById('editPastProjectsInput').value = data.past_projects || '';
 				if (editModal) {
@@ -680,14 +773,18 @@ if ($clientStmt) {
 				lastSelectedData = data || null;
 				document.getElementById('viewClientTitle').textContent = data.client_name || 'Client Details';
 				document.getElementById('viewClientName').textContent = data.client_name || '-';
+				document.getElementById('viewClientType').textContent = data.client_type || '-';
+				document.getElementById('viewUnionStatus').textContent = data.union_status || '-';
 				document.getElementById('viewClientNumber').textContent = data.client_number || '-';
+				document.getElementById('viewContactPhone').textContent = data.contact_phone || '-';
 				document.getElementById('viewClientEmail').textContent = data.client_email || '-';
 				document.getElementById('viewClientAddress').textContent = data.client_address || '-';
 				document.getElementById('viewClientCity').textContent = data.city || '-';
 				document.getElementById('viewClientState').textContent = data.state || '-';
+				document.getElementById('viewWebsite').textContent = data.website || '-';
 				document.getElementById('viewClientNotes').textContent = data.notes || '-';
 				document.getElementById('viewFamilyDetails').textContent = data.family_details || '-';
-				document.getElementById('viewCurrentRole').textContent = data.current_role || '-';
+				document.getElementById('viewCurrentRole').textContent = data.current_employer || '-';
 				document.getElementById('viewPreviousEmployment').textContent = data.previous_employment || '-';
 				document.getElementById('viewPastProjects').textContent = data.past_projects || '-';
 				if (viewModal) {
@@ -773,13 +870,17 @@ if ($clientStmt) {
 					var data = {
 						client_name: this.getAttribute('data-client-name'),
 						client_number: this.getAttribute('data-client-number'),
+						client_type: this.getAttribute('data-client-type'),
+						union_status: this.getAttribute('data-union-status'),
+						contact_phone: this.getAttribute('data-contact-phone'),
 						client_email: this.getAttribute('data-client-email'),
 						client_address: this.getAttribute('data-client-address'),
 						city: this.getAttribute('data-city'),
 						state: this.getAttribute('data-state'),
+						website: this.getAttribute('data-website'),
 						notes: this.getAttribute('data-notes'),
 						family_details: this.getAttribute('data-family-details') || '',
-						current_role: this.getAttribute('data-current-role') || '',
+						current_employer: this.getAttribute('data-current-employer') || '',
 						previous_employment: this.getAttribute('data-previous-employment') || '',
 						past_projects: this.getAttribute('data-past-projects') || ''
 					};
@@ -795,13 +896,17 @@ if ($clientStmt) {
 					var formData = new FormData();
 					formData.append('client_name', clientName);
 					formData.append('client_number', document.getElementById('clientNumberInput').value.trim());
+						formData.append('client_type', document.getElementById('clientTypeInput').value.trim());
+						formData.append('union_status', document.getElementById('unionStatusInput').value.trim());
+						formData.append('contact_phone', document.getElementById('contactPhoneInput').value.trim());
 					formData.append('client_email', document.getElementById('clientEmailInput').value.trim());
 					formData.append('client_address', document.getElementById('clientAddressInput').value.trim());
 					formData.append('city', document.getElementById('clientCityInput').value.trim());
 					formData.append('state', document.getElementById('clientStateInput').value.trim());
+						formData.append('website', document.getElementById('websiteInput').value.trim());
 					formData.append('notes', document.getElementById('clientNotesInput').value.trim());
 					formData.append('family_details', document.getElementById('familyDetailsInput').value.trim());
-					formData.append('current_role', document.getElementById('currentRoleInput').value.trim());
+					formData.append('current_employer', document.getElementById('currentRoleInput').value.trim());
 					formData.append('previous_employment', document.getElementById('previousEmploymentInput').value.trim());
 					formData.append('past_projects', document.getElementById('pastProjectsInput').value.trim());
 					
@@ -856,13 +961,17 @@ if ($clientStmt) {
 					formData.append('client_id', clientId);
 					formData.append('client_name', clientName);
 					formData.append('client_number', document.getElementById('editClientNumberInput').value.trim());
+					formData.append('client_type', document.getElementById('editClientTypeInput').value.trim());
+					formData.append('union_status', document.getElementById('editUnionStatusInput').value.trim());
+					formData.append('contact_phone', document.getElementById('editContactPhoneInput').value.trim());
 					formData.append('client_email', document.getElementById('editClientEmailInput').value.trim());
 					formData.append('client_address', document.getElementById('editClientAddressInput').value.trim());
 					formData.append('city', document.getElementById('editClientCityInput').value.trim());
 					formData.append('state', document.getElementById('editClientStateInput').value.trim());
+					formData.append('website', document.getElementById('editWebsiteInput').value.trim());
 					formData.append('notes', document.getElementById('editClientNotesInput').value.trim());
 					formData.append('family_details', document.getElementById('editFamilyDetailsInput').value.trim());
-					formData.append('current_role', document.getElementById('editCurrentRoleInput').value.trim());
+					formData.append('current_employer', document.getElementById('editCurrentRoleInput').value.trim());
 					formData.append('previous_employment', document.getElementById('editPreviousEmploymentInput').value.trim());
 					formData.append('past_projects', document.getElementById('editPastProjectsInput').value.trim());
 					

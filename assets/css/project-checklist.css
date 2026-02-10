@@ -96,6 +96,13 @@
   padding-bottom: 56px;
 }
 
+/* Ensure there is breathing room below the checklist table so
+   the last row and horizontal scrollbar are not visually cut off
+   by the bottom edge */
+.table-area {
+  margin-bottom: 32px;
+}
+
 /* Modern table styles (moved from inline) */
 .data-table {
   border-collapse: separate;
@@ -107,8 +114,14 @@
   overflow: visible;
   box-shadow: none;
   border: none;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
 }
 
 .data-table thead th {
@@ -140,6 +153,9 @@
 .project-table tbody td {
   padding: 10px 12px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+}
+.project-table tbody tr:last-child td {
+  padding-bottom: 24px;
 }
 .project-table .col-name {
   font-weight: 700;
@@ -296,12 +312,17 @@
   background: #ffffff;
   color: #0f172a;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 140ms ease, background 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 140ms ease,
+    background 120ms ease;
   box-shadow: 0 1px 2px rgba(2, 6, 23, 0.04);
 }
 .btn:focus {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), 0 4px 18px rgba(2, 6, 23, 0.06);
+  box-shadow:
+    0 0 0 4px rgba(99, 102, 241, 0.1),
+    0 4px 18px rgba(2, 6, 23, 0.06);
 }
 
 /* Success (used for Edit/Save button) */
@@ -488,8 +509,14 @@ body {
   width: -moz-max-content;
   width: max-content;
   min-width: 2200px;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
   table-layout: auto;
 }
 
@@ -503,7 +530,7 @@ body {
   max-width: 100%;
   height: calc(100vh - var(--admin-header-h, 70px) - 120px);
   margin-bottom: 50px;
-  padding-bottom: 50px;
+  padding-bottom: 110px;
   position: relative;
 }
 .table-container {
@@ -536,7 +563,12 @@ body {
   background: #475569;
   padding: 18px 16px;
   text-align: center;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
     Arial;
   font-weight: 700;
   border: none;
@@ -843,7 +875,9 @@ body {
 }
 
 .row-flash {
-  transition: background-color 0.35s ease, opacity 0.35s ease;
+  transition:
+    background-color 0.35s ease,
+    opacity 0.35s ease;
 }
 .row-flash.success {
   background: rgba(47, 154, 85, 0.12);
@@ -857,8 +891,12 @@ body {
   height: 0;
   padding: 0;
   margin: 0;
-  transition: opacity 0.28s ease, transform 0.28s ease, height 0.28s ease,
-    padding 0.28s ease, margin 0.28s ease;
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease,
+    height 0.28s ease,
+    padding 0.28s ease,
+    margin 0.28s ease;
 }
 
 /* Floating project summary tab */
