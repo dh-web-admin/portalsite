@@ -14,18 +14,33 @@ if ($project_id <= 0) {
   echo json_encode(['success' => false, 'message' => 'Missing project id']);
   exit;
 }
-// Fetch associated DHSS project number (if present) so we can remove related general_contractor rows
+
+// Fetch associated DHSS project number (if the column exists) so we can
+// remove related general_contractor rows. Some installs of the Projects
+// table do not have this column, so we feature-detect it first.
 $dhss = null;
-$sel = $conn->prepare('SELECT dhss_project_number FROM `Projects` WHERE `Project_ID` = ? LIMIT 1');
-if ($sel) {
-  $sel->bind_param('i', $project_id);
-  $sel->execute();
-  $res = $sel->get_result();
-  if ($res && $res->num_rows > 0) {
-    $row = $res->fetch_assoc();
-    $dhss = isset($row['dhss_project_number']) ? $row['dhss_project_number'] : null;
+$hasDhssCol = false;
+try {
+  $colRes = $conn->query("SHOW COLUMNS FROM `Projects` LIKE 'dhss_project_number'");
+  if ($colRes && $colRes->num_rows > 0) {
+    $hasDhssCol = true;
   }
-  $sel->close();
+} catch (Throwable $e) {
+  $hasDhssCol = false;
+}
+
+if ($hasDhssCol) {
+  $sel = $conn->prepare('SELECT dhss_project_number FROM `Projects` WHERE `Project_ID` = ? LIMIT 1');
+  if ($sel) {
+    $sel->bind_param('i', $project_id);
+    $sel->execute();
+    $res = $sel->get_result();
+    if ($res && $res->num_rows > 0) {
+      $row = $res->fetch_assoc();
+      $dhss = isset($row['dhss_project_number']) ? $row['dhss_project_number'] : null;
+    }
+    $sel->close();
+  }
 }
 
 // Begin transaction so deletes are atomic

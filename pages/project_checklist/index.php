@@ -677,8 +677,22 @@ try {
           if (!confirm('Delete this project? This action cannot be undone.')) return;
           var fd = new FormData(); fd.append('project_id', pid);
           fetch('../../api/delete_project.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-            .then(function(r){ return r.json(); })
-            .then(function(json){ if (json && json.success) { window.location.reload(); } else { alert((json && json.message) ? json.message : 'Delete failed'); } })
+            .then(function(r){ return r.text(); })
+            .then(function(text){
+              var json = null;
+              try {
+                json = text ? JSON.parse(text) : null;
+              } catch (e) {
+                console.error('Delete response not JSON:', text);
+                alert('Delete failed: ' + (text ? text.substring(0, 200) : 'Unexpected response'));
+                return;
+              }
+              if (json && json.success) {
+                window.location.reload();
+              } else {
+                alert((json && json.message) ? json.message : 'Delete failed');
+              }
+            })
             .catch(function(err){ console.error('Delete error', err); alert('Delete failed: ' + (err && err.message ? err.message : err)); });
         });
 
