@@ -1126,29 +1126,44 @@ if ($nameStmt) {
 			}
 			
 			// Click handlers for client rows
+			function buildClientDataFromRow(row) {
+				return {
+					client_name: row.getAttribute('data-client-name'),
+					client_number: row.getAttribute('data-client-number'),
+					client_type: row.getAttribute('data-client-type'),
+					union_status: row.getAttribute('data-union-status'),
+					contact_phone: row.getAttribute('data-contact-phone'),
+					client_email: row.getAttribute('data-client-email'),
+					client_address: row.getAttribute('data-client-address'),
+					city: row.getAttribute('data-city'),
+					state: row.getAttribute('data-state'),
+					website: row.getAttribute('data-website'),
+					notes: row.getAttribute('data-notes'),
+					family_details: row.getAttribute('data-family-details') || '',
+					current_employer: row.getAttribute('data-current-employer') || '',
+					previous_employment: row.getAttribute('data-previous-employment') || '',
+					past_projects: row.getAttribute('data-past-projects') || ''
+				};
+			}
+
 			document.querySelectorAll('.client-row').forEach(function(row){
 				row.addEventListener('click', function(){
 					var clientId = this.getAttribute('data-client-id');
-					var data = {
-						client_name: this.getAttribute('data-client-name'),
-						client_number: this.getAttribute('data-client-number'),
-						client_type: this.getAttribute('data-client-type'),
-						union_status: this.getAttribute('data-union-status'),
-						contact_phone: this.getAttribute('data-contact-phone'),
-						client_email: this.getAttribute('data-client-email'),
-						client_address: this.getAttribute('data-client-address'),
-						city: this.getAttribute('data-city'),
-						state: this.getAttribute('data-state'),
-						website: this.getAttribute('data-website'),
-						notes: this.getAttribute('data-notes'),
-						family_details: this.getAttribute('data-family-details') || '',
-						current_employer: this.getAttribute('data-current-employer') || '',
-						previous_employment: this.getAttribute('data-previous-employment') || '',
-						past_projects: this.getAttribute('data-past-projects') || ''
-					};
+					var data = buildClientDataFromRow(this);
 					openViewModal(clientId, data);
 				});
 			});
+
+			try {
+				var params = new URLSearchParams(window.location.search || '');
+				var openId = params.get('client_id');
+				if (openId) {
+					var targetRow = document.querySelector('.client-row[data-client-id="' + openId + '"]');
+					if (targetRow) {
+						openViewModal(openId, buildClientDataFromRow(targetRow));
+					}
+				}
+			} catch(e) {}
 			
 			if (saveAddBtn) {
 				saveAddBtn.addEventListener('click', function(){

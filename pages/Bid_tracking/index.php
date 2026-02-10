@@ -1163,6 +1163,7 @@ foreach ($bidColumns as $c) {
                   <div class="header" role="button" aria-expanded="false">
                     <h4>General Contractor</h4>
                     <div style="display:flex;align-items:center;gap:10px;">
+                      <button type="button" id="editGcToggleBtn" class="add-gc-btn" style="background:#fff;border:1px solid #cbd5e1;">Edit contractor info</button>
                       <button type="button" id="addGcBtn" class="add-gc-btn">+ Add contractor</button>
                       <div class="toggle"><span class="chev">▾</span><span>collapse</span></div>
                     </div>
@@ -1658,6 +1659,57 @@ foreach ($bidColumns as $c) {
         } catch(e) { console.warn('applyDollarPrefixToTableCells failed', e); }
       }
 
+      var gcEditEnabled = false;
+
+      function setGcEditState(enabled) {
+        gcEditEnabled = !!enabled;
+        try {
+          var btn = document.getElementById('editGcToggleBtn');
+          if (btn) btn.textContent = gcEditEnabled ? 'Save contractor info' : 'Edit contractor info';
+        } catch(e) {}
+        try {
+          var addBtn = document.getElementById('addGcBtn');
+          if (addBtn) addBtn.disabled = !gcEditEnabled;
+        } catch(e) {}
+        try {
+          var list = document.getElementById('gcTableList');
+          if (list) {
+            Array.from(list.querySelectorAll('input[data-field], select[data-field]')).forEach(function(el){
+              if (el.tagName && el.tagName.toLowerCase() === 'select') {
+                el.disabled = !gcEditEnabled;
+                el.style.cursor = gcEditEnabled ? 'auto' : 'pointer';
+              } else {
+                el.readOnly = !gcEditEnabled;
+                el.style.cursor = gcEditEnabled ? 'auto' : 'pointer';
+              }
+            });
+            Array.from(list.querySelectorAll('button[title="Remove contractor"]')).forEach(function(btn){
+              btn.disabled = !gcEditEnabled;
+              btn.style.opacity = gcEditEnabled ? '1' : '0.4';
+              btn.style.cursor = gcEditEnabled ? 'pointer' : 'not-allowed';
+            });
+          }
+        } catch(e) {}
+        try {
+          var newGc = document.getElementById('newGcContainer');
+          if (newGc) {
+            Array.from(newGc.querySelectorAll('input, select, button.remove-gc')).forEach(function(el){
+              if (el.tagName && el.tagName.toLowerCase() === 'select') {
+                el.disabled = !gcEditEnabled;
+                el.style.cursor = gcEditEnabled ? 'auto' : 'pointer';
+              } else if (el.classList && el.classList.contains('remove-gc')) {
+                el.disabled = !gcEditEnabled;
+                el.style.opacity = gcEditEnabled ? '1' : '0.4';
+                el.style.cursor = gcEditEnabled ? 'pointer' : 'not-allowed';
+              } else {
+                el.readOnly = !gcEditEnabled;
+                el.style.cursor = gcEditEnabled ? 'auto' : 'pointer';
+              }
+            });
+          }
+        } catch(e) {}
+      }
+
       var gcDirectoryCache = null;
       var gcDirectoryPromise = null;
 
@@ -1671,6 +1723,39 @@ foreach ($bidColumns as $c) {
         if (s === '1' || s === 'true' || s === 'yes' || s === 'union') return '1';
         if (s === '0' || s === 'false' || s === 'no' || s === 'non-union' || s === 'nonunion') return '0';
         return '';
+      }
+
+      function findClientByNameOrCompany(clients, name, company) {
+        var n = normText(name);
+        var comp = normText(company);
+        if (n) {
+          var byName = (clients || []).find(function(c){ return normText(c.client_name) === n; });
+          if (byName) return byName;
+        }
+        if (comp) {
+          var matches = (clients || []).filter(function(c){ return normText(c.current_employer) === comp; });
+          if (matches.length === 1) return matches[0];
+        }
+        return null;
+      }
+
+      function openClientProfile(client) {
+        if (!client || !client.client_id) return;
+        var base = '';
+        try {
+          var path = window.location.pathname || '';
+          var idx = path.toLowerCase().indexOf('/pages/');
+          base = (idx >= 0) ? path.slice(0, idx) : '';
+        } catch(e) { base = ''; }
+        var url = base + '/pages/client_profile/index.php?client_id=' + encodeURIComponent(client.client_id);
+        try { window.open(url, '_blank'); } catch(e) { window.location.href = url; }
+      }
+
+      function openClientProfileForRow(nameVal, companyVal) {
+        fetchGcDirectory().then(function(clients){
+          var client = findClientByNameOrCompany(clients, nameVal, companyVal);
+          if (client) openClientProfile(client);
+        });
       }
 
       function fetchGcDirectory() {
@@ -1769,6 +1854,17 @@ foreach ($bidColumns as $c) {
           companyInput.addEventListener('blur', function(){ setTimeout(function(){ removeSuggest(companyInput); }, 140); });
         }
 
+        if (companyInput && !companyInput.dataset.gcLinkWired) {
+          companyInput.dataset.gcLinkWired = '1';
+          companyInput.addEventListener('click', function(){
+            var companyVal = companyInput.value || '';
+            fetchGcDirectory().then(function(clients){
+              var client = findClientByNameOrCompany(clients, '', companyVal);
+              if (client) openClientProfile(client);
+            });
+          });
+        }
+
         if (nameInput && !nameInput.dataset.gcSuggestWired) {
           nameInput.dataset.gcSuggestWired = '1';
           var handleNameSuggest = function(){
@@ -1797,6 +1893,18 @@ foreach ($bidColumns as $c) {
           nameInput.addEventListener('input', handleNameSuggest);
           nameInput.addEventListener('focus', handleNameSuggest);
           nameInput.addEventListener('blur', function(){ setTimeout(function(){ removeSuggest(nameInput); }, 140); });
+        }
+
+        if (nameInput && !nameInput.dataset.gcLinkWired) {
+          nameInput.dataset.gcLinkWired = '1';
+          nameInput.addEventListener('click', function(){
+            var nameVal = nameInput.value || '';
+            var companyVal = companyInput ? (companyInput.value || '') : '';
+            fetchGcDirectory().then(function(clients){
+              var client = findClientByNameOrCompany(clients, nameVal, companyVal);
+              if (client) openClientProfile(client);
+            });
+          });
         }
       }
 
@@ -1937,6 +2045,13 @@ foreach ($bidColumns as $c) {
                     wrapper.style.borderBottom = '1px solid #eef2f7';
                     wrapper.style.textAlign = 'left';
                     wrapper.setAttribute('data-gc-id', id);
+                    wrapper.setAttribute('data-gc-company', gc || '');
+                    wrapper.setAttribute('data-gc-name', name || '');
+                    wrapper.style.cursor = gcEditEnabled ? 'auto' : 'pointer';
+                    wrapper.addEventListener('click', function(){
+                      if (gcEditEnabled) return;
+                      openClientProfileForRow(name || '', gc || '');
+                    });
 
                     // Render a select for union fields, otherwise a regular text input
                     if (nameAttr === 'is_union' || nameAttr === 'union' || (nameAttr || '').toString().toLowerCase().indexOf('union') !== -1) {
@@ -1995,6 +2110,11 @@ foreach ($bidColumns as $c) {
                   actionCell.style.alignItems = 'center';
                   actionCell.style.justifyContent = 'flex-end';
                   actionCell.setAttribute('data-gc-id', id);
+                  actionCell.style.cursor = gcEditEnabled ? 'auto' : 'pointer';
+                  actionCell.addEventListener('click', function(){
+                    if (gcEditEnabled) return;
+                    openClientProfileForRow(name || '', gc || '');
+                  });
                   var remBtn = document.createElement('button');
                   remBtn.type = 'button';
                   remBtn.textContent = '✕';
@@ -2029,6 +2149,7 @@ foreach ($bidColumns as $c) {
                 container.innerHTML = '';
                 container.appendChild(table);
                 try { attachGcDirectoryAutocomplete(container); } catch(e) {}
+                try { setGcEditState(gcEditEnabled); } catch(e) {}
               } catch(err) {
                 container.innerHTML = '<div style="padding:12px;color:#ef4444">Failed to render contractors</div>';
                 console.warn('loadGcList render failed', err);
@@ -3570,7 +3691,17 @@ function syncGcDisplayForProjects() {
           }
           initModalCollapsibles();
           var addGcBtn = document.getElementById('addGcBtn');
+          var editGcToggleBtn = document.getElementById('editGcToggleBtn');
           // existing-contractor select removed; keep add-new flow only
+
+          try { setGcEditState(false); } catch(e) {}
+
+          if (editGcToggleBtn) {
+            editGcToggleBtn.addEventListener('click', function(e){
+              e.stopPropagation();
+              setGcEditState(!gcEditEnabled);
+            });
+          }
 
           if (addGcBtn) {
             addGcBtn.addEventListener('click', function(e){
@@ -3603,6 +3734,7 @@ function syncGcDisplayForProjects() {
                 var unionInput = row.querySelector('select[name="new_gc_union"]');
                 wireGcRowAutocomplete(companyInput, nameInput, numberInput, emailInput, addressInput, unionInput);
               } catch(e) {}
+              try { setGcEditState(gcEditEnabled); } catch(e) {}
               row.querySelector('.remove-gc').addEventListener('click', function(){ container.removeChild(row); });
             });
           }
