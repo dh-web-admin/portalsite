@@ -67,8 +67,8 @@ foreach ($items as $c) {
 
     $gcName = norm($c['general_contractor_name'] ?? '');
     $gcCompany = norm($c['general_contractor'] ?? '');
-    $clientName = $gcName !== '' ? $gcName : $gcCompany;
-    if ($clientName === '') { $skipped++; continue; }
+    if ($gcName === '') { $skipped++; continue; }
+    $clientName = $gcName;
 
     $checkStmt->bind_param('s', $clientName);
     $checkStmt->execute();
