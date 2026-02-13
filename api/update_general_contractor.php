@@ -24,6 +24,20 @@ if (!$id) {
   exit;
 }
 
+$existingName = '';
+$existingStmt = $conn->prepare('SELECT general_contractor_name FROM general_contractor WHERE id = ? LIMIT 1');
+if ($existingStmt) {
+  $existingStmt->bind_param('i', $id);
+  if ($existingStmt->execute()) {
+    $res = $existingStmt->get_result();
+    if ($res && $res->num_rows > 0) {
+      $row = $res->fetch_assoc();
+      $existingName = isset($row['general_contractor_name']) ? (string)$row['general_contractor_name'] : '';
+    }
+  }
+  $existingStmt->close();
+}
+
 try {
   $sql = 'UPDATE general_contractor SET dhss_project_number = ?, general_contractor = ?, general_contractor_name = ?, general_contractor_number = ?, general_contractor_email = ?, general_contractor_address = ?, is_union = ?, winner = ? WHERE id = ?';
   $stmt = $conn->prepare($sql);
@@ -35,7 +49,28 @@ try {
   $iu = ($is_union === null) ? 0 : intval($is_union);
   $stmt->bind_param('ssssssiii', $dhss, $gc, $name, $num, $email, $addr, $iu, $winner, $id);
   if ($stmt->execute()) {
-    echo json_encode(['success'=>true,'affected'=>$stmt->affected_rows]);
+    $clientUpdated = 0;
+    $lookupName = $existingName !== '' ? $existingName : (string)$name;
+    $currentName = (string)$name;
+    if ($lookupName !== '' && $currentName !== '') {
+      $clientUnion = null;
+      if ($is_union === 1 || $is_union === 0) {
+        $clientUnion = $is_union === 1 ? 'Union' : 'Non-Union';
+      }
+
+      $clientStmt = $conn->prepare(
+        'UPDATE clients SET client_name = ?, current_employer = ?, contact_phone = ?, client_email = ?, client_address = ?, union_status = ? WHERE LOWER(client_name) = LOWER(?) AND (client_type IS NULL OR LOWER(client_type) = "general contractor")'
+      );
+      if ($clientStmt) {
+        $clientStmt->bind_param('sssssss', $currentName, $gc, $num, $email, $addr, $clientUnion, $lookupName);
+        if ($clientStmt->execute()) {
+          $clientUpdated = $clientStmt->affected_rows;
+        }
+        $clientStmt->close();
+      }
+    }
+
+    echo json_encode(['success'=>true,'affected'=>$stmt->affected_rows,'client_updated'=>$clientUpdated]);
   } else {
     http_response_code(500);
     echo json_encode(['success'=>false,'message'=>'Update failed','db_error'=>$stmt->error ?? '']);

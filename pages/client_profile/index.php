@@ -109,6 +109,35 @@ if ($nameStmt) {
 		.type-suggestions-list .type-item:hover { background: #f8fafc; }
 		.type-suggestions-list .type-item.is-active { background: #eff6ff; color: #0c63e4; font-weight: 600; }
 		.type-suggestions-list .type-empty { padding: 8px 12px; color: #94a3b8; font-size: 13px; }
+		/* Left-align table headers and cells */
+		table thead th,
+		table tbody td { text-align: left; }
+		/* Hide Client Type (first column) and Website (last column) */
+		table thead th:first-child,
+		table tbody td:first-child,
+		table thead th:last-child,
+		table tbody td:last-child { display: none; }
+		/* Toast message */
+		#clientToast {
+			position: fixed;
+			top: 24px;
+			right: 24px;
+			min-width: 220px;
+			max-width: 420px;
+			background: #f1f5f9;
+			color: #0f172a;
+			padding: 12px 14px;
+			border-radius: 8px;
+			box-shadow: 0 12px 30px rgba(2,6,23,0.08);
+			display: none;
+			align-items: center;
+			gap: 10px;
+			z-index: 6000;
+			border: 1px solid rgba(15,23,42,0.06);
+		}
+		#clientToast.warn { background: #fef3c7; color: #92400e; border-color: rgba(146,64,14,0.12); }
+		#clientToast .msg { flex: 1; font-weight: 700; }
+		#clientToast .close { background: transparent; border: 0; color: rgba(15,23,42,0.7); cursor: pointer; font-weight: 700; padding: 6px; border-radius: 6px; }
 	</style>
 </head>
 <body class="admin-page">
@@ -118,7 +147,7 @@ if ($nameStmt) {
 			<?php include __DIR__ . '/../../partials/sidebar.php'; ?>
 			<main class="content-area">
 				<div class="main-content">
-					<div style="margin-top:12px;margin-bottom:6px;display:flex;gap:10px;align-items:center;justify-content:center;width:100%;">
+					<div style="margin-top:12px;margin-bottom:6px;display:flex;gap:10px;align-items:center;justify-content:flex-start;width:100%;">
 						<div class="search-container">
 							<input type="text" id="clientSearch" placeholder="Search clients..." style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;box-shadow:0 2px 6px rgba(2,6,23,0.04);" />
 							<div id="clientSearchSuggestions"></div>
@@ -169,6 +198,10 @@ if ($nameStmt) {
 				</div>
 			</main>
 		</div>
+	</div>
+	<div id="clientToast" role="status" aria-live="polite">
+		<span class="msg"></span>
+		<button type="button" class="close" aria-label="Close">Close</button>
 	</div>
 
 	<div id="addClientModal" aria-hidden="true">
@@ -583,6 +616,31 @@ if ($nameStmt) {
 
 	<script>
 		(function(){
+			function hideToast() {
+				var t = document.getElementById('clientToast');
+				if (!t) return;
+				clearTimeout(t._hideTimer);
+				t.style.display = 'none';
+				t.classList.remove('warn');
+			}
+
+			function showToast(message, type, opts) {
+				var t = document.getElementById('clientToast');
+				if (!t) return;
+				var msg = t.querySelector('.msg');
+				var close = t.querySelector('.close');
+				var persist = !!(opts && opts.persist);
+				msg.textContent = message;
+				t.classList.remove('warn');
+				if (type === 'warn') t.classList.add('warn');
+				t.style.display = 'flex';
+				clearTimeout(t._hideTimer);
+				if (!persist) {
+					t._hideTimer = setTimeout(hideToast, 3000);
+				}
+				close.onclick = function(){ hideToast(); };
+			}
+
 			var clientTypeOptions = <?php echo json_encode(array_values(array_unique($clientTypes)), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
 			var currentEmployerOptions = <?php echo json_encode(array_values(array_unique($currentEmployers)), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
 			var clientNameOptions = <?php echo json_encode(array_values(array_unique($clientNames)), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || [];
@@ -600,6 +658,7 @@ if ($nameStmt) {
 			var clientNameSuggestions = document.getElementById('clientNameSuggestions');
 			var editClientNameInput = document.getElementById('editClientNameInput');
 			var editClientNameSuggestions = document.getElementById('editClientNameSuggestions');
+			var lastDuplicateName = '';
 			var clientTypeInput = document.getElementById('clientTypeInput');
 			var clientTypeSuggestions = document.getElementById('clientTypeSuggestions');
 			var editClientTypeInput = document.getElementById('editClientTypeInput');
@@ -667,7 +726,7 @@ if ($nameStmt) {
 				listEl.style.display = 'block';
 			}
 
-			function attachAutocomplete(inputEl, listEl, options, emptyText) {
+			function attachAutocomplete(inputEl, listEl, options, emptyText, onSelect) {
 				if (!inputEl || !listEl) return;
 				var activeIndex = -1;
 				var currentItems = [];
@@ -728,6 +787,7 @@ if ($nameStmt) {
 							var value = currentItems[activeIndex].getAttribute('data-value') || '';
 							inputEl.value = value;
 							closeList();
+							if (typeof onSelect === 'function') onSelect(value);
 						}
 					}
 					if (e.key === 'Escape') {
@@ -740,6 +800,7 @@ if ($nameStmt) {
 					var value = item.getAttribute('data-value') || '';
 					inputEl.value = value;
 					closeList();
+					if (typeof onSelect === 'function') onSelect(value);
 				});
 				document.addEventListener('click', function(e){
 					if (e.target === inputEl || listEl.contains(e.target)) return;
@@ -910,8 +971,34 @@ if ($nameStmt) {
 				return text.replace(/[&<>"']/g, function(m) { return map[m]; });
 			}
 
-			attachAutocomplete(clientNameInput, clientNameSuggestions, clientNameOptions, 'No matching client names');
+			function openEditForExistingClient(name) {
+				var needle = normalizeLower(name);
+				if (!needle) return;
+				var match = allClients.find(function(c){ return normalizeLower(c.name) === needle; });
+				if (!match || !match.element) return;
+				closeAddModal();
+				openEditModal(match.id, buildClientDataFromRow(match.element));
+			}
+
+			attachAutocomplete(clientNameInput, clientNameSuggestions, clientNameOptions, 'No matching client names', function(value){
+				if (hasExactMatch(clientNameOptions, value)) openEditForExistingClient(value);
+			});
 			attachAutocomplete(editClientNameInput, editClientNameSuggestions, clientNameOptions, 'No matching client names');
+						if (clientNameInput) {
+							clientNameInput.addEventListener('input', function(){
+								var name = this.value.trim();
+								if (!name) { lastDuplicateName = ''; hideToast(); return; }
+								if (hasExactMatch(clientNameOptions, name)) {
+									if (normalizeLower(name) !== normalizeLower(lastDuplicateName)) {
+										showToast('This name already exists.', 'warn', { persist: true });
+										lastDuplicateName = name;
+									}
+								} else {
+									lastDuplicateName = '';
+									hideToast();
+								}
+							});
+						}
 			attachAutocomplete(clientTypeInput, clientTypeSuggestions, clientTypeOptions, 'No matching client types');
 			attachAutocomplete(editClientTypeInput, editClientTypeSuggestions, clientTypeOptions, 'No matching client types');
 			attachAutocomplete(currentEmployerInput, currentEmployerSuggestions, currentEmployerOptions, 'No matching employers');
@@ -968,7 +1055,7 @@ if ($nameStmt) {
 			});
 			
 			function openAddModal(){ if (addModal) { addModal.style.display = 'block'; addModal.setAttribute('aria-hidden', 'false'); } }
-			function closeAddModal(){ if (addModal) { addModal.style.display = 'none'; addModal.setAttribute('aria-hidden', 'true'); } if (addForm) addForm.reset(); resetPastProjects(pastProjectsContainer, []); }
+			function closeAddModal(){ if (addModal) { addModal.style.display = 'none'; addModal.setAttribute('aria-hidden', 'true'); } if (addForm) addForm.reset(); resetPastProjects(pastProjectsContainer, []); lastDuplicateName = ''; hideToast(); }
 			function openEditModal(clientId, data){ 
 				document.getElementById('editClientId').value = clientId;
 				document.getElementById('editClientNameInput').value = data.client_name || '';
@@ -1169,9 +1256,10 @@ if ($nameStmt) {
 				saveAddBtn.addEventListener('click', function(){
 					var clientName = document.getElementById('clientNameInput').value.trim();
 					if (!clientName) { alert('Client Name is required'); return; }
-					if (hasExactMatch(clientNameOptions, clientName)) {
-						alert('Warning: a client with this name already exists.');
-					}
+						if (hasExactMatch(clientNameOptions, clientName)) {
+							showToast('This name already exists.', 'warn', { persist: true });
+							return;
+						}
 					
 					var formData = new FormData();
 					formData.append('client_name', clientName);

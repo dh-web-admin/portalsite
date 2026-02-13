@@ -143,6 +143,11 @@ function equipment_label($row) {
 		.selector-row select { padding:10px; border:1px solid #e6eef6; border-radius:8px; font-size:14px; min-width:280px; }
 		.info-badge { display:inline-block; background:#fff; padding:8px 12px; border-radius:999px; border:1px solid #e6eef6; font-weight:700; color:#0f172a; font-size:14px; box-shadow:0 8px 22px rgba(2,6,23,0.05); }
 		.card { background:#fff; border:1px solid #e6eef6; border-radius:10px; box-shadow:0 6px 18px rgba(2,6,23,0.04); padding:14px; margin-top:12px; }
+		/* Supplier suggestion dropdown */
+		.supplier-suggest { position:absolute; z-index:2000; background:#fff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 12px 30px rgba(2,6,23,0.12); overflow:hidden; }
+		.supplier-suggest .row { padding:8px 10px; cursor:pointer; font-size:13px; color:#0f172a; }
+		.supplier-suggest .row:hover { background:#f8fafc; }
+		.supplier-profile-link { display:inline-block; margin-top:6px; font-size:12px; font-weight:700; color:#0f5a8a; text-decoration:underline; }
 	</style>
 	<script>
 		// Initial data
@@ -378,6 +383,8 @@ document.addEventListener('DOMContentLoaded', function(){
 	var originalPartNameInput = document.getElementById('originalPartName');
 	var isEditMode = false;
 	var originalPartName = '';
+	var supplierDirectoryCache = null;
+	var supplierDirectoryPromise = null;
 	
 	console.log('Modal:', modal);
 	console.log('Open button:', openBtn);
@@ -419,6 +426,262 @@ document.addEventListener('DOMContentLoaded', function(){
 	
 	if (closeBtn) closeBtn.addEventListener('click', closeModal);
 	if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+	function savePartsSuppliers(suppliers, partName, nsnNumber) {
+		if (!suppliers || !suppliers.length) return;
+		var payload = suppliers.map(function(s){
+			return {
+				supplier: s.supplier || '',
+				supplier_name: s.supplierName || '',
+				supplier_number: s.supplierNumber || '',
+				supplier_email: s.supplierEmail || '',
+				supplier_address: s.supplierAddress || '',
+				part_name: partName || '',
+				nsn_number: nsnNumber || ''
+			};
+		}).filter(function(s){
+			return (s.supplier_name || s.supplier || s.supplier_email);
+		});
+		if (!payload.length) return;
+		var fd = new FormData();
+		fd.append('suppliers', JSON.stringify(payload));
+		fetch('../../api/save_parts_suppliers.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+			.then(function(r){ return r.json(); })
+			.catch(function(err){ console.warn('save_parts_suppliers failed', err); });
+	}
+
+	function normText(v) {
+		return (v || '').toString().trim().toLowerCase();
+	}
+
+	function getBasePath() {
+		try {
+			var path = window.location.pathname || '';
+			var idx = path.indexOf('/pages/');
+			return (idx >= 0) ? path.slice(0, idx) : '';
+		} catch (e) {
+			return '';
+		}
+	}
+
+	function fetchSupplierDirectory() {
+		if (supplierDirectoryCache) return Promise.resolve(supplierDirectoryCache);
+		if (supplierDirectoryPromise) return supplierDirectoryPromise;
+		supplierDirectoryPromise = fetch('../../api/get_parts_suppliers.php', { credentials: 'same-origin' })
+			.then(function(r){
+				return r.text().then(function(t){
+					try { return JSON.parse(t); } catch (e) { return { success: false, message: t }; }
+				});
+			})
+			.then(function(json){
+				var list = (json && json.clients) ? json.clients : [];
+				supplierDirectoryCache = list;
+				return list;
+			})
+			.catch(function(){ return []; })
+			.finally(function(){ supplierDirectoryPromise = null; });
+		return supplierDirectoryPromise;
+	}
+
+	function findClientByNameOrCompany(clients, name, company) {
+		var n = normText(name);
+		var comp = normText(company);
+		if (n) {
+			for (var i = 0; i < (clients || []).length; i++) {
+				var c = clients[i];
+				if (normText(c.client_name) === n) return c;
+			}
+		}
+		if (comp) {
+			for (var j = 0; j < (clients || []).length; j++) {
+				var c2 = clients[j];
+				if (normText(c2.current_employer) === comp) return c2;
+			}
+		}
+		return null;
+	}
+
+	function removeSuggest(input) {
+		try {
+			if (input && input._supplierSuggestEl) {
+				input._supplierSuggestEl.remove();
+				input._supplierSuggestEl = null;
+			}
+		} catch (e) {}
+	}
+
+	function showSuggest(input, items, renderLabel, onPick) {
+		if (!input) return;
+		removeSuggest(input);
+		if (!items || !items.length) return;
+		var box = document.createElement('div');
+		box.className = 'supplier-suggest';
+		items.slice(0, 8).forEach(function(item){
+			var row = document.createElement('div');
+			row.className = 'row';
+			row.textContent = renderLabel(item);
+			row.addEventListener('mousedown', function(e){
+				e.preventDefault();
+				onPick(item);
+				removeSuggest(input);
+			});
+			box.appendChild(row);
+		});
+		var rect = input.getBoundingClientRect();
+		box.style.left = (rect.left + window.scrollX) + 'px';
+		box.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+		box.style.width = rect.width + 'px';
+		document.body.appendChild(box);
+		input._supplierSuggestEl = box;
+	}
+
+	function ensureSupplierLink(container) {
+		if (!container) return null;
+		var existing = container.querySelector('.supplier-profile-link');
+		if (existing) return existing;
+		var link = document.createElement('a');
+		link.className = 'supplier-profile-link';
+		link.href = '#';
+		link.target = '_blank';
+		link.rel = 'noopener';
+		link.textContent = 'Open client profile';
+		link.style.display = 'none';
+		container.appendChild(link);
+		return link;
+	}
+
+	function setSupplierProfileLink(container, client) {
+		var link = ensureSupplierLink(container);
+		if (!link) return;
+		if (client && client.client_id) {
+			link.href = getBasePath() + '/pages/client_profile/index.php?client_id=' + encodeURIComponent(client.client_id);
+			link.style.display = 'inline-block';
+		} else {
+			link.href = '#';
+			link.style.display = 'none';
+		}
+	}
+
+	function applySupplierClient(makeItem, client) {
+		if (!makeItem || !client) return;
+		var companyInput = makeItem.querySelector('.make-supplier');
+		var nameInput = makeItem.querySelector('.make-supplier-name');
+		var numberInput = makeItem.querySelector('.make-supplier-number');
+		var emailInput = makeItem.querySelector('.make-supplier-email');
+		var addressInput = makeItem.querySelector('.make-supplier-address');
+		if (companyInput) companyInput.value = client.current_employer || '';
+		if (nameInput) nameInput.value = client.client_name || '';
+		if (numberInput) numberInput.value = client.contact_phone || '';
+		if (emailInput) emailInput.value = client.client_email || '';
+		if (addressInput) addressInput.value = client.client_address || '';
+		var supplierContainer = companyInput ? companyInput.parentElement : null;
+		if (supplierContainer) setSupplierProfileLink(supplierContainer, client);
+		if (companyInput) companyInput.dataset.clientId = client.client_id || '';
+		if (nameInput) nameInput.dataset.clientId = client.client_id || '';
+	}
+
+	function applySupplierCompany(makeItem, companyName) {
+		if (!makeItem) return;
+		var companyInput = makeItem.querySelector('.make-supplier');
+		var nameInput = makeItem.querySelector('.make-supplier-name');
+		var numberInput = makeItem.querySelector('.make-supplier-number');
+		var emailInput = makeItem.querySelector('.make-supplier-email');
+		var addressInput = makeItem.querySelector('.make-supplier-address');
+		if (companyInput) companyInput.value = companyName || '';
+		if (nameInput) nameInput.value = '';
+		if (numberInput) numberInput.value = '';
+		if (emailInput) emailInput.value = '';
+		if (addressInput) addressInput.value = '';
+		var supplierContainer = companyInput ? companyInput.parentElement : null;
+		if (supplierContainer) setSupplierProfileLink(supplierContainer, null);
+		if (companyInput) companyInput.dataset.clientId = '';
+		if (nameInput) nameInput.dataset.clientId = '';
+	}
+
+	function wireSupplierAutocomplete(makeItem) {
+		if (!makeItem) return;
+		var companyInput = makeItem.querySelector('.make-supplier');
+		var nameInput = makeItem.querySelector('.make-supplier-name');
+		var supplierContainer = companyInput ? companyInput.parentElement : null;
+		if (supplierContainer) ensureSupplierLink(supplierContainer);
+
+		function bindSuggest(input, mode) {
+			if (!input || input.dataset.supplierSuggestWired === '1') return;
+			input.dataset.supplierSuggestWired = '1';
+			input.addEventListener('input', function(){
+				var q = input.value || '';
+				fetchSupplierDirectory().then(function(clients){
+					if (mode === 'company') {
+						var seen = {};
+						var companies = [];
+						(clients || []).forEach(function(c){
+							var comp = (c.current_employer || '').toString().trim();
+							if (!comp) return;
+							var key = comp.toLowerCase();
+							if (seen[key]) return;
+							seen[key] = true;
+							if (normText(comp).indexOf(normText(q)) === -1) return;
+							companies.push({ company: comp });
+						});
+						showSuggest(input, companies, function(c){
+							return c.company || '';
+						}, function(c){
+							applySupplierCompany(makeItem, c.company || '');
+						});
+						return;
+					}
+
+					var companySelected = companyInput ? companyInput.value : '';
+					var list = (clients || []).filter(function(c){
+						if (companySelected) {
+							return normText(c.current_employer) === normText(companySelected);
+						}
+						return true;
+					}).filter(function(c){
+						var v = c.client_name;
+						return normText(v).indexOf(normText(q)) !== -1;
+					});
+					if (!list.length && !companySelected) {
+						list = (clients || []).filter(function(c){
+							var v2 = c.client_name;
+							return normText(v2).indexOf(normText(q)) !== -1;
+						});
+					}
+					showSuggest(input, list, function(c){
+						var comp2 = c.current_employer || '';
+						var nm2 = c.client_name || '';
+						return nm2 + (comp2 ? ' — ' + comp2 : '');
+					}, function(c){
+						applySupplierClient(makeItem, c);
+					});
+				});
+			});
+			input.addEventListener('blur', function(){ setTimeout(function(){ removeSuggest(input); }, 120); });
+		}
+
+		bindSuggest(companyInput, 'company');
+		bindSuggest(nameInput, 'name');
+
+		if (companyInput && !companyInput.dataset.supplierLinkWired) {
+			companyInput.dataset.supplierLinkWired = '1';
+			companyInput.addEventListener('dblclick', function(){
+				fetchSupplierDirectory().then(function(clients){
+					var c = findClientByNameOrCompany(clients, nameInput ? nameInput.value : '', companyInput.value);
+					applySupplierClient(makeItem, c);
+				});
+			});
+		}
+
+		if (nameInput && !nameInput.dataset.supplierLinkWired) {
+			nameInput.dataset.supplierLinkWired = '1';
+			nameInput.addEventListener('dblclick', function(){
+				fetchSupplierDirectory().then(function(clients){
+					var c = findClientByNameOrCompany(clients, nameInput.value, companyInput ? companyInput.value : '');
+					applySupplierClient(makeItem, c);
+				});
+			});
+		}
+	}
 	
 	function deleteMakeSpecification(partName, makeVal, modelVal) {
 		if (!partName || !makeVal || !modelVal) return;
@@ -512,6 +775,10 @@ document.addEventListener('DOMContentLoaded', function(){
 	if (openBtn) {
 		openBtn.addEventListener('click', function() {
 			setTimeout(function() { initSupplierDetailsToggle(); }, 100);
+			try {
+				var items = makesList ? makesList.querySelectorAll('.make-item') : [];
+				items.forEach(function(it){ wireSupplierAutocomplete(it); });
+			} catch (e) {}
 		});
 	}
 	
@@ -570,6 +837,8 @@ document.addEventListener('DOMContentLoaded', function(){
 			
 			// Initialize toggle for the newly added make item
 			initSupplierDetailsToggle();
+			// Wire supplier autocomplete for new item
+			wireSupplierAutocomplete(makeItem);
 			
 			// Add remove handler
 			bindMakeRemoveHandler(makeItem);
@@ -578,6 +847,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 	// Bind remove handler for the initial make item
 	bindMakeRemoveHandler(makesList ? makesList.querySelector('.make-item') : null);
+	try { wireSupplierAutocomplete(makesList ? makesList.querySelector('.make-item') : null); } catch (e) {}
 
 	// Open modal in "edit" mode when clicking an existing part card
 	if (partCards && partCards.length && modal) {
@@ -675,6 +945,11 @@ document.addEventListener('DOMContentLoaded', function(){
 				
 				// Re-initialize toggles after all makes have been added and populated
 				initSupplierDetailsToggle();
+				// Wire supplier autocomplete for all items (edit mode)
+				try {
+					var allItems = makesList ? makesList.querySelectorAll('.make-item') : [];
+					allItems.forEach(function(it){ wireSupplierAutocomplete(it); });
+				} catch (e) {}
 			});
 		});
 	}
@@ -791,6 +1066,7 @@ document.addEventListener('DOMContentLoaded', function(){
 			.then(function(response){ return response.json(); })
 			.then(function(data){
 				if (data.success) {
+					try { savePartsSuppliers(makes, partNumber, partNsn); } catch (e) {}
 					alert(isEditMode ? 'Part updated successfully!' : 'Part added successfully!');
 					closeModal();
 					window.location.reload();
