@@ -879,32 +879,42 @@ $isRedStatus = ($equipment['operating_condition'] ?? '') === 'red' || ($equipmen
                         <?php } ?>
                     </td>
                 </tr>
-                <tr>
-                    <th class="equipment-label-cell">Vin #</th>
-                    <td class="equipment-value-cell">
-                        <?php if ($editMode) { ?>
-                            <input type="text" name="vin" value="<?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>" class="equipment-editable-cell" />
-                        <?php } else { ?>
-                            <?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>
-                        <?php } ?>
-                    </td>
-                    <th class="equipment-label-cell">Transmission</th>
-                    <td class="equipment-value-cell equipment-value-cell--border">
-                        <?php if ($editMode) { ?>
-                            <div style="display:flex;flex-direction:column;gap:6px;">
-                                <input type="text" name="transmission" value="<?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>" class="equipment-editable-cell" placeholder="Transmission" />
-                                <input type="text" name="trans_serial_number" value="<?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>" class="equipment-editable-cell" placeholder="Trans Serial Number" />
-                            </div>
-                        <?php } else {
-                            $transSerial = trim((string)($equipment['trans_serial_number'] ?? ''));
-                            if ($transSerial !== '') {
-                                echo htmlspecialchars($transSerial);
-                            } else {
-                                echo htmlspecialchars($equipment['transmission'] ?? '');
-                            }
-                        } ?>
-                    </td>
-                </tr>
+            <tr>
+    <th class="equipment-label-cell">Vin #</th>
+    <td class="equipment-value-cell">
+        <?php if ($editMode) { ?>
+            <input type="text" name="vin" value="<?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>" class="equipment-editable-cell" />
+        <?php } else { ?>
+            <?php echo htmlspecialchars($equipment['vin'] ?? ''); ?>
+        <?php } ?>
+    </td>
+    <th class="equipment-label-cell">Transmission</th>
+    <td class="equipment-value-cell equipment-value-cell--border">
+        <?php if ($editMode) { ?>
+            <input type="text" name="transmission" value="<?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>" class="equipment-editable-cell" />
+        <?php } else { ?>
+            <?php echo htmlspecialchars($equipment['transmission'] ?? ''); ?>
+        <?php } ?>
+    </td>
+</tr>
+<tr>
+    <th class="equipment-label-cell">Model</th>
+    <td class="equipment-value-cell">
+        <?php if ($editMode) { ?>
+            <input type="text" name="model" value="<?php echo htmlspecialchars($equipment['model'] ?? ''); ?>" class="equipment-editable-cell" />
+        <?php } else { ?>
+            <?php echo htmlspecialchars($equipment['model'] ?? ''); ?>
+        <?php } ?>
+    </td>
+    <th class="equipment-label-cell">Transmission Serial</th>
+    <td class="equipment-value-cell equipment-value-cell--border">
+        <?php if ($editMode) { ?>
+            <input type="text" name="trans_serial_number" value="<?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>" class="equipment-editable-cell" />
+        <?php } else { ?>
+            <?php echo htmlspecialchars($equipment['trans_serial_number'] ?? ''); ?>
+        <?php } ?>
+    </td>
+</tr>
                 <tr>
                     <th class="equipment-label-cell">Location</th>
                     <td class="equipment-value-cell">

@@ -38,7 +38,8 @@ $stmt->close();
 			<?php include __DIR__ . '/../../partials/sidebar.php'; ?>
 			<main class="content-area">
 				<div class="main-content">
-					  <!-- Engineering content will go here -->
+					<h1>Engineering</h1>
+					<button>Build New</button>
 				</div>
 			</main>
 		</div>
@@ -61,6 +62,7 @@ $stmt->close();
 					devGroup.classList.toggle('open');
 				});
 			}
+		
 			// Toggle maintenance sub-nav
 			var maintenanceToggle = document.getElementById('maintenanceToggle');
 			var maintenanceGroup = document.getElementById('maintenanceGroup');
