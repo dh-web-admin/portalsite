@@ -3007,6 +3007,7 @@ foreach ($bidColumns as $c) {
         (function initYearOptions(){
   if (!yearFilterEl) return;
   var nowY = new Date().getFullYear();
+  var nowYShort = String(nowY).slice(-2);
 
   yearFilterEl.innerHTML = '';
 
@@ -3024,10 +3025,10 @@ foreach ($bidColumns as $c) {
     yearFilterEl.appendChild(opt);
   }
 
-  // default to all years on load
-          yearFilterEl.value = '';
-          // trigger filtering without persisting across refresh
-          yearFilterEl.addEventListener('change', function(){ try { applyFiltersAndGrouping(); } catch(e){} });
+  // Default to current year unless session value exists (session restore runs after this)
+  yearFilterEl.value = nowYShort;
+  // trigger filtering without persisting across refresh
+  yearFilterEl.addEventListener('change', function(){ try { applyFiltersAndGrouping(); } catch(e){} });
 })();
           // Mirror year options to the compact top selector (if present)
           try {
