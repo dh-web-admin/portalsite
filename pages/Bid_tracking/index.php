@@ -524,7 +524,7 @@ foreach ($bidColumns as $c) {
               <?php } ?>
               <button id="manageColumnsBtn" class="btn" style="padding:8px 12px;border:1px solid #e6edf0;border-radius:8px;font-weight:700;">Manage Columns</button>
               <!-- Compact top filters placed inline in toolbar between Manage Columns and Email Notifications (visible to all roles) -->
-              <div id="compactFilters" style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:10px;background:#f3f4f6;border:1px solid rgba(15,23,42,0.06);margin-left:8px;flex:1 1 auto;max-width:760px;">
+              <div id="compactFilters" style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:10px;background:#f3f4f6;border:1px solid rgba(15,23,42,0.06);margin-left:8px;flex:1 1 auto;">
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-right:1px solid rgba(15,23,42,0.06);">
                   <label for="statusFilterTop" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">Status</label>
                   <select id="statusFilterTop" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:110px;"> 
@@ -540,6 +540,74 @@ foreach ($bidColumns as $c) {
                   <label for="yearFilterTop" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">DHSS Project#</label>
                   <select id="yearFilterTop" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:120px;"></select>
                 </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;flex:1 1 240px;position:relative;min-width:180px;max-width:400px;">
+                  <input id="globalProjectSearch" type="text" placeholder="Search projects..." style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;flex:1 1 auto;min-width:120px;max-width:400px;" autocomplete="off" />
+                  <div id="globalProjectSearchSuggestions" style="position:absolute;top:38px;left:0;width:100%;z-index:3000;"></div>
+                </div>
+                </style>
+                <style>
+                .global-search-suggestions-list {
+                  background: #fff;
+                  border: 1px solid #cbd5e1;
+                  border-radius: 6px;
+                  max-height: 220px;
+                  overflow-y: auto;
+                  width: 100%;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+                  margin-top: 2px;
+                  padding: 0;
+                  list-style: none;
+                }
+                .global-search-suggestion-item {
+                  padding: 8px 12px;
+                  cursor: pointer;
+                  border-bottom: 1px solid #f1f5f9;
+                }
+                .global-search-suggestion-item:last-child {
+                  border-bottom: none;
+                }
+                .global-search-suggestion-item:hover, .global-search-suggestion-item.active {
+                  background: #f1f5f9;
+                }
+                </style>
+                <script>
+                // Global project search autocomplete
+                const globalSearchInput = document.getElementById('globalProjectSearch');
+                const globalSearchBox = document.getElementById('globalProjectSearchSuggestions');
+                if (globalSearchInput && globalSearchBox) {
+                  globalSearchInput.addEventListener('input', function() {
+                    const val = this.value.trim().toLowerCase();
+                    globalSearchBox.innerHTML = '';
+                    const rows = document.querySelectorAll('#bidsTable tbody tr');
+                    if (!val) {
+                      rows.forEach(row => row.style.display = '');
+                      return;
+                    }
+                    rows.forEach(row => {
+                      let match = false;
+                      row.querySelectorAll('td').forEach(td => {
+                        if ((td.textContent || '').toLowerCase().includes(val)) match = true;
+                      });
+                      row.style.display = match ? '' : 'none';
+                    });
+                  });
+                  // Remove dropdown suggestion logic for now, as table filtering is now live
+                }
+                // Optionally scroll to or highlight the project row in the table
+                function highlightProjectRow(dhssProjectNumber) {
+                  if (!dhssProjectNumber) return;
+                  const rows = document.querySelectorAll('#bidsTable tbody tr');
+                  for (const row of rows) {
+                    const cell = row.querySelector('td[data-col="dhss_project_number"]');
+                    if (cell && (cell.textContent || '').trim() === dhssProjectNumber) {
+                      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      row.classList.add('highlight-search');
+                      setTimeout(() => row.classList.remove('highlight-search'), 2000);
+                      break;
+                    }
+                  }
+                }
+                </script>
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;margin-left:auto;">
                   <label for="orderBySelect" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">order by:</label>
                   <select id="orderBySelect" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:140px;">
