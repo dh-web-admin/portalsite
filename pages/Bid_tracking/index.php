@@ -2336,6 +2336,8 @@ foreach ($bidColumns as $c) {
       function openEditModal(bidObj) {
         var modal = document.getElementById('editBidModal');
         if (!modal) return;
+        // Reset GC edit state and button label on modal open
+        setGcEditState(false);
 
         var idInput = document.getElementById('editBidId');
         if (idInput) idInput.value = bidObj.bid_id || '';
@@ -2457,6 +2459,14 @@ foreach ($bidColumns as $c) {
       function closeEditModal() {
         var modal = document.getElementById('editBidModal');
         if (!modal) return;
+        // If GC section is in edit mode, save contractor info before closing
+        if (window.gcEditEnabled) {
+          var saveBtn = document.getElementById('editGcToggleBtn');
+          if (saveBtn && saveBtn.textContent.indexOf('Save contractor info') !== -1) {
+            saveBtn.click(); // trigger save if in edit mode
+          }
+          setGcEditState(false); // ensure GC section is not in edit mode next time
+        }
         modal.style.display = 'none';
       }
 
