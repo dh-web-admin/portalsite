@@ -144,7 +144,7 @@ $hasEditPermission = can_edit_page('engineering');
 						});
 
 						function saveItemToBackend(name) {
-							fetch('/api/add_engineering_item.php', {
+							fetch('/PortalSite/api/add_engineering_item.php', {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },
 								body: JSON.stringify({ name: name })
