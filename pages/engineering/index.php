@@ -649,7 +649,6 @@ $hasEditPermission = can_edit_page('engineering');
 						function handleDrawingsClick(item, liElement) {
 							if (drawingsDropdownBusy) return;
 							drawingsDropdownBusy = true;
-							setTimeout(function() { drawingsDropdownBusy = false; }, 100);
 							
 							currentItemForDrawings = item;
 							
@@ -657,6 +656,7 @@ $hasEditPermission = can_edit_page('engineering');
 							var existingDropdown = document.getElementById('drawingsDropdown');
 							if (existingDropdown) {
 								existingDropdown.remove();
+								drawingsDropdownBusy = false;
 								return;
 							}
 							
@@ -869,8 +869,13 @@ $hasEditPermission = can_edit_page('engineering');
 										dropdown.style.transform = 'translateY(0)';
 										dropdown.style.pointerEvents = 'auto';
 									}, 10);
-									
-									});
+								})
+								.catch(function(err) {
+									console.error('Error loading drawings:', err);
+								})
+								.finally(function() {
+									drawingsDropdownBusy = false;
+								});
 						}
 
 						function openUploadDrawingsModal() {
@@ -957,7 +962,6 @@ $hasEditPermission = can_edit_page('engineering');
 						function handleBillOfMaterialsClick(item, liElement) {
 							if (bomDropdownBusy) return;
 							bomDropdownBusy = true;
-							setTimeout(function() { bomDropdownBusy = false; }, 100);
 							
 							currentItemForBom = item;
 							
@@ -965,6 +969,7 @@ $hasEditPermission = can_edit_page('engineering');
 							var existingDropdown = document.getElementById('bomDropdown');
 							if (existingDropdown) {
 								existingDropdown.remove();
+								bomDropdownBusy = false;
 								return;
 							}
 							
@@ -1195,10 +1200,12 @@ $hasEditPermission = can_edit_page('engineering');
 										dropdown.style.transform = 'translateY(0)';
 										dropdown.style.pointerEvents = 'auto';
 									}, 10);
-									
-									})
+								})
 								.catch(function(err) {
 									alert('Error loading BOMs: ' + err.message);
+								})
+								.finally(function() {
+									bomDropdownBusy = false;
 								});
 						}
 
@@ -1210,7 +1217,6 @@ $hasEditPermission = can_edit_page('engineering');
 						function handlePartsClick(item, liElement) {
 							if (partsDropdownBusy) return;
 							partsDropdownBusy = true;
-							setTimeout(function() { partsDropdownBusy = false; }, 100);
 							
 							currentItemForParts = item;
 							
@@ -1218,6 +1224,7 @@ $hasEditPermission = can_edit_page('engineering');
 							var existingDropdown = document.getElementById('partsDropdown');
 							if (existingDropdown) {
 								existingDropdown.remove();
+								partsDropdownBusy = false;
 								return;
 							}
 							
@@ -1389,10 +1396,12 @@ $hasEditPermission = can_edit_page('engineering');
 										dropdown.style.transform = 'translateY(0)';
 										dropdown.style.pointerEvents = 'auto';
 									}, 10);
-									
-									})
+								})
 								.catch(function(err) {
 									console.error('Error fetching parts:', err);
+								})
+								.finally(function() {
+									partsDropdownBusy = false;
 								});
 						}
 
@@ -2203,3 +2212,10 @@ $hasEditPermission = can_edit_page('engineering');
 	<script src="../../assets/js/logout-confirm.js"></script>
 </body>
 </html>
+
+
+
+
+
+
+
