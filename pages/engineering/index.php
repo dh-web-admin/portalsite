@@ -548,14 +548,12 @@ $hasEditPermission = can_edit_page('engineering');
 									chevron.style.background = 'transparent';
 								});
 								
-								// Add click handler for In house Drawings
+								// Single click handler on the entire li row to prevent double-firing
+								// (span + chevron as siblings could both receive a near-boundary click)
 								if (label === 'In house Drawings') {
 									span.style.cursor = 'pointer';
-									span.addEventListener('click', function(e) {
-										e.stopPropagation();
-										handleDrawingsClick(item, li);
-									});
-									chevron.addEventListener('click', function(e) {
+									li.style.cursor = 'pointer';
+									li.addEventListener('click', function(e) {
 										e.stopPropagation();
 										handleDrawingsClick(item, li);
 									});
@@ -564,11 +562,8 @@ $hasEditPermission = can_edit_page('engineering');
 								// Add click handler for Bill of Materials
 								if (label === 'Bill of materials') {
 									span.style.cursor = 'pointer';
-									span.addEventListener('click', function(e) {
-										e.stopPropagation();
-										handleBillOfMaterialsClick(item, li);
-									});
-									chevron.addEventListener('click', function(e) {
+									li.style.cursor = 'pointer';
+									li.addEventListener('click', function(e) {
 										e.stopPropagation();
 										handleBillOfMaterialsClick(item, li);
 									});
@@ -577,11 +572,8 @@ $hasEditPermission = can_edit_page('engineering');
 								// Add click handler for Parts and Suppliers
 								if (label === 'Parts and Suppliers') {
 									span.style.cursor = 'pointer';
-									span.addEventListener('click', function(e) {
-										e.stopPropagation();
-										handlePartsClick(item, li);
-									});
-									chevron.addEventListener('click', function(e) {
+									li.style.cursor = 'pointer';
+									li.addEventListener('click', function(e) {
 										e.stopPropagation();
 										handlePartsClick(item, li);
 									});
@@ -653,13 +645,19 @@ $hasEditPermission = can_edit_page('engineering');
 
 						// Handle drawings dropdown click
 						var currentItemForDrawings = null;
+						var drawingsDropdownBusy = false;
 						function handleDrawingsClick(item, liElement) {
+							if (drawingsDropdownBusy) return;
+							drawingsDropdownBusy = true;
+							setTimeout(function() { drawingsDropdownBusy = false; }, 100);
+							
 							currentItemForDrawings = item;
 							
-							// Remove any existing dropdown
+							// Toggle: if already open for this trigger, close it
 							var existingDropdown = document.getElementById('drawingsDropdown');
 							if (existingDropdown) {
 								existingDropdown.remove();
+								return;
 							}
 							
 							// Fetch existing drawings
@@ -872,16 +870,7 @@ $hasEditPermission = can_edit_page('engineering');
 										dropdown.style.pointerEvents = 'auto';
 									}, 10);
 									
-									// Close dropdown when clicking outside
-									setTimeout(function() {
-										document.addEventListener('click', function closeDropdown(e) {
-											if (!dropdown.contains(e.target)) {
-												dropdown.remove();
-												document.removeEventListener('click', closeDropdown);
-											}
-										});
-									}, 0);
-								});
+									});
 						}
 
 						function openUploadDrawingsModal() {
@@ -964,14 +953,19 @@ $hasEditPermission = can_edit_page('engineering');
 
 						// Bill of Materials functionality
 						var currentItemForBom = null;
-
+						var bomDropdownBusy = false;
 						function handleBillOfMaterialsClick(item, liElement) {
+							if (bomDropdownBusy) return;
+							bomDropdownBusy = true;
+							setTimeout(function() { bomDropdownBusy = false; }, 100);
+							
 							currentItemForBom = item;
 							
-							// Remove any existing dropdown
+							// Toggle: if already open, close it
 							var existingDropdown = document.getElementById('bomDropdown');
 							if (existingDropdown) {
 								existingDropdown.remove();
+								return;
 							}
 							
 							// Fetch existing BOMs for this engineering item
@@ -1202,16 +1196,7 @@ $hasEditPermission = can_edit_page('engineering');
 										dropdown.style.pointerEvents = 'auto';
 									}, 10);
 									
-									// Close dropdown when clicking outside
-									setTimeout(function() {
-										document.addEventListener('click', function closeDropdown(e) {
-											if (!dropdown.contains(e.target)) {
-												dropdown.remove();
-												document.removeEventListener('click', closeDropdown);
-											}
-										});
-									}, 0);
-								})
+									})
 								.catch(function(err) {
 									alert('Error loading BOMs: ' + err.message);
 								});
@@ -1219,15 +1204,21 @@ $hasEditPermission = can_edit_page('engineering');
 
 						// Parts and Suppliers functionality
 						var currentItemForParts = null;
+						var partsDropdownBusy = false;
 						var partModalState = { editMode: false, originalPartName: '' };
 
 						function handlePartsClick(item, liElement) {
+							if (partsDropdownBusy) return;
+							partsDropdownBusy = true;
+							setTimeout(function() { partsDropdownBusy = false; }, 100);
+							
 							currentItemForParts = item;
 							
-							// Remove any existing dropdown
+							// Toggle: if already open, close it
 							var existingDropdown = document.getElementById('partsDropdown');
 							if (existingDropdown) {
 								existingDropdown.remove();
+								return;
 							}
 							
 							// Fetch existing parts for this engineering item
@@ -1399,16 +1390,7 @@ $hasEditPermission = can_edit_page('engineering');
 										dropdown.style.pointerEvents = 'auto';
 									}, 10);
 									
-									// Close dropdown when clicking outside
-									setTimeout(function() {
-										document.addEventListener('click', function closeDropdown(e) {
-											if (!dropdown.contains(e.target)) {
-												dropdown.remove();
-												document.removeEventListener('click', closeDropdown);
-											}
-										});
-									}, 0);
-								})
+									})
 								.catch(function(err) {
 									console.error('Error fetching parts:', err);
 								});
