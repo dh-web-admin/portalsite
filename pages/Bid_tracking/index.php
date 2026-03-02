@@ -621,11 +621,12 @@ foreach ($bidColumns as $c) {
                   <button id="clearFiltersBtn" type="button" style="background:#fff;border:1px solid rgba(15,23,42,0.06);color:#0f172a;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer;height:34px;font-size:13px;">Clear</button>
                 </div>
               </div>
-            <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px;border:1px solid #e6edf0;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;width:40px;height:40px;min-width:40px;min-height:40px;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-              <img src="pages/Bid_tracking/images/bell.svg" alt="" style="width:20px;height:20px;display:inline-block;vertical-align:middle;" />
+            <?php $imgBase = ($_SERVER['HTTP_HOST'] === 'localhost') ? '/PortalSite/pages/Bid_tracking/images' : '/pages/Bid_tracking/images'; ?>
+            <button id="enableEmailBtn" class="btn" style="margin-left:auto;padding:8px;border:1px solid #c7d5e8;border-radius:50%;background:#eef3fb;display:flex;align-items:center;justify-content:center;width:40px;height:40px;min-width:40px;min-height:40px;box-shadow:0 2px 8px rgba(91,127,163,0.10);">
+              <img src="<?php echo $imgBase; ?>/bell.svg" alt="" style="width:20px;height:20px;display:inline-block;vertical-align:middle;" />
             </button>
-            <button id="printBtn" class="btn" style="padding:8px;border:1px solid #e6edf0;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;width:40px;height:40px;min-width:40px;min-height:40px;box-shadow:0 2px 8px rgba(0,0,0,0.04);margin-left:8px;">
-              <img src="pages/Bid_tracking/images/print.svg" alt="" style="width:20px;height:20px;display:inline-block;vertical-align:middle;" />
+            <button id="printBtn" class="btn" style="padding:8px;border:1px solid #c7d5e8;border-radius:50%;background:#eef3fb;display:flex;align-items:center;justify-content:center;width:40px;height:40px;min-width:40px;min-height:40px;box-shadow:0 2px 8px rgba(91,127,163,0.10);margin-left:8px;">
+              <img src="<?php echo $imgBase; ?>/print.svg" alt="" style="width:20px;height:20px;display:inline-block;vertical-align:middle;" />
             </button>
             </div>
 
