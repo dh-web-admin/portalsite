@@ -101,6 +101,7 @@ $hasEditPermission = can_edit_page('engineering');
 					<script>
 					// Modal logic for Add Item
 					(function(){
+						var apiBase = window.location.hostname === 'localhost' ? '/PortalSite/api' : '/api';
 						var addBtn = document.getElementById('addItemBtn');
 						var modal = document.getElementById('addItemModal');
 						var saveBtn = document.getElementById('saveItemBtn');
@@ -111,7 +112,7 @@ $hasEditPermission = can_edit_page('engineering');
 
 						// Fetch items from backend on load
 						function fetchItems() {
-							fetch('/PortalSite/api/get_engineering_items.php')
+							fetch(apiBase + '/get_engineering_items.php')
 								.then(function(res) { return res.json(); })
 								.then(function(data) {
 									if (data.success && Array.isArray(data.items)) {
@@ -144,7 +145,7 @@ $hasEditPermission = can_edit_page('engineering');
 						});
 
 						function saveItemToBackend(name) {
-							fetch('/PortalSite/api/add_engineering_item.php', {
+							fetch(apiBase + '/add_engineering_item.php', {
 								method: 'POST',
 								headers: { 'Content-Type': 'application/json' },
 								body: JSON.stringify({ name: name })
@@ -375,7 +376,7 @@ $hasEditPermission = can_edit_page('engineering');
 							document.getElementById('saveEditItemBtn').onclick = function() {
 								var newName = document.getElementById('editItemNameInput').value.trim();
 								if (!newName) { document.getElementById('editItemNameInput').focus(); return; }
-								fetch('/PortalSite/api/update_engineering_item.php', {
+								fetch(apiBase + '/update_engineering_item.php', {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ id: item.id, name: newName })
@@ -393,7 +394,7 @@ $hasEditPermission = can_edit_page('engineering');
 							// Delete
 							document.getElementById('deleteEditItemBtn').onclick = function() {
 								if (!confirm('Are you sure you want to delete this item?')) return;
-								fetch('/PortalSite/api/delete_engineering_item.php', {
+								fetch(apiBase + '/delete_engineering_item.php', {
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({ id: item.id })
