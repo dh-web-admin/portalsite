@@ -82,6 +82,21 @@ $hasEditPermission = can_edit_page('engineering');
 							</div>
 						</div>
 					</div>
+					<!-- Modal for Upload Drawings -->
+					<div id="uploadDrawingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); z-index:1000; align-items:center; justify-content:center;">
+						<div style="background:#fff; border-radius:8px; box-shadow:0 2px 16px #b0b8c1; padding:32px 24px; min-width:420px; max-width:90vw;">
+							<h3 style="margin-top:0; margin-bottom:18px; font-size:1.2em;">Upload Drawings</h3>
+							<div style="margin-bottom:18px;">
+								<label style="display:block; margin-bottom:6px; font-weight:500;">Select Files (multiple allowed)</label>
+								<input id="drawingFilesInput" type="file" multiple accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1;" />
+								<div id="selectedFilesPreview" style="margin-top:8px; font-size:0.9em; color:#666;"></div>
+							</div>
+							<div style="display:flex; gap:12px; justify-content:flex-end;">
+								<button id="uploadDrawingsBtn" style="padding:8px 18px; background:#5b7fa3; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Upload</button>
+								<button id="cancelUploadBtn" style="padding:8px 18px; background:#b0b8c1; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Cancel</button>
+							</div>
+						</div>
+					</div>
 					<style>
     #itemPanel::-webkit-scrollbar {
         width: 8px;
@@ -238,6 +253,8 @@ $hasEditPermission = can_edit_page('engineering');
 							var wrapper = document.createElement('div');
 							wrapper.style.textAlign = 'left';
 							wrapper.style.marginLeft = '0';
+							wrapper.style.width = '100%';
+							wrapper.style.maxWidth = '100%';
 							
 							var titleRow = document.createElement('div');
 							titleRow.style.display = 'flex';
@@ -331,6 +348,8 @@ $hasEditPermission = can_edit_page('engineering');
 							subList.style.margin = '0';
 							subList.style.fontSize = '1em';
 							subList.style.color = '#444';
+							subList.style.width = '100%';
+							subList.style.boxSizing = 'border-box';
 							var labels = ['In house Drawings', 'Bill of materials', 'Parts and Suppliers'];
 							labels.forEach(function(label, idx) {
 								var li = document.createElement('li');
@@ -338,11 +357,14 @@ $hasEditPermission = can_edit_page('engineering');
 								li.style.alignItems = 'center';
 								li.style.gap = '8px';
 								li.style.padding = '6px 0';
+								li.style.position = 'relative';
+								li.style.width = '100%';
 								// Subitem name
 								var span = document.createElement('span');
 								span.textContent = label;
 								span.style.display = 'inline-block';
-								span.style.width = '220px'; // Fixed width for alignment
+								span.style.flex = '0 0 auto';
+								span.style.minWidth = 'auto';
 								span.style.textAlign = 'left';
 								li.appendChild(span);
 								// Chevron icon (SVG)
@@ -351,6 +373,32 @@ $hasEditPermission = can_edit_page('engineering');
 								chevron.style.display = 'inline-flex';
 								chevron.style.alignItems = 'center';
 								chevron.style.justifyContent = 'center';
+								chevron.style.cursor = 'pointer';
+								chevron.style.padding = '4px';
+								chevron.style.borderRadius = '4px';
+								chevron.style.transition = 'background 0.2s';
+								
+								// Add hover effect
+								chevron.addEventListener('mouseenter', function() {
+									chevron.style.background = '#f0f0f0';
+								});
+								chevron.addEventListener('mouseleave', function() {
+									chevron.style.background = 'transparent';
+								});
+								
+								// Add click handler for In house Drawings
+								if (label === 'In house Drawings') {
+									span.style.cursor = 'pointer';
+									span.addEventListener('click', function(e) {
+										e.stopPropagation();
+										handleDrawingsClick(item, li);
+									});
+									chevron.addEventListener('click', function(e) {
+										e.stopPropagation();
+										handleDrawingsClick(item, li);
+									});
+								}
+								
 								li.appendChild(chevron);
 								subList.appendChild(li);
 								if (idx < labels.length - 1) {
@@ -358,7 +406,7 @@ $hasEditPermission = can_edit_page('engineering');
 									hr.style.border = 'none';
 									hr.style.borderTop = '1px solid #d1d5db';
 									hr.style.margin = '2px 0';
-									hr.style.width = '250px';
+									hr.style.width = '100%';
 									hr.style.marginLeft = '0';
 									subList.appendChild(hr);
 								}
@@ -414,6 +462,307 @@ $hasEditPermission = can_edit_page('engineering');
 								editModal.style.display = 'none';
 							};
 						}
+
+						// Handle drawings dropdown click
+						var currentItemForDrawings = null;
+						function handleDrawingsClick(item, liElement) {
+							currentItemForDrawings = item;
+							
+							// Remove any existing dropdown
+							var existingDropdown = document.getElementById('drawingsDropdown');
+							if (existingDropdown) {
+								existingDropdown.remove();
+							}
+							
+							// Fetch existing drawings
+							fetch(apiBase + '/get_engineering_drawings.php?item_id=' + item.id)
+								.then(function(res) { return res.json(); })
+								.then(function(data) {
+									var dropdown = document.createElement('div');
+									dropdown.id = 'drawingsDropdown';
+									dropdown.style.position = 'relative';
+									dropdown.style.display = 'block';
+									dropdown.style.background = '#f7f9fc';
+									dropdown.style.border = '1px solid #d1d5db';
+									dropdown.style.borderTop = 'none';
+									dropdown.style.borderRadius = '0 0 6px 6px';
+									dropdown.style.boxShadow = 'none';
+									dropdown.style.width = '100%';
+									dropdown.style.maxWidth = '100%';
+									dropdown.style.zIndex = '1';
+									dropdown.style.margin = '0 0 10px 0';
+									dropdown.style.padding = '10px 0';
+									dropdown.style.boxSizing = 'border-box';
+									dropdown.style.overflow = 'hidden';
+									dropdown.style.maxHeight = '0';
+									dropdown.style.opacity = '0';
+									dropdown.style.transform = 'translateY(-4px)';
+									dropdown.style.transition = 'max-height 0.24s ease, opacity 0.2s ease, transform 0.2s ease';
+									dropdown.style.pointerEvents = 'none';
+									
+									var hasDrawings = data.success && data.drawings && data.drawings.length > 0;
+									if (hasDrawings) {
+										// Group drawings by version so each upload batch is shown as one boxed section
+										var drawingsByVersion = {};
+										data.drawings.forEach(function(drawing) {
+											if (!drawingsByVersion[drawing.version]) {
+												drawingsByVersion[drawing.version] = [];
+											}
+											drawingsByVersion[drawing.version].push(drawing);
+										});
+
+										var sortedVersions = Object.keys(drawingsByVersion)
+											.sort(function(a, b) {
+												return parseInt(b.replace('v', ''), 10) - parseInt(a.replace('v', ''), 10);
+											});
+
+										function createVersionBox(versionKey, headerText, withPreviousToggle, previousContainer, isCurrentVersion) {
+											var versionBox = document.createElement('div');
+											versionBox.style.margin = '8px 12px';
+											versionBox.style.width = '50%';
+											versionBox.style.maxWidth = '920px';
+											versionBox.style.border = '1px solid #d7dce4';
+											versionBox.style.borderRadius = '6px';
+											versionBox.style.background = '#ffffff';
+
+											var versionHeader = document.createElement('div');
+											versionHeader.style.padding = '8px 12px';
+											versionHeader.style.fontWeight = '700';
+											versionHeader.style.fontSize = '0.92em';
+											versionHeader.style.color = '#334155';
+											versionHeader.style.borderBottom = '1px solid #e6ebf2';
+
+											versionHeader.style.display = 'flex';
+											versionHeader.style.alignItems = 'center';
+											versionHeader.style.gap = '12px';
+
+											var headerTitle = document.createElement('span');
+											headerTitle.textContent = headerText;
+											versionHeader.appendChild(headerTitle);
+
+											var downloadAllBtn = document.createElement('span');
+											downloadAllBtn.textContent = 'Download';
+											downloadAllBtn.style.fontWeight = '600';
+											downloadAllBtn.style.fontSize = '0.88em';
+											downloadAllBtn.style.color = '#5b7fa3';
+											downloadAllBtn.style.cursor = 'pointer';
+											downloadAllBtn.style.marginLeft = withPreviousToggle ? '0' : 'auto';
+											downloadAllBtn.addEventListener('click', function(e) {
+												e.stopPropagation();
+												var zipUrl = apiBase + '/download_engineering_drawings_zip.php?item_id=' + encodeURIComponent(item.id) + '&version=' + encodeURIComponent(versionKey);
+												window.location.href = zipUrl;
+											});
+											versionHeader.appendChild(downloadAllBtn);
+
+											if (withPreviousToggle) {
+												var previousToggle = document.createElement('span');
+												previousToggle.textContent = 'Click to view previous versions';
+												previousToggle.style.fontWeight = '600';
+												previousToggle.style.fontSize = '0.88em';
+												previousToggle.style.color = '#5b7fa3';
+												previousToggle.style.cursor = 'pointer';
+												previousToggle.style.marginLeft = 'auto';
+												previousToggle.addEventListener('click', function() {
+													if (!previousContainer) return;
+													var isHidden = previousContainer.style.display === 'none';
+													previousContainer.style.display = isHidden ? 'block' : 'none';
+													previousToggle.textContent = isHidden ? 'Hide previous versions' : 'Click to view previous versions';
+													dropdown.style.maxHeight = (dropdown.scrollHeight + 40) + 'px';
+												});
+												versionHeader.appendChild(previousToggle);
+											}
+
+											versionBox.appendChild(versionHeader);
+
+											drawingsByVersion[versionKey].forEach(function(drawing, index) {
+												var drawingItem = document.createElement('div');
+												drawingItem.style.padding = '8px 12px';
+												drawingItem.style.cursor = 'pointer';
+												drawingItem.style.fontSize = '0.93em';
+												drawingItem.style.color = '#1f2937';
+												drawingItem.textContent = drawing.filename;
+
+												if (index < drawingsByVersion[versionKey].length - 1) {
+													drawingItem.style.borderBottom = '1px solid #f1f5f9';
+												}
+
+												drawingItem.addEventListener('mouseenter', function() {
+													drawingItem.style.background = '#f8fafc';
+												});
+												drawingItem.addEventListener('mouseleave', function() {
+													drawingItem.style.background = 'transparent';
+												});
+												drawingItem.addEventListener('click', function() {
+													window.open(drawing.file_url, '_blank');
+													dropdown.remove();
+												});
+
+												versionBox.appendChild(drawingItem);
+											});
+
+											return versionBox;
+										}
+
+										var currentVersionKey = sortedVersions[0];
+										var currentDisplayVersion = currentVersionKey.toUpperCase();
+										var previousContainer = document.createElement('div');
+										previousContainer.style.display = 'none';
+
+										var currentBox = createVersionBox(
+											currentVersionKey,
+											'Current Version: ' + currentDisplayVersion,
+											sortedVersions.length > 1,
+											previousContainer,
+											true
+										);
+										dropdown.appendChild(currentBox);
+
+										sortedVersions.slice(1).forEach(function(versionKey) {
+											var displayVersion = versionKey.toUpperCase();
+											previousContainer.appendChild(
+												createVersionBox(versionKey, 'Version: ' + displayVersion, false, null, false)
+											);
+										});
+
+										dropdown.appendChild(previousContainer);
+										
+										// Add separator
+										var separator = document.createElement('div');
+										separator.style.borderTop = '1px solid #e5e7eb';
+										separator.style.margin = '4px 0';
+										dropdown.appendChild(separator);
+									}
+
+									if (!hasDrawings) {
+										var emptyState = document.createElement('div');
+										emptyState.textContent = 'No drawings yet. Click add.';
+										emptyState.style.padding = '10px 16px 6px 16px';
+										emptyState.style.fontSize = '0.92em';
+										emptyState.style.color = '#6b7280';
+										emptyState.style.fontStyle = 'italic';
+										dropdown.appendChild(emptyState);
+									}
+									
+									// Add "Add drawings" option
+									var addOption = document.createElement('div');
+									addOption.textContent = hasDrawings ? '+ Update drawings' : '+ Add drawings';
+									addOption.style.padding = '10px 16px 12px 16px';
+									addOption.style.cursor = 'pointer';
+									addOption.style.fontWeight = '600';
+									addOption.style.color = '#5b7fa3';
+									addOption.style.fontSize = '0.95em';
+									addOption.style.borderTop = hasDrawings ? 'none' : '1px solid #e5e7eb';
+									addOption.style.borderBottom = hasDrawings ? '1px solid #e5e7eb' : 'none';
+									addOption.addEventListener('mouseenter', function() {
+										addOption.style.background = '#f3f4f6';
+									});
+									addOption.addEventListener('mouseleave', function() {
+										addOption.style.background = 'transparent';
+									});
+									addOption.addEventListener('click', function() {
+										dropdown.remove();
+										openUploadDrawingsModal();
+									});
+									dropdown.appendChild(addOption);
+									if (hasDrawings && dropdown.firstChild) {
+										dropdown.insertBefore(addOption, dropdown.firstChild);
+									}
+									
+									if (liElement.parentNode) {
+										liElement.parentNode.insertBefore(dropdown, liElement.nextSibling);
+									}
+									
+									// Trigger animation
+									setTimeout(function() {
+										dropdown.style.maxHeight = (dropdown.scrollHeight + 40) + 'px';
+										dropdown.style.opacity = '1';
+										dropdown.style.transform = 'translateY(0)';
+										dropdown.style.pointerEvents = 'auto';
+									}, 10);
+									
+									// Close dropdown when clicking outside
+									setTimeout(function() {
+										document.addEventListener('click', function closeDropdown(e) {
+											if (!dropdown.contains(e.target)) {
+												dropdown.remove();
+												document.removeEventListener('click', closeDropdown);
+											}
+										});
+									}, 0);
+								});
+						}
+
+						function openUploadDrawingsModal() {
+							var modal = document.getElementById('uploadDrawingsModal');
+							var filesInput = document.getElementById('drawingFilesInput');
+							var preview = document.getElementById('selectedFilesPreview');
+							
+							filesInput.value = '';
+							preview.innerHTML = '';
+							modal.style.display = 'flex';
+							
+							// Show selected files
+							filesInput.addEventListener('change', function() {
+								var files = filesInput.files;
+								if (files.length > 0) {
+									preview.innerHTML = files.length + ' file(s) selected: ' + Array.from(files).map(function(f) { return f.name; }).join(', ');
+								} else {
+									preview.innerHTML = '';
+								}
+							});
+						}
+
+						// Upload drawings button handler
+						document.getElementById('uploadDrawingsBtn').addEventListener('click', function() {
+							var filesInput = document.getElementById('drawingFilesInput');
+							var files = filesInput.files;
+							
+							if (files.length === 0) {
+								alert('Please select at least one file');
+								return;
+							}
+							
+							if (!currentItemForDrawings) {
+								alert('No item selected');
+								return;
+							}
+							
+							var formData = new FormData();
+							formData.append('item_id', currentItemForDrawings.id);
+							for (var i = 0; i < files.length; i++) {
+								formData.append('drawings[]', files[i]);
+							}
+							
+							// Show uploading state
+							document.getElementById('uploadDrawingsBtn').textContent = 'Uploading...';
+							document.getElementById('uploadDrawingsBtn').disabled = true;
+							
+							fetch(apiBase + '/upload_engineering_drawings.php', {
+								method: 'POST',
+								body: formData
+							})
+							.then(function(res) { return res.json(); })
+							.then(function(data) {
+								if (data.success) {
+									document.getElementById('uploadDrawingsModal').style.display = 'none';
+									alert('Drawings uploaded successfully!');
+								} else {
+									alert(data.message || 'Failed to upload drawings');
+								}
+							})
+							.catch(function(err) {
+								alert('Upload failed: ' + err.message);
+							})
+							.finally(function() {
+								document.getElementById('uploadDrawingsBtn').textContent = 'Upload';
+								document.getElementById('uploadDrawingsBtn').disabled = false;
+							});
+						});
+
+						// Cancel upload button handler
+						document.getElementById('cancelUploadBtn').addEventListener('click', function() {
+							document.getElementById('uploadDrawingsModal').style.display = 'none';
+						});
 					})();
 					// Dynamically set the link for View equipments button
 					(function() {
