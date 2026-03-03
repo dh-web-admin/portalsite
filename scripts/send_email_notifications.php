@@ -104,7 +104,7 @@ try {
     $ures = $conn->query("
         SELECT u.email, b.preferred_days, u.name
         FROM bids_email b
-        LEFT JOIN users u ON u.email = b.email
+        LEFT JOIN users u ON u.email COLLATE utf8mb4_0900_ai_ci = b.email COLLATE utf8mb4_0900_ai_ci
         WHERE b.opted_in = 1
     ");
     while ($u = $ures->fetch_assoc()) {
