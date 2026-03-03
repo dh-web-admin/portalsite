@@ -431,10 +431,12 @@ $hasEditPermission = can_edit_page('engineering');
 							
 							var title = document.createElement('div');
 							title.textContent = item.name;
-							title.style.fontWeight = '500'; // Changed from bold to medium weight
-							title.style.fontSize = '1.05em'; // Slightly reduced from 1.1em
-							title.style.color = '#5a5a5a'; // Softer color instead of default black
-							title.style.letterSpacing = '0.3px'; // Subtle letter spacing for distinction
+							title.style.fontWeight = '700'; // Bold for prominence
+							title.style.fontSize = '1.6em'; // Larger header size
+							title.style.color = '#0f172a'; // Darker, more distinguished color
+							title.style.letterSpacing = '0.5px'; // More letter spacing
+							title.style.paddingBottom = '16px'; // Add padding below
+							title.style.borderBottom = '2px solid #d1d5db'; // Add distinguishing bottom border
 							titleRow.appendChild(title);
 							
 							// Edit button - Try multiple image paths as fallback
