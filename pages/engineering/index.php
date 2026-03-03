@@ -361,7 +361,11 @@ $hasEditPermission = can_edit_page('engineering');
 							itemDetails.innerHTML = '';
 							selectedItem = null;
 							var hasSelectedInList = false;
-							items.forEach(function(item, idx){
+							// Sort items alphabetically by name
+							var sortedItems = items.slice().sort(function(a, b) {
+								return a.name.localeCompare(b.name);
+							});
+							sortedItems.forEach(function(item, idx){
 								var div = document.createElement('div');
 								div.setAttribute('data-item-id', String(item.id));
 								div.textContent = item.name;
@@ -1382,7 +1386,7 @@ $hasEditPermission = can_edit_page('engineering');
 										emptyState.style.fontSize = '0.92em';
 										emptyState.style.color = '#6b7280';
 										emptyState.style.fontStyle = 'italic';
-										dropdown.appendChild(emptyState);
+										dropdown.appendChild(emptyState); 
 									}
 									
 									if (liElement.parentNode) {
