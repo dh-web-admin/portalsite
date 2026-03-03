@@ -3212,6 +3212,7 @@ foreach ($bidColumns as $c) {
           var paginationControlsEl = document.getElementById('paginationControls');
           var currentPage = 1;
           var pageSize = 50;
+          var totalPages = 1;
 
           // Build last 5 years dropdown (auto updates each year)
         (function initYearOptions(){
@@ -3347,12 +3348,12 @@ foreach ($bidColumns as $c) {
               if (currentPage > 1) { currentPage--; applyFiltersAndGrouping(); }
             });
             if (next) next.addEventListener('click', function(){
-              currentPage++; applyFiltersAndGrouping();
+              if (currentPage < totalPages) { currentPage++; applyFiltersAndGrouping(); }
             });
           })();
 
           function renderPaginationControls(totalItems) {
-            var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+            totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
             if (currentPage > totalPages) currentPage = totalPages;
             if (currentPage < 1) currentPage = 1;
 
