@@ -438,6 +438,18 @@ foreach ($bidColumns as $c) {
     #pageBody { flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; }
     /* make only the table container scroll vertically */
     #tableContainer { flex: 1 1 auto; overflow-y: auto; overflow-x: auto; }
+    /* pagination bar */
+    #paginationControls { flex: 0 0 auto; }
+    #paginationBar { flex: 0 0 auto; display:flex; align-items:center; gap:10px; padding:8px 40px 4px 40px; border-bottom: 1px solid #e2e8f0; }
+    #paginationBar .pg-label { font-size:12px; color:#64748b; font-weight:500; letter-spacing:0.03em; text-transform:uppercase; margin-right:2px; }
+    #paginationBar .pg-current { font-size:14px; font-weight:700; color:#0f172a; }
+    #paginationBar .pg-sep { font-size:13px; color:#94a3b8; margin: 0 1px; }
+    #paginationBar .pg-total { font-size:14px; font-weight:600; color:#475569; }
+    #paginationBar .pg-count { font-size:12px; color:#64748b; margin-left:8px; padding-left:10px; border-left:1px solid #e2e8f0; }
+    #paginationBar .pg-count strong { color:#0f172a; font-weight:700; }
+    #paginationPrev, #paginationNext { background:#fff; border:1px solid #cbd5e1; color:#334155; padding:5px 14px; border-radius:7px; font-weight:600; font-size:13px; cursor:pointer; transition:background 0.15s,border-color 0.15s,color 0.15s; margin-left:4px; }
+    #paginationPrev:hover:not([disabled]), #paginationNext:hover:not([disabled]) { background:#f1f5f9; border-color:#94a3b8; color:#0f172a; }
+    #paginationPrev[disabled], #paginationNext[disabled] { opacity:0.38; cursor:not-allowed; }
     /* Ensure sticky table headers stick to the top of the scroller */
     #tableContainer thead th { position: sticky; top: 0; z-index: 20; }
 
@@ -630,6 +642,16 @@ foreach ($bidColumns as $c) {
             </button>
             </div>
 
+          <div id="paginationBar">
+            <span class="pg-label">Page</span>
+            <span id="pgCurrent" class="pg-current">1</span>
+            <span class="pg-sep">of</span>
+            <span id="pgTotal" class="pg-total">1</span>
+            <span id="pgCount" class="pg-count">0 projects loaded</span>
+            <button id="paginationPrev" type="button" disabled>← Prev</button>
+            <button id="paginationNext" type="button" disabled>Next →</button>
+          </div>
+
           <div id="pageBody" style="padding:16px 40px;">
 
             
@@ -639,6 +661,7 @@ foreach ($bidColumns as $c) {
             </div>
 
             <div id="tableContainer" style="overflow:auto;border:1px solid #e6edf0;border-radius:8px;padding:8px;background:#fff;">
+              <div id="filterIndicator" style="display:none;padding:10px 14px;background:#f0f9ff;border:1px solid #bfdbfe;border-radius:6px;margin-bottom:12px;font-size:13px;color:#1e40af;font-weight:500;"></div>
               <?php
                 // Prefetch General Contractor names for any client_winner ids to display friendly names in the table
                 $gcMap = [];
@@ -1080,6 +1103,7 @@ foreach ($bidColumns as $c) {
                 </tbody>
               </table>
             </div>
+
           </div>
 
           <!-- Manage Columns Modal -->
@@ -3185,6 +3209,9 @@ foreach ($bidColumns as $c) {
           var yearFilterTopEl = document.getElementById('yearFilterTop');
           var statusFilterTopEl = document.getElementById('statusFilterTop');
           var orderByEl = document.getElementById('orderBySelect');
+          var paginationControlsEl = document.getElementById('paginationControls');
+          var currentPage = 1;
+          var pageSize = 50;
 
           // Build last 5 years dropdown (auto updates each year)
         (function initYearOptions(){
@@ -3308,6 +3335,42 @@ foreach ($bidColumns as $c) {
             return Math.max(1, count);
           }
 
+          function ensurePaginationControls() {
+            return document.getElementById('paginationBar') || null;
+          }
+
+          // Wire pagination button clicks once
+          (function wirePaginationClicks(){
+            var prev = document.getElementById('paginationPrev');
+            var next = document.getElementById('paginationNext');
+            if (prev) prev.addEventListener('click', function(){
+              if (currentPage > 1) { currentPage--; applyFiltersAndGrouping(); }
+            });
+            if (next) next.addEventListener('click', function(){
+              currentPage++; applyFiltersAndGrouping();
+            });
+          })();
+
+          function renderPaginationControls(totalItems) {
+            var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            var prev = document.getElementById('paginationPrev');
+            var next = document.getElementById('paginationNext');
+            var pgCurrent = document.getElementById('pgCurrent');
+            var pgTotal   = document.getElementById('pgTotal');
+            var pgCount   = document.getElementById('pgCount');
+
+            if (pgCurrent) pgCurrent.textContent = currentPage;
+            if (pgTotal)   pgTotal.textContent   = totalPages;
+            if (pgCount)   pgCount.textContent   = totalItems + ' projects loaded';
+            if (prev) { prev.disabled = (currentPage <= 1); }
+            if (next) { next.disabled = (currentPage >= totalPages); }
+          }
+
+          var lastFilterSignature = '';
+
           // Capture original rows once (source of truth)
           var originalRows = [];
           (function captureRows(){
@@ -3364,6 +3427,12 @@ function applyFiltersAndGrouping() {
   var _order = (orderByEl && orderByEl.value) ? orderByEl.value : (localStorage.getItem ? localStorage.getItem('bidTracking_orderBy') || 'date_asc' : 'date_asc');
   try { if (orderByEl) { try { orderByEl.value = _order; } catch(e){} } } catch(e){}
 
+  var filterSignature = [selectedYear || '', selectedStatus || 'all', _order || 'grouped'].join('|');
+  if (filterSignature !== lastFilterSignature) {
+    currentPage = 1;
+    lastFilterSignature = filterSignature;
+  }
+
   // Flattened list of items (preserve detailRows reference)
   var flatItems = filtered.map(function(it){ return { it: it, date: it.date }; });
 
@@ -3413,8 +3482,15 @@ function applyFiltersAndGrouping() {
       } catch(e) { return cmpDateItems(a,b); }
     });
 
+    var totalItems = flatItems.length;
+    var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    var startIndex = (currentPage - 1) * pageSize;
+    var pagedItems = flatItems.slice(startIndex, startIndex + pageSize);
+
     var prevProj = null;
-    flatItems.forEach(function(w, idx){
+    pagedItems.forEach(function(w, idx){
       var curProj = (w.it.project || '').toString();
       if (idx !== 0 && prevProj !== curProj) {
         var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
@@ -3423,6 +3499,8 @@ function applyFiltersAndGrouping() {
       try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
       prevProj = curProj;
     });
+
+    renderPaginationControls(totalItems);
   } else {
     // grouped-by-status (legacy behavior)
     var prevProj = null;
@@ -3433,7 +3511,14 @@ function applyFiltersAndGrouping() {
       if (si !== sj) return si - sj;
       return cmpDateItems(a,b);
     });
-    flatItems.forEach(function(w, idx){
+    var totalItems = flatItems.length;
+    var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    var startIndex = (currentPage - 1) * pageSize;
+    var pagedItems = flatItems.slice(startIndex, startIndex + pageSize);
+
+    pagedItems.forEach(function(w, idx){
       var curProj = (w.it.project || '').toString();
       if (idx !== 0 && prevProj !== curProj) {
         var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
@@ -3442,6 +3527,8 @@ function applyFiltersAndGrouping() {
       try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
       prevProj = curProj;
     });
+
+    renderPaginationControls(totalItems);
   }
 
   tbody.innerHTML = '';
@@ -3453,6 +3540,8 @@ function applyFiltersAndGrouping() {
 
   // Update project separators after tbody rebuild
   try { updateProjectSeparators(); } catch(e) { console.warn('updateProjectSeparators failed', e); }
+  // Update filter indicator
+  try { updateFilterIndicator(); } catch(e){}
   // re-apply GC highlight if modal is open
   try {
     var modalOpen = document.getElementById('editBidModal') && document.getElementById('editBidModal').style.display === 'flex';
@@ -3462,6 +3551,50 @@ function applyFiltersAndGrouping() {
       try { applyGcWinnerHighlight(pk, cw); } catch(e){}
     }
   } catch(e){}
+}
+
+function updateFilterIndicator() {
+  try {
+    var indicatorDiv = document.getElementById('filterIndicator');
+    if (!indicatorDiv) return;
+
+    var selectedYear = yearFilterEl ? yearFilterEl.value : '';
+    var selectedStatus = statusFilterEl ? statusFilterEl.value : 'all';
+    var selectedOrder = orderByEl ? orderByEl.value : 'grouped';
+
+    var filterParts = [];
+
+    // Check if any filters are applied
+    if (selectedStatus && selectedStatus !== 'all') {
+      filterParts.push(selectedStatus + ' only');
+    }
+
+    if (selectedYear) {
+      filterParts.push(selectedYear + ' only');
+    }
+
+    if (selectedOrder && selectedOrder !== 'grouped') {
+      var orderLabel = '';
+      if (selectedOrder === 'date_asc') orderLabel = 'ordered by bid date (low → high)';
+      else if (selectedOrder === 'date_desc') orderLabel = 'ordered by bid date (high → low)';
+      else if (selectedOrder === 'projectnum_asc') orderLabel = 'ordered by project # (low → high)';
+      else if (selectedOrder === 'projectnum_desc') orderLabel = 'ordered by project # (high → low)';
+      else if (selectedOrder === 'projectname_asc') orderLabel = 'ordered by project name (a → z)';
+      else if (selectedOrder === 'projectname_desc') orderLabel = 'ordered by project name (z → a)';
+
+      filterParts.push(orderLabel);
+    }
+
+    if (filterParts.length > 0) {
+      var displayText = 'Showing: ' + filterParts.join('. ');
+      indicatorDiv.textContent = displayText;
+      indicatorDiv.style.display = 'block';
+    } else {
+      indicatorDiv.style.display = 'none';
+    }
+  } catch(e) {
+    console.warn('updateFilterIndicator error:', e);
+  }
 }
 
         // Populate Client Winner select for a given project key. Keep unique order from visible rows.
