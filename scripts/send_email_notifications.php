@@ -83,7 +83,7 @@ try {
     // Since bid_date is a DATE column, NULL is the only "empty" value that can safely exist.
     $bids = [];
     $bres = $conn->query("
-        SELECT bid_id, bid_date, dhss_project_number
+        SELECT bid_id, bid_date, dhss_project_number, project_name
         FROM bids
         WHERE bid_date IS NOT NULL
           AND bid_date >= CURDATE()
@@ -102,9 +102,10 @@ try {
     // ----------------------------
     $users = [];
     $ures = $conn->query("
-        SELECT email, preferred_days
-        FROM bids_email
-        WHERE opted_in = 1
+        SELECT u.email, b.preferred_days, u.name
+        FROM bids_email b
+        LEFT JOIN users u ON u.email = b.email
+        WHERE b.opted_in = 1
     ");
     while ($u = $ures->fetch_assoc()) {
         $email = trim((string)$u['email']);
@@ -117,6 +118,7 @@ try {
 
         $users[] = [
             'email' => $email,
+            'name' => $u['name'] ?? 'User',
             'preferred' => $preferred,
         ];
     }
@@ -143,10 +145,12 @@ try {
             if (in_array($days, $usr['preferred'], true)) {
                 $toSend[] = [
                     'email' => $usr['email'],
+                    'name' => $usr['name'],
                     'bid_id' => (int)$br['bid_id'],
                     'days_before' => $days,
                     'bid_date' => $br['bid_date'],
-                    'dhss_project_number' => $br['dhss_project_number'] ?? ''
+                    'dhss_project_number' => $br['dhss_project_number'] ?? '',
+                    'project_name' => $br['project_name'] ?? ''
                 ];
             }
         }
@@ -166,10 +170,11 @@ try {
     }
 
     foreach ($grouped as $email => $items) {
-        $lines = [];
+        $userName = '';
+        $bidsByDate = [];
         $toMark = [];
 
-        // Skip already-sent items
+        // Skip already-sent items and group by date
         foreach ($items as $item) {
             $chk = $conn->prepare(
                 "SELECT id FROM bids_email_sent WHERE email = ? AND bid_id = ? AND days_before = ? LIMIT 1"
@@ -184,43 +189,94 @@ try {
                 continue;
             }
 
-            $proj = $item['dhss_project_number'] ?: ('Project ' . $item['bid_id']);
-
-            if ($item['days_before'] === 0) {
-                $lines[] = $proj . ': Bid Today';
-            } elseif ($item['days_before'] === 1) {
-                $lines[] = $proj . ': Bid date in 1 day';
-            } else {
-                $lines[] = $proj . ': Bid date in ' . (int)$item['days_before'] . ' days';
+            // Capture user name from first item
+            if ($userName === '') {
+                $userName = $item['name'] ?: 'User';
             }
 
+            // Group by date
+            $bidsByDate[$item['bid_date']][] = $item;
             $toMark[] = $item;
         }
 
-        if (!count($lines)) {
+        if (!count($toMark)) {
             // Everything for this user was already sent
             continue;
         }
 
-        $subject = 'Bid reminder:';
+        // Sort dates chronologically
+        ksort($bidsByDate);
 
-        $text = implode("\n", $lines);
-        $text .= "\n\n----------------------------------------\n";
-        $text .= "To change your notification days, go to Bid Tracking -> Email Notifications\n";
-        $text .= "If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.";
+        // Build plain text email
+        $textLines = [];
+        $textLines[] = 'Good morning ' . htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') . ',';
+        $textLines[] = '';
+        $textLines[] = 'Daily Bid Updates:';
+        $textLines[] = '';
 
-        $htmlLines = '';
-        foreach ($lines as $ln) {
-            $htmlLines .= '<p>' . htmlspecialchars($ln, ENT_QUOTES, 'UTF-8') . '</p>';
+        $today = new DateTime('today');
+        foreach ($bidsByDate as $bidDate => $bidItems) {
+            $dateObj = new DateTime($bidDate);
+            $days = (int)$today->diff($dateObj)->format('%r%a');
+            $dateStr = $dateObj->format('M j, Y');
+
+            if ($days === 0) {
+                $textLines[] = 'Today: ' . $dateStr;
+            } elseif ($days === 1) {
+                $textLines[] = 'Tomorrow: ' . $dateObj->format('l') . ' | ' . $dateStr;
+            } else {
+                $textLines[] = $dateObj->format('l') . ' | ' . $dateStr;
+            }
+
+            foreach ($bidItems as $bid) {
+                $projNum = $bid['dhss_project_number'] ?: ('Bid ' . $bid['bid_id']);
+                $projName = $bid['project_name'] ? ' – ' . $bid['project_name'] : '';
+                $textLines[] = $projNum . $projName;
+            }
+
+            $textLines[] = '';
         }
-        $html =
-            '<div>' .
-                '<h3>Bid reminder:</h3>' .
-                $htmlLines .
-                '<hr />' .
-                '<p>To change your notification days, go to <strong>Bid Tracking &rarr; Email Notifications</strong></p>' .
-                '<p>If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.</p>' .
+
+        $textLines[] = '----------------------------------------';
+        $textLines[] = 'To change your notification days, go to Bid Tracking -> Email Notifications';
+        $textLines[] = 'If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.';
+
+        $text = implode("\n", $textLines);
+
+        // Build HTML email
+        $htmlBidsContent = '';
+        foreach ($bidsByDate as $bidDate => $bidItems) {
+            $dateObj = new DateTime($bidDate);
+            $days = (int)$today->diff($dateObj)->format('%r%a');
+            $dateStr = $dateObj->format('M j, Y');
+
+            if ($days === 0) {
+                $dayLabel = 'Today: ' . $dateStr;
+            } elseif ($days === 1) {
+                $dayLabel = 'Tomorrow: ' . $dateObj->format('l') . ' | ' . $dateStr;
+            } else {
+                $dayLabel = $dateObj->format('l') . ' | ' . $dateStr;
+            }
+
+            $htmlBidsContent .= '<p><strong>' . htmlspecialchars($dayLabel, ENT_QUOTES, 'UTF-8') . '</strong></p>';
+
+            foreach ($bidItems as $bid) {
+                $projNum = $bid['dhss_project_number'] ?: ('Bid ' . $bid['bid_id']);
+                $projName = $bid['project_name'] ? ' – ' . $bid['project_name'] : '';
+                $htmlBidsContent .= '<p style="margin-left:16px;">' . htmlspecialchars($projNum . $projName, ENT_QUOTES, 'UTF-8') . '</p>';
+            }
+        }
+
+        $html = '<div style="font-family:Arial,sans-serif;color:#333;line-height:1.6;">' .
+            '<p>Good morning ' . htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') . ',</p>' .
+            '<h3 style="color:#0f172a;margin-top:20px;margin-bottom:12px;">Daily Bid Updates:</h3>' .
+            $htmlBidsContent .
+            '<hr style="margin-top:20px;margin-bottom:20px;" />' .
+            '<p>To change your notification days, go to <strong>Bid Tracking &rarr; Email Notifications</strong></p>' .
+            '<p>If you do not want these reminders, you can turn them off in the Bid Tracking settings or contact your administrator.</p>' .
             '</div>';
+
+        $subject = 'Daily Bid Updates';
 
         // Send the email
         $sent = sendMail($email, $subject, $text, $html);
