@@ -1712,17 +1712,17 @@ $hasEditPermission = can_edit_page('engineering');
 											});
 											
 											var deleteBtn = document.createElement('button');
-											deleteBtn.innerHTML = '🗑';
-											deleteBtn.style.padding = '4px 8px';
+											deleteBtn.textContent = '✕';
 											deleteBtn.style.background = 'transparent';
-											deleteBtn.style.border = '1px solid #d1d5db';
-											deleteBtn.style.borderRadius = '4px';
+											deleteBtn.style.border = 'none';
+											deleteBtn.style.color = '#ef4444';
 											deleteBtn.style.cursor = 'pointer';
-											deleteBtn.style.fontSize = '1em';
-											deleteBtn.style.marginLeft = '8px';
+											deleteBtn.style.marginLeft = '16px';
+											deleteBtn.style.marginRight = '8px';
+											deleteBtn.style.fontSize = '15px';
 											deleteBtn.addEventListener('click', function(e) {
 												e.stopPropagation();
-												if (confirm('Delete this material and all its parts?')) {
+												if (confirm('Delete this material?')) {
 													fetch(apiBase + '/delete_engineering_material.php', {
 														method: 'POST',
 														headers: { 'Content-Type': 'application/json' },
@@ -1742,10 +1742,48 @@ $hasEditPermission = can_edit_page('engineering');
 												}
 											});
 											
+											var chevron = document.createElement('span');
+											chevron.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 6L8 9.5L11.5 6" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+											chevron.style.display = 'inline-flex';
+											chevron.style.alignItems = 'center';
+											chevron.style.justifyContent = 'center';
+											chevron.style.cursor = 'pointer';
+											chevron.style.padding = '4px';
+											chevron.style.borderRadius = '4px';
+											chevron.style.transition = 'background 0.2s, transform 0.2s';
+											chevron.addEventListener('mouseenter', function() { chevron.style.background = '#f0f0f0'; });
+											chevron.addEventListener('mouseleave', function() { chevron.style.background = 'transparent'; });
+											
+											// Click handler to toggle parts dropdown (matches server-rendered rows)
+											var newMaterial = { id: data.id, number: data.number, name: data.name };
+											materialRow.addEventListener('click', function(e) {
+												var existingMaterialDropdown = materialWrapper.querySelector('.material-dropdown');
+												var isDropdown = existingMaterialDropdown !== null;
+												if (isDropdown) {
+													existingMaterialDropdown.remove();
+													chevron.style.transform = 'rotate(0deg)';
+												} else {
+													chevron.style.transform = 'rotate(180deg)';
+													var materialDropdown = document.createElement('div');
+													materialDropdown.classList.add('material-dropdown');
+													materialDropdown.style.padding = '12px 16px';
+													materialDropdown.style.background = '#ffffff';
+													materialDropdown.style.borderTop = '2px solid #e5e7eb';
+													materialWrapper.appendChild(materialDropdown);
+													var bd = document.getElementById('bomDropdown');
+													if (bd) bd.style.maxHeight = (bd.scrollHeight + 40) + 'px';
+												}
+												var bd2 = document.getElementById('bomDropdown');
+												if (bd2 && isDropdown) {
+													setTimeout(function() { bd2.style.maxHeight = (bd2.scrollHeight + 40) + 'px'; }, 50);
+												}
+											});
+											
 											materialRow.appendChild(numberSpan);
 											materialRow.appendChild(nameSpan);
 											materialRow.appendChild(addPartsBtn);
 											materialRow.appendChild(deleteBtn);
+											materialRow.appendChild(chevron);
 											materialWrapper.appendChild(materialRow);
 											materialsContainer.appendChild(materialWrapper);
 											
