@@ -1650,10 +1650,12 @@ $hasEditPermission = can_edit_page('engineering');
 													if (existingDropdown) {
 														existingDropdown.remove();
 													}
+													// Reset the busy flag to allow reopening
+													bomDropdownBusy = false;
 													// Wait a bit then reopen
 													setTimeout(function() {
 														handleBillOfMaterialsClick(currentItemForMaterial, li);
-													}, 100);
+													}, 150);
 												}
 											});
 										}
