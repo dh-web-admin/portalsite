@@ -1365,14 +1365,21 @@ $hasEditPermission = can_edit_page('engineering');
 																headers: { 'Content-Type': 'application/json' },
 																body: JSON.stringify({ id: material.id })
 															})
-															.then(function(r) { return r.json(); })
+															.then(function(r) {
+																return r.text().then(function(text) {
+																	var j = text.indexOf('{"success"');
+																	if (j < 0) j = text.lastIndexOf('{');
+																	try { return JSON.parse(j >= 0 ? text.slice(j) : text); } catch(e) { return {success:false}; }
+																});
+															})
 															.then(function(res) {
 																if (res.success) {
 																	materialWrapper.remove();
 																} else {
 																	alert('Failed to delete material');
 																}
-															});
+															})
+															.catch(function(err) { console.error('Delete error:', err); });
 														}
 													});
 													
@@ -1728,7 +1735,13 @@ $hasEditPermission = can_edit_page('engineering');
 														headers: { 'Content-Type': 'application/json' },
 														body: JSON.stringify({ id: data.id })
 													})
-													.then(function(res) { return res.json(); })
+													.then(function(res) {
+														return res.text().then(function(text) {
+															var j = text.indexOf('{"success"');
+															if (j < 0) j = text.lastIndexOf('{');
+															try { return JSON.parse(j >= 0 ? text.slice(j) : text); } catch(e) { return {success:false}; }
+														});
+													})
 													.then(function(delData) {
 														if (delData.success) {
 															materialWrapper.remove();
