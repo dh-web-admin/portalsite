@@ -2006,7 +2006,12 @@ $hasEditPermission = can_edit_page('engineering');
 								headers: { 'Content-Type': 'application/json' },
 								body: JSON.stringify({ id: currentPartEditId })
 							})
-							.then(function(res) { return res.json(); })
+							.then(function(res) {
+								return res.text().then(function(text) {
+									var j = text.indexOf('{"success"'); if (j < 0) j = text.lastIndexOf('{');
+									try { return JSON.parse(j >= 0 ? text.slice(j) : text); } catch(e) { console.error('Raw:', text); throw new Error('Invalid JSON response from server'); }
+								});
+							})
 							.then(function(data) {
 								if (data.success) {
 									document.getElementById('addMaterialPartModal').style.display = 'none';
