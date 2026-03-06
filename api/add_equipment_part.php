@@ -61,16 +61,18 @@ try {
 
     // Insert into part_specifications for each make
     if (!empty($makes) && is_array($makes)) {
-        $stmt = $conn->prepare("INSERT INTO part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE make = VALUES(make), model = VALUES(model), other_numbers = VALUES(other_numbers), supplier = VALUES(supplier), supplier_name = VALUES(supplier_name), supplier_number = VALUES(supplier_number), supplier_email = VALUES(supplier_email), supplier_address = VALUES(supplier_address), supplier_price = VALUES(supplier_price)");
+        $stmt = $conn->prepare("INSERT INTO part_specifications (part_name, make, model, other_numbers, make_lnk, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price, supplier_lnk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE make = VALUES(make), model = VALUES(model), other_numbers = VALUES(other_numbers), make_lnk = VALUES(make_lnk), supplier = VALUES(supplier), supplier_name = VALUES(supplier_name), supplier_number = VALUES(supplier_number), supplier_email = VALUES(supplier_email), supplier_address = VALUES(supplier_address), supplier_price = VALUES(supplier_price), supplier_lnk = VALUES(supplier_lnk)");
         
         foreach ($makes as $make) {
             if (!empty($make['make']) && !empty($make['partNumber'])) {
                 $otherNumbers = isset($make['otherNumbers']) ? trim($make['otherNumbers']) : '';
+                $makeLnk = isset($make['makeLnk']) ? trim($make['makeLnk']) : '';
                 $supplier = isset($make['supplier']) ? trim($make['supplier']) : '';
                 $supplierName = isset($make['supplierName']) ? trim($make['supplierName']) : '';
                 $supplierNumber = isset($make['supplierNumber']) ? trim($make['supplierNumber']) : '';
                 $supplierEmail = isset($make['supplierEmail']) ? trim($make['supplierEmail']) : '';
                 $supplierAddress = isset($make['supplierAddress']) ? trim($make['supplierAddress']) : '';
+                $supplierLnk = isset($make['supplierLnk']) ? trim($make['supplierLnk']) : '';
                 $supplierPrice = null;
                 if (array_key_exists('supplierPrice', $make)) {
                     $supplierPrice = $make['supplierPrice'];
@@ -82,7 +84,7 @@ try {
                     }
                 }
                 
-                $stmt->bind_param('ssssssssss', $partNumber, $make['make'], $make['partNumber'], $otherNumbers, $supplier, $supplierName, $supplierNumber, $supplierEmail, $supplierAddress, $supplierPrice);
+                $stmt->bind_param('ssssssssssss', $partNumber, $make['make'], $make['partNumber'], $otherNumbers, $makeLnk, $supplier, $supplierName, $supplierNumber, $supplierEmail, $supplierAddress, $supplierPrice, $supplierLnk);
                 $stmt->execute();
             }
         }

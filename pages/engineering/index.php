@@ -176,6 +176,10 @@ $hasEditPermission = can_edit_page('engineering');
 											<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Other Numbers</label>
 											<input type="text" class="make-other-numbers" placeholder="12345, 45657, 76876876" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 										</div>
+										<div style="margin-top:10px;">
+											<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>
+											<input type="text" class="make-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+										</div>
 										<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">
 											<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">
 												<div style="font-size:12px;font-weight:600;color:#0f172a;">Supplier Details:</div>
@@ -210,6 +214,14 @@ $hasEditPermission = can_edit_page('engineering');
 														<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Address</label>
 														<input type="text" class="make-supplier-address" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 													</div>
+													<div>
+														<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Supplier Part Number</label>
+														<input type="text" class="make-supplier-part-number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+													</div>
+													<div>
+														<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>
+														<input type="text" class="make-supplier-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+													</div>
 												</div>
 											</div>
 										</div>
@@ -224,6 +236,78 @@ $hasEditPermission = can_edit_page('engineering');
 									<button type="submit" style="padding:10px 18px;background:#2563eb;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;">Save Part</button>
 								</div>
 							</form>
+						</div>
+					</div>
+					<!-- Modal for Add Member Assembly -->
+					<div id="addMaterialModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); z-index:1000; align-items:center; justify-content:center;">
+						<div style="background:#fff; border-radius:8px; box-shadow:0 2px 16px #b0b8c1; padding:32px 24px; min-width:380px; max-width:90vw;">
+							<div style="margin-bottom:20px;">
+								<h3 style="margin:0; margin-bottom:4px; font-size:1.2em;">Add Member Assembly</h3>
+								<div id="materialNumberHeader" style="font-size:0.9em; color:#64748b; font-weight:500;">Number: #...</div>
+							</div>
+							<div style="margin-bottom:18px;">
+								<label style="display:block; margin-bottom:6px; font-weight:500;">Name *</label>
+								<input id="materialNameInput" type="text" placeholder="Enter material name" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+							</div>
+							<div style="display:flex; gap:12px; justify-content:flex-end;">
+								<button id="saveMaterialBtn" style="padding:8px 18px; background:#5b7fa3; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Save</button>
+								<button id="cancelMaterialBtn" style="padding:8px 18px; background:#b0b8c1; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Cancel</button>
+							</div>
+						</div>
+					</div>
+					<!-- Modal for Add/Edit Material Part -->
+					<div id="addMaterialPartModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); z-index:1001; align-items:center; justify-content:center; overflow-y:auto;">
+						<div style="background:#fff; border-radius:8px; box-shadow:0 2px 16px #b0b8c1; padding:32px 24px; min-width:600px; max-width:90vw; margin:20px auto;">
+							<div style="margin-bottom:20px;">
+								<h3 id="materialPartModalTitle" style="margin:0; margin-bottom:4px; font-size:1.2em;">Add Part</h3>
+								<div id="materialPartNumberHeader" style="font-size:0.9em; color:#64748b; font-weight:500;">Number: #...</div>
+								<div style="margin-top:12px; padding:8px 12px; background:#f0f9ff; border-left:3px solid #3b82f6; border-radius:4px;">
+									<span style="font-size:0.85em; color:#1e40af; font-style:italic;">All unit of measurements are in inches</span>
+								</div>
+							</div>
+							<div style="display:grid; grid-template-columns: 1fr 1fr; gap:18px;">
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Name *</label>
+									<input id="materialPartNameInput" type="text" placeholder="Enter part name" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Make</label>
+									<input id="materialPartMakeInput" type="text" placeholder="Enter make" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Part Number</label>
+									<input id="materialPartNumberInput" type="text" placeholder="Enter part number" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Material Type</label>
+									<input id="materialPartTypeInput" type="text" placeholder="Enter material type" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Thickness</label>
+									<input id="materialPartThicknessInput" type="text" placeholder="Enter thickness" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Length</label>
+									<input id="materialPartLengthInput" type="text" placeholder="Enter length" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Width</label>
+									<input id="materialPartWidthInput" type="text" placeholder="Enter width" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Area</label>
+									<input id="materialPartAreaInput" type="text" placeholder="Enter area" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+								<div>
+									<label style="display:block; margin-bottom:6px; font-weight:500;">Quantity</label>
+									<input id="materialPartQuantityInput" type="text" placeholder="Enter quantity" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
+								</div>
+							</div>
+							<div style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px;">
+								<button id="deleteMaterialPartBtn" style="display:none; padding:8px 18px; background:#ef4444; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Delete</button>
+								<button id="saveMaterialPartBtn" style="padding:8px 18px; background:#5b7fa3; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Save</button>
+								<button id="cancelMaterialPartBtn" style="padding:8px 18px; background:#b0b8c1; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Cancel</button>
+							</div>
 						</div>
 					</div>
 					<style>
@@ -1157,55 +1241,339 @@ $hasEditPermission = can_edit_page('engineering');
 									}
 
 									if (!hasBoms) {
-										var emptyState = document.createElement('div');
-										emptyState.textContent = 'No BOMs available. Click add.';
-										emptyState.style.padding = '10px 16px 6px 16px';
-										emptyState.style.fontSize = '0.92em';
-										emptyState.style.color = '#6b7280';
-										emptyState.style.fontStyle = 'italic';
-										dropdown.appendChild(emptyState);
+										var emptyStatePlaceholder = document.createElement('div');
+										emptyStatePlaceholder.id = 'bomEmptyState';
+										emptyStatePlaceholder.style.display = 'none'; // Hidden by default, will show only if no materials
+										emptyStatePlaceholder.textContent = 'No BOMs available.';
+										emptyStatePlaceholder.style.padding = '10px 16px 6px 16px';
+										emptyStatePlaceholder.style.fontSize = '0.92em';
+										emptyStatePlaceholder.style.color = '#6b7280';
+										emptyStatePlaceholder.style.fontStyle = 'italic';
+										dropdown.appendChild(emptyStatePlaceholder);
 									}
 
-									// "+ Update BOM" (permission required) or "+ Add BOM"
-									var shouldShowBomOption = !hasBoms || (hasBoms && window.hasEditEngineeringPermission === true);
-									if (shouldShowBomOption) {
-										var addOption = document.createElement('div');
-										addOption.textContent = hasBoms ? '+ Update BOM' : '+ Add BOM';
-										addOption.style.padding = '10px 16px 12px 16px';
-										addOption.style.cursor = 'pointer';
-										addOption.style.fontWeight = '600';
-										addOption.style.color = '#5b7fa3';
-										addOption.style.fontSize = '0.95em';
-										addOption.style.borderTop = hasBoms ? 'none' : '1px solid #e5e7eb';
-										addOption.style.borderBottom = hasBoms ? '1px solid #e5e7eb' : 'none';
-										addOption.addEventListener('mouseenter', function() {
-											addOption.style.background = '#f3f4f6';
-										});
-										addOption.addEventListener('mouseleave', function() {
-											addOption.style.background = 'transparent';
-										});
-										addOption.addEventListener('click', function() {
-											dropdown.remove();
-											openUploadBomModal();
-										});
-										if (hasBoms && dropdown.firstChild) {
-											dropdown.insertBefore(addOption, dropdown.firstChild);
-										} else {
-											dropdown.appendChild(addOption);
-										}
-									}
+									// Add materials section
+									var materialsHeader = document.createElement('div');
+									materialsHeader.style.padding = '10px 16px 6px 16px';
+									materialsHeader.style.fontWeight = '700';
+									materialsHeader.style.fontSize = '0.92em';
+									materialsHeader.style.color = '#334155';
+									materialsHeader.style.display = 'flex';
+									materialsHeader.style.justifyContent = 'space-between';
+									materialsHeader.style.alignItems = 'center';
+									materialsHeader.style.borderTop = '1px solid #e5e7eb';
+									materialsHeader.style.marginTop = '8px';
+									materialsHeader.style.paddingTop = '12px';
+									
+									// Add Member Assembly button
+									var addMemberBtn = document.createElement('button');
+									addMemberBtn.textContent = '+ Add Member Assembly';
+									addMemberBtn.style.padding = '4px 12px';
+									addMemberBtn.style.background = '#5b7fa3';
+									addMemberBtn.style.color = '#fff';
+									addMemberBtn.style.border = 'none';
+									addMemberBtn.style.borderRadius = '4px';
+									addMemberBtn.style.fontWeight = '600';
+									addMemberBtn.style.fontSize = '0.85em';
+									addMemberBtn.style.cursor = 'pointer';
+									addMemberBtn.style.marginRight = '12px';
+									addMemberBtn.addEventListener('click', function(e) {
+										e.stopPropagation();
+										openAddMaterialModal(item);
+									});
+									materialsHeader.appendChild(addMemberBtn);
+									
+									var materialsTitle = document.createElement('span');
+									materialsTitle.textContent = 'Materials';
+									materialsHeader.appendChild(materialsTitle);
+									
+									dropdown.appendChild(materialsHeader);
 									
 									if (liElement.parentNode) {
 										liElement.parentNode.insertBefore(dropdown, liElement.nextSibling);
 									}
 									
-									// Trigger animation
-									setTimeout(function() {
-										dropdown.style.maxHeight = (dropdown.scrollHeight + 40) + 'px';
-										dropdown.style.opacity = '1';
-										dropdown.style.transform = 'translateY(0)';
-										dropdown.style.pointerEvents = 'auto';
-									}, 10);
+									// Fetch and display existing materials
+									fetch(apiBase + '/get_engineering_materials.php?item_id=' + item.id)
+										.then(function(res) { return res.json(); })
+										.then(function(materialData) {
+											if (materialData.success && materialData.materials && materialData.materials.length > 0) {
+												var materialsContainer = document.createElement('div');
+												materialsContainer.style.padding = '6px 12px 10px 12px';
+												
+												materialData.materials.forEach(function(material) {
+																	// Create a wrapper to bundle material and its parts
+																	var materialWrapper = document.createElement('div');
+																	materialWrapper.classList.add('material-wrapper');
+																	materialWrapper.style.border = '2px solid #d1d5db';
+																	materialWrapper.style.borderRadius = '6px';
+																	materialWrapper.style.marginBottom = '8px';
+																	materialWrapper.style.overflow = 'hidden';
+																	
+																	var materialRow = document.createElement('div');
+																	materialRow.setAttribute('data-material-id', material.id);
+																	materialRow.style.padding = '10px 12px';
+																	materialRow.style.display = 'flex';
+																	materialRow.style.alignItems = 'center';
+																	materialRow.style.fontSize = '0.93em';
+																	materialRow.style.color = '#1f2937';
+																	materialRow.style.background = '#f9fafb';
+																	materialRow.style.cursor = 'pointer';
+													
+													var numberSpan = document.createElement('span');
+													numberSpan.textContent = '#' + material.number;
+													numberSpan.style.fontWeight = '700';
+													numberSpan.style.color = '#5b7fa3';
+													numberSpan.style.marginRight = '12px';
+													numberSpan.style.minWidth = '50px';
+													
+													var nameSpan = document.createElement('span');
+													nameSpan.textContent = material.name;
+													nameSpan.style.flex = '1';
+													
+													// Add Parts button
+													var addPartsBtn = document.createElement('button');
+													addPartsBtn.textContent = '+ Add Parts';
+													addPartsBtn.style.padding = '4px 12px';
+													addPartsBtn.style.background = '#5b7fa3';
+													addPartsBtn.style.color = '#fff';
+													addPartsBtn.style.border = 'none';
+													addPartsBtn.style.borderRadius = '4px';
+													addPartsBtn.style.fontWeight = '600';
+													addPartsBtn.style.fontSize = '0.85em';
+													addPartsBtn.style.cursor = 'pointer';
+													addPartsBtn.style.marginLeft = '12px';
+													addPartsBtn.addEventListener('click', function(e) {
+														e.stopPropagation();
+														openAddMaterialPartModal(material);
+													});
+													
+													var deleteBtn = document.createElement('button');
+													deleteBtn.textContent = '✕';
+													deleteBtn.style.background = 'transparent';
+													deleteBtn.style.border = 'none';
+													deleteBtn.style.color = '#ef4444';
+													deleteBtn.style.cursor = 'pointer';
+													deleteBtn.style.marginLeft = '16px';
+													deleteBtn.style.marginRight = '8px';
+													deleteBtn.style.fontSize = '15px';
+													deleteBtn.addEventListener('click', function(e) {
+														e.stopPropagation();
+														if (confirm('Delete this material?')) {
+															fetch(apiBase + '/delete_engineering_material.php', {
+																method: 'POST',
+																headers: { 'Content-Type': 'application/json' },
+																body: JSON.stringify({ id: material.id })
+															})
+															.then(function(r) { return r.json(); })
+															.then(function(res) {
+																if (res.success) {
+																	handleBillOfMaterialsClick(item, liElement);
+																} else {
+																	alert('Failed to delete material');
+																}
+															});
+														}
+													});
+													
+													// Chevron icon
+													var chevron = document.createElement('span');
+													chevron.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.5 6L8 9.5L11.5 6" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+													chevron.style.display = 'inline-flex';
+													chevron.style.alignItems = 'center';
+													chevron.style.justifyContent = 'center';
+													chevron.style.cursor = 'pointer';
+													chevron.style.padding = '4px';
+													chevron.style.borderRadius = '4px';
+													chevron.style.transition = 'background 0.2s, transform 0.2s';
+													
+													chevron.addEventListener('mouseenter', function() {
+														chevron.style.background = '#f0f0f0';
+													});
+													chevron.addEventListener('mouseleave', function() {
+														chevron.style.background = 'transparent';
+													});
+													
+													// Click handler for entire row to toggle dropdown
+													materialRow.addEventListener('click', function(e) {
+														// Check if there's already a dropdown for this material
+														var existingMaterialDropdown = materialWrapper.querySelector('.material-dropdown');
+														var isDropdown = existingMaterialDropdown !== null;
+														
+														if (isDropdown) {
+															existingMaterialDropdown.remove();
+															chevron.style.transform = 'rotate(0deg)';
+														} else {
+															// Open the dropdown
+															chevron.style.transform = 'rotate(180deg)';
+															
+															// Create dropdown
+															var materialDropdown = document.createElement('div');
+															materialDropdown.classList.add('material-dropdown');
+															materialDropdown.style.padding = '12px 16px';
+															materialDropdown.style.background = '#ffffff';
+															materialDropdown.style.borderTop = '2px solid #e5e7eb';
+															
+															// Append dropdown to wrapper (not materials container)
+															materialWrapper.appendChild(materialDropdown);
+															var bomDropdown = document.getElementById('bomDropdown');
+															if (bomDropdown) {
+																bomDropdown.style.maxHeight = (bomDropdown.scrollHeight + 40) + 'px';
+															}
+															
+															// Fetch and display parts for this material
+															fetch(apiBase + '/get_material_parts.php?material_id=' + material.id)
+																.then(function(res) { return res.json(); })
+																.then(function(partsData) {
+																	if (partsData.success && partsData.parts && partsData.parts.length > 0) {
+																		// Create parts list container
+																		var partsListContainer = document.createElement('div');
+																		partsListContainer.style.marginTop = '8px';
+																		partsListContainer.style.borderTop = '1px solid #e5e7eb';
+																		partsListContainer.style.paddingTop = '8px';
+																		
+																		partsData.parts.forEach(function(part) {
+																			var partRow = document.createElement('div');
+																			partRow.style.padding = '10px 12px 10px 20px';
+																			partRow.style.background = '#fafbfc';
+																			partRow.style.borderRadius = '4px';
+																			partRow.style.marginBottom = '4px';
+																			partRow.style.marginLeft = '8px';
+																			partRow.style.cursor = 'pointer';
+																			partRow.style.fontSize = '0.88em';
+																			partRow.style.display = 'flex';
+																			partRow.style.alignItems = 'center';
+																			partRow.style.gap = '16px';
+																			partRow.style.border = '1px solid #e5e7eb';
+																			partRow.style.borderLeft = '3px solid #5b7fa3';
+																			
+																			// Part number badge
+																			var numberSpan = document.createElement('span');
+																			numberSpan.textContent = '#' + part.number;
+																			numberSpan.style.fontWeight = '700';
+																			numberSpan.style.color = '#5b7fa3';
+																			numberSpan.style.minWidth = '40px';
+																			
+																			// Name (prominent)
+																			var nameSpan = document.createElement('span');
+																			nameSpan.textContent = part.name;
+																			nameSpan.style.color = '#1f2937';
+																			nameSpan.style.fontWeight = '600';
+																			nameSpan.style.minWidth = '120px';
+																			
+																			// Make
+																			var makeSpan = document.createElement('span');
+																			makeSpan.innerHTML = '<span style="color: #6b7280;">Make:</span> ' + (part.make || '-');
+																			makeSpan.style.color = '#1f2937';
+																			makeSpan.style.minWidth = '150px';
+																			
+																			// Material Type
+																			var materialTypeSpan = document.createElement('span');
+																			materialTypeSpan.innerHTML = '<span style="color: #6b7280;">Material Type:</span> ' + (part.material_type || '-');
+																			materialTypeSpan.style.color = '#1f2937';
+																			materialTypeSpan.style.minWidth = '180px';
+																			
+																			// Quantity
+																			var quantitySpan = document.createElement('span');
+																			quantitySpan.innerHTML = '<span style="color: #6b7280;">Quantity:</span> ' + (part.quantity || '-');
+																			quantitySpan.style.color = '#1f2937';
+																			quantitySpan.style.minWidth = '100px';
+																			
+																			// Click for more detail
+																			var detailText = document.createElement('span');
+																			detailText.textContent = 'click for more detail';
+																			detailText.style.color = '#9ca3af';
+																			detailText.style.fontSize = '0.85em';
+																			detailText.style.fontStyle = 'italic';
+																			detailText.style.marginLeft = 'auto';
+																			
+																			partRow.appendChild(numberSpan);
+																			partRow.appendChild(nameSpan);
+																			partRow.appendChild(makeSpan);
+																			partRow.appendChild(materialTypeSpan);
+																			partRow.appendChild(quantitySpan);
+																			partRow.appendChild(detailText);
+																			
+																			// Click to edit
+																			partRow.addEventListener('click', function(e) {
+																				e.stopPropagation();
+																				openEditMaterialPartModal(part, material);
+																			});
+																			
+																			partRow.addEventListener('mouseenter', function() {
+																				partRow.style.background = '#f3f4f6';
+																			});
+																			partRow.addEventListener('mouseleave', function() {
+																				partRow.style.background = '#fafbfc';
+																			});
+																			
+																			partsListContainer.appendChild(partRow);
+																		});
+																		
+																		materialDropdown.appendChild(partsListContainer);
+																		
+																		// Update parent BOM dropdown height after parts are loaded
+																		var bomDropdown = document.getElementById('bomDropdown');
+																		if (bomDropdown) {
+																			setTimeout(function() {
+																				bomDropdown.style.maxHeight = (bomDropdown.scrollHeight + 40) + 'px';
+																			}, 50);
+																		}
+																	}
+																});
+														}
+														
+														// Also adjust height when closing
+														var bomDropdown = document.getElementById('bomDropdown');
+														if (bomDropdown && isDropdown) {
+															setTimeout(function() {
+																bomDropdown.style.maxHeight = (bomDropdown.scrollHeight + 40) + 'px';
+															}, 50);
+														}
+													});
+													
+													materialRow.appendChild(numberSpan);
+													materialRow.appendChild(nameSpan);
+													materialRow.appendChild(addPartsBtn);
+													materialRow.appendChild(deleteBtn);
+													materialRow.appendChild(chevron);
+													materialWrapper.appendChild(materialRow);
+													materialsContainer.appendChild(materialWrapper);
+												});
+												
+												dropdown.appendChild(materialsContainer);
+												
+												// Hide "No BOMs available" message since we have materials
+												var bomEmpty = dropdown.querySelector('#bomEmptyState');
+												if (bomEmpty) {
+													bomEmpty.style.display = 'none';
+												}
+											} else {
+												// Show "No BOMs available" only if there are no BOMs either
+												if (!hasBoms) {
+													var bomEmpty = dropdown.querySelector('#bomEmptyState');
+													if (bomEmpty) {
+														bomEmpty.style.display = 'block';
+													}
+												}
+												
+												var emptyMaterialsState = document.createElement('div');
+												emptyMaterialsState.textContent = 'No materials added yet.';
+												emptyMaterialsState.style.padding = '8px 16px 10px 16px';
+												emptyMaterialsState.style.fontSize = '0.88em';
+												emptyMaterialsState.style.color = '#9ca3af';
+												emptyMaterialsState.style.fontStyle = 'italic';
+												dropdown.appendChild(emptyMaterialsState);
+											}
+											
+											// Trigger animation after materials are loaded
+											setTimeout(function() {
+												dropdown.style.maxHeight = (dropdown.scrollHeight + 40) + 'px';
+												dropdown.style.opacity = '1';
+												dropdown.style.transform = 'translateY(0)';
+												dropdown.style.pointerEvents = 'auto';
+											}, 10);
+										});
 								})
 								.catch(function(err) {
 									alert('Error loading BOMs: ' + err.message);
@@ -1213,6 +1581,328 @@ $hasEditPermission = can_edit_page('engineering');
 								.finally(function() {
 									bomDropdownBusy = false;
 								});
+						}
+
+						// Material Modal functionality
+						var currentItemForMaterial = null;
+						function openAddMaterialModal(item) {
+							currentItemForMaterial = item;
+							var modal = document.getElementById('addMaterialModal');
+							var nameInput = document.getElementById('materialNameInput');
+							var numberHeader = document.getElementById('materialNumberHeader');
+							var saveBtn = document.getElementById('saveMaterialBtn');
+							var cancelBtn = document.getElementById('cancelMaterialBtn');
+							
+							// Clear inputs
+							nameInput.value = '';
+							numberHeader.textContent = 'Number: #...';
+							
+							// Fetch next number
+							fetch(apiBase + '/get_engineering_materials.php?item_id=' + item.id)
+								.then(function(res) { return res.json(); })
+								.then(function(data) {
+									if (data.success) {
+										var maxNumber = 0;
+										if (data.materials && data.materials.length > 0) {
+											data.materials.forEach(function(mat) {
+												if (mat.number > maxNumber) maxNumber = mat.number;
+											});
+										}
+										numberHeader.textContent = 'Number: #' + (maxNumber + 1);
+									}
+								});
+							
+							// Show modal
+							modal.style.display = 'flex';
+							nameInput.focus();
+							
+							// Handle save
+							saveBtn.onclick = function() {
+								var name = nameInput.value.trim();
+								if (!name) {
+									alert('Please enter a material name');
+									nameInput.focus();
+									return;
+								}
+								
+								fetch(apiBase + '/add_engineering_material.php', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ 
+										name: name,
+										item_id: currentItemForMaterial.id 
+									})
+								})
+								.then(function(res) { return res.json(); })
+								.then(function(data) {
+									if (data.success) {
+										modal.style.display = 'none';
+										// Re-open the BOM dropdown to show updated materials
+										var bomLi = document.querySelector('li span');
+										if (bomLi) {
+											// Find the correct li element for Bill of materials
+											var allLis = document.querySelectorAll('#itemDetails li');
+											allLis.forEach(function(li) {
+												var span = li.querySelector('span');
+												if (span && span.textContent === 'Bill of materials') {
+													// Close any existing dropdown first
+													var existingDropdown = document.getElementById('bomDropdown');
+													if (existingDropdown) {
+														existingDropdown.remove();
+													}
+													// Wait a bit then reopen
+													setTimeout(function() {
+														handleBillOfMaterialsClick(currentItemForMaterial, li);
+													}, 100);
+												}
+											});
+										}
+									} else {
+										alert(data.message || 'Failed to add material');
+									}
+								})
+								.catch(function(err) {
+									alert('Error: ' + err.message);
+								});
+							};
+							
+							// Handle cancel
+							cancelBtn.onclick = function() {
+								modal.style.display = 'none';
+							};
+							
+							// Handle clicking outside modal
+							modal.onclick = function(e) {
+								if (e.target === modal) {
+									modal.style.display = 'none';
+								}
+							};
+						}
+
+						// Material Part Modal functionality
+						var currentMaterialForPart = null;
+						var currentPartEditId = null;
+						function openAddMaterialPartModal(material) {
+							currentMaterialForPart = material;
+							currentPartEditId = null;
+							var modal = document.getElementById('addMaterialPartModal');
+							var title = document.getElementById('materialPartModalTitle');
+							var numberHeader = document.getElementById('materialPartNumberHeader');
+							var deleteBtn = document.getElementById('deleteMaterialPartBtn');
+							
+							// Set title
+							title.textContent = 'Add Part';
+							deleteBtn.style.display = 'none';
+							
+							// Clear all inputs
+							document.getElementById('materialPartNameInput').value = '';
+							document.getElementById('materialPartMakeInput').value = '';
+							document.getElementById('materialPartNumberInput').value = '';
+							document.getElementById('materialPartTypeInput').value = '';
+							document.getElementById('materialPartThicknessInput').value = '';
+							document.getElementById('materialPartLengthInput').value = '';
+							document.getElementById('materialPartWidthInput').value = '';
+							document.getElementById('materialPartAreaInput').value = '';
+							document.getElementById('materialPartQuantityInput').value = '';
+							
+							// Fetch next number (material number + letter suffix)
+							fetch(apiBase + '/get_material_parts.php?material_id=' + material.id)
+								.then(function(res) { return res.json(); })
+								.then(function(data) {
+									if (data.success) {
+										var nextSuffix = 'a';
+										if (data.parts && data.parts.length > 0) {
+											var lastPart = data.parts[data.parts.length - 1];
+											var lastNumber = lastPart.number;
+											var match = lastNumber.match(/(\d+)([a-z])$/);
+											if (match) {
+												nextSuffix = String.fromCharCode(match[2].charCodeAt(0) + 1);
+											}
+										}
+										numberHeader.textContent = 'Number: #' + material.number + nextSuffix;
+									}
+								});
+							
+							// Show modal
+							modal.style.display = 'flex';
+							document.getElementById('materialPartNameInput').focus();
+						}
+
+						function openEditMaterialPartModal(part, material) {
+							currentMaterialForPart = material;
+							currentPartEditId = part.id;
+							var modal = document.getElementById('addMaterialPartModal');
+							var title = document.getElementById('materialPartModalTitle');
+							var numberHeader = document.getElementById('materialPartNumberHeader');
+							var deleteBtn = document.getElementById('deleteMaterialPartBtn');
+							
+							// Set title
+							title.textContent = 'Edit Part';
+							deleteBtn.style.display = 'inline-block';
+							
+							// Fill inputs with current values
+							numberHeader.textContent = 'Number: #' + part.number;
+							document.getElementById('materialPartNameInput').value = part.name || '';
+							document.getElementById('materialPartMakeInput').value = part.make || '';
+							document.getElementById('materialPartNumberInput').value = part.part_number || '';
+							document.getElementById('materialPartTypeInput').value = part.material_type || '';
+							document.getElementById('materialPartThicknessInput').value = part.thickness || '';
+							document.getElementById('materialPartLengthInput').value = part.length || '';
+							document.getElementById('materialPartWidthInput').value = part.width || '';
+							document.getElementById('materialPartAreaInput').value = part.area || '';
+							document.getElementById('materialPartQuantityInput').value = part.quantity || '';
+							
+							// Show modal
+							modal.style.display = 'flex';
+							document.getElementById('materialPartNameInput').focus();
+						}
+
+						// Save material part button handler
+						document.getElementById('saveMaterialPartBtn').addEventListener('click', function() {
+							var name = document.getElementById('materialPartNameInput').value.trim();
+							if (!name) {
+								alert('Please enter a part name');
+								document.getElementById('materialPartNameInput').focus();
+								return;
+							}
+							
+							var partData = {
+								name: name,
+								make: document.getElementById('materialPartMakeInput').value.trim(),
+								part_number: document.getElementById('materialPartNumberInput').value.trim(),
+								material_type: document.getElementById('materialPartTypeInput').value.trim(),
+								thickness: document.getElementById('materialPartThicknessInput').value.trim(),
+								length: document.getElementById('materialPartLengthInput').value.trim(),
+								width: document.getElementById('materialPartWidthInput').value.trim(),
+								area: document.getElementById('materialPartAreaInput').value.trim(),
+								quantity: document.getElementById('materialPartQuantityInput').value.trim()
+							};
+							
+							if (currentPartEditId) {
+								// Update existing part
+								partData.id = currentPartEditId;
+								fetch(apiBase + '/update_material_part.php', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify(partData)
+								})
+								.then(function(res) {
+									return res.text().then(function(text) {
+										console.log('Raw update response:', text);
+										try {
+											return JSON.parse(text);
+										} catch (e) {
+											console.error('JSON parse error:', e);
+											console.error('Response text was:', text);
+											throw new Error('Invalid JSON response from server');
+										}
+									});
+								})
+								.then(function(data) {
+									if (data.success) {
+										document.getElementById('addMaterialPartModal').style.display = 'none';
+										// Refresh the material dropdown to show updated parts
+										refreshMaterialDropdown(currentMaterialForPart);
+									} else {
+										alert(data.message || 'Failed to update part');
+									}
+								})
+								.catch(function(err) {
+									console.error('Error:', err);
+									alert('Error: ' + err.message);
+								});
+							} else {
+								// Add new part
+								partData.material_id = currentMaterialForPart.id;
+								fetch(apiBase + '/add_material_part.php', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify(partData)
+								})
+								.then(function(res) {
+									return res.text().then(function(text) {
+										console.log('Raw response:', text);
+										try {
+											return JSON.parse(text);
+										} catch (e) {
+											console.error('JSON parse error:', e);
+											console.error('Response text was:', text);
+											throw new Error('Invalid JSON response from server');
+										}
+									});
+								})
+								.then(function(data) {
+									if (data.success) {
+										document.getElementById('addMaterialPartModal').style.display = 'none';
+										// Refresh the material dropdown to show new parts
+										refreshMaterialDropdown(currentMaterialForPart);
+									} else {
+										alert(data.message || 'Failed to add part');
+									}
+								})
+								.catch(function(err) {
+									console.error('Error:', err);
+									alert('Error: ' + err.message);
+								});
+							}
+						});
+
+						// Delete material part button handler
+						document.getElementById('deleteMaterialPartBtn').addEventListener('click', function() {
+							if (!currentPartEditId) return;
+							if (!confirm('Are you sure you want to delete this part?')) return;
+							
+							fetch(apiBase + '/delete_material_part.php', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify({ id: currentPartEditId })
+							})
+							.then(function(res) { return res.json(); })
+							.then(function(data) {
+								if (data.success) {
+									document.getElementById('addMaterialPartModal').style.display = 'none';
+									refreshMaterialDropdown(currentMaterialForPart);
+								} else {
+									alert(data.message || 'Failed to delete part');
+								}
+							});
+						});
+
+						// Cancel material part button handler
+						document.getElementById('cancelMaterialPartBtn').addEventListener('click', function() {
+							document.getElementById('addMaterialPartModal').style.display = 'none';
+						});
+
+						// Click outside modal to close
+						document.getElementById('addMaterialPartModal').addEventListener('click', function(e) {
+							if (e.target === this) {
+								this.style.display = 'none';
+							}
+						});
+
+						// Helper function to refresh material dropdown with parts
+						function refreshMaterialDropdown(material) {
+							// Find the material row in the current BOM dropdown
+							var bomDropdown = document.getElementById('bomDropdown');
+							if (!bomDropdown) return;
+							
+							// Find the Bill of materials li element
+							var allLis = document.querySelectorAll('#itemDetails li');
+							var bomLi = null;
+							allLis.forEach(function(li) {
+								var span = li.querySelector('span');
+								if (span && span.textContent === 'Bill of materials') {
+									bomLi = li;
+								}
+							});
+							
+							if (bomLi) {
+								// Close and reopen the BOM dropdown
+								bomDropdown.remove();
+								setTimeout(function() {
+									handleBillOfMaterialsClick(currentItemForBom, bomLi);
+								}, 100);
+							}
 						}
 
 						// Parts and Suppliers functionality
@@ -1301,83 +1991,101 @@ $hasEditPermission = can_edit_page('engineering');
 													make: part.make,
 													partNumber: part.model || '',
 													otherNumbers: part.other_numbers || '',
+													makeLnk: part.make_lnk || '',
 													supplier: part.supplier || '',
 													supplierName: part.supplier_name || '',
 													supplierNumber: part.supplier_number || '',
 													supplierEmail: part.supplier_email || '',
 													supplierAddress: part.supplier_address || '',
-													supplierPrice: part.supplier_price || ''
+													supplierPartNumber: part.supplier_part_number || '',
+													supplierPrice: part.supplier_price || '',
+													supplierLnk: part.supplier_lnk || ''
 												});
 											}
 										});
 
-										// Display parts as cards
+										// Display parts in horizontal rows (matching BOM section style)
 										var partsContainer = document.createElement('div');
-										partsContainer.className = 'parts-grid';
-										partsContainer.style.padding = '10px 12px';
-										partsContainer.style.gap = '12px';
-										partsContainer.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+										partsContainer.style.marginTop = '8px';
+										partsContainer.style.borderTop = '1px solid #e5e7eb';
+										partsContainer.style.paddingTop = '8px';
 										
 										Object.keys(partsList).forEach(function(partName) {
 											var partData = partsList[partName];
-											var partCard = document.createElement('div');
-											partCard.className = 'part-card';
-											partCard.style.cursor = 'pointer';
-											partCard.setAttribute('data-part-name', partData.part_name);
-											partCard.setAttribute('data-part-nsn', partData.nsn_number);
-											partCard.setAttribute('data-part-makes', JSON.stringify(partData.makes));
 											
-											// Part header
-											var partHeader = document.createElement('div');
-											partHeader.className = 'part-header';
-											var partNameEl = document.createElement('div');
-											partNameEl.className = 'part-name';
-											partNameEl.textContent = partData.part_name;
-											partHeader.appendChild(partNameEl);
-											if (partData.quantity > 1) {
-												var qtyBadge = document.createElement('span');
-												qtyBadge.className = 'part-quantity';
-												qtyBadge.textContent = 'Qty: ' + partData.quantity;
-												partHeader.appendChild(qtyBadge);
-											}
-											partCard.appendChild(partHeader);
+											// Create part row
+											var partRow = document.createElement('div');
+											partRow.style.display = 'flex';
+											partRow.style.alignItems = 'center';
+											partRow.style.padding = '10px 12px';
+											partRow.style.gap = '16px';
+											partRow.style.cursor = 'pointer';
+											partRow.style.borderRadius = '4px';
+											partRow.style.background = '#fafbfc';
+											partRow.style.marginBottom = '6px';
+											partRow.style.transition = 'background 0.15s';
 											
-											// Makes table
-											if (partData.makes.length > 0) {
-												var makesSection = document.createElement('div');
-												makesSection.className = 'makes-section';
-												var table = document.createElement('table');
-												table.className = 'makes-table';
-												var thead = document.createElement('thead');
-												thead.innerHTML = '<tr class="makes-table-header"><th class="makes-table-cell make-col" style="text-align:left;">Make</th><th class="makes-table-cell part-col">Part Number</th></tr>';
-												table.appendChild(thead);
-												var tbody = document.createElement('tbody');
-												partData.makes.forEach(function(make) {
-													var tr = document.createElement('tr');
-													tr.className = 'makes-table-row';
-													tr.innerHTML = '<td class="makes-table-cell make-col">' + make.make + '</td><td class="makes-table-cell part-col">' + (make.partNumber || '') + '</td>';
-													tbody.appendChild(tr);
-												});
-												table.appendChild(tbody);
-												makesSection.appendChild(table);
-												partCard.appendChild(makesSection);
-											}
+											partRow.setAttribute('data-part-name', partData.part_name);
+											partRow.setAttribute('data-part-nsn', partData.nsn_number);
+											partRow.setAttribute('data-part-makes', JSON.stringify(partData.makes));
 											
-											// Notes
-											if (partData.notes) {
-												var notesDiv = document.createElement('div');
-												notesDiv.className = 'part-notes';
-												notesDiv.innerHTML = '💡 ' + partData.notes;
-												partCard.appendChild(notesDiv);
-											}
+											// Name
+											var nameSpan = document.createElement('span');
+											nameSpan.textContent = partData.part_name;
+											nameSpan.style.color = '#1f2937';
+											nameSpan.style.fontWeight = '500';
+											nameSpan.style.minWidth = '150px';
+											
+											// Make(s)
+											var makeSpan = document.createElement('span');
+											var makesText = partData.makes.length > 0 
+												? partData.makes.map(function(m) { return m.make; }).filter(Boolean).join(', ') || '-'
+												: '-';
+											makeSpan.innerHTML = '<span style="color: #6b7280;">Make:</span> ' + makesText;
+											makeSpan.style.color = '#1f2937';
+											makeSpan.style.minWidth = '200px';
+											
+											// NSN Number
+											var nsnSpan = document.createElement('span');
+											nsnSpan.innerHTML = '<span style="color: #6b7280;">NSN:</span> ' + (partData.nsn_number || '-');
+											nsnSpan.style.color = '#1f2937';
+											nsnSpan.style.minWidth = '150px';
+											
+											// Quantity
+											var quantitySpan = document.createElement('span');
+											quantitySpan.innerHTML = '<span style="color: #6b7280;">Quantity:</span> ' + (partData.quantity || '-');
+											quantitySpan.style.color = '#1f2937';
+											quantitySpan.style.minWidth = '100px';
+											
+											// Click for more detail
+											var detailText = document.createElement('span');
+											detailText.textContent = 'click for more detail';
+											detailText.style.color = '#9ca3af';
+											detailText.style.fontSize = '0.85em';
+											detailText.style.fontStyle = 'italic';
+											detailText.style.marginLeft = 'auto';
+											
+											partRow.appendChild(nameSpan);
+											partRow.appendChild(makeSpan);
+											partRow.appendChild(nsnSpan);
+											partRow.appendChild(quantitySpan);
+											partRow.appendChild(detailText);
 											
 											// Click handler to edit
-											partCard.addEventListener('click', function() {
+											partRow.addEventListener('click', function() {
 												dropdown.remove();
 												openEditPartModal(partData);
 											});
 											
-											partsContainer.appendChild(partCard);
+											// Hover effects
+											partRow.addEventListener('mouseenter', function() {
+												partRow.style.background = '#f3f4f6';
+											});
+											partRow.addEventListener('mouseleave', function() {
+												partRow.style.background = '#fafbfc';
+											});
+											
+											partsContainer.appendChild(partRow);
 										});
 										
 										dropdown.appendChild(partsContainer);
@@ -1498,21 +2206,27 @@ $hasEditPermission = can_edit_page('engineering');
 							var mi = makeItem.querySelector('.make-input');
 							var pn = makeItem.querySelector('.make-part-number');
 							var on = makeItem.querySelector('.make-other-numbers');
+							var ml = makeItem.querySelector('.make-lnk');
 							var sup = makeItem.querySelector('.make-supplier');
 							var sname = makeItem.querySelector('.make-supplier-name');
 							var snum = makeItem.querySelector('.make-supplier-number');
 							var semail = makeItem.querySelector('.make-supplier-email');
 							var saddr = makeItem.querySelector('.make-supplier-address');
+							var spnum = makeItem.querySelector('.make-supplier-part-number');
 							var sprice = makeItem.querySelector('.make-supplier-price');
+							var sl = makeItem.querySelector('.make-supplier-lnk');
 							if (mi) mi.value = makeData.make || '';
 							if (pn) pn.value = makeData.partNumber || '';
 							if (on) on.value = makeData.otherNumbers || '';
+							if (ml) ml.value = makeData.makeLnk || '';
 							if (sup) sup.value = makeData.supplier || '';
 							if (sname) sname.value = makeData.supplierName || '';
 							if (snum) snum.value = makeData.supplierNumber || '';
 							if (semail) semail.value = makeData.supplierEmail || '';
 							if (saddr) saddr.value = makeData.supplierAddress || '';
+							if (spnum) spnum.value = makeData.supplierPartNumber || '';
 							if (sprice) sprice.value = makeData.supplierPrice || '';
+							if (sl) sl.value = makeData.supplierLnk || '';
 						}
 
 						// Upload drawings button handler
@@ -1678,6 +2392,10 @@ $hasEditPermission = can_edit_page('engineering');
 								'<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Other Numbers</label>' +
 								'<input type="text" class="make-other-numbers" placeholder="12345, 45657, 76876876" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />' +
 								'</div>' +
+								'<div style="margin-top:10px;">' +
+								'<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>' +
+								'<input type="text" class="make-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />' +
+								'</div>' +
 								'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">' +
 								'<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">' +
 								'<div style="font-size:12px;font-weight:600;color:#0f172a;">Supplier Details:</div>' +
@@ -1699,6 +2417,10 @@ $hasEditPermission = can_edit_page('engineering');
 								'<input type="text" class="make-supplier-email" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
 								'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Address</label>' +
 								'<input type="text" class="make-supplier-address" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+								'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Supplier Part Number</label>' +
+								'<input type="text" class="make-supplier-part-number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+								'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>' +
+								'<input type="text" class="make-supplier-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
 								'</div></div></div>';
 							makesList.appendChild(makeItem);
 							initSupplierDetailsToggle();
@@ -1843,12 +2565,15 @@ $hasEditPermission = can_edit_page('engineering');
 											make: makeInput.value.trim(),
 											partNumber: partInput.value.trim(),
 											otherNumbers: otherVal,
+											makeLnk: (item.querySelector('.make-lnk') || {}).value?.trim() || '',
 											supplier: (item.querySelector('.make-supplier') || {}).value?.trim() || '',
 											supplierName: (item.querySelector('.make-supplier-name') || {}).value?.trim() || '',
 											supplierNumber: (item.querySelector('.make-supplier-number') || {}).value?.trim() || '',
 											supplierEmail: (item.querySelector('.make-supplier-email') || {}).value?.trim() || '',
 											supplierAddress: (item.querySelector('.make-supplier-address') || {}).value?.trim() || '',
-											supplierPrice: priceVal
+											supplierPartNumber: (item.querySelector('.make-supplier-part-number') || {}).value?.trim() || '',
+											supplierPrice: priceVal,
+											supplierLnk: (item.querySelector('.make-supplier-lnk') || {}).value?.trim() || ''
 										});
 									}
 								});

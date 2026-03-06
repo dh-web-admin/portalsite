@@ -59,6 +59,16 @@ if (!$ok) {
     exit();
 }
 
+// Also delete from Bill of Materials section (Engineering_material_parts)
+$stmt = $conn->prepare('DELETE emp FROM Engineering_material_parts emp 
+                        JOIN Engineering_materials em ON emp.material_id = em.id 
+                        WHERE em.item_id = ? AND emp.name = ?');
+if ($stmt) {
+    $stmt->bind_param('is', $item_id, $part_name);
+    $stmt->execute();
+    $stmt->close();
+}
+
 $conn->commit();
 
 echo json_encode(['success' => true]);

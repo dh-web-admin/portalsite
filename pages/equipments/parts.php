@@ -49,7 +49,7 @@ $partsList = [];
 if ($equipmentId > 0) {
 	try {
 		$stmt = $conn->prepare("
-			SELECT ep.part_name, ep.nsn_number, ps.make, ps.model, ps.other_numbers, ps.supplier, ps.supplier_name, ps.supplier_number, ps.supplier_email, ps.supplier_address, ps.supplier_price, ep.quantity, ep.notes
+			SELECT ep.part_name, ep.nsn_number, ps.make, ps.model, ps.other_numbers, ps.make_lnk, ps.supplier, ps.supplier_name, ps.supplier_number, ps.supplier_email, ps.supplier_address, ps.supplier_part_number, ps.supplier_price, ps.supplier_lnk, ep.quantity, ep.notes
 			FROM equipment_parts ep
 			LEFT JOIN part_specifications ps ON ep.part_name = ps.part_name
 			WHERE ep.equipment_id = ?
@@ -75,12 +75,15 @@ if ($equipmentId > 0) {
 						'make' => $row['make'],
 						'model' => $row['model'],
 						'other_numbers' => $row['other_numbers'],
+						'make_lnk' => isset($row['make_lnk']) ? $row['make_lnk'] : '',
 						'supplier' => $row['supplier'],
 						'supplier_name' => $row['supplier_name'],
 						'supplier_number' => $row['supplier_number'],
 						'supplier_email' => $row['supplier_email'],
 						'supplier_address' => $row['supplier_address'],
-						'supplier_price' => $row['supplier_price']
+						'supplier_part_number' => isset($row['supplier_part_number']) ? $row['supplier_part_number'] : '',
+						'supplier_price' => $row['supplier_price'],
+						'supplier_lnk' => isset($row['supplier_lnk']) ? $row['supplier_lnk'] : ''
 					];
 				}
 			}
@@ -210,12 +213,15 @@ function equipment_label($row) {
 									'make' => $mk['make'],
 									'partNumber' => $mk['model'],
 									'otherNumbers' => $mk['other_numbers'],
+									'makeLnk' => isset($mk['make_lnk']) ? $mk['make_lnk'] : '',
 									'supplier' => isset($mk['supplier']) ? $mk['supplier'] : '',
 									'supplierName' => isset($mk['supplier_name']) ? $mk['supplier_name'] : '',
 									'supplierNumber' => isset($mk['supplier_number']) ? $mk['supplier_number'] : '',
 									'supplierEmail' => isset($mk['supplier_email']) ? $mk['supplier_email'] : '',
 									'supplierAddress' => isset($mk['supplier_address']) ? $mk['supplier_address'] : '',
+									'supplierPartNumber' => isset($mk['supplier_part_number']) ? $mk['supplier_part_number'] : '',
 									'supplierPrice' => isset($mk['supplier_price']) ? $mk['supplier_price'] : '',
+									'supplierLnk' => isset($mk['supplier_lnk']) ? $mk['supplier_lnk'] : '',
 								];
 							}
 						}
@@ -312,6 +318,10 @@ function equipment_label($row) {
 						<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Other Numbers</label>
 						<input type="text" class="make-other-numbers" placeholder="12345, 45657, 76876876" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 					</div>
+					<div style="margin-top:10px;">
+						<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>
+						<input type="text" class="make-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+					</div>
 					<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">
 						<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">
 							<div style="font-size:12px;font-weight:600;color:#0f172a;">Supplier Details:</div>
@@ -345,6 +355,14 @@ function equipment_label($row) {
 								<div>
 									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Address</label>
 									<input type="text" class="make-supplier-address" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Supplier Part Number</label>
+									<input type="text" class="make-supplier-part-number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+								</div>
+								<div>
+									<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>
+									<input type="text" class="make-supplier-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 								</div>
 							</div>
 						</div>
@@ -808,6 +826,10 @@ document.addEventListener('DOMContentLoaded', function(){
 				'<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Other Numbers</label>' +
 				'<input type="text" class="make-other-numbers" placeholder="12345, 45657, 76876876" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />' +
 			'</div>' +
+			'<div style="margin-top:10px;">' +
+				'<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>' +
+				'<input type="text" class="make-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />' +
+			'</div>' +
 			'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #cbd5e1;">' +
 				'<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;margin-bottom:8px;" class="supplier-details-toggle">' +
 				'<div style="font-size:12px;font-weight:600;color:#0f172a;">Supplier Details:</div>' +
@@ -829,10 +851,10 @@ document.addEventListener('DOMContentLoaded', function(){
 					'<input type="text" class="make-supplier-email" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
 					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Address</label>' +
 					'<input type="text" class="make-supplier-address" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
-				'</div>' +
-				'</div>' +
-			'</div>';
-			
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Supplier Part Number</label>' +
+					'<input type="text" class="make-supplier-part-number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+					'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>' +
+					'<input type="text" class="make-supplier-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
 			makesList.appendChild(makeItem);
 			
 			// Initialize toggle for the newly added make item
@@ -902,16 +924,22 @@ document.addEventListener('DOMContentLoaded', function(){
 						var snum = firstItem.querySelector('.make-supplier-number');
 						var semail = firstItem.querySelector('.make-supplier-email');
 						var saddr = firstItem.querySelector('.make-supplier-address');
+						var sspn = firstItem.querySelector('.make-supplier-part-number');
 						var sprice = firstItem.querySelector('.make-supplier-price');
+						var mlnk = firstItem.querySelector('.make-lnk');
+						var slnk = firstItem.querySelector('.make-supplier-lnk');
 						if (mi) mi.value = first.make || '';
 						if (pn) pn.value = first.partNumber || '';
 						if (on) on.value = first.otherNumbers || '';
+						if (mlnk) mlnk.value = first.makeLnk || '';
 						if (sup) sup.value = first.supplier || '';
 						if (sname) sname.value = first.supplierName || '';
 						if (snum) snum.value = first.supplierNumber || '';
 						if (semail) semail.value = first.supplierEmail || '';
 						if (saddr) saddr.value = first.supplierAddress || '';
+						if (sspn) sspn.value = first.supplierPartNumber || '';
 						if (sprice) sprice.value = first.supplierPrice || '';
+						if (slnk) slnk.value = first.supplierLnk || '';
 					}
 
 					// Remaining makes: add extra blocks
@@ -929,16 +957,22 @@ document.addEventListener('DOMContentLoaded', function(){
 							var snum2 = last.querySelector('.make-supplier-number');
 							var semail2 = last.querySelector('.make-supplier-email');
 							var saddr2 = last.querySelector('.make-supplier-address');
+							var sspn2 = last.querySelector('.make-supplier-part-number');
 							var sprice2 = last.querySelector('.make-supplier-price');
+							var mlnk2 = last.querySelector('.make-lnk');
+							var slnk2 = last.querySelector('.make-supplier-lnk');
 							if (mi2) mi2.value = m2.make || '';
 							if (pn2) pn2.value = m2.partNumber || '';
 							if (on2) on2.value = m2.otherNumbers || '';
+							if (mlnk2) mlnk2.value = m2.makeLnk || '';
 							if (sup2) sup2.value = m2.supplier || '';
 							if (sname2) sname2.value = m2.supplierName || '';
 							if (snum2) snum2.value = m2.supplierNumber || '';
 							if (semail2) semail2.value = m2.supplierEmail || '';
 							if (saddr2) saddr2.value = m2.supplierAddress || '';
+							if (sspn2) sspn2.value = m2.supplierPartNumber || '';
 							if (sprice2) sprice2.value = m2.supplierPrice || '';
+							if (slnk2) slnk2.value = m2.supplierLnk || '';
 						}
 					}
 				}
@@ -1026,12 +1060,15 @@ document.addEventListener('DOMContentLoaded', function(){
 						make: makeInput.value.trim(),
 						partNumber: partInput.value.trim(),
 						otherNumbers: otherVal,
+						makeLnk: (item.querySelector('.make-lnk') || {}).value?.trim() || '',
 						supplier: (item.querySelector('.make-supplier') || {}).value?.trim() || '',
 						supplierName: (item.querySelector('.make-supplier-name') || {}).value?.trim() || '',
 						supplierNumber: (item.querySelector('.make-supplier-number') || {}).value?.trim() || '',
 						supplierEmail: (item.querySelector('.make-supplier-email') || {}).value?.trim() || '',
 						supplierAddress: (item.querySelector('.make-supplier-address') || {}).value?.trim() || '',
-						supplierPrice: priceVal
+						supplierPartNumber: (item.querySelector('.make-supplier-part-number') || {}).value?.trim() || '',
+						supplierPrice: priceVal,
+						supplierLnk: (item.querySelector('.make-supplier-lnk') || {}).value?.trim() || ''
 					});
 				}
 			});

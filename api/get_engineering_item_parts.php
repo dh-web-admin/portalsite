@@ -13,9 +13,9 @@ try {
     // Fetch parts with all makes and supplier info
     $stmt = $conn->prepare("
         SELECT eip.part_name, eip.nsn_number, eip.quantity, eip.notes, 
-               eps.make, eps.model, eps.other_numbers, 
+               eps.make, eps.model, eps.other_numbers, eps.make_lnk,
                eps.supplier, eps.supplier_name, eps.supplier_number, 
-               eps.supplier_email, eps.supplier_address, eps.supplier_price
+               eps.supplier_email, eps.supplier_address, eps.supplier_part_number, eps.supplier_price, eps.supplier_lnk
         FROM engineering_item_parts eip
         LEFT JOIN engineering_part_specifications eps ON eip.part_name = eps.part_name
         WHERE eip.item_id = ?
