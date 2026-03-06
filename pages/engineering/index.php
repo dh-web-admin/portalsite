@@ -1633,11 +1633,17 @@ $hasEditPermission = can_edit_page('engineering');
 										item_id: currentItemForMaterial.id 
 									})
 								})
-								.then(function(res) { 
-									if (!res.ok) {
-										throw new Error('Server returned ' + res.status);
-									}
-									return res.json(); 
+								.then(function(res) {
+									return res.text().then(function(text) {
+										var jsonStart = text.indexOf('{');
+										var jsonText = jsonStart >= 0 ? text.slice(jsonStart) : text;
+										try {
+											return JSON.parse(jsonText);
+										} catch (e) {
+											console.error('Raw response:', text);
+											throw new Error('Invalid JSON response from server');
+										}
+									});
 								})
 								.then(function(data) {
 									if (data.success) {
