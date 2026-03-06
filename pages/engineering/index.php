@@ -1368,7 +1368,7 @@ $hasEditPermission = can_edit_page('engineering');
 															.then(function(r) { return r.json(); })
 															.then(function(res) {
 																if (res.success) {
-																	handleBillOfMaterialsClick(item, liElement);
+																	materialWrapper.remove();
 																} else {
 																	alert('Failed to delete material');
 																}
