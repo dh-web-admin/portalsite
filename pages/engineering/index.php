@@ -1633,38 +1633,127 @@ $hasEditPermission = can_edit_page('engineering');
 										item_id: currentItemForMaterial.id 
 									})
 								})
-								.then(function(res) { return res.json(); })
+								.then(function(res) { 
+									if (!res.ok) {
+										throw new Error('Server returned ' + res.status);
+									}
+									return res.json(); 
+								})
 								.then(function(data) {
 									if (data.success) {
 										modal.style.display = 'none';
-										// Re-open the BOM dropdown to show updated materials
-										var bomLi = document.querySelector('li span');
-										if (bomLi) {
-											// Find the correct li element for Bill of materials
-											var allLis = document.querySelectorAll('#itemDetails li');
-											allLis.forEach(function(li) {
-												var span = li.querySelector('span');
-												if (span && span.textContent === 'Bill of materials') {
-													// Close any existing dropdown first
-													var existingDropdown = document.getElementById('bomDropdown');
-													if (existingDropdown) {
-														existingDropdown.remove();
-													}
-													// Reset the busy flag to allow reopening
-													bomDropdownBusy = false;
-													// Wait a bit then reopen
-													setTimeout(function() {
-														handleBillOfMaterialsClick(currentItemForMaterial, li);
-													}, 150);
+										// Find the BOM dropdown and add the new material directly
+										var bomDropdown = document.getElementById('bomDropdown');
+										if (bomDropdown) {
+											// Find or create materials container
+											var materialsContainer = bomDropdown.querySelector('div[style*="padding: 6px 12px 10px 12px"]');
+											if (!materialsContainer) {
+												// Create materials container if it doesn't exist
+												materialsContainer = document.createElement('div');
+												materialsContainer.style.padding = '6px 12px 10px 12px';
+												// Remove any "no materials" message
+												var emptyMsg = Array.from(bomDropdown.children).find(function(el) {
+													return el.textContent && el.textContent.includes('No materials');
+												});
+												if (emptyMsg) emptyMsg.remove();
+												bomDropdown.appendChild(materialsContainer);
+											}
+											
+											// Create the new material wrapper and row
+											var materialWrapper = document.createElement('div');
+											materialWrapper.classList.add('material-wrapper');
+											materialWrapper.style.border = '2px solid #d1d5db';
+											materialWrapper.style.borderRadius = '6px';
+											materialWrapper.style.marginBottom = '8px';
+											materialWrapper.style.overflow = 'hidden';
+											
+											var materialRow = document.createElement('div');
+											materialRow.setAttribute('data-material-id', data.id);
+											materialRow.style.padding = '10px 12px';
+											materialRow.style.display = 'flex';
+											materialRow.style.alignItems = 'center';
+											materialRow.style.fontSize = '0.93em';
+											materialRow.style.color = '#1f2937';
+											materialRow.style.background = '#f9fafb';
+											materialRow.style.cursor = 'pointer';
+											
+											var numberSpan = document.createElement('span');
+											numberSpan.textContent = '#' + data.number;
+											numberSpan.style.fontWeight = '700';
+											numberSpan.style.color = '#5b7fa3';
+											numberSpan.style.marginRight = '12px';
+											numberSpan.style.minWidth = '50px';
+											
+											var nameSpan = document.createElement('span');
+											nameSpan.textContent = data.name;
+											nameSpan.style.flex = '1';
+											
+											var addPartsBtn = document.createElement('button');
+											addPartsBtn.textContent = '+ Add Parts';
+											addPartsBtn.style.padding = '4px 12px';
+											addPartsBtn.style.background = '#5b7fa3';
+											addPartsBtn.style.color = '#fff';
+											addPartsBtn.style.border = 'none';
+											addPartsBtn.style.borderRadius = '4px';
+											addPartsBtn.style.fontWeight = '600';
+											addPartsBtn.style.fontSize = '0.85em';
+											addPartsBtn.style.cursor = 'pointer';
+											addPartsBtn.style.marginLeft = '12px';
+											addPartsBtn.addEventListener('click', function(e) {
+												e.stopPropagation();
+												openAddMaterialPartModal({ id: data.id, number: data.number, name: data.name });
+											});
+											
+											var deleteBtn = document.createElement('button');
+											deleteBtn.innerHTML = '🗑';
+											deleteBtn.style.padding = '4px 8px';
+											deleteBtn.style.background = 'transparent';
+											deleteBtn.style.border = '1px solid #d1d5db';
+											deleteBtn.style.borderRadius = '4px';
+											deleteBtn.style.cursor = 'pointer';
+											deleteBtn.style.fontSize = '1em';
+											deleteBtn.style.marginLeft = '8px';
+											deleteBtn.addEventListener('click', function(e) {
+												e.stopPropagation();
+												if (confirm('Delete this material and all its parts?')) {
+													fetch(apiBase + '/delete_engineering_material.php', {
+														method: 'POST',
+														headers: { 'Content-Type': 'application/json' },
+														body: JSON.stringify({ id: data.id })
+													})
+													.then(function(res) { return res.json(); })
+													.then(function(delData) {
+														if (delData.success) {
+															materialWrapper.remove();
+														} else {
+															alert(delData.message || 'Failed to delete');
+														}
+													})
+													.catch(function(err) {
+														console.error('Delete error:', err);
+													});
 												}
 											});
+											
+											materialRow.appendChild(numberSpan);
+											materialRow.appendChild(nameSpan);
+											materialRow.appendChild(addPartsBtn);
+											materialRow.appendChild(deleteBtn);
+											materialWrapper.appendChild(materialRow);
+											materialsContainer.appendChild(materialWrapper);
+											
+											// Animate the dropdown height to accommodate new material
+											setTimeout(function() {
+												bomDropdown.style.maxHeight = (bomDropdown.scrollHeight + 40) + 'px';
+											}, 10);
 										}
 									} else {
 										alert(data.message || 'Failed to add material');
 									}
 								})
 								.catch(function(err) {
-									alert('Error: ' + err.message);
+									console.error('Add material error:', err);
+									alert('Error adding material: ' + err.message);
 								});
 							};
 							
