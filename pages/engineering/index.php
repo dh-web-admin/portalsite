@@ -1635,7 +1635,8 @@ $hasEditPermission = can_edit_page('engineering');
 								})
 								.then(function(res) {
 									return res.text().then(function(text) {
-										var jsonStart = text.indexOf('{');
+										var jsonStart = text.indexOf('{"success"');
+										if (jsonStart < 0) jsonStart = text.lastIndexOf('{');
 										var jsonText = jsonStart >= 0 ? text.slice(jsonStart) : text;
 										try {
 											return JSON.parse(jsonText);
