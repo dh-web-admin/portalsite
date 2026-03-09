@@ -1324,8 +1324,8 @@ foreach ($bidColumns as $c) {
                         ?>
                         <div class="field" style="position:relative;">
                           <label><?php echo htmlspecialchars($label); ?></label>
-                          <input type="text" data-col="reason" name="reason" id="editReasonInput" class="reason-autocomplete" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;" autocomplete="off" />
-                          <div id="reasonSuggestions" class="autocomplete-suggestions" style="position:absolute;top:100%;left:0;width:100%;z-index:2000;"></div>
+                          <input type="text" data-col="reason" name="reason" id="editReasonInput" class="reason-autocomplete" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;width:100%;box-sizing:border-box;" autocomplete="off" />
+                          <div id="reasonSuggestions" style="position:absolute;top:100%;left:0;width:100%;z-index:2000;"></div>
                         </div>
                         <?php
                       } else {
@@ -1336,129 +1336,127 @@ foreach ($bidColumns as $c) {
                           <label><?php echo htmlspecialchars($label); ?></label>
                           <input type="<?php echo $inputType; ?>" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
                         </div>
-                        <style>
-                        .autocomplete-suggestions-list {
-                          position: static;
-                          z-index: inherit;
-                          background: #fff;
-                          border: 1px solid #cbd5e1;
-                          border-radius: 6px;
-                          max-height: 180px;
-                          overflow-y: auto;
-                          width: 100%;
-                          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-                          margin-top: 2px;
-                          padding: 0;
-                          list-style: none;
-                        }
-                        .autocomplete-suggestion-item {
-                          padding: 8px 12px;
-                          cursor: pointer;
-                        }
-                        .autocomplete-suggestion-item:hover, .autocomplete-suggestion-item.active {
-                          background: #f1f5f9;
-                        }
-                        </style>
-                        <script>
-                        // Autocomplete for Reason field
-                        let reasonList = [];
-                        function fetchReasonsForAutocomplete() {
-                          fetch('../../api/get_bid_reasons.php', { credentials: 'same-origin' })
-                            .then(r => r.json())
-                            .then(data => {
-                              if (data && data.success && Array.isArray(data.reasons)) {
-                                reasonList = data.reasons.filter(Boolean);
-                              }
-                            }).catch(function(){});
-                        }
-                        fetchReasonsForAutocomplete();
-
-                        function setupReasonAutocomplete() {
-                          const input = document.getElementById('editReasonInput');
-                          const suggestionBox = document.getElementById('reasonSuggestions');
-                          if (!input || !suggestionBox) return;
-
-                          let currentFocus = -1;
-
-                          // Mark as new (typed) whenever the user edits the field
-                          input.addEventListener('input', function() {
-                            input.dataset.isNew = 'true';
-                            const val = this.value.trim().toLowerCase();
-                            suggestionBox.innerHTML = '';
-                            currentFocus = -1;
-                            if (!val) return;
-                            const matches = reasonList.filter(r => r.toLowerCase().includes(val)).slice(0, 10);
-                            if (matches.length === 0) return;
-                            const ul = document.createElement('ul');
-                            ul.className = 'autocomplete-suggestions-list';
-                            matches.forEach((reason, idx) => {
-                              const li = document.createElement('li');
-                              li.className = 'autocomplete-suggestion-item';
-                              li.textContent = reason;
-                              li.addEventListener('mousedown', function(e) {
-                                e.preventDefault();
-                                input.value = reason;
-                                // Mark as existing — picked from list, do NOT save as new
-                                input.dataset.isNew = 'false';
-                                suggestionBox.innerHTML = '';
-                                currentFocus = -1;
-                              });
-                              ul.appendChild(li);
-                            });
-                            suggestionBox.appendChild(ul);
-                          });
-
-                          input.addEventListener('keydown', function(e) {
-                            let items = suggestionBox.querySelectorAll('.autocomplete-suggestion-item');
-                            if (!items.length) return;
-                            if (e.key === 'ArrowDown') {
-                              currentFocus++;
-                              if (currentFocus >= items.length) currentFocus = 0;
-                              setActive(items, currentFocus);
-                              e.preventDefault();
-                            } else if (e.key === 'ArrowUp') {
-                              currentFocus--;
-                              if (currentFocus < 0) currentFocus = items.length - 1;
-                              setActive(items, currentFocus);
-                              e.preventDefault();
-                            } else if (e.key === 'Enter') {
-                              if (currentFocus > -1) {
-                                e.preventDefault();
-                                items[currentFocus].dispatchEvent(new MouseEvent('mousedown'));
-                              }
-                            } else if (e.key === 'Escape') {
-                              suggestionBox.innerHTML = '';
-                            }
-                          });
-
-                          document.addEventListener('click', function(e) {
-                            if (e.target !== input) suggestionBox.innerHTML = '';
-                          });
-
-                          function setActive(items, idx) {
-                            items.forEach((el, i) => el.classList.toggle('active', i === idx));
-                          }
-                        }
-
-                        // Setup autocomplete when modal is opened (wait for DOM)
-                        function observeReasonInput() {
-                          const observer = new MutationObserver(() => {
-                            const input = document.getElementById('editReasonInput');
-                            if (input && !input.dataset.autocomplete) {
-                              input.dataset.autocomplete = '1';
-                              input.dataset.isNew = 'false';
-                              setupReasonAutocomplete();
-                            }
-                          });
-                          observer.observe(document.body, { childList: true, subtree: true });
-                        }
-                        observeReasonInput();
-                        </script>
                         <?php
                       }
                     } ?>
                   </div>
                 </div>
+                <?php /* Reason autocomplete — rendered once, outside the column loop */ ?>
+                <style>
+                .reason-suggestions-list {
+                  background: #fff;
+                  border: 1px solid #cbd5e1;
+                  border-radius: 6px;
+                  max-height: 200px;
+                  overflow-y: auto;
+                  width: 100%;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+                  margin-top: 2px;
+                  padding: 0;
+                  list-style: none;
+                }
+                .reason-suggestion-item {
+                  padding: 8px 12px;
+                  cursor: pointer;
+                  font-size: 14px;
+                }
+                .reason-suggestion-item:hover, .reason-suggestion-item.active {
+                  background: #f1f5f9;
+                }
+                </style>
+                <script>
+                (function() {
+                  var reasonList = [];
+
+                  fetch('../../api/get_bid_reasons.php', { credentials: 'same-origin' })
+                    .then(function(r){ return r.json(); })
+                    .then(function(data){
+                      if (data && data.success && Array.isArray(data.reasons)) {
+                        reasonList = data.reasons.filter(Boolean);
+                      }
+                    }).catch(function(){});
+
+                  function setupReasonAutocomplete() {
+                    var input = document.getElementById('editReasonInput');
+                    var suggestionBox = document.getElementById('reasonSuggestions');
+                    if (!input || !suggestionBox || input.dataset.autocomplete) return;
+                    input.dataset.autocomplete = '1';
+                    input.dataset.isNew = 'false';
+
+                    var currentFocus = -1;
+
+                    input.addEventListener('input', function() {
+                      input.dataset.isNew = 'true';
+                      var val = input.value.trim().toLowerCase();
+                      suggestionBox.innerHTML = '';
+                      currentFocus = -1;
+                      var matches = val
+                        ? reasonList.filter(function(r){ return r.toLowerCase().includes(val); }).slice(0, 10)
+                        : reasonList.slice(0, 10);
+                      if (!matches.length) return;
+                      renderSuggestions(matches);
+                    });
+
+                    input.addEventListener('focus', function() {
+                      if (!input.value.trim() && reasonList.length) {
+                        suggestionBox.innerHTML = '';
+                        renderSuggestions(reasonList.slice(0, 10));
+                      }
+                    });
+
+                    function renderSuggestions(matches) {
+                      var ul = document.createElement('ul');
+                      ul.className = 'reason-suggestions-list';
+                      matches.forEach(function(reason) {
+                        var li = document.createElement('li');
+                        li.className = 'reason-suggestion-item';
+                        li.textContent = reason;
+                        li.addEventListener('mousedown', function(e) {
+                          e.preventDefault();
+                          input.value = reason;
+                          input.dataset.isNew = 'false';
+                          suggestionBox.innerHTML = '';
+                          currentFocus = -1;
+                        });
+                        ul.appendChild(li);
+                      });
+                      suggestionBox.appendChild(ul);
+                    }
+
+                    input.addEventListener('keydown', function(e) {
+                      var items = suggestionBox.querySelectorAll('.reason-suggestion-item');
+                      if (!items.length) return;
+                      if (e.key === 'ArrowDown') {
+                        currentFocus = (currentFocus + 1) % items.length;
+                        setActive(items, currentFocus); e.preventDefault();
+                      } else if (e.key === 'ArrowUp') {
+                        currentFocus = (currentFocus - 1 + items.length) % items.length;
+                        setActive(items, currentFocus); e.preventDefault();
+                      } else if (e.key === 'Enter' && currentFocus > -1) {
+                        e.preventDefault();
+                        items[currentFocus].dispatchEvent(new MouseEvent('mousedown'));
+                      } else if (e.key === 'Escape') {
+                        suggestionBox.innerHTML = '';
+                      }
+                    });
+
+                    document.addEventListener('click', function(e) {
+                      if (e.target !== input) suggestionBox.innerHTML = '';
+                    });
+
+                    function setActive(items, idx) {
+                      Array.prototype.forEach.call(items, function(el, i){ el.classList.toggle('active', i === idx); });
+                    }
+                  }
+
+                  // The modal HTML is already in the DOM — run on DOMContentLoaded.
+                  // Also expose globally so the modal-open code can re-init after populate.
+                  window._setupReasonAutocomplete = setupReasonAutocomplete;
+                  document.addEventListener('DOMContentLoaded', setupReasonAutocomplete);
+                  // Fallback: also try after a short delay in case DOMContentLoaded already fired
+                  setTimeout(setupReasonAutocomplete, 300);
+                })();
+                </script>
 
                 <?php if (in_array('notes', $bidColumns, true)) { ?>
                   <div style="margin-top:12px;">
@@ -2890,16 +2888,7 @@ foreach ($bidColumns as $c) {
                         var rf = new FormData();
                         rf.append('reason', newReasonVal);
                         fetch('../../api/save_bid_reason.php', { method: 'POST', credentials: 'same-origin', body: rf })
-                          .then(function(r){ return r.json(); })
-                          .then(function(rd){
-                            if (rd && rd.success && rd.is_new) {
-                              // Add to local list so it shows next time without refetch
-                              if (typeof reasonList !== 'undefined' && reasonList.indexOf(newReasonVal) === -1) {
-                                reasonList.push(newReasonVal);
-                                reasonList.sort();
-                              }
-                            }
-                          }).catch(function(){});
+                          .catch(function(){});
                       }
                     }
                   } catch(e){}
