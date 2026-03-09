@@ -42,6 +42,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     }
 }
 
+// Handle edit BEFORE any output
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_id'], $_POST['edit_text'])) {
+    $editId = (int)$_POST['edit_id'];
+    $editText = trim($_POST['edit_text']);
+    if ($editId > 0 && $editText !== '') {
+        $stmt = $conn->prepare('UPDATE whishlists SET item_text = ? WHERE id = ?');
+        $stmt->bind_param('si', $editText, $editId);
+        $stmt->execute();
+        $stmt->close();
+    }
+    header('Location: whishlist.php?id=' . $equipmentId . '&updated=1');
+    exit();
+}
+
 // Handle add BEFORE any output
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['item_text'], $_POST['equipment_id'])) {
     $txt = trim($_POST['item_text']);
@@ -60,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['item_text'], $_POST['
 // Check for success messages from redirect
 $showSuccess = isset($_GET['added']) && $_GET['added'] == '1';
 $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
+$showUpdated = isset($_GET['updated']) && $_GET['updated'] == '1';
 
 ?><!DOCTYPE html>
 <html lang="en">
@@ -313,6 +328,54 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
             background: #fef2f2;
         }
 
+        .btn-edit-pencil {
+            position: absolute;
+            top: 16px;
+            right: 44px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+            transition: all 0.2s ease;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .btn-edit-pencil:hover {
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .inline-edit-form {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .inline-edit-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #2563eb;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        .inline-edit-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -461,6 +524,10 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
                     <?php if ($showDeleted) { ?>
                         <div class="delete-message">✓ Wishlist item deleted successfully!</div>
                     <?php } ?>
+
+                    <?php if ($showUpdated) { ?>
+                        <div class="success-message">✓ Wishlist item updated successfully!</div>
+                    <?php } ?>
  
                     <form id="wishlistForm" method="POST" class="wishlist-form" style="display:none;">
                         <label class="form-label">New Wishlist Item</label>
@@ -482,6 +549,7 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
                         <?php } else { 
                             foreach ($items as $i => $row) { ?>
                                 <div class="wishlist-item">
+                                    <button type="button" class="btn-edit-pencil" title="Edit item" data-id="<?php echo (int)$row['id']; ?>">✏</button>
                                     <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this wishlist item?');">
                                         <input type="hidden" name="delete_id" value="<?php echo (int)$row['id']; ?>">
                                         <button type="submit" class="btn-delete-x" title="Delete item">×</button>
@@ -490,6 +558,14 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
                                         <div class="item-number"><?php echo $i + 1; ?></div>
                                         <div class="item-content">
                                             <div class="item-text"><?php echo htmlspecialchars($row['item_text']); ?></div>
+                                            <form method="POST" class="inline-edit-form" id="editForm_<?php echo (int)$row['id']; ?>">
+                                                <input type="hidden" name="edit_id" value="<?php echo (int)$row['id']; ?>">
+                                                <textarea name="edit_text" class="inline-edit-textarea" rows="3"><?php echo htmlspecialchars($row['item_text']); ?></textarea>
+                                                <div class="inline-edit-actions">
+                                                    <button type="submit" class="btn-save" style="padding:7px 16px;font-size:13px;">Save</button>
+                                                    <button type="button" class="btn-cancel btn-edit-cancel" style="padding:7px 16px;font-size:13px;">Cancel</button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
@@ -583,6 +659,34 @@ $showDeleted = isset($_GET['deleted']) && $_GET['deleted'] == '1';
                 if (textarea) textarea.value = '';
             });
         }
+
+        // Edit item logic
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.btn-edit-pencil').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var id = btn.dataset.id;
+                    var editForm = document.getElementById('editForm_' + id);
+                    var wishlistItem = btn.closest('.wishlist-item');
+                    var itemText = wishlistItem ? wishlistItem.querySelector('.item-text') : null;
+                    if (!editForm) return;
+                    if (itemText) itemText.style.display = 'none';
+                    editForm.style.display = 'block';
+                    btn.style.display = 'none';
+                    editForm.querySelector('.inline-edit-textarea').focus();
+                });
+            });
+            document.querySelectorAll('.btn-edit-cancel').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var editForm = btn.closest('.inline-edit-form');
+                    var wishlistItem = btn.closest('.wishlist-item');
+                    var itemText = wishlistItem ? wishlistItem.querySelector('.item-text') : null;
+                    var pencilBtn = wishlistItem ? wishlistItem.querySelector('.btn-edit-pencil') : null;
+                    if (editForm) editForm.style.display = 'none';
+                    if (itemText) itemText.style.display = '';
+                    if (pencilBtn) pencilBtn.style.display = '';
+                });
+            });
+        });
     </script>
 </body>
 </html>
