@@ -11,7 +11,22 @@ if (!isset($_SESSION['email'])) {
 }
 
 try {
-  $result = $conn->query("SELECT DISTINCT reason FROM bids WHERE reason IS NOT NULL AND TRIM(reason) != '' ORDER BY reason ASC");
+  // Ensure the dedicated reasons table exists
+  $conn->query("CREATE TABLE IF NOT EXISTS bid_reasons (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reason VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_reason (reason(255))
+  )");
+
+  // Return union of dedicated reasons table AND distinct reasons already in bids
+  $sql = "
+    SELECT reason FROM bid_reasons WHERE reason IS NOT NULL AND TRIM(reason) != ''
+    UNION
+    SELECT DISTINCT reason FROM bids WHERE reason IS NOT NULL AND TRIM(reason) != ''
+    ORDER BY reason ASC
+  ";
+  $result = $conn->query($sql);
   $reasons = [];
   if ($result) {
     while ($row = $result->fetch_assoc()) {

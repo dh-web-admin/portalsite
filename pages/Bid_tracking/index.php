@@ -1363,13 +1363,13 @@ foreach ($bidColumns as $c) {
                         // Autocomplete for Reason field
                         let reasonList = [];
                         function fetchReasonsForAutocomplete() {
-                          fetch('http://127.0.0.1/PortalSite/api/get_bid_reasons.php')
+                          fetch('../../api/get_bid_reasons.php', { credentials: 'same-origin' })
                             .then(r => r.json())
                             .then(data => {
                               if (data && data.success && Array.isArray(data.reasons)) {
                                 reasonList = data.reasons.filter(Boolean);
                               }
-                            });
+                            }).catch(function(){});
                         }
                         fetchReasonsForAutocomplete();
 
@@ -1380,9 +1380,12 @@ foreach ($bidColumns as $c) {
 
                           let currentFocus = -1;
 
+                          // Mark as new (typed) whenever the user edits the field
                           input.addEventListener('input', function() {
+                            input.dataset.isNew = 'true';
                             const val = this.value.trim().toLowerCase();
                             suggestionBox.innerHTML = '';
+                            currentFocus = -1;
                             if (!val) return;
                             const matches = reasonList.filter(r => r.toLowerCase().includes(val)).slice(0, 10);
                             if (matches.length === 0) return;
@@ -1393,8 +1396,12 @@ foreach ($bidColumns as $c) {
                               li.className = 'autocomplete-suggestion-item';
                               li.textContent = reason;
                               li.addEventListener('mousedown', function(e) {
+                                e.preventDefault();
                                 input.value = reason;
+                                // Mark as existing — picked from list, do NOT save as new
+                                input.dataset.isNew = 'false';
                                 suggestionBox.innerHTML = '';
+                                currentFocus = -1;
                               });
                               ul.appendChild(li);
                             });
@@ -1417,8 +1424,10 @@ foreach ($bidColumns as $c) {
                             } else if (e.key === 'Enter') {
                               if (currentFocus > -1) {
                                 e.preventDefault();
-                                items[currentFocus].dispatchEvent(new Event('mousedown'));
+                                items[currentFocus].dispatchEvent(new MouseEvent('mousedown'));
                               }
+                            } else if (e.key === 'Escape') {
+                              suggestionBox.innerHTML = '';
                             }
                           });
 
@@ -1437,6 +1446,7 @@ foreach ($bidColumns as $c) {
                             const input = document.getElementById('editReasonInput');
                             if (input && !input.dataset.autocomplete) {
                               input.dataset.autocomplete = '1';
+                              input.dataset.isNew = 'false';
                               setupReasonAutocomplete();
                             }
                           });
@@ -2871,6 +2881,28 @@ foreach ($bidColumns as $c) {
               })
               .then(function(data){
                 if (data && data.success) {
+                  // If the reason was manually typed (not picked from suggestions), save it to bid_reasons table
+                  try {
+                    var reasonInputEl = document.getElementById('editReasonInput');
+                    if (reasonInputEl && reasonInputEl.dataset.isNew === 'true') {
+                      var newReasonVal = (reasonInputEl.value || '').trim();
+                      if (newReasonVal) {
+                        var rf = new FormData();
+                        rf.append('reason', newReasonVal);
+                        fetch('../../api/save_bid_reason.php', { method: 'POST', credentials: 'same-origin', body: rf })
+                          .then(function(r){ return r.json(); })
+                          .then(function(rd){
+                            if (rd && rd.success && rd.is_new) {
+                              // Add to local list so it shows next time without refetch
+                              if (typeof reasonList !== 'undefined' && reasonList.indexOf(newReasonVal) === -1) {
+                                reasonList.push(newReasonVal);
+                                reasonList.sort();
+                              }
+                            }
+                          }).catch(function(){});
+                      }
+                    }
+                  } catch(e){}
                   try { closeEditModal(); } catch(e){}
                   try { showToast('Saved', 'success'); } catch(e){}
                   try {
