@@ -75,7 +75,35 @@ $hasEditPermission = can_edit_page('engineering');
 					<div style="display: flex; gap: 12px; margin-bottom: 24px; margin-top: 28px; justify-content: space-between; align-items: center;">
 						<div style="display: flex; gap: 12px;">
 							<?php if ($hasEditPermission) { ?>
-							<button type="button" style="padding: 8px 18px; background: #5b7fa3; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Build new</button>
+							<div id="buildNewMenu" style="position: relative; display: inline-flex; align-items: stretch;">
+								<button type="button" id="buildNewBtn" style="padding: 8px 14px; background: #5b7fa3; color: #fff; border: none; border-radius: 4px 0 0 4px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center;">Build new</button>
+								<button type="button" id="buildNewChevronBtn" aria-expanded="false" aria-haspopup="true" style="padding: 8px 10px; background: #4f7293; color: #fff; border: none; border-left: 1px solid rgba(255,255,255,0.22); border-radius: 0 4px 4px 0; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+									<span style="display:inline-flex;align-items:center;justify-content:center;">
+										<svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+											<path d="M4.5 6L8 9.5L11.5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+										</svg>
+									</span>
+								</button>
+								<div id="buildNewDropdown" style="display:none; position:absolute; top:calc(100% + 8px); left:0; min-width:180px; background:#fff; border:1px solid #d1d5db; border-radius:8px; box-shadow:0 12px 24px rgba(15,23,42,0.16); padding:8px; z-index:1200;">
+									<button type="button" id="viewDraftsBtn" style="display:flex; align-items:center; padding:10px 12px; background:#f8fafc; color:#334155; border-radius:6px; font-weight:700; text-decoration:none; border:none; cursor:pointer; width:100%;">View Drafts</button>
+								</div>
+							</div>
+
+							<!-- Modal for View Drafts -->
+							<div id="viewDraftsModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:2400;align-items:center;justify-content:center;padding:24px;">
+								<div style="background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(15,23,42,0.22);width:min(700px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;">
+									<div style="padding:22px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:16px;">
+										<h2 style="margin:0;font-size:20px;color:#0f172a;">Draft Equipment</h2>
+										<button type="button" id="closeViewDraftsModalBtn" style="background:transparent;border:none;font-size:28px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px;">&times;</button>
+									</div>
+									<div id="viewDraftsModalBody" style="padding:22px;overflow:auto;display:grid;gap:16px;background:#fff;">
+										<div style="text-align:center;color:#64748b;padding:20px;">Loading drafts...</div>
+									</div>
+									<div style="display:flex;justify-content:flex-end;gap:10px;padding:18px 22px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+										<button type="button" id="closeViewDraftsBtn" style="padding:10px 16px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;color:#334155;font-weight:700;cursor:pointer;">Close</button>
+									</div>
+								</div>
+							</div>
 							<button id="addItemBtn" type="button" style="padding: 8px 18px; background: #5b7fa3; color: #fff; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">Add Item</button>
 							<?php if (isset($_SESSION['user_permissions']) && in_array('edit_engineering', $_SESSION['user_permissions'])): ?>
 							<div style="position: absolute; top: 20px; right: 20px;">
@@ -310,6 +338,33 @@ $hasEditPermission = can_edit_page('engineering');
 							</div>
 						</div>
 					</div>
+					<!-- Modal for Build New Equipment -->
+					<div id="buildNewModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:2400;align-items:center;justify-content:center;padding:24px;">
+						<div style="background:#fff;border-radius:14px;box-shadow:0 24px 60px rgba(15,23,42,0.22);width:min(500px,96vw);display:flex;flex-direction:column;gap:0;overflow:hidden;">
+							<div style="padding:22px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:16px;">
+								<h2 style="margin:0;font-size:20px;color:#0f172a;">Build New Equipment</h2>
+								<button type="button" id="closeBuildNewModalBtn" style="background:transparent;border:none;font-size:28px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px;">&times;</button>
+							</div>
+							<form id="buildNewModalForm" style="padding:22px;display:grid;gap:18px;">
+								<div>
+									<label style="display:block;font-weight:600;color:#0f172a;margin-bottom:8px;">Equipment Name</label>
+									<input type="text" id="modalEquipmentName" placeholder="Enter equipment name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;box-sizing:border-box;" />
+								</div>
+								<div>
+									<label style="display:block;font-weight:600;color:#0f172a;margin-bottom:8px;">Equipment #</label>
+									<input type="text" id="modalEquipmentNumber" placeholder="Enter equipment number" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;box-sizing:border-box;" />
+								</div>
+								<div>
+									<label style="display:block;font-weight:600;color:#0f172a;margin-bottom:8px;">Type</label>
+									<input type="text" id="modalEquipmentType" placeholder="Enter type" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;box-sizing:border-box;" />
+								</div>
+							</form>
+							<div style="display:flex;justify-content:flex-end;gap:10px;padding:18px 22px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+								<button type="button" id="cancelBuildNewModalBtn" style="padding:10px 16px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;color:#334155;font-weight:700;cursor:pointer;">Cancel</button>
+								<button type="button" id="proceedBuildNewModalBtn" style="padding:10px 16px;background:#5b7fa3;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;">Proceed</button>
+							</div>
+						</div>
+					</div>
 					<style>
     #itemPanel::-webkit-scrollbar {
         width: 8px;
@@ -330,6 +385,17 @@ $hasEditPermission = can_edit_page('engineering');
 					// Modal logic for Add Item
 					(function(){
 						var apiBase = window.location.hostname === 'localhost' ? '/PortalSite/api' : '/api';
+						var buildNewMenu = document.getElementById('buildNewMenu');
+						var buildNewBtn = document.getElementById('buildNewBtn');
+						var buildNewChevronBtn = document.getElementById('buildNewChevronBtn');
+						var buildNewDropdown = document.getElementById('buildNewDropdown');
+						var buildNewModal = document.getElementById('buildNewModal');
+						var closeBuildNewModalBtn = document.getElementById('closeBuildNewModalBtn');
+						var cancelBuildNewModalBtn = document.getElementById('cancelBuildNewModalBtn');
+						var proceedBuildNewModalBtn = document.getElementById('proceedBuildNewModalBtn');
+						var modalEquipmentName = document.getElementById('modalEquipmentName');
+						var modalEquipmentNumber = document.getElementById('modalEquipmentNumber');
+						var modalEquipmentType = document.getElementById('modalEquipmentType');
 						var addBtn = document.getElementById('addItemBtn');
 						var modal = document.getElementById('addItemModal');
 						var saveBtn = document.getElementById('saveItemBtn');
@@ -337,6 +403,195 @@ $hasEditPermission = can_edit_page('engineering');
 						var input = document.getElementById('itemNameInput');
 						var itemList = document.getElementById('itemList');
 						var items = [];
+
+						function openBuildNewModal() {
+							if (!buildNewModal) return;
+							buildNewModal.style.display = 'flex';
+							modalEquipmentName && modalEquipmentName.focus();
+						}
+
+						function closeBuildNewModal() {
+							if (!buildNewModal) return;
+							buildNewModal.style.display = 'none';
+							if (modalEquipmentName) modalEquipmentName.value = '';
+							if (modalEquipmentNumber) modalEquipmentNumber.value = '';
+							if (modalEquipmentType) modalEquipmentType.value = '';
+						}
+
+						if (buildNewBtn) {
+							buildNewBtn.addEventListener('click', openBuildNewModal);
+						}
+						if (closeBuildNewModalBtn) {
+							closeBuildNewModalBtn.addEventListener('click', closeBuildNewModal);
+						}
+						if (cancelBuildNewModalBtn) {
+							cancelBuildNewModalBtn.addEventListener('click', closeBuildNewModal);
+						}
+						if (proceedBuildNewModalBtn) {
+							proceedBuildNewModalBtn.addEventListener('click', function() {
+								var name = modalEquipmentName ? modalEquipmentName.value.trim() : '';
+								if (name) {
+									var number = modalEquipmentNumber ? modalEquipmentNumber.value.trim() : '';
+									var type = modalEquipmentType ? modalEquipmentType.value.trim() : '';
+									
+									fetch(apiBase + '/save_equipment_draft.php', {
+										method: 'POST',
+										headers: { 'Content-Type': 'application/json' },
+										body: JSON.stringify({ name: name, number: number, type: type })
+									})
+									.then(function(res) { return res.json(); })
+									.then(function(data) {
+										if (data.success) {
+											// Store equipment data in localStorage for build_new.php
+											try {
+												localStorage.setItem('buildNewEquipment', JSON.stringify({
+													name: name,
+													number: number,
+													type: type,
+													draftId: data.draft_id
+												}));
+											} catch (e) {
+												console.warn('Could not store equipment data in localStorage');
+											}
+											closeBuildNewModal();
+											window.open('build_new.php', '_blank');
+										} else {
+											alert(data.message || 'Failed to save draft equipment');
+										}
+									})
+									.catch(function(err) {
+										alert('Error saving draft equipment: ' + err.message);
+									});
+								} else {
+									modalEquipmentName && modalEquipmentName.focus();
+								}
+							});
+						}
+						if (buildNewModal) {
+							buildNewModal.addEventListener('click', function(e) {
+								if (e.target === buildNewModal) closeBuildNewModal();
+							});
+						}
+
+						var viewDraftsBtn = document.getElementById('viewDraftsBtn');
+						var viewDraftsModal = document.getElementById('viewDraftsModal');
+						var closeViewDraftsModalBtn = document.getElementById('closeViewDraftsModalBtn');
+						var closeViewDraftsBtn = document.getElementById('closeViewDraftsBtn');
+						var viewDraftsModalBody = document.getElementById('viewDraftsModalBody');
+
+						function openViewDraftsModal() {
+							if (!viewDraftsModal) return;
+							toggleBuildNewDropdown(false);
+							viewDraftsModal.style.display = 'flex';
+							loadDrafts();
+						}
+
+						function closeViewDraftsModal() {
+							if (!viewDraftsModal) return;
+							viewDraftsModal.style.display = 'none';
+						}
+
+						function loadDrafts() {
+							if (!viewDraftsModalBody) return;
+							viewDraftsModalBody.innerHTML = '<div style="text-align:center;color:#64748b;padding:20px;">Loading drafts...</div>';
+							
+							fetch(apiBase + '/get_equipment_drafts.php')
+								.then(function(res) { return res.json(); })
+								.then(function(data) {
+									if (!data.success || !Array.isArray(data.drafts)) {
+										viewDraftsModalBody.innerHTML = '<div style="padding:16px;color:#991b1b;">Failed to load drafts.</div>';
+										return;
+									}
+									
+									if (data.drafts.length === 0) {
+										viewDraftsModalBody.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">No draft equipment found.</div>';
+										return;
+									}
+									
+									viewDraftsModalBody.innerHTML = data.drafts.map(function(draft) {
+										var createdDate = draft.created_at ? new Date(draft.created_at).toLocaleDateString() : '';
+										return '' +
+											'<div style="padding:16px;border:1px solid #e2e8f0;border-radius:8px;display:flex;justify-content:space-between;align-items:center;gap:16px;">' +
+												'<div style="flex:1;">' +
+													'<div style="font-size:16px;font-weight:700;color:#0f172a;">' + (draft.equipment_name || 'Unnamed') + '</div>' +
+													'<div style="font-size:12px;color:#64748b;margin-top:4px;">' +
+														(draft.equipment_number ? 'Equipment #: ' + draft.equipment_number + ' | ' : '') +
+														(draft.equipment_type ? 'Type: ' + draft.equipment_type : '') +
+													'</div>' +
+													'<div style="font-size:11px;color:#94a3b8;margin-top:4px;">Created: ' + createdDate + '</div>' +
+												'</div>' +
+												'<button type="button" class="continue-building-btn" data-draft-id="' + draft.id + '" data-equipment-name="' + (draft.equipment_name || '').replace(/"/g, '&quot;') + '" data-equipment-number="' + (draft.equipment_number || '').replace(/"/g, '&quot;') + '" data-equipment-type="' + (draft.equipment_type || '').replace(/"/g, '&quot;') + '" style="padding:10px 18px;background:#5b7fa3;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;">Continue Building</button>' +
+											'</div>';
+									}).join('');
+									
+									// Attach click handlers to continue building buttons
+									Array.prototype.forEach.call(viewDraftsModalBody.querySelectorAll('.continue-building-btn'), function(btn) {
+										btn.addEventListener('click', function() {
+											var draftId = this.getAttribute('data-draft-id');
+											var equipmentName = this.getAttribute('data-equipment-name');
+											var equipmentNumber = this.getAttribute('data-equipment-number');
+											var equipmentType = this.getAttribute('data-equipment-type');
+											
+											// Store equipment data in localStorage
+											try {
+												localStorage.setItem('buildNewEquipment', JSON.stringify({
+													name: equipmentName,
+													number: equipmentNumber,
+													type: equipmentType,
+													draftId: draftId
+												}));
+											} catch (e) {
+												console.warn('Could not store equipment data in localStorage');
+											}
+											
+											closeViewDraftsModal();
+											window.open('build_new.php', '_blank');
+										});
+									});
+								})
+								.catch(function(err) {
+									if (viewDraftsModalBody) {
+										viewDraftsModalBody.innerHTML = '<div style="padding:16px;color:#991b1b;">Error loading drafts: ' + (err.message || 'Unknown error') + '</div>';
+									}
+								});
+						}
+
+						if (viewDraftsBtn) {
+							viewDraftsBtn.addEventListener('click', openViewDraftsModal);
+						}
+						if (closeViewDraftsModalBtn) {
+							closeViewDraftsModalBtn.addEventListener('click', closeViewDraftsModal);
+						}
+						if (closeViewDraftsBtn) {
+							closeViewDraftsBtn.addEventListener('click', closeViewDraftsModal);
+						}
+						if (viewDraftsModal) {
+							viewDraftsModal.addEventListener('click', function(e) {
+								if (e.target === viewDraftsModal) closeViewDraftsModal();
+							});
+						}
+
+						function toggleBuildNewDropdown(forceOpen) {
+							if (!buildNewDropdown || !buildNewChevronBtn) return;
+							var shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : buildNewDropdown.style.display === 'none';
+							buildNewDropdown.style.display = shouldOpen ? 'block' : 'none';
+							buildNewChevronBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+						}
+
+						if (buildNewChevronBtn) {
+							buildNewChevronBtn.addEventListener('click', function(e) {
+								e.preventDefault();
+								e.stopPropagation();
+								toggleBuildNewDropdown();
+							});
+						}
+
+						document.addEventListener('click', function(e) {
+							if (!buildNewMenu || !buildNewDropdown) return;
+							if (!buildNewMenu.contains(e.target)) {
+								toggleBuildNewDropdown(false);
+							}
+						});
 
 						// Fetch items from backend on load
 						function fetchItems() {
