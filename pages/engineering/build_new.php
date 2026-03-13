@@ -735,6 +735,66 @@ $stmt->close();
         return versions.length ? versions : ['v1'];
       }
 
+      function parseBomPartKey(partKey) {
+        var parsed = { itemId: 0, materialId: 0, partId: null };
+        if (!partKey) return parsed;
+        var tokens = String(partKey).split('|');
+        if (tokens.length < 3) return parsed;
+        parsed.itemId = parseInt(tokens[0], 10) || 0;
+        parsed.materialId = parseInt(tokens[1], 10) || 0;
+        var partToken = tokens.slice(2).join('|');
+        if (partToken.indexOf('ep-') === 0) {
+          var idNum = parseInt(partToken.slice(3), 10);
+          parsed.partId = idNum > 0 ? idNum : null;
+        }
+        return parsed;
+      }
+
+      function buildDraftSelectionRows() {
+        var rows = [];
+        var dedupe = {};
+
+        function pushRow(itemId, materialId, partId, version) {
+          var iid = parseInt(itemId, 10) || 0;
+          if (iid <= 0) return;
+          var mid = parseInt(materialId, 10) || 0;
+          var pid = parseInt(partId, 10) || 0;
+          var ver = (version == null || String(version).trim() === '') ? null : String(version).toLowerCase();
+          var rowKey = [iid, mid || 0, pid || 0, ver || ''].join('|');
+          if (dedupe[rowKey]) return;
+          dedupe[rowKey] = true;
+          rows.push({
+            item_id: iid,
+            material_id: mid > 0 ? mid : null,
+            part_id: pid > 0 ? pid : null,
+            version: ver
+          });
+        }
+
+        Object.keys(engCheckedItems).forEach(function(itemId) {
+          if (!engCheckedItems[itemId]) return;
+          pushRow(itemId, null, null, null);
+
+          var materialMap = engCheckedMaterials[itemId] || {};
+          Object.keys(materialMap).forEach(function(materialId) {
+            if (!materialMap[materialId]) return;
+            pushRow(itemId, materialId, null, null);
+          });
+        });
+
+        Object.keys(engCheckedParts).forEach(function(partKey) {
+          if (!engCheckedParts[partKey]) return;
+          var parsed = parseBomPartKey(partKey);
+          if (!parsed.itemId || !parsed.materialId) return;
+          if (!engCheckedItems[String(parsed.itemId)]) return;
+          var matMap = engCheckedMaterials[String(parsed.itemId)] || {};
+          if (!matMap[String(parsed.materialId)]) return;
+          pushRow(parsed.itemId, parsed.materialId, parsed.partId, engPartSelectedVersions[partKey] || 'v1');
+        });
+
+        return rows;
+      }
+
       function setEngItemCardStyle(div, isSelected, isHover) {
         div.style.background   = isSelected ? '#dbeafe' : (isHover ? '#e8edf2' : '#f5f7fa');
         div.style.borderColor  = isSelected ? '#3b82f6' : '#d1d5db';
@@ -829,13 +889,44 @@ $stmt->close();
         fetch(apiBase+'/get_draft_engineering_items.php?draft_id='+encodeURIComponent(engDraftId), { credentials:'same-origin' })
           .then(function(res){ return res.json(); })
           .then(function(data) {
-            if (data.success&&data.item_ids&&data.item_ids.length>0) {
+            if (!(data && data.success)) return;
+
+            if (data.item_ids&&data.item_ids.length>0) {
               data.item_ids.forEach(function(id) {
                 engCheckedItems[String(id)] = true;
-                var card = document.querySelector('[data-eng-item-id="'+id+'"]');
-                if (card) { var cb=card.querySelector('input[type="checkbox"]'); if (cb) cb.checked=true; }
               });
             }
+
+            if (data.selection_rows && data.selection_rows.length > 0) {
+              data.selection_rows.forEach(function(row) {
+                var itemId = row && row.item_id ? String(row.item_id) : '';
+                if (!itemId) return;
+                engCheckedItems[itemId] = true;
+
+                var materialId = row.material_id ? String(row.material_id) : '';
+                if (materialId) {
+                  engCheckedMaterials[itemId] = engCheckedMaterials[itemId] || {};
+                  engCheckedMaterials[itemId][materialId] = true;
+                }
+
+                var partId = row.part_id ? parseInt(row.part_id, 10) : 0;
+                if (materialId && partId > 0) {
+                  var pKey = itemId + '|' + materialId + '|ep-' + partId;
+                  engCheckedParts[pKey] = true;
+                  if (row.version) {
+                    engPartSelectedVersions[pKey] = String(row.version).toLowerCase();
+                  }
+                }
+              });
+            }
+
+            Object.keys(engCheckedItems).forEach(function(id) {
+              var card = document.querySelector('[data-eng-item-id="'+id+'"]');
+              if (card) {
+                var cb=card.querySelector('input[type="checkbox"]');
+                if (cb) cb.checked=true;
+              }
+            });
           })
           .catch(function(err){ console.error('Failed to load draft items:', err); });
       }
@@ -1350,13 +1441,14 @@ $stmt->close();
             return;
           }
           var checkedIds = Object.keys(engCheckedItems).filter(function(id){ return engCheckedItems[id]; });
+          var selectionRows = buildDraftSelectionRows();
           saveEngineeringItemsBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="animation:spin 0.8s linear infinite"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2.5" stroke-dasharray="40" stroke-dashoffset="10"/></svg> Saving…';
           saveEngineeringItemsBtn.disabled = true;
 
           fetch(apiBase+'/save_draft_engineering_items.php', {
             method: 'POST',
             headers: { 'Content-Type':'application/json' },
-            body: JSON.stringify({ draft_id:engDraftId, item_ids:checkedIds })
+            body: JSON.stringify({ draft_id:engDraftId, item_ids:checkedIds, selection_rows:selectionRows })
           })
           .then(function(res){ return res.json(); })
           .then(function(data) {
