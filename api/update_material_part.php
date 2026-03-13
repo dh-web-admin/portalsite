@@ -8,7 +8,7 @@ ob_clean();
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['email'])) {
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
 }
@@ -21,6 +21,7 @@ if (!can_edit_page('engineering')) {
 
 $data = json_decode(file_get_contents('php://input'), true);
 $part_id = isset($data['id']) ? (int)$data['id'] : 0;
+$number = isset($data['number']) ? trim($data['number']) : '';
 $name = isset($data['name']) ? trim($data['name']) : '';
 $make = isset($data['make']) ? trim($data['make']) : '';
 $part_number = isset($data['part_number']) ? trim($data['part_number']) : '';
@@ -31,8 +32,8 @@ $width = isset($data['width']) ? trim($data['width']) : '';
 $area = isset($data['area']) ? trim($data['area']) : '';
 $quantity = isset($data['quantity']) ? trim($data['quantity']) : '';
 
-if ($part_id <= 0 || empty($name)) {
-    echo json_encode(['success' => false, 'message' => 'Part ID and name are required']);
+if ($part_id <= 0 || empty($name) || $number === '') {
+    echo json_encode(['success' => false, 'message' => 'Part record, part ID, and name are required']);
     exit;
 }
 
@@ -51,14 +52,27 @@ try {
     $old_name = $oldPart ? $oldPart['name'] : null;
     $old_make = $oldPart ? $oldPart['make'] : null;
     $item_id = $oldPart ? $oldPart['item_id'] : null;
+
+    $stmtCheckNumber = $conn->prepare("SELECT id FROM Engineering_material_parts WHERE number = ? AND id <> ? LIMIT 1");
+    $stmtCheckNumber->bind_param('si', $number, $part_id);
+    $stmtCheckNumber->execute();
+    $resultCheckNumber = $stmtCheckNumber->get_result();
+    $numberExists = $resultCheckNumber ? $resultCheckNumber->fetch_assoc() : null;
+    $stmtCheckNumber->close();
+
+    if ($numberExists) {
+        echo json_encode(['success' => false, 'message' => 'Part ID already exists. Please use a unique part ID.']);
+        exit;
+    }
     
     // Update the material part
     $stmt = $conn->prepare("UPDATE Engineering_material_parts 
-        SET name = ?, make = ?, part_number = ?, material_type = ?, 
+        SET number = ?, name = ?, make = ?, part_number = ?, material_type = ?, 
             thickness = ?, length = ?, width = ?, area = ?, quantity = ?
         WHERE id = ?");
     
-    $stmt->bind_param('sssssssssi', 
+    $stmt->bind_param('ssssssssssi', 
+        $number,
         $name,
         $make,
         $part_number,
@@ -132,6 +146,7 @@ try {
                     $stmtSpec->close();
                 }
             }
+
         }
         
         echo json_encode(['success' => true, 'message' => 'Part updated successfully']);

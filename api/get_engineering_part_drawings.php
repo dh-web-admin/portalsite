@@ -9,15 +9,15 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     exit();
 }
 
-if (!isset($_GET['item_id']) || !is_numeric($_GET['item_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid item ID']);
+$itemId = isset($_GET['item_id']) ? (int) $_GET['item_id'] : 0;
+$partId = isset($_GET['part_id']) ? (int) $_GET['part_id'] : 0;
+
+if ($itemId <= 0 || $partId <= 0) {
+    echo json_encode(['success' => false, 'message' => 'Invalid item or part']);
     exit();
 }
 
-$itemId = intval($_GET['item_id']);
-
 try {
-    // Check if table exists
     $tableCheck = $conn->query("SHOW TABLES LIKE 'engineering_drawings'");
     if (!$tableCheck || $tableCheck->num_rows === 0) {
         echo json_encode(['success' => true, 'drawings' => []]);
@@ -31,18 +31,18 @@ try {
         $conn->query("CREATE INDEX idx_item_part_version ON engineering_drawings (item_id, part_id, version)");
     }
 
-    $stmt = $conn->prepare("SELECT id, item_id, part_id, file_url, filename, version, uploaded_at, uploaded_by FROM engineering_drawings WHERE item_id = ? AND part_id IS NULL ORDER BY CAST(SUBSTRING(version, 2) AS UNSIGNED) DESC, uploaded_at DESC, id DESC");
-    $stmt->bind_param('i', $itemId);
+    $stmt = $conn->prepare('SELECT id, item_id, part_id, file_url, filename, version, uploaded_at, uploaded_by FROM engineering_drawings WHERE item_id = ? AND part_id = ? ORDER BY CAST(SUBSTRING(version, 2) AS UNSIGNED) DESC, uploaded_at DESC, id DESC');
+    $stmt->bind_param('ii', $itemId, $partId);
     $stmt->execute();
     $result = $stmt->get_result();
-    
+
     $drawings = [];
     while ($row = $result->fetch_assoc()) {
         $drawings[] = $row;
     }
-    
+
     $stmt->close();
-    
+
     echo json_encode(['success' => true, 'drawings' => $drawings]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);

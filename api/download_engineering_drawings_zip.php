@@ -66,6 +66,13 @@ try {
         exit();
     }
 
+    $partColumnCheck = $conn->query("SHOW COLUMNS FROM engineering_drawings LIKE 'part_id'");
+    if (!$partColumnCheck || $partColumnCheck->num_rows === 0) {
+        $conn->query("ALTER TABLE engineering_drawings ADD COLUMN part_id INT(11) NULL DEFAULT NULL AFTER item_id");
+        $conn->query("CREATE INDEX idx_part_id ON engineering_drawings (part_id)");
+        $conn->query("CREATE INDEX idx_item_part_version ON engineering_drawings (item_id, part_id, version)");
+    }
+
     $itemName = 'Item_' . $itemId;
     $itemStmt = $conn->prepare("SELECT name FROM engineering_items WHERE id = ? LIMIT 1");
     if ($itemStmt) {
@@ -86,7 +93,7 @@ try {
     $bundleName = $safeItemName . '_Drawings_' . strtoupper($version);
     $downloadName = $bundleName . '.zip';
 
-    $stmt = $conn->prepare("SELECT filename, file_url FROM engineering_drawings WHERE item_id = ? AND LOWER(version) = ? ORDER BY id ASC");
+    $stmt = $conn->prepare("SELECT filename, file_url FROM engineering_drawings WHERE item_id = ? AND part_id IS NULL AND LOWER(version) = ? ORDER BY id ASC");
     $stmt->bind_param('is', $itemId, $version);
     $stmt->execute();
     $result = $stmt->get_result();

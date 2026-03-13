@@ -22,6 +22,17 @@ if ($item_id <= 0 || $part_name === '') {
 
 $conn->begin_transaction();
 
+$part_id = 0;
+$stmt = $conn->prepare('SELECT id FROM engineering_item_parts WHERE item_id = ? AND part_name = ? LIMIT 1');
+if ($stmt) {
+    $stmt->bind_param('is', $item_id, $part_name);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result ? $result->fetch_assoc() : null;
+    $part_id = $row ? (int)$row['id'] : 0;
+    $stmt->close();
+}
+
 $stmt = $conn->prepare('DELETE FROM engineering_item_parts WHERE item_id = ? AND part_name = ?');
 if (!$stmt) {
     http_response_code(500);
@@ -57,6 +68,16 @@ if (!$ok) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Failed to delete part specifications.']);
     exit();
+}
+
+$tableCheck = $conn->query("SHOW TABLES LIKE 'engineering_drawings'");
+if ($tableCheck && $tableCheck->num_rows > 0 && $part_id > 0) {
+    $stmt = $conn->prepare('DELETE FROM engineering_drawings WHERE item_id = ? AND part_id = ?');
+    if ($stmt) {
+        $stmt->bind_param('ii', $item_id, $part_id);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 
 // Also delete from Bill of Materials section (Engineering_material_parts)

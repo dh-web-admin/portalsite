@@ -360,7 +360,7 @@ $stmt->close();
               <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid #e2e8f0;gap:16px;">
                 <div>
                   <h2 style="margin:0;font-size:22px;color:#0f172a;">Select Specific Parts</h2>
-                  <p style="margin:6px 0 0;color:#64748b;font-size:14px;">Choose engineering items, drawing versions, member assemblies, and specific parts.</p>
+                  <p style="margin:6px 0 0;color:#64748b;font-size:14px;">Choose engineering items, member assemblies, and specific parts.</p>
                 </div>
                 <button type="button" id="closeSpecificPartsModalBtn" style="background:transparent;border:none;font-size:28px;line-height:1;color:#64748b;cursor:pointer;padding:0 4px;">&times;</button>
               </div>
@@ -455,20 +455,20 @@ $stmt->close();
 
       function ensureItemSelection(itemId) {
         if (!specificPartsState.selections[itemId]) {
-          specificPartsState.selections[itemId] = { itemSelected:false, mode:'', drawingId:'', materialId:'', partKeys:{} };
+          specificPartsState.selections[itemId] = { itemSelected:false, mode:'', materialId:'', partKeys:{} };
         }
         return specificPartsState.selections[itemId];
       }
 
-      function uniqueParts(parts) {
-        var seen = {};
-        return (parts || []).filter(function(part) {
-          var key = [part.part_name||'', part.nsn_number||''].join('|');
-          if (seen[key]) return false;
-          seen[key] = true;
-          part._key = key;
-          return true;
-        });
+      function partSelectionKey(part) {
+        if (part && part.id != null && String(part.id) !== '') {
+          return 'material-part:' + String(part.id);
+        }
+        return [
+          part && part.number ? part.number : '',
+          part && part.name ? part.name : '',
+          part && part.make ? part.make : ''
+        ].join('|');
       }
 
       function getMostRecentId(items) {
@@ -477,22 +477,22 @@ $stmt->close();
 
       function selectAllParts(item, selection) {
         selection.partKeys = {};
-        (item.parts || []).forEach(function(part) {
-          if (part && part._key) selection.partKeys[part._key] = true;
+        (item || []).forEach(function(part) {
+          var key = partSelectionKey(part);
+          if (key) selection.partKeys[key] = true;
         });
       }
 
       function updateSpecificPartsSummary() {
-        var itemCount=0, drawingCount=0, materialCount=0, partsCount=0;
+        var itemCount=0, materialCount=0, partsCount=0;
         Object.keys(specificPartsState.selections).forEach(function(itemId) {
           var sel = specificPartsState.selections[itemId];
           if (!sel) return;
           if (sel.itemSelected)  itemCount += 1;
-          if (sel.drawingId)     drawingCount += 1;
           if (sel.materialId)    materialCount += 1;
           Object.keys(sel.partKeys||{}).forEach(function(key){ if (sel.partKeys[key]) partsCount += 1; });
         });
-        specificPartsSelectionSummary.textContent = itemCount+' item(s), '+drawingCount+' drawing(s), '+materialCount+' assembly selection(s), '+partsCount+' part(s) selected';
+        specificPartsSelectionSummary.textContent = itemCount+' item(s), '+materialCount+' assembly selection(s), '+partsCount+' part(s) selected';
       }
 
       function buildRadioList(name, items, selectedValue, formatter, emptyText) {
@@ -502,28 +502,31 @@ $stmt->close();
         return items.map(function(item) {
           var idValue = String(item.id||'');
           var checked = selectedValue && String(selectedValue)===idValue ? ' checked' : '';
+          var checkVisible = checked ? 'inline-flex' : 'none';
           return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;">'
             +'<input type="radio" name="'+escapeHtml(name)+'" value="'+escapeHtml(idValue)+'"'+checked+' />'
             +'<span style="display:block;line-height:1.4;color:#0f172a;font-size:14px;">'+formatter(item)+'</span>'
+            +'<span style="margin-left:auto;display:'+checkVisible+';align-items:center;justify-content:center;color:#16a34a;font-weight:800;font-size:15px;">&#10003;</span>'
             +'</label>';
         }).join('');
       }
 
       function buildCheckboxList(itemId, parts, selectedMap) {
         if (!parts || !parts.length) {
-          return '<div style="padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:13px;">No parts available for this engineering item.</div>';
+          return '<div style="padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:13px;">No parts available for this member assembly.</div>';
         }
         return parts.map(function(part) {
-          var key = part._key || [part.part_name||'', part.nsn_number||''].join('|');
+          var key = partSelectionKey(part);
           var checked = selectedMap && selectedMap[key] ? ' checked' : '';
           var secondary = [];
-          if (part.nsn_number)    secondary.push('NSN: '+part.nsn_number);
+          if (part.part_number)   secondary.push('Part No: '+part.part_number);
           if (part.make)          secondary.push('Make: '+part.make);
-          if (part.supplier_name) secondary.push('Supplier: '+part.supplier_name);
+          if (part.material_type) secondary.push('Type: '+part.material_type);
+          if (part.quantity)      secondary.push('Qty: '+part.quantity);
           return '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;">'
             +'<input type="checkbox" data-item-id="'+escapeHtml(itemId)+'" data-part-key="'+escapeHtml(key)+'"'+checked+' />'
             +'<span style="display:block;line-height:1.4;">'
-              +'<span style="display:block;color:#0f172a;font-size:14px;font-weight:600;">'+escapeHtml(part.part_name||'Unnamed part')+'</span>'
+              +'<span style="display:block;color:#0f172a;font-size:14px;font-weight:600;">'+escapeHtml(part.name||part.part_name||'Unnamed part')+'</span>'
               +'<span style="display:block;color:#64748b;font-size:12px;">'+escapeHtml(secondary.join(' | ')||'No additional details')+'</span>'
             +'</span></label>';
         }).join('');
@@ -540,14 +543,15 @@ $stmt->close();
         specificPartsModalBody.innerHTML = specificPartsState.items.map(function(item) {
           var sel = ensureItemSelection(item.id);
           var isExpanded = String(specificPartsState.expandedItemId||'') === String(item.id);
-          var drawingsMarkup  = buildRadioList('drawing_version_'+item.id, item.drawings,  sel.drawingId,  function(d){ return '<strong>'+escapeHtml(d.version||'No version')+'</strong><br><span style="color:#64748b;font-size:12px;">'+escapeHtml(d.filename||d.file_url||'Drawing file')+'</span>'; }, 'No drawing versions available for this item.');
           var materialsMarkup = buildRadioList('member_assembly_'+item.id, item.materials, sel.materialId, function(m){ var l=[]; if(m.number) l.push(m.number); if(m.name) l.push(m.name); return escapeHtml(l.join(' - ')||'Unnamed member assembly'); }, 'No member assemblies available for this item.');
-          var partsMarkup = buildCheckboxList(item.id, item.parts, sel.partKeys);
+          var selectedMaterialParts = sel.materialId && item.materialPartsById ? (item.materialPartsById[String(sel.materialId)] || []) : [];
+          var partsMarkup = sel.materialId
+            ? buildCheckboxList(item.id, selectedMaterialParts, sel.partKeys)
+            : '<div style="padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;color:#64748b;font-size:13px;">Select a member assembly to view its parts.</div>';
           var allRecentActive = sel.mode==='all-most-recent';
           var specificActive  = sel.mode==='specific';
           var detailsMarkup   = isExpanded && specificActive
             ? '<div style="padding:18px;display:grid;gap:18px;border-top:1px solid #dbe4ee;background:#fff;">'
-                +'<div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px;">In House Drawings</div><div style="display:grid;gap:10px;">'+drawingsMarkup+'</div></div>'
                 +'<div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px;">Bill of Materials</div><div style="display:grid;gap:10px;">'+materialsMarkup+'</div></div>'
                 +'<div><div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:10px;">Parts and Suppliers</div><div style="display:grid;gap:10px;max-height:260px;overflow:auto;padding-right:4px;">'+partsMarkup+'</div></div>'
               +'</div>'
@@ -574,9 +578,9 @@ $stmt->close();
             var sel    = ensureItemSelection(itemId);
             var item   = specificPartsState.items.find(function(e){ return String(e.id)===String(itemId); });
             sel.itemSelected = true; sel.mode = 'all-most-recent';
-            sel.drawingId  = item ? getMostRecentId(item.drawings)  : '';
             sel.materialId = item ? getMostRecentId(item.materials) : '';
-            if (item) selectAllParts(item, sel);
+            var selectedParts = item && sel.materialId && item.materialPartsById ? (item.materialPartsById[String(sel.materialId)] || []) : [];
+            selectAllParts(selectedParts, sel);
             specificPartsState.expandedItemId = null;
             renderSpecificPartsModal();
           });
@@ -597,9 +601,12 @@ $stmt->close();
             var itemId = name.split('_').pop();
             var sel    = ensureItemSelection(itemId);
             sel.itemSelected = true; sel.mode = 'specific';
-            if (name.indexOf('drawing_version_')===0)   sel.drawingId  = value;
-            else if (name.indexOf('member_assembly_')===0) sel.materialId = value;
+            if (name.indexOf('member_assembly_')===0) {
+              sel.materialId = value;
+              sel.partKeys = {};
+            }
             updateSpecificPartsSummary();
+            renderSpecificPartsModal();
           });
         });
         Array.prototype.forEach.call(specificPartsModalBody.querySelectorAll('input[type="checkbox"][data-part-key]'), function(input) {
@@ -623,19 +630,37 @@ $stmt->close();
             if (!data||!data.success||!Array.isArray(data.items)) throw new Error('Unable to load engineering items');
             return Promise.all(data.items.map(function(item) {
               ensureItemSelection(item.id);
-              return Promise.all([
-                fetch(apiBase+'/get_engineering_drawings.php?item_id='+encodeURIComponent(item.id), {credentials:'same-origin'}).then(function(r){ return r.json(); }).catch(function(){ return {success:false,drawings:[]}; }),
-                fetch(apiBase+'/get_engineering_materials.php?item_id='+encodeURIComponent(item.id), {credentials:'same-origin'}).then(function(r){ return r.json(); }).catch(function(){ return {success:false,materials:[]}; }),
-                fetch(apiBase+'/get_engineering_item_parts.php?item_id='+encodeURIComponent(item.id), {credentials:'same-origin'}).then(function(r){ return r.json(); }).catch(function(){ return {success:false,parts:[]}; })
-              ]).then(function(results) {
-                return {
-                  id:       item.id,
-                  name:     item.name,
-                  drawings: results[0]&&results[0].success&&Array.isArray(results[0].drawings)  ? results[0].drawings  : [],
-                  materials:results[1]&&results[1].success&&Array.isArray(results[1].materials) ? results[1].materials : [],
-                  parts:    uniqueParts(results[2]&&results[2].success&&Array.isArray(results[2].parts) ? results[2].parts : [])
-                };
-              });
+              return fetch(apiBase+'/get_engineering_materials.php?item_id='+encodeURIComponent(item.id), {credentials:'same-origin'})
+                .then(function(r){ return r.json(); })
+                .catch(function(){ return {success:false,materials:[]}; })
+                .then(function(materialResult) {
+                  var materials = materialResult&&materialResult.success&&Array.isArray(materialResult.materials) ? materialResult.materials : [];
+                  return Promise.all(materials.map(function(material) {
+                    return fetch(apiBase+'/get_material_parts.php?material_id='+encodeURIComponent(material.id), {credentials:'same-origin'})
+                      .then(function(r){ return r.json(); })
+                      .catch(function(){ return {success:false,parts:[]}; })
+                      .then(function(partsResult) {
+                        return {
+                          materialId: material.id,
+                          parts: partsResult&&partsResult.success&&Array.isArray(partsResult.parts) ? partsResult.parts : []
+                        };
+                      });
+                  })).then(function(materialPartsResults) {
+                    var materialPartsById = {};
+                    materialPartsResults.forEach(function(entry) {
+                      materialPartsById[String(entry.materialId)] = entry.parts || [];
+                    });
+                    return {
+                      id: item.id,
+                      name: item.name,
+                      materials: materials,
+                      materialPartsById: materialPartsById
+                    };
+                  });
+                })
+                .then(function(resultItem) {
+                  return resultItem;
+                });
             }));
           })
           .then(function(items) {
@@ -683,11 +708,32 @@ $stmt->close();
       // Engineering Panel
       // ============================================================
       var engSelectedItem         = null;
-      var engDrawingsDropdownBusy = false;
       var engBomDropdownBusy      = false;
       var engPartsDropdownBusy    = false;
       var engDraftId              = equipmentData ? (equipmentData.draftId || null) : null;
       var engCheckedItems         = {};
+      var engCheckedMaterials     = {};
+      var engCheckedParts         = {};
+      var engPartSelectedVersions = {};
+
+      function buildBomPartKey(itemId, materialId, part) {
+        var partToken = (part && part.engineering_part_id) ? ('ep-'+String(part.engineering_part_id)) : ('n-'+String(part && part.number ? part.number : '')+'-'+String(part && part.name ? part.name : ''));
+        return String(itemId) + '|' + String(materialId) + '|' + partToken;
+      }
+
+      function extractPartVersions(drawings) {
+        var seen = {};
+        var versions = [];
+        (drawings || []).forEach(function(d) {
+          var v = (d && d.version) ? String(d.version).toLowerCase() : 'v1';
+          if (!seen[v]) {
+            seen[v] = true;
+            versions.push(v);
+          }
+        });
+        versions.sort(function(a,b){ return (parseInt(b.replace(/\D/g,''),10)||1) - (parseInt(a.replace(/\D/g,''),10)||1); });
+        return versions.length ? versions : ['v1'];
+      }
 
       function setEngItemCardStyle(div, isSelected, isHover) {
         div.style.background   = isSelected ? '#dbeafe' : (isHover ? '#e8edf2' : '#f5f7fa');
@@ -732,7 +778,7 @@ $stmt->close();
             e.stopPropagation();
             engCheckedItems[String(item.id)] = checkbox.checked;
             if (engSelectedItem && String(engSelectedItem.id) === String(item.id)) {
-              ['engDrawingsDropdown','engBomDropdown','engPartsDropdown'].forEach(function(id){ var el=document.getElementById(id); if(el) el.remove(); });
+              ['engBomDropdown','engPartsDropdown'].forEach(function(id){ var el=document.getElementById(id); if(el) el.remove(); });
               if (checkbox.checked) {
                 showEngDetails(item);
               } else {
@@ -753,7 +799,7 @@ $stmt->close();
               var prev = document.querySelector('[data-eng-item-id="'+engSelectedItem.id+'"]');
               if (prev) setEngItemCardStyle(prev, false, false);
             }
-            ['engDrawingsDropdown','engBomDropdown','engPartsDropdown'].forEach(function(id){ var el=document.getElementById(id); if(el) el.remove(); });
+            ['engBomDropdown','engPartsDropdown'].forEach(function(id){ var el=document.getElementById(id); if(el) el.remove(); });
             engSelectedItem = item;
             setEngItemCardStyle(div, true, false);
             if (engCheckedItems[String(item.id)]) {
@@ -810,8 +856,7 @@ $stmt->close();
         var ul = document.createElement('ul');
         ul.style.cssText = 'list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0;';
 
-        [{label:'In house Drawings',   handler:function(li){ handleEngDrawingsClick(item,li); }},
-         {label:'Bill of materials',   handler:function(li){ handleEngBomClick(item,li); }},
+        [{label:'Bill of materials',   handler:function(li){ handleEngBomClick(item,li); }},
          {label:'Parts and Suppliers', handler:function(li){ handleEngPartsClick(item,li); }}
         ].forEach(function(section) {
           var li = document.createElement('li');
@@ -837,98 +882,6 @@ $stmt->close();
           ul.appendChild(li);
         });
         details.appendChild(ul);
-      }
-
-      function handleEngDrawingsClick(item, liElement) {
-        if (engDrawingsDropdownBusy) return;
-        engDrawingsDropdownBusy = true;
-        var existingDropdown = document.getElementById('engDrawingsDropdown');
-        if (existingDropdown) { existingDropdown.remove(); engDrawingsDropdownBusy=false; return; }
-
-        fetch(apiBase+'/get_engineering_drawings.php?item_id='+item.id)
-          .then(function(res){ return res.json(); })
-          .then(function(data) {
-            var dropdown = document.createElement('div');
-            dropdown.id = 'engDrawingsDropdown';
-            dropdown.style.cssText = 'position:relative;display:block;background:#f7f9fc;border:1px solid #d1d5db;border-top:none;border-radius:0 0 6px 6px;width:100%;max-height:0;opacity:0;transform:translateY(-4px);transition:max-height 0.24s ease,opacity 0.2s ease,transform 0.2s ease;overflow:hidden;pointer-events:none;z-index:1;margin:0 0 10px 0;padding:10px 0;box-sizing:border-box;';
-
-            var hasDrawings = data.success&&data.drawings&&data.drawings.length>0;
-            if (hasDrawings) {
-              var drawingsByVersion = {};
-              data.drawings.forEach(function(drawing) {
-                var vk = (drawing.version||'v1').toLowerCase().replace(/\s+/g,'');
-                if (!drawingsByVersion[vk]) drawingsByVersion[vk]=[];
-                drawingsByVersion[vk].push(drawing);
-              });
-              var sortedVersions = Object.keys(drawingsByVersion).sort(function(a,b){ return (parseInt(b.replace(/\D/g,''),10)||0)-(parseInt(a.replace(/\D/g,''),10)||0); });
-
-              function createEngDrawingVersionBox(versionKey, headerLabel, withPreviousToggle, previousContainer) {
-                var versionBox = document.createElement('div');
-                versionBox.style.cssText = 'margin:4px 10px;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;background:#fff;';
-                var versionHeader = document.createElement('div');
-                versionHeader.style.cssText = 'display:flex;align-items:center;padding:8px 12px;background:#f1f5f9;border-bottom:1px solid #e5e7eb;gap:10px;';
-                var versionLabel = document.createElement('span');
-                versionLabel.textContent = headerLabel;
-                versionLabel.style.cssText = 'font-weight:700;font-size:0.92em;color:#1f2937;flex:1;';
-                versionHeader.appendChild(versionLabel);
-                var downloadBtn = document.createElement('a');
-                downloadBtn.href = apiBase+'/download_engineering_drawings_zip.php?item_id='+item.id+'&version='+versionKey;
-                downloadBtn.textContent = 'Download '+versionKey.toUpperCase();
-                downloadBtn.target = '_blank';
-                downloadBtn.style.cssText = 'padding:4px 12px;background:#5b7fa3;color:#fff;text-decoration:none;border-radius:4px;font-weight:600;font-size:0.85em;';
-                versionHeader.appendChild(downloadBtn);
-                if (withPreviousToggle) {
-                  var previousToggle = document.createElement('span');
-                  previousToggle.textContent = 'Click to view previous versions';
-                  previousToggle.style.cssText = 'font-weight:600;font-size:0.88em;color:#5b7fa3;cursor:pointer;margin-left:auto;';
-                  previousToggle.addEventListener('click', function() {
-                    if (!previousContainer) return;
-                    var isHidden = previousContainer.style.display==='none';
-                    previousContainer.style.display = isHidden ? 'block' : 'none';
-                    previousToggle.textContent = isHidden ? 'Hide previous versions' : 'Click to view previous versions';
-                    dropdown.style.maxHeight = (dropdown.scrollHeight+40)+'px';
-                  });
-                  versionHeader.appendChild(previousToggle);
-                }
-                versionBox.appendChild(versionHeader);
-                drawingsByVersion[versionKey].forEach(function(drawing) {
-                  var drawingRow = document.createElement('div');
-                  drawingRow.style.cssText = 'padding:8px 12px;display:flex;align-items:center;font-size:0.93em;color:#1f2937;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background 0.15s;';
-                  drawingRow.addEventListener('mouseenter', function(){ drawingRow.style.background='#f3f4f6'; });
-                  drawingRow.addEventListener('mouseleave', function(){ drawingRow.style.background=''; });
-                  drawingRow.addEventListener('click', function(){ window.open(drawing.file_url,'_blank'); });
-                  var nameSpan = document.createElement('span');
-                  nameSpan.textContent = drawing.filename||drawing.file_url||'Drawing';
-                  nameSpan.style.flex = '1';
-                  drawingRow.appendChild(nameSpan);
-                  versionBox.appendChild(drawingRow);
-                });
-                return versionBox;
-              }
-
-              var currentVersionKey  = sortedVersions[0];
-              var previousContainer  = document.createElement('div');
-              previousContainer.style.display = 'none';
-              dropdown.appendChild(createEngDrawingVersionBox(currentVersionKey,'Current Version: '+currentVersionKey.toUpperCase(),sortedVersions.length>1,previousContainer));
-              sortedVersions.slice(1).forEach(function(vk){ previousContainer.appendChild(createEngDrawingVersionBox(vk,'Version: '+vk.toUpperCase(),false,null)); });
-              dropdown.appendChild(previousContainer);
-            } else {
-              var emptyState = document.createElement('div');
-              emptyState.textContent = 'No drawings available.';
-              emptyState.style.cssText = 'padding:10px 16px;font-size:0.92em;color:#6b7280;font-style:italic;';
-              dropdown.appendChild(emptyState);
-            }
-
-            if (liElement.parentNode) liElement.parentNode.insertBefore(dropdown, liElement.nextSibling);
-            setTimeout(function(){
-              dropdown.style.maxHeight  = (dropdown.scrollHeight+40)+'px';
-              dropdown.style.opacity    = '1';
-              dropdown.style.transform  = 'translateY(0)';
-              dropdown.style.pointerEvents = 'auto';
-            }, 10);
-          })
-          .catch(function(err){ console.error('Error loading drawings:', err); })
-          .finally(function(){ engDrawingsDropdownBusy=false; });
       }
 
       function handleEngBomClick(item, liElement) {
@@ -1032,6 +985,7 @@ $stmt->close();
                   materialsContainer.style.padding = '6px 12px 10px 12px';
 
                   materialData.materials.forEach(function(material) {
+                    var itemMaterialChecks = engCheckedMaterials[String(item.id)] || (engCheckedMaterials[String(item.id)] = {});
                     var materialWrapper = document.createElement('div');
                     materialWrapper.classList.add('eng-material-wrapper');
                     materialWrapper.style.cssText = 'border:2px solid #d1d5db;border-radius:6px;margin-bottom:8px;overflow:hidden;';
@@ -1043,6 +997,11 @@ $stmt->close();
                     numSpan.textContent = '#'+material.number;
                     numSpan.style.cssText = 'font-weight:700;color:#5b7fa3;margin-right:12px;min-width:50px;';
 
+                    var assemblyCheckbox = document.createElement('input');
+                    assemblyCheckbox.type = 'checkbox';
+                    assemblyCheckbox.style.cssText = 'width:16px;height:16px;cursor:pointer;flex-shrink:0;margin-right:10px;';
+                    assemblyCheckbox.checked = !!itemMaterialChecks[String(material.id)];
+
                     var nameSpan = document.createElement('span');
                     nameSpan.textContent = material.name;
                     nameSpan.style.flex = '1';
@@ -1051,14 +1010,23 @@ $stmt->close();
                     chevron.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4.5 6L8 9.5L11.5 6" stroke="#888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
                     chevron.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;padding:4px;border-radius:4px;transition:transform 0.2s;';
 
-                    materialRow.addEventListener('click', function() {
+                    function setPartsVisibility(isChecked) {
+                      itemMaterialChecks[String(material.id)] = !!isChecked;
                       var existingMd = materialWrapper.querySelector('.eng-material-dropdown');
-                      if (existingMd) {
-                        existingMd.remove();
+                      if (!isChecked) {
+                        if (existingMd) existingMd.remove();
+                        materialWrapper.style.borderColor = '#d1d5db';
                         chevron.style.transform = 'rotate(0deg)';
                         setTimeout(function(){ var bd=document.getElementById('engBomDropdown'); if(bd) bd.style.maxHeight=(bd.scrollHeight+40)+'px'; }, 50);
                         return;
                       }
+
+                      materialWrapper.style.borderColor = '#3b82f6';
+                      if (existingMd) {
+                        chevron.style.transform = 'rotate(180deg)';
+                        return;
+                      }
+
                       chevron.style.transform = 'rotate(180deg)';
                       var materialDropdown = document.createElement('div');
                       materialDropdown.classList.add('eng-material-dropdown');
@@ -1074,15 +1042,153 @@ $stmt->close();
                             var partsListContainer = document.createElement('div');
                             partsListContainer.style.cssText = 'margin-top:8px;border-top:1px solid #e5e7eb;padding-top:8px;';
                             partsData.parts.forEach(function(part) {
+                              var partKey = buildBomPartKey(item.id, material.id, part);
+                              var isPartChecked = !!engCheckedParts[partKey];
                               var partRow = document.createElement('div');
                               partRow.style.cssText = 'padding:10px 12px 10px 20px;background:#fafbfc;border-radius:4px;margin-bottom:4px;margin-left:8px;font-size:0.88em;display:flex;align-items:center;gap:16px;border:1px solid #e5e7eb;border-left:3px solid #5b7fa3;';
+
+                              var partCheckbox = document.createElement('input');
+                              partCheckbox.type = 'checkbox';
+                              partCheckbox.style.cssText = 'width:16px;height:16px;cursor:pointer;flex-shrink:0;';
+                              partCheckbox.checked = isPartChecked;
+
                               var pNum=document.createElement('span'); pNum.textContent='#'+part.number; pNum.style.cssText='font-weight:700;color:#5b7fa3;min-width:40px;';
                               var pName=document.createElement('span'); pName.textContent=part.name; pName.style.cssText='color:#1f2937;font-weight:600;min-width:120px;';
                               var pMake=document.createElement('span'); pMake.innerHTML='<span style="color:#6b7280;">Make:</span> '+(part.make||'-'); pMake.style.minWidth='150px';
                               var pMatType=document.createElement('span'); pMatType.innerHTML='<span style="color:#6b7280;">Material Type:</span> '+(part.material_type||'-'); pMatType.style.minWidth='180px';
                               var pQty=document.createElement('span'); pQty.innerHTML='<span style="color:#6b7280;">Quantity:</span> '+(part.quantity||'-'); pQty.style.minWidth='100px';
-                              partRow.appendChild(pNum); partRow.appendChild(pName); partRow.appendChild(pMake); partRow.appendChild(pMatType); partRow.appendChild(pQty);
+
+                              var partVersionMeta = document.createElement('span');
+                              partVersionMeta.style.cssText = 'margin-left:auto;color:#334155;font-size:12px;font-weight:700;display:none;';
+
+                              var partVersionChangeBtn = document.createElement('button');
+                              partVersionChangeBtn.type = 'button';
+                              partVersionChangeBtn.textContent = 'Change version';
+                              partVersionChangeBtn.style.cssText = 'font-size:12px;font-weight:700;color:#1d4ed8;background:transparent;border:none;padding:0;cursor:pointer;display:none;';
+                              partVersionChangeBtn.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                              });
+
+                              var versionWrap = document.createElement('div');
+                              versionWrap.style.cssText = 'display:none;margin:6px 0 0 46px;padding:8px 10px;border:1px solid #dbe4ee;border-radius:6px;background:#fff;';
+
+                              function updateBomHeight() {
+                                var bdx = document.getElementById('engBomDropdown');
+                                if (bdx) setTimeout(function(){ bdx.style.maxHeight = (bdx.scrollHeight + 40) + 'px'; }, 30);
+                              }
+
+                              function renderVersionSelector(versions) {
+                                versionWrap.innerHTML = '';
+                                var selectedVersion = engPartSelectedVersions[partKey] || versions[0];
+                                if (versions.indexOf(selectedVersion) === -1) {
+                                  selectedVersion = versions[0];
+                                }
+                                engPartSelectedVersions[partKey] = selectedVersion;
+                                partVersionMeta.textContent = 'Selected Version: ' + String(selectedVersion).toUpperCase();
+                                partVersionMeta.style.display = partCheckbox.checked ? 'inline' : 'none';
+
+                                var optionsWrap = document.createElement('div');
+                                optionsWrap.style.cssText = 'display:none;';
+                                var selectorTitle = document.createElement('div');
+                                selectorTitle.textContent = versions.length > 1 ? 'Select version (one only)' : 'Version';
+                                selectorTitle.style.cssText = 'font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;';
+                                optionsWrap.appendChild(selectorTitle);
+
+                                partVersionChangeBtn.style.display = (versions.length > 1 && partCheckbox.checked) ? 'inline' : 'none';
+                                partVersionChangeBtn.textContent = 'Change version';
+                                partVersionChangeBtn.onclick = function(e) {
+                                  e.stopPropagation();
+                                  var opening = optionsWrap.style.display === 'none';
+                                  optionsWrap.style.display = opening ? 'block' : 'none';
+                                  partVersionChangeBtn.textContent = opening ? 'Hide versions' : 'Change version';
+                                  versionWrap.style.display = opening ? 'block' : 'none';
+                                  updateBomHeight();
+                                };
+
+                                versions.forEach(function(ver) {
+                                  var option = document.createElement('label');
+                                  option.style.cssText = 'display:flex;align-items:center;gap:8px;margin:4px 0;cursor:pointer;color:#1f2937;font-size:12px;';
+                                  var radio = document.createElement('input');
+                                  radio.type = 'radio';
+                                  radio.name = 'bom_part_version_' + partKey.replace(/[^a-zA-Z0-9_\-]/g, '_');
+                                  radio.value = ver;
+                                  radio.checked = String(selectedVersion) === String(ver);
+                                  radio.addEventListener('click', function(e){ e.stopPropagation(); });
+                                  radio.addEventListener('change', function() {
+                                    if (!this.checked) return;
+                                    engPartSelectedVersions[partKey] = ver;
+                                    partVersionMeta.textContent = 'Selected Version: ' + String(ver).toUpperCase();
+                                    optionsWrap.style.display = 'none';
+                                    partVersionChangeBtn.textContent = 'Change version';
+                                    versionWrap.style.display = 'none';
+                                    updateBomHeight();
+                                  });
+                                  var txt = document.createElement('span');
+                                  txt.textContent = String(ver).toUpperCase();
+                                  option.appendChild(radio);
+                                  option.appendChild(txt);
+                                  optionsWrap.appendChild(option);
+                                });
+
+                                versionWrap.appendChild(optionsWrap);
+                              }
+
+                              function loadPartVersionsThenRender() {
+                                if (!part.engineering_part_id) {
+                                  renderVersionSelector(['v1']);
+                                  return;
+                                }
+                                fetch(apiBase + '/get_engineering_part_drawings.php?item_id=' + encodeURIComponent(item.id) + '&part_id=' + encodeURIComponent(part.engineering_part_id))
+                                  .then(function(res){ return res.json(); })
+                                  .then(function(drawData) {
+                                    var versions = (drawData && drawData.success) ? extractPartVersions(drawData.drawings) : ['v1'];
+                                    renderVersionSelector(versions);
+                                  })
+                                  .catch(function() {
+                                    renderVersionSelector(['v1']);
+                                  });
+                              }
+
+                              function setPartCheckedState(checked) {
+                                engCheckedParts[partKey] = !!checked;
+                                partCheckbox.checked = !!checked;
+                                if (!checked) {
+                                  versionWrap.style.display = 'none';
+                                  partVersionMeta.style.display = 'none';
+                                  partVersionChangeBtn.style.display = 'none';
+                                  partVersionChangeBtn.textContent = 'Change version';
+                                  partRow.style.borderColor = '#e5e7eb';
+                                  partRow.style.background = '#fafbfc';
+                                  updateBomHeight();
+                                  return;
+                                }
+                                partRow.style.borderColor = '#93c5fd';
+                                partRow.style.background = '#eff6ff';
+                                loadPartVersionsThenRender();
+                                updateBomHeight();
+                              }
+
+                              partCheckbox.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                                setPartCheckedState(partCheckbox.checked);
+                              });
+
+                              partRow.addEventListener('click', function() {
+                                setPartCheckedState(!partCheckbox.checked);
+                              });
+
+                              versionWrap.addEventListener('click', function(e) {
+                                e.stopPropagation();
+                              });
+
+                              partRow.appendChild(partCheckbox);
+                              partRow.appendChild(pNum); partRow.appendChild(pName); partRow.appendChild(pMake); partRow.appendChild(pMatType); partRow.appendChild(pQty); partRow.appendChild(partVersionMeta); partRow.appendChild(partVersionChangeBtn);
                               partsListContainer.appendChild(partRow);
+                              partsListContainer.appendChild(versionWrap);
+
+                              if (isPartChecked) {
+                                setPartCheckedState(true);
+                              }
                             });
                             materialDropdown.appendChild(partsListContainer);
                           } else {
@@ -1094,12 +1200,28 @@ $stmt->close();
                           var bd2=document.getElementById('engBomDropdown');
                           if (bd2) setTimeout(function(){ bd2.style.maxHeight=(bd2.scrollHeight+40)+'px'; },50);
                         });
+                    }
+
+                    assemblyCheckbox.addEventListener('click', function(e) {
+                      e.stopPropagation();
+                      setPartsVisibility(assemblyCheckbox.checked);
                     });
 
+                    materialRow.addEventListener('click', function() {
+                      assemblyCheckbox.checked = !assemblyCheckbox.checked;
+                      setPartsVisibility(assemblyCheckbox.checked);
+                    });
+
+                    materialRow.appendChild(assemblyCheckbox);
                     materialRow.appendChild(numSpan);
                     materialRow.appendChild(nameSpan);
                     materialRow.appendChild(chevron);
                     materialWrapper.appendChild(materialRow);
+
+                    if (assemblyCheckbox.checked) {
+                      setPartsVisibility(true);
+                    }
+
                     materialsContainer.appendChild(materialWrapper);
                   });
 

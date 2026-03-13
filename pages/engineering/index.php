@@ -133,9 +133,10 @@ $hasEditPermission = can_edit_page('engineering');
 						</div>
 					</div>
 					<!-- Modal for Upload Drawings -->
-					<div id="uploadDrawingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); z-index:1000; align-items:center; justify-content:center;">
-						<div style="background:#fff; border-radius:8px; box-shadow:0 2px 16px #b0b8c1; padding:32px 24px; min-width:420px; max-width:90vw;">
-							<h3 style="margin-top:0; margin-bottom:18px; font-size:1.2em;">Upload Drawings</h3>
+					<div id="uploadDrawingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.18); z-index:5000; align-items:center; justify-content:center;">
+						<div style="position:relative; z-index:5001; background:#fff; border-radius:8px; box-shadow:0 2px 16px #b0b8c1; padding:32px 24px; min-width:420px; max-width:90vw;">
+							<h3 id="uploadDrawingsModalTitle" style="margin-top:0; margin-bottom:6px; font-size:1.2em;">Upload Drawings</h3>
+							<div id="uploadDrawingsModalTarget" style="margin-bottom:18px; font-size:0.92em; color:#64748b;">Select files to upload.</div>
 							<div style="margin-bottom:18px;">
 								<label style="display:block; margin-bottom:6px; font-weight:500;">Select Files (multiple allowed)</label>
 								<input id="drawingFilesInput" type="file" multiple accept=".pdf,.dwg,.dxf,.png,.jpg,.jpeg" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1;" />
@@ -288,7 +289,10 @@ $hasEditPermission = can_edit_page('engineering');
 						<div style="background:#fff; border-radius:8px; box-shadow:0 2px 16px #b0b8c1; padding:32px 24px; min-width:600px; max-width:90vw; margin:20px auto;">
 							<div style="margin-bottom:20px;">
 								<h3 id="materialPartModalTitle" style="margin:0; margin-bottom:4px; font-size:1.2em;">Add Part</h3>
-								<div id="materialPartNumberHeader" style="font-size:0.9em; color:#64748b; font-weight:500;">Number: #...</div>
+								<div style="margin-top:10px; max-width:220px;">
+									<label for="materialPartIdInput" style="display:block; margin-bottom:6px; font-size:0.9em; color:#64748b; font-weight:600;">Part ID *</label>
+									<input id="materialPartIdInput" type="text" placeholder="e.g. 2a" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #b0b8c1; font-size:0.95em; font-weight:600; color:#334155;" />
+								</div>
 								<div style="margin-top:12px; padding:8px 12px; background:#f0f9ff; border-left:3px solid #3b82f6; border-radius:4px;">
 									<span style="font-size:0.85em; color:#1e40af; font-style:italic;">All unit of measurements are in inches</span>
 								</div>
@@ -330,6 +334,19 @@ $hasEditPermission = can_edit_page('engineering');
 									<label style="display:block; margin-bottom:6px; font-weight:500;">Quantity</label>
 									<input id="materialPartQuantityInput" type="text" placeholder="Enter quantity" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em;" />
 								</div>
+							</div>
+							<div style="margin-top:20px;border-top:1px solid #e2e8f0;padding-top:16px;display:grid;gap:10px;">
+								<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+									<div>
+										<div style="font-size:13px;font-weight:700;color:#0f172a;">Part Drawings</div>
+										<div style="font-size:12px;color:#64748b;">Upload drawings for this part after the part has been saved.</div>
+									</div>
+									<div style="display:flex;align-items:center;gap:8px;">
+										<button type="button" id="materialPartDrawingsHistoryBtn" style="display:none;padding:8px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;color:#c2410c;font-weight:700;cursor:pointer;">View previous versions</button>
+										<button type="button" id="materialPartDrawingsUploadBtn" style="padding:8px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;color:#1d4ed8;font-weight:700;cursor:pointer;">Upload drawings</button>
+									</div>
+								</div>
+								<div id="materialPartDrawingsList" style="display:grid;gap:8px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;min-height:58px;"></div>
 							</div>
 							<div style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px;">
 								<button id="deleteMaterialPartBtn" style="display:none; padding:8px 18px; background:#ef4444; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Delete</button>
@@ -1195,7 +1212,11 @@ $hasEditPermission = can_edit_page('engineering');
 										});
 										addOption.addEventListener('click', function() {
 											dropdown.remove();
-											openUploadDrawingsModal();
+											openUploadDrawingsModal({
+												type: 'item',
+												itemId: item.id,
+												targetLabel: item.name
+											});
 										});
 										dropdown.appendChild(addOption);
 										if (hasDrawings && dropdown.firstChild) {
@@ -1223,24 +1244,29 @@ $hasEditPermission = can_edit_page('engineering');
 								});
 						}
 
-						function openUploadDrawingsModal() {
+						function openUploadDrawingsModal(context) {
 							var modal = document.getElementById('uploadDrawingsModal');
 							var filesInput = document.getElementById('drawingFilesInput');
 							var preview = document.getElementById('selectedFilesPreview');
+							var title = document.getElementById('uploadDrawingsModalTitle');
+							var target = document.getElementById('uploadDrawingsModalTarget');
+							currentDrawingsUploadContext = context || {
+								type: 'item',
+								itemId: currentItemForDrawings ? currentItemForDrawings.id : 0,
+								targetLabel: currentItemForDrawings ? currentItemForDrawings.name : ''
+							};
 							
 							filesInput.value = '';
 							preview.innerHTML = '';
+							if (title) {
+								title.textContent = currentDrawingsUploadContext.type === 'part' ? 'Upload Part Drawings' : 'Upload Drawings';
+							}
+							if (target) {
+								target.textContent = currentDrawingsUploadContext.type === 'part'
+									? 'Part: ' + (currentDrawingsUploadContext.targetLabel || '')
+									: 'Item: ' + (currentDrawingsUploadContext.targetLabel || 'Engineering item');
+							}
 							modal.style.display = 'flex';
-							
-							// Show selected files
-							filesInput.addEventListener('change', function() {
-								var files = filesInput.files;
-								if (files.length > 0) {
-									preview.innerHTML = files.length + ' file(s) selected: ' + Array.from(files).map(function(f) { return f.name; }).join(', ');
-								} else {
-									preview.innerHTML = '';
-								}
-							});
 						}
 
 						function createBomRow() {
@@ -1740,6 +1766,39 @@ $hasEditPermission = can_edit_page('engineering');
 																			quantitySpan.innerHTML = '<span style="color: #6b7280;">Quantity:</span> ' + (part.quantity || '-');
 																			quantitySpan.style.color = '#1f2937';
 																			quantitySpan.style.minWidth = '100px';
+
+																			var versionSpan = document.createElement('span');
+																			versionSpan.textContent = 'Version: V1';
+																			versionSpan.style.color = '#1f2937';
+																			versionSpan.style.minWidth = '95px';
+
+																			var drawingIconButton = document.createElement('button');
+																			drawingIconButton.type = 'button';
+																			drawingIconButton.className = '';
+																			drawingIconButton.style.display = 'inline-flex';
+																			drawingIconButton.style.alignItems = 'center';
+																			drawingIconButton.style.justifyContent = 'center';
+																			drawingIconButton.style.lineHeight = '1';
+																			drawingIconButton.style.marginLeft = '6px';
+																			drawingIconButton.style.padding = '0';
+																			drawingIconButton.style.border = 'none';
+																			drawingIconButton.style.background = 'transparent';
+																			drawingIconButton.style.boxShadow = 'none';
+																			drawingIconButton.style.outline = 'none';
+																			drawingIconButton.style.cursor = 'pointer';
+
+																			var drawingIconImg = document.createElement('img');
+																			drawingIconImg.src = getPartDrawingIconPath(false);
+																			drawingIconImg.alt = 'no drawings';
+																			drawingIconImg.style.width = '26.4px';
+																			drawingIconImg.style.height = '26.4px';
+																			drawingIconButton.appendChild(drawingIconImg);
+
+																			wireBOMPartDrawingIcon(drawingIconButton, drawingIconImg, {
+																				itemId: item.id,
+																				partId: part.engineering_part_id,
+																				targetLabel: '#' + part.number + ' ' + (part.name || '')
+																			}, versionSpan);
 																			
 																			// Click for more detail
 																			var detailText = document.createElement('span');
@@ -1754,6 +1813,8 @@ $hasEditPermission = can_edit_page('engineering');
 																			partRow.appendChild(makeSpan);
 																			partRow.appendChild(materialTypeSpan);
 																			partRow.appendChild(quantitySpan);
+																			partRow.appendChild(versionSpan);
+																			partRow.appendChild(drawingIconButton);
 																			partRow.appendChild(detailText);
 																			
 																			// Click to edit
@@ -1781,6 +1842,28 @@ $hasEditPermission = can_edit_page('engineering');
 																				bomDropdown.style.maxHeight = (bomDropdown.scrollHeight + 40) + 'px';
 																			}, 50);
 																		}
+																	} else if (partsData.success) {
+																		var emptyPartsState = document.createElement('div');
+																		emptyPartsState.textContent = 'No parts found for this member assembly.';
+																		emptyPartsState.style.padding = '8px 12px';
+																		emptyPartsState.style.fontSize = '0.88em';
+																		emptyPartsState.style.color = '#9ca3af';
+																		emptyPartsState.style.fontStyle = 'italic';
+																		materialDropdown.appendChild(emptyPartsState);
+																	} else {
+																		var errorPartsState = document.createElement('div');
+																		errorPartsState.textContent = partsData.message || 'Failed to load parts for this member assembly.';
+																		errorPartsState.style.padding = '8px 12px';
+																		errorPartsState.style.fontSize = '0.88em';
+																		errorPartsState.style.color = '#b91c1c';
+																		materialDropdown.appendChild(errorPartsState);
+																	}
+
+																	var bomDropdown = document.getElementById('bomDropdown');
+																	if (bomDropdown) {
+																		setTimeout(function() {
+																			bomDropdown.style.maxHeight = (bomDropdown.scrollHeight + 40) + 'px';
+																		}, 50);
 																	}
 																});
 														}
@@ -2091,7 +2174,7 @@ $hasEditPermission = can_edit_page('engineering');
 							currentPartEditId = null;
 							var modal = document.getElementById('addMaterialPartModal');
 							var title = document.getElementById('materialPartModalTitle');
-							var numberHeader = document.getElementById('materialPartNumberHeader');
+							var partIdInput = document.getElementById('materialPartIdInput');
 							var deleteBtn = document.getElementById('deleteMaterialPartBtn');
 							
 							// Set title
@@ -2108,6 +2191,7 @@ $hasEditPermission = can_edit_page('engineering');
 							document.getElementById('materialPartWidthInput').value = '';
 							document.getElementById('materialPartAreaInput').value = '';
 							document.getElementById('materialPartQuantityInput').value = '';
+							if (partIdInput) partIdInput.value = '';
 							
 							// Fetch next number (material number + letter suffix)
 							fetch(apiBase + '/get_material_parts.php?material_id=' + material.id)
@@ -2116,19 +2200,24 @@ $hasEditPermission = can_edit_page('engineering');
 									if (data.success) {
 										var nextSuffix = 'a';
 										if (data.parts && data.parts.length > 0) {
-											var lastPart = data.parts[data.parts.length - 1];
-											var lastNumber = lastPart.number;
-											var match = lastNumber.match(/(\d+)([a-z])$/);
-											if (match) {
-												nextSuffix = String.fromCharCode(match[2].charCodeAt(0) + 1);
-											}
+											var maxSuffixCode = 96;
+											data.parts.forEach(function(existingPart) {
+												var existingNumber = existingPart.number || '';
+												var match = existingNumber.match(/(\d+)([a-z])$/i);
+												if (match && String(match[1]) === String(material.number)) {
+													var code = match[2].toLowerCase().charCodeAt(0);
+													if (code > maxSuffixCode) maxSuffixCode = code;
+												}
+											});
+											nextSuffix = String.fromCharCode(maxSuffixCode + 1);
 										}
-										numberHeader.textContent = 'Number: #' + material.number + nextSuffix;
+										if (partIdInput) partIdInput.value = material.number + nextSuffix;
 									}
 								});
 							
 							// Show modal
 							modal.style.display = 'flex';
+							updateMaterialPartDrawingsSection(null, false);
 							document.getElementById('materialPartNameInput').focus();
 						}
 
@@ -2137,7 +2226,7 @@ $hasEditPermission = can_edit_page('engineering');
 							currentPartEditId = part.id;
 							var modal = document.getElementById('addMaterialPartModal');
 							var title = document.getElementById('materialPartModalTitle');
-							var numberHeader = document.getElementById('materialPartNumberHeader');
+							var partIdInput = document.getElementById('materialPartIdInput');
 							var deleteBtn = document.getElementById('deleteMaterialPartBtn');
 							
 							// Set title
@@ -2145,7 +2234,7 @@ $hasEditPermission = can_edit_page('engineering');
 							deleteBtn.style.display = 'inline-block';
 							
 							// Fill inputs with current values
-							numberHeader.textContent = 'Number: #' + part.number;
+							if (partIdInput) partIdInput.value = part.number || '';
 							document.getElementById('materialPartNameInput').value = part.name || '';
 							document.getElementById('materialPartMakeInput').value = part.make || '';
 							document.getElementById('materialPartNumberInput').value = part.part_number || '';
@@ -2158,19 +2247,31 @@ $hasEditPermission = can_edit_page('engineering');
 							
 							// Show modal
 							modal.style.display = 'flex';
+							updateMaterialPartDrawingsSection({
+								itemId: currentItemForBom ? currentItemForBom.id : 0,
+								partId: part.engineering_part_id || 0,
+								targetLabel: part.name || ''
+							}, true);
 							document.getElementById('materialPartNameInput').focus();
 						}
 
 						// Save material part button handler
 						document.getElementById('saveMaterialPartBtn').addEventListener('click', function() {
 							var name = document.getElementById('materialPartNameInput').value.trim();
+							var number = document.getElementById('materialPartIdInput').value.trim();
 							if (!name) {
 								alert('Please enter a part name');
 								document.getElementById('materialPartNameInput').focus();
 								return;
 							}
+							if (!number) {
+								alert('Please enter a part ID');
+								document.getElementById('materialPartIdInput').focus();
+								return;
+							}
 							
 							var partData = {
+								number: number,
 								name: name,
 								make: document.getElementById('materialPartMakeInput').value.trim(),
 								part_number: document.getElementById('materialPartNumberInput').value.trim(),
@@ -2280,12 +2381,14 @@ $hasEditPermission = can_edit_page('engineering');
 						// Cancel material part button handler
 						document.getElementById('cancelMaterialPartBtn').addEventListener('click', function() {
 							document.getElementById('addMaterialPartModal').style.display = 'none';
+							updateMaterialPartDrawingsSection(null, false);
 						});
 
 						// Click outside modal to close
 						document.getElementById('addMaterialPartModal').addEventListener('click', function(e) {
 							if (e.target === this) {
 								this.style.display = 'none';
+								updateMaterialPartDrawingsSection(null, false);
 							}
 						});
 
@@ -2318,6 +2421,8 @@ $hasEditPermission = can_edit_page('engineering');
 						var currentItemForParts = null;
 						var partsDropdownBusy = false;
 						var partModalState = { editMode: false, originalPartName: '' };
+						var currentDrawingsUploadContext = null;
+						var materialPartDrawingContext = null;
 
 						function handlePartsClick(item, liElement) {
 							if (partsDropdownBusy) return;
@@ -2388,6 +2493,7 @@ $hasEditPermission = can_edit_page('engineering');
 										data.parts.forEach(function(part) {
 											if (!partsList[part.part_name]) {
 												partsList[part.part_name] = {
+													part_id: part.part_id || 0,
 													part_name: part.part_name,
 													nsn_number: part.nsn_number || '',
 													quantity: part.quantity || 1,
@@ -2638,32 +2744,329 @@ $hasEditPermission = can_edit_page('engineering');
 							if (sl) sl.value = makeData.supplierLnk || '';
 						}
 
+						function setDrawingListMessage(container, message, tone) {
+							if (!container) return;
+							container.innerHTML = '';
+							var state = document.createElement('div');
+							state.textContent = message;
+							state.style.fontSize = '0.9em';
+							state.style.color = tone === 'error' ? '#b91c1c' : '#64748b';
+							state.style.fontStyle = tone === 'error' ? 'normal' : 'italic';
+							container.appendChild(state);
+						}
+
+						function createDrawingRow(drawing) {
+							var row = document.createElement('button');
+							row.type = 'button';
+							row.style.display = 'flex';
+							row.style.justifyContent = 'space-between';
+							row.style.alignItems = 'center';
+							row.style.gap = '12px';
+							row.style.padding = '10px 12px';
+							row.style.border = '1px solid #dbe4ee';
+							row.style.borderRadius = '6px';
+							row.style.background = '#fff';
+							row.style.cursor = 'pointer';
+							row.style.textAlign = 'left';
+							row.addEventListener('click', function() {
+								window.open(drawing.file_url, '_blank');
+							});
+
+							var name = document.createElement('span');
+							name.textContent = drawing.filename;
+							name.style.fontWeight = '600';
+							name.style.color = '#1f2937';
+
+							var meta = document.createElement('span');
+							meta.textContent = (drawing.version || 'v1').toUpperCase();
+							meta.style.fontSize = '0.82em';
+							meta.style.color = '#64748b';
+
+							row.appendChild(name);
+							row.appendChild(meta);
+							return row;
+						}
+
+						function getPartDrawingIconPath(hasDrawings) {
+							return (window.location.hostname === 'localhost'
+								? '/PortalSite/pages/engineering/image/'
+								: '/pages/engineering/image/') + (hasDrawings ? 'drawings.svg' : 'nodrawings.svg');
+						}
+
+						function wireBOMPartDrawingIcon(iconBtn, iconImg, context, versionEl) {
+							if (!iconBtn || !iconImg) return;
+							var latestUrl = '';
+							var hasDrawings = false;
+							var latestVersion = '';
+
+							function renderState() {
+								iconImg.src = getPartDrawingIconPath(hasDrawings);
+								iconImg.alt = hasDrawings ? 'drawings' : 'no drawings';
+								iconBtn.title = hasDrawings ? 'Open latest drawing' : 'No drawings. Click to upload';
+								if (versionEl) {
+									versionEl.textContent = 'Version: ' + (hasDrawings ? (latestVersion || 'v2').toUpperCase() : 'V1');
+								}
+							}
+
+							function refreshState() {
+								if (!context || !context.itemId || !context.partId) {
+									hasDrawings = false;
+									latestUrl = '';
+									latestVersion = '';
+									renderState();
+									return;
+								}
+								fetch(apiBase + '/get_engineering_part_drawings.php?item_id=' + encodeURIComponent(context.itemId) + '&part_id=' + encodeURIComponent(context.partId))
+									.then(function(res) { return res.json(); })
+									.then(function(data) {
+										hasDrawings = !!(data.success && data.drawings && data.drawings.length > 0);
+										latestUrl = hasDrawings ? (data.drawings[0].file_url || '') : '';
+										latestVersion = hasDrawings ? (data.drawings[0].version || 'v1') : '';
+										renderState();
+									})
+									.catch(function() {
+										hasDrawings = false;
+										latestUrl = '';
+										latestVersion = '';
+										renderState();
+									});
+							}
+
+							iconBtn.addEventListener('click', function(e) {
+								e.stopPropagation();
+								if (hasDrawings && latestUrl) {
+									window.open(latestUrl, '_blank');
+									return;
+								}
+								if (!context || !context.itemId || !context.partId) {
+									alert('Save this part first before uploading drawings.');
+									return;
+								}
+								openUploadDrawingsModal({
+									type: 'part',
+									itemId: context.itemId,
+									partId: context.partId,
+									targetLabel: context.targetLabel || '',
+									onSuccess: function() {
+										refreshState();
+									}
+								});
+							});
+
+							refreshState();
+						}
+
+						function renderPartDrawingsList(container, drawings, uploadBtn, historyBtn) {
+							if (!container) return;
+							container.innerHTML = '';
+							if (historyBtn) {
+								historyBtn.style.display = 'none';
+								historyBtn.textContent = 'View previous versions';
+								historyBtn.onclick = null;
+							}
+							if (uploadBtn) {
+								uploadBtn.textContent = 'Upload drawings';
+							}
+							if (!drawings || !drawings.length) {
+								setDrawingListMessage(container, 'No drawings uploaded yet.');
+								return;
+							}
+
+							if (uploadBtn) {
+								uploadBtn.textContent = 'Update drawings';
+							}
+
+							var byVersion = {};
+							drawings.forEach(function(drawing) {
+								var versionKey = (drawing.version || 'v1').toLowerCase();
+								if (!byVersion[versionKey]) byVersion[versionKey] = [];
+								byVersion[versionKey].push(drawing);
+							});
+
+							var versions = Object.keys(byVersion).sort(function(a, b) {
+								return parseInt(b.replace('v', ''), 10) - parseInt(a.replace('v', ''), 10);
+							});
+
+							var currentVersion = versions[0];
+							var currentWrap = document.createElement('div');
+							currentWrap.style.display = 'grid';
+							currentWrap.style.gap = '8px';
+
+							var currentLabel = document.createElement('div');
+							currentLabel.textContent = 'Current Version: ' + currentVersion.toUpperCase();
+							currentLabel.style.fontSize = '0.82em';
+							currentLabel.style.fontWeight = '700';
+							currentLabel.style.color = '#64748b';
+							currentWrap.appendChild(currentLabel);
+
+							byVersion[currentVersion].forEach(function(drawing) {
+								currentWrap.appendChild(createDrawingRow(drawing));
+							});
+							container.appendChild(currentWrap);
+
+							if (versions.length > 1 && historyBtn) {
+								var previousWrap = document.createElement('div');
+								previousWrap.style.display = 'none';
+								previousWrap.style.marginTop = '10px';
+								previousWrap.style.paddingTop = '10px';
+								previousWrap.style.borderTop = '1px solid #e2e8f0';
+								previousWrap.style.display = 'none';
+
+								versions.slice(1).forEach(function(versionKey) {
+									var versionSection = document.createElement('div');
+									versionSection.style.display = 'grid';
+									versionSection.style.gap = '8px';
+									versionSection.style.marginTop = '10px';
+
+									var versionLabel = document.createElement('div');
+									versionLabel.textContent = 'Version: ' + versionKey.toUpperCase();
+									versionLabel.style.fontSize = '0.82em';
+									versionLabel.style.fontWeight = '700';
+									versionLabel.style.color = '#64748b';
+									versionSection.appendChild(versionLabel);
+
+									byVersion[versionKey].forEach(function(drawing) {
+										versionSection.appendChild(createDrawingRow(drawing));
+									});
+
+									previousWrap.appendChild(versionSection);
+								});
+
+								container.appendChild(previousWrap);
+								historyBtn.style.display = 'inline-flex';
+								historyBtn.onclick = function() {
+									var isHidden = previousWrap.style.display === 'none';
+									previousWrap.style.display = isHidden ? 'block' : 'none';
+									historyBtn.textContent = isHidden ? 'Hide previous versions' : 'View previous versions';
+								};
+							}
+						}
+
+						function loadPartDrawings(context, container, uploadBtn) {
+							if (!container) return;
+							var historyBtn = document.getElementById('materialPartDrawingsHistoryBtn');
+							if (!context || !context.itemId || !context.partId) {
+								setDrawingListMessage(container, 'Save the part first to upload drawings.');
+								if (uploadBtn) uploadBtn.disabled = true;
+								if (historyBtn) historyBtn.style.display = 'none';
+								return;
+							}
+
+							if (uploadBtn) uploadBtn.disabled = false;
+							setDrawingListMessage(container, 'Loading drawings...');
+
+							fetch(apiBase + '/get_engineering_part_drawings.php?item_id=' + encodeURIComponent(context.itemId) + '&part_id=' + encodeURIComponent(context.partId))
+								.then(function(res) { return res.json(); })
+								.then(function(data) {
+									if (!data.success) {
+										setDrawingListMessage(container, data.message || 'Failed to load drawings.', 'error');
+										if (historyBtn) historyBtn.style.display = 'none';
+										return;
+									}
+									renderPartDrawingsList(container, data.drawings || [], uploadBtn, historyBtn);
+								})
+								.catch(function(err) {
+									setDrawingListMessage(container, 'Failed to load drawings: ' + err.message, 'error');
+									if (historyBtn) historyBtn.style.display = 'none';
+								});
+						}
+
+						function updateMaterialPartDrawingsSection(context, allowUpload) {
+							materialPartDrawingContext = context || null;
+							var list = document.getElementById('materialPartDrawingsList');
+							var btn = document.getElementById('materialPartDrawingsUploadBtn');
+							var historyBtn = document.getElementById('materialPartDrawingsHistoryBtn');
+							if (!allowUpload || !context || !context.itemId || !context.partId) {
+								setDrawingListMessage(list, 'Save the part first to upload drawings.');
+								if (btn) {
+									btn.disabled = true;
+									btn.style.opacity = '0.55';
+									btn.style.cursor = 'not-allowed';
+									btn.title = 'Save the part first before uploading drawings.';
+									btn.textContent = 'Upload drawings';
+								}
+								if (historyBtn) historyBtn.style.display = 'none';
+								return;
+							}
+							if (btn) {
+								btn.disabled = false;
+								btn.style.opacity = '1';
+								btn.style.cursor = 'pointer';
+								btn.title = '';
+							}
+							loadPartDrawings(context, list, btn);
+						}
+
+						function bindPartDrawingUploadButton(buttonId, contextGetter, refreshFn) {
+							var button = document.getElementById(buttonId);
+							if (!button || button.getAttribute('data-bound') === '1') return;
+							button.setAttribute('data-bound', '1');
+							button.addEventListener('click', function() {
+								var context = typeof contextGetter === 'function' ? contextGetter() : null;
+								if (!context || !context.itemId || !context.partId) {
+									alert('Save the part first before uploading drawings.');
+									return;
+								}
+								openUploadDrawingsModal({
+									type: 'part',
+									itemId: context.itemId,
+									partId: context.partId,
+									targetLabel: context.targetLabel || '',
+									onSuccess: refreshFn
+								});
+							});
+						}
+
+						bindPartDrawingUploadButton('materialPartDrawingsUploadBtn', function() {
+							return materialPartDrawingContext;
+						}, function() {
+							updateMaterialPartDrawingsSection(materialPartDrawingContext, true);
+						});
+
+						var drawingFilesInput = document.getElementById('drawingFilesInput');
+						var selectedFilesPreview = document.getElementById('selectedFilesPreview');
+						if (drawingFilesInput && drawingFilesInput.getAttribute('data-bound') !== '1') {
+							drawingFilesInput.setAttribute('data-bound', '1');
+							drawingFilesInput.addEventListener('change', function() {
+								var files = drawingFilesInput.files;
+								if (!selectedFilesPreview) return;
+								if (files.length > 0) {
+									selectedFilesPreview.innerHTML = files.length + ' file(s) selected: ' + Array.from(files).map(function(f) { return f.name; }).join(', ');
+								} else {
+									selectedFilesPreview.innerHTML = '';
+								}
+							});
+						}
+
 						// Upload drawings button handler
 						document.getElementById('uploadDrawingsBtn').addEventListener('click', function() {
 							var filesInput = document.getElementById('drawingFilesInput');
 							var files = filesInput.files;
+							var uploadContext = currentDrawingsUploadContext || {};
 							
 							if (files.length === 0) {
 								alert('Please select at least one file');
 								return;
 							}
 							
-							if (!currentItemForDrawings) {
-								alert('No item selected');
+							if (!uploadContext.itemId) {
+								alert('No drawing target selected');
 								return;
 							}
 							
 							var formData = new FormData();
-							formData.append('item_id', currentItemForDrawings.id);
+							formData.append('item_id', uploadContext.itemId);
+							if (uploadContext.type === 'part') {
+								formData.append('part_id', uploadContext.partId || '');
+							}
 							for (var i = 0; i < files.length; i++) {
 								formData.append('drawings[]', files[i]);
 							}
 							
-							// Show uploading state
 							document.getElementById('uploadDrawingsBtn').textContent = 'Uploading...';
 							document.getElementById('uploadDrawingsBtn').disabled = true;
 							
-							fetch(apiBase + '/upload_engineering_drawings.php', {
+							fetch(apiBase + (uploadContext.type === 'part' ? '/upload_engineering_part_drawings.php' : '/upload_engineering_drawings.php'), {
 								method: 'POST',
 								body: formData
 							})
@@ -2671,7 +3074,10 @@ $hasEditPermission = can_edit_page('engineering');
 							.then(function(data) {
 								if (data.success) {
 									document.getElementById('uploadDrawingsModal').style.display = 'none';
-									alert('Drawings uploaded successfully!');
+									if (typeof uploadContext.onSuccess === 'function') {
+										uploadContext.onSuccess(data);
+									}
+									alert(uploadContext.type === 'part' ? 'Part drawings uploaded successfully!' : 'Drawings uploaded successfully!');
 								} else {
 									alert(data.message || 'Failed to upload drawings');
 								}

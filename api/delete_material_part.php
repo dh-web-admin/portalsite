@@ -8,7 +8,7 @@ ob_clean();
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['email'])) {
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
 }
@@ -41,6 +41,17 @@ try {
     
     $part_name = $partInfo ? $partInfo['name'] : null;
     $item_id = $partInfo ? $partInfo['item_id'] : null;
+    $engineering_part_id = null;
+
+    if ($part_name && $item_id) {
+        $stmtMap = $conn->prepare("SELECT id FROM engineering_item_parts WHERE item_id = ? AND part_name = ? LIMIT 1");
+        $stmtMap->bind_param('is', $item_id, $part_name);
+        $stmtMap->execute();
+        $resultMap = $stmtMap->get_result();
+        $mapRow = $resultMap ? $resultMap->fetch_assoc() : null;
+        $engineering_part_id = $mapRow ? (int)$mapRow['id'] : null;
+        $stmtMap->close();
+    }
     
     // Delete from Engineering_material_parts
     $stmt = $conn->prepare("DELETE FROM Engineering_material_parts WHERE id = ?");
@@ -62,6 +73,14 @@ try {
             $stmtSpec->bind_param('s', $part_name);
             $stmtSpec->execute();
             $stmtSpec->close();
+
+            $tableCheck = $conn->query("SHOW TABLES LIKE 'engineering_drawings'");
+            if ($tableCheck && $tableCheck->num_rows > 0 && $engineering_part_id) {
+                $stmtDrawings = $conn->prepare("DELETE FROM engineering_drawings WHERE item_id = ? AND part_id = ?");
+                $stmtDrawings->bind_param('ii', $item_id, $engineering_part_id);
+                $stmtDrawings->execute();
+                $stmtDrawings->close();
+            }
         }
         
         echo json_encode(['success' => true, 'message' => 'Part deleted successfully']);

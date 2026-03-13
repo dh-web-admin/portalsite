@@ -8,7 +8,7 @@ ob_clean();
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['email'])) {
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
     exit;
 }
@@ -21,6 +21,7 @@ if (!can_edit_page('engineering')) {
 
 $data = json_decode(file_get_contents('php://input'), true);
 $material_id = isset($data['material_id']) ? (int)$data['material_id'] : 0;
+$number = isset($data['number']) ? trim($data['number']) : '';
 $name = isset($data['name']) ? trim($data['name']) : '';
 $make = isset($data['make']) ? trim($data['make']) : '';
 $part_number = isset($data['part_number']) ? trim($data['part_number']) : '';
@@ -31,8 +32,8 @@ $width = isset($data['width']) ? trim($data['width']) : '';
 $area = isset($data['area']) ? trim($data['area']) : '';
 $quantity = isset($data['quantity']) ? trim($data['quantity']) : '';
 
-if ($material_id <= 0 || empty($name)) {
-    echo json_encode(['success' => false, 'message' => 'Material ID and name are required']);
+if ($material_id <= 0 || empty($name) || $number === '') {
+    echo json_encode(['success' => false, 'message' => 'Material ID, part ID, and name are required']);
     exit;
 }
 
@@ -61,7 +62,7 @@ try {
         exit;
     }
     
-    // Get material number to generate part number
+    // Get material data for sync
     $stmt = $conn->prepare("SELECT number, item_id FROM Engineering_materials WHERE id = ?");
     $stmt->bind_param('i', $material_id);
     $stmt->execute();
@@ -74,32 +75,19 @@ try {
         exit;
     }
     
-    $material_number = $material['number'];
     $item_id = $material['item_id'];
-    
-    // Get the next letter suffix for this material
-    $stmt = $conn->prepare("SELECT number FROM Engineering_material_parts WHERE material_id = ? ORDER BY number DESC LIMIT 1");
-    $stmt->bind_param('i', $material_id);
+
+    $stmt = $conn->prepare("SELECT id FROM Engineering_material_parts WHERE number = ? LIMIT 1");
+    $stmt->bind_param('s', $number);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $lastPart = $result->fetch_assoc();
+    $duplicateResult = $stmt->get_result();
+    $duplicateRow = $duplicateResult ? $duplicateResult->fetch_assoc() : null;
     $stmt->close();
-    
-    if ($lastPart) {
-        // Extract the letter suffix and increment
-        $lastNumber = $lastPart['number'];
-        // Format should be like "1a", "1b", etc.
-        preg_match('/(\d+)([a-z]+)$/', $lastNumber, $matches);
-        if (count($matches) === 3) {
-            $nextSuffix = chr(ord($matches[2]) + 1); // Increment letter
-        } else {
-            $nextSuffix = 'a'; // Default to 'a' if pattern doesn't match
-        }
-    } else {
-        $nextSuffix = 'a'; // First part for this material
+
+    if ($duplicateRow) {
+        echo json_encode(['success' => false, 'message' => 'Part ID already exists. Please use a unique part ID.']);
+        exit;
     }
-    
-    $part_number_generated = $material_number . $nextSuffix;
     
     // Insert the new part
     $stmt = $conn->prepare("INSERT INTO Engineering_material_parts 
@@ -108,7 +96,7 @@ try {
     
     $stmt->bind_param('issssssssss', 
         $material_id,
-        $part_number_generated,
+        $number,
         $name,
         $make,
         $part_number,
@@ -122,21 +110,15 @@ try {
     
     if ($stmt->execute()) {
         $part_id = $conn->insert_id;
-        
-        echo json_encode([
-            'success' => true,
-            'message' => 'Part added successfully',
-            'part_id' => $part_id,
-            'number' => $part_number_generated
-        ]);
-        
+
         $stmt->close();
-        
+
         // Also add this part to the Parts and Suppliers section (engineering_item_parts)
         // Add part name to engineering_item_parts
         $stmtParts = $conn->prepare("INSERT INTO engineering_item_parts (item_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, '', NULL, '')");
         $stmtParts->bind_param('is', $item_id, $name);
         $stmtParts->execute();
+        $engineering_part_id = $conn->insert_id;
         $stmtParts->close();
         
         // If make is provided, also add it to engineering_part_specifications
@@ -146,6 +128,14 @@ try {
             $stmtSpec->execute();
             $stmtSpec->close();
         }
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Part added successfully',
+            'part_id' => $part_id,
+            'engineering_part_id' => $engineering_part_id,
+            'number' => $number
+        ]);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to add part: ' . $stmt->error]);
         $stmt->close();

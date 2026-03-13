@@ -31,16 +31,19 @@ try {
 
     $conn->begin_transaction();
 
-    // If editing, clear existing records for this item/part to avoid duplicates
+    $existingPartId = 0;
     if ($editMode === 1 && $itemId > 0 && $originalPartName !== '') {
-        // Remove existing engineering_item_parts mapping for this item + original part name
-        $stmt = $conn->prepare("DELETE FROM engineering_item_parts WHERE item_id = ? AND part_name = ?");
+        $stmt = $conn->prepare("SELECT id FROM engineering_item_parts WHERE item_id = ? AND part_name = ? LIMIT 1");
         $stmt->bind_param('is', $itemId, $originalPartName);
-        if (!$stmt->execute()) {
-            throw new Exception('Failed to update part mapping: ' . $stmt->error);
-        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $existingRow = $result ? $result->fetch_assoc() : null;
+        $existingPartId = $existingRow ? (int)$existingRow['id'] : 0;
         $stmt->close();
+    }
 
+    // If editing, clear existing specifications for this part before saving the new set.
+    if ($editMode === 1 && $itemId > 0 && $originalPartName !== '') {
         // Remove existing specifications tied to the original part name
         $stmt = $conn->prepare("DELETE FROM engineering_part_specifications WHERE part_name = ?");
         $stmt->bind_param('s', $originalPartName);
@@ -50,14 +53,23 @@ try {
         $stmt->close();
     }
 
-    // Insert into engineering_item_parts (new or updated name)
-    $stmt = $conn->prepare("INSERT INTO engineering_item_parts (item_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param('issis', $itemId, $partNumber, $nsnNumber, $quantity, $notes);
-    
-    if (!$stmt->execute()) {
-        throw new Exception('Failed to add part: ' . $stmt->error);
+    // Insert or update engineering_item_parts while preserving the existing ID on edit.
+    if ($existingPartId > 0) {
+        $stmt = $conn->prepare("UPDATE engineering_item_parts SET part_name = ?, nsn_number = ?, quantity = ?, notes = ? WHERE id = ?");
+        $stmt->bind_param('ssisi', $partNumber, $nsnNumber, $quantity, $notes, $existingPartId);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to update part: ' . $stmt->error);
+        }
+        $stmt->close();
+    } else {
+        $stmt = $conn->prepare("INSERT INTO engineering_item_parts (item_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param('issis', $itemId, $partNumber, $nsnNumber, $quantity, $notes);
+        if (!$stmt->execute()) {
+            throw new Exception('Failed to add part: ' . $stmt->error);
+        }
+        $existingPartId = (int)$conn->insert_id;
+        $stmt->close();
     }
-    $stmt->close();
 
     // Insert into engineering_part_specifications for each make
     if (!empty($makes) && is_array($makes)) {
@@ -129,7 +141,7 @@ try {
         }
     }
     
-    echo json_encode(['success' => true, 'message' => $editMode === 1 ? 'Part updated successfully' : 'Part added successfully']);
+    echo json_encode(['success' => true, 'message' => $editMode === 1 ? 'Part updated successfully' : 'Part added successfully', 'part_id' => $existingPartId]);
 
 } catch (Exception $e) {
     if (isset($conn)) {

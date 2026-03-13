@@ -36,8 +36,15 @@ try {
         exit();
     }
 
+    $partColumnCheck = $conn->query("SHOW COLUMNS FROM engineering_drawings LIKE 'part_id'");
+    if (!$partColumnCheck || $partColumnCheck->num_rows === 0) {
+        $conn->query("ALTER TABLE engineering_drawings ADD COLUMN part_id INT(11) NULL DEFAULT NULL AFTER item_id");
+        $conn->query("CREATE INDEX idx_part_id ON engineering_drawings (part_id)");
+        $conn->query("CREATE INDEX idx_item_part_version ON engineering_drawings (item_id, part_id, version)");
+    }
+
     // Get the current highest version for this item
-    $stmt = $conn->prepare("SELECT MAX(CAST(SUBSTRING(version, 2) AS UNSIGNED)) as max_version FROM engineering_drawings WHERE item_id = ?");
+    $stmt = $conn->prepare("SELECT MAX(CAST(SUBSTRING(version, 2) AS UNSIGNED)) as max_version FROM engineering_drawings WHERE item_id = ? AND part_id IS NULL");
     $stmt->bind_param('i', $itemId);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -69,8 +76,9 @@ try {
                     : '/uploads/engineering_drawings/' . $uniqueName;
                 
                 // Insert into database
-                $stmt = $conn->prepare("INSERT INTO engineering_drawings (item_id, file_url, filename, version, file_size, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-                $stmt->bind_param('isssis', $itemId, $fileUrl, $filename, $batchVersion, $fileSize, $uploadedBy);
+                $partId = null;
+                $stmt = $conn->prepare("INSERT INTO engineering_drawings (item_id, part_id, file_url, filename, version, file_size, uploaded_by, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+                $stmt->bind_param('iisssis', $itemId, $partId, $fileUrl, $filename, $batchVersion, $fileSize, $uploadedBy);
                 $stmt->execute();
                 $stmt->close();
                 
