@@ -83,6 +83,31 @@ $stmt->close();
       gap: 10px;
     }
 
+    /* ── Back button ── */
+    #backToEngineeringBtn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      background: #ffffff;
+      color: #475569;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.86rem;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s, transform 0.12s;
+      white-space: nowrap;
+    }
+    #backToEngineeringBtn:hover {
+      background: #f8fafc;
+      color: #334155;
+      transform: translateY(-1px);
+    }
+    #backToEngineeringBtn:active { transform: translateY(0); }
+
     /* ── Save Draft button ── */
     #saveEngineeringItemsBtn {
       display: inline-flex;
@@ -187,12 +212,6 @@ $stmt->close();
       font-weight: 600;
       color: #1e40af;
     }
-    /* Equipment name — slightly larger */
-    #displayEquipmentName {
-      font-size: 15px;
-      font-weight: 700;
-      color: #0f172a;
-    }
     /* Type */
     #displayEquipmentType {
       font-size: 13px;
@@ -273,6 +292,60 @@ $stmt->close();
       transition: background 0.15s;
     }
     .deploy-btn-yes:hover { background: #15803d; }
+
+    /* ── Deploy success modal ── */
+    #deploySuccessModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.5);
+      z-index: 9050;
+      align-items: center;
+      justify-content: center;
+    }
+    #deploySuccessModal.open {
+      display: flex;
+    }
+    #deploySuccessBox {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(15,23,42,0.2);
+      padding: 30px 30px 24px;
+      width: min(460px, 92vw);
+      display: grid;
+      gap: 16px;
+    }
+    #deploySuccessBox h3 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #166534;
+    }
+    #deploySuccessMessage {
+      margin: 0;
+      font-size: 14px;
+      color: #334155;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+    .deploy-success-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .deploy-btn-continue {
+      padding: 9px 22px;
+      background: #1d4ed8;
+      border: none;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .deploy-btn-continue:hover { background: #1e40af; }
   </style>
 </head>
 <body class="admin-page">
@@ -294,6 +367,12 @@ $stmt->close();
             <div id="equipmentTitleRow">
               <h1>Build New Equipment</h1>
               <div class="header-btn-group">
+                <button id="backToEngineeringBtn" type="button">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M10.5 3L5.5 8L10.5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Back to Engineering
+                </button>
                 <button id="saveEngineeringItemsBtn">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -318,10 +397,6 @@ $stmt->close();
                   <span class="equip-id-label">EQ #</span>
                   <span id="displayEquipmentNumber">—</span>
                 </div>
-                <!-- Name -->
-                <div class="equip-id-segment">
-                  <span id="displayEquipmentName">—</span>
-                </div>
                 <!-- Type -->
                 <div class="equip-id-segment">
                   <span class="equip-id-label">Type</span>
@@ -342,6 +417,18 @@ $stmt->close();
               <div class="deploy-confirm-actions">
                 <button class="deploy-btn-no" id="deployConfirmNo">No, cancel</button>
                 <button class="deploy-btn-yes" id="deployConfirmYes">Yes, deploy</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="deploySuccessModal">
+            <div id="deploySuccessBox">
+              <div>
+                <h3>Equipment Deployed Successfully</h3>
+              </div>
+              <p id="deploySuccessMessage"></p>
+              <div class="deploy-success-actions">
+                <button class="deploy-btn-continue" id="deploySuccessContinue">Continue to Equipment</button>
               </div>
             </div>
           </div>
@@ -393,17 +480,13 @@ $stmt->close();
         }
         if (stored) {
           equipmentData = JSON.parse(stored);
-          var displayName   = document.getElementById('displayEquipmentName');
           var displayNumber = document.getElementById('displayEquipmentNumber');
           var displayType   = document.getElementById('displayEquipmentType');
           var infoDisplay   = document.getElementById('equipmentInfoDisplay');
 
-          if (displayName && equipmentData.name) {
-            displayName.textContent   = equipmentData.name;
-            if (displayNumber) displayNumber.textContent = equipmentData.number || '—';
-            if (displayType)   displayType.textContent   = equipmentData.type   || '—';
-            if (infoDisplay)   infoDisplay.classList.add('visible');
-          }
+          if (displayNumber) displayNumber.textContent = equipmentData.number || '—';
+          if (displayType)   displayType.textContent   = equipmentData.type   || '—';
+          if (infoDisplay)   infoDisplay.classList.add('visible');
 
           localStorage.setItem('buildNewEquipmentCurrent', JSON.stringify(equipmentData));
           localStorage.removeItem('buildNewEquipment');
@@ -1402,11 +1485,22 @@ $stmt->close();
 
       fetchEngItems();
 
+      var backToEngineeringBtn = document.getElementById('backToEngineeringBtn');
+      if (backToEngineeringBtn) {
+        backToEngineeringBtn.addEventListener('click', function() {
+          window.location.href = 'index.php';
+        });
+      }
+
       // ── Deploy modal (no functionality yet) ──
       var deployEquipmentBtn   = document.getElementById('deployEquipmentBtn');
       var deployConfirmModal   = document.getElementById('deployConfirmModal');
       var deployConfirmNo      = document.getElementById('deployConfirmNo');
       var deployConfirmYes     = document.getElementById('deployConfirmYes');
+      var deploySuccessModal   = document.getElementById('deploySuccessModal');
+      var deploySuccessMessage = document.getElementById('deploySuccessMessage');
+      var deploySuccessContinue = document.getElementById('deploySuccessContinue');
+      var deployRedirectUrl = null;
 
       if (deployEquipmentBtn) {
         deployEquipmentBtn.addEventListener('click', function() {
@@ -1419,9 +1513,73 @@ $stmt->close();
         });
       }
       if (deployConfirmYes) {
-        // No functionality yet — just closes modal
         deployConfirmYes.addEventListener('click', function() {
-          deployConfirmModal.classList.remove('open');
+          var equipmentNumber = equipmentData && equipmentData.number ? String(equipmentData.number).trim() : '';
+          var equipmentType = equipmentData && equipmentData.type ? String(equipmentData.type).trim() : '';
+          if (!equipmentNumber || !equipmentType) {
+            alert('Equipment number and type are required before deploy. Please go back and fill them in.');
+            return;
+          }
+
+          var selectionRows = buildDraftSelectionRows();
+          var hasSelectedParts = selectionRows.some(function(row) {
+            return row && row.part_id;
+          });
+          if (!hasSelectedParts) {
+            alert('Please select at least one part before deploying.');
+            return;
+          }
+
+          deployConfirmYes.disabled = true;
+          deployConfirmYes.textContent = 'Deploying...';
+
+          fetch(apiBase + '/deploy_engineering_build.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              draft_id: engDraftId || null,
+              equipment_number: equipmentNumber,
+              equipment_type: equipmentType,
+              selection_rows: selectionRows
+            })
+          })
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (!data || !data.success) {
+              throw new Error((data && data.message) ? data.message : 'Deploy failed');
+            }
+
+            deployConfirmModal.classList.remove('open');
+
+            try {
+              localStorage.removeItem('buildNewEquipment');
+              localStorage.removeItem('buildNewEquipmentCurrent');
+            } catch (e) {}
+
+            deployRedirectUrl = '../equipments/equipment.php?id=' + encodeURIComponent(data.equipment_id);
+            if (deploySuccessMessage) {
+              var partsInserted = parseInt(data.parts_inserted || 0, 10);
+              var specsInserted = parseInt(data.specs_inserted || 0, 10);
+              var partsSkipped = parseInt(data.parts_skipped || 0, 10);
+              deploySuccessMessage.textContent =
+                'Equipment ID: #' + String(data.equipment_id) + '\n'
+                + 'Parts saved: ' + String(partsInserted) + '\n'
+                + 'Specifications saved: ' + String(specsInserted) + '\n'
+                + 'Skipped parts: ' + String(partsSkipped);
+            }
+            if (deploySuccessModal) {
+              deploySuccessModal.classList.add('open');
+            }
+          })
+          .catch(function(err) {
+            var rawMsg = (err && err.message) ? String(err.message) : 'Unknown error';
+            var cleanMsg = rawMsg.replace(/^Deploy failed:\s*/i, '');
+            alert('Deploy failed: ' + cleanMsg);
+          })
+          .finally(function() {
+            deployConfirmYes.disabled = false;
+            deployConfirmYes.textContent = 'Yes, deploy';
+          });
         });
       }
       if (deployConfirmModal) {
@@ -1429,8 +1587,36 @@ $stmt->close();
           if (e.target === deployConfirmModal) deployConfirmModal.classList.remove('open');
         });
       }
+      if (deploySuccessContinue) {
+        deploySuccessContinue.addEventListener('click', function() {
+          if (deployRedirectUrl) {
+            window.location.href = deployRedirectUrl;
+          } else if (deploySuccessModal) {
+            deploySuccessModal.classList.remove('open');
+          }
+        });
+      }
+      if (deploySuccessModal) {
+        deploySuccessModal.addEventListener('click', function(e) {
+          if (e.target === deploySuccessModal) {
+            if (deployRedirectUrl) {
+              window.location.href = deployRedirectUrl;
+            } else {
+              deploySuccessModal.classList.remove('open');
+            }
+          }
+        });
+      }
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') deployConfirmModal.classList.remove('open');
+        if (e.key !== 'Escape') return;
+        if (deployConfirmModal) deployConfirmModal.classList.remove('open');
+        if (deploySuccessModal && deploySuccessModal.classList.contains('open')) {
+          if (deployRedirectUrl) {
+            window.location.href = deployRedirectUrl;
+          } else {
+            deploySuccessModal.classList.remove('open');
+          }
+        }
       });
 
       var saveEngineeringItemsBtn = document.getElementById('saveEngineeringItemsBtn');

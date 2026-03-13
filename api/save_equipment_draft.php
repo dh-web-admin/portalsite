@@ -18,15 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $data = json_decode(file_get_contents('php://input'), true);
-$name = trim($data['name'] ?? '');
+$name = '';
 $number = trim($data['number'] ?? '');
 $type = trim($data['type'] ?? '');
-
-if ($name === '') {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Equipment Name is required']);
-    exit;
-}
 
 // Create draft_equipment table if it doesn't exist
 $createTableSQL = "CREATE TABLE IF NOT EXISTS draft_equipment (

@@ -364,10 +364,6 @@ $hasEditPermission = can_edit_page('engineering');
 							</div>
 							<form id="buildNewModalForm" style="padding:22px;display:grid;gap:18px;">
 								<div>
-									<label style="display:block;font-weight:600;color:#0f172a;margin-bottom:8px;">Equipment Name</label>
-									<input type="text" id="modalEquipmentName" placeholder="Enter equipment name" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;box-sizing:border-box;" />
-								</div>
-								<div>
 									<label style="display:block;font-weight:600;color:#0f172a;margin-bottom:8px;">Equipment #</label>
 									<input type="text" id="modalEquipmentNumber" placeholder="Enter equipment number" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;box-sizing:border-box;" />
 								</div>
@@ -410,7 +406,6 @@ $hasEditPermission = can_edit_page('engineering');
 						var closeBuildNewModalBtn = document.getElementById('closeBuildNewModalBtn');
 						var cancelBuildNewModalBtn = document.getElementById('cancelBuildNewModalBtn');
 						var proceedBuildNewModalBtn = document.getElementById('proceedBuildNewModalBtn');
-						var modalEquipmentName = document.getElementById('modalEquipmentName');
 						var modalEquipmentNumber = document.getElementById('modalEquipmentNumber');
 						var modalEquipmentType = document.getElementById('modalEquipmentType');
 						var addBtn = document.getElementById('addItemBtn');
@@ -424,13 +419,12 @@ $hasEditPermission = can_edit_page('engineering');
 						function openBuildNewModal() {
 							if (!buildNewModal) return;
 							buildNewModal.style.display = 'flex';
-							modalEquipmentName && modalEquipmentName.focus();
+							modalEquipmentNumber && modalEquipmentNumber.focus();
 						}
 
 						function closeBuildNewModal() {
 							if (!buildNewModal) return;
 							buildNewModal.style.display = 'none';
-							if (modalEquipmentName) modalEquipmentName.value = '';
 							if (modalEquipmentNumber) modalEquipmentNumber.value = '';
 							if (modalEquipmentType) modalEquipmentType.value = '';
 						}
@@ -446,42 +440,35 @@ $hasEditPermission = can_edit_page('engineering');
 						}
 						if (proceedBuildNewModalBtn) {
 							proceedBuildNewModalBtn.addEventListener('click', function() {
-								var name = modalEquipmentName ? modalEquipmentName.value.trim() : '';
-								if (name) {
-									var number = modalEquipmentNumber ? modalEquipmentNumber.value.trim() : '';
-									var type = modalEquipmentType ? modalEquipmentType.value.trim() : '';
-									
-									fetch(apiBase + '/save_equipment_draft.php', {
-										method: 'POST',
-										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({ name: name, number: number, type: type })
-									})
-									.then(function(res) { return res.json(); })
-									.then(function(data) {
-										if (data.success) {
-											// Store equipment data in localStorage for build_new.php
-											try {
-												localStorage.setItem('buildNewEquipment', JSON.stringify({
-													name: name,
-													number: number,
-													type: type,
-													draftId: data.draft_id
-												}));
-											} catch (e) {
-												console.warn('Could not store equipment data in localStorage');
-											}
-											closeBuildNewModal();
-											window.open('build_new.php', '_blank');
-										} else {
-											alert(data.message || 'Failed to save draft equipment');
+								var number = modalEquipmentNumber ? modalEquipmentNumber.value.trim() : '';
+								var type = modalEquipmentType ? modalEquipmentType.value.trim() : '';
+								
+								fetch(apiBase + '/save_equipment_draft.php', {
+									method: 'POST',
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify({ number: number, type: type })
+								})
+								.then(function(res) { return res.json(); })
+								.then(function(data) {
+									if (data.success) {
+										try {
+											localStorage.setItem('buildNewEquipment', JSON.stringify({
+												number: number,
+												type: type,
+												draftId: data.draft_id
+											}));
+										} catch (e) {
+											console.warn('Could not store equipment data in localStorage');
 										}
-									})
-									.catch(function(err) {
-										alert('Error saving draft equipment: ' + err.message);
-									});
-								} else {
-									modalEquipmentName && modalEquipmentName.focus();
-								}
+										closeBuildNewModal();
+										window.open('build_new.php', '_blank');
+									} else {
+										alert(data.message || 'Failed to save draft equipment');
+									}
+								})
+								.catch(function(err) {
+									alert('Error saving draft equipment: ' + err.message);
+								});
 							});
 						}
 						if (buildNewModal) {
