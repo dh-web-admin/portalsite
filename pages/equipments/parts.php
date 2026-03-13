@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../session_init.php';
 
 // Require login
@@ -48,8 +48,47 @@ if ($equipmentId === 0 && !empty($equipments)) {
 $partsList = [];
 if ($equipmentId > 0) {
 	try {
+		$partSpecColumns = [];
+		$partSpecColumnResult = $conn->query("SHOW COLUMNS FROM part_specifications");
+		if ($partSpecColumnResult) {
+			while ($columnRow = $partSpecColumnResult->fetch_assoc()) {
+				if (!empty($columnRow['Field'])) {
+					$partSpecColumns[$columnRow['Field']] = true;
+				}
+			}
+			$partSpecColumnResult->free();
+		}
+
+		$optionalPartSpecFields = [
+			'make_lnk',
+			'supplier',
+			'supplier_name',
+			'supplier_number',
+			'supplier_email',
+			'supplier_address',
+			'supplier_part_number',
+			'supplier_price',
+			'supplier_lnk'
+		];
+		$partSpecSelects = [
+			'ep.part_name',
+			'ep.nsn_number',
+			'ps.make',
+			'ps.model',
+			'ps.other_numbers',
+			'ep.quantity',
+			'ep.notes'
+		];
+		foreach ($optionalPartSpecFields as $fieldName) {
+			if (isset($partSpecColumns[$fieldName])) {
+				$partSpecSelects[] = 'ps.' . $fieldName;
+			} else {
+				$partSpecSelects[] = "'' AS " . $fieldName;
+			}
+		}
+
 		$stmt = $conn->prepare("
-			SELECT ep.part_name, ep.nsn_number, ps.make, ps.model, ps.other_numbers, ps.make_lnk, ps.supplier, ps.supplier_name, ps.supplier_number, ps.supplier_email, ps.supplier_address, ps.supplier_part_number, ps.supplier_price, ps.supplier_lnk, ep.quantity, ep.notes
+			SELECT " . implode(", ", $partSpecSelects) . "
 			FROM equipment_parts ep
 			LEFT JOIN part_specifications ps ON ep.part_name = ps.part_name
 			WHERE ep.equipment_id = ?
@@ -862,7 +901,8 @@ document.addEventListener('DOMContentLoaded', function(){
 			// Wire supplier autocomplete for new item
 			wireSupplierAutocomplete(makeItem);
 			
-			// Add remove handler
+			// Add remove handler3'
+			
 			bindMakeRemoveHandler(makeItem);
 		});
 	}
