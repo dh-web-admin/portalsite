@@ -66,6 +66,19 @@ $stmt->close();
       letter-spacing: -0.3px;
     }
 
+    .header-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .header-back-row {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 8px;
+    }
+
     /* ── Breadcrumb eyebrow ── */
     #equipmentEyebrow {
       font-size: 11px;
@@ -132,6 +145,31 @@ $stmt->close();
       transform: translateY(-1px);
     }
     #saveEngineeringItemsBtn:active { transform: translateY(0); }
+
+    /* ── Delete Draft button ── */
+    #deleteEngineeringDraftBtn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      background: #ffffff;
+      color: #dc2626;
+      border: 1.5px solid #fca5a5;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.86rem;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s, transform 0.12s;
+      white-space: nowrap;
+    }
+    #deleteEngineeringDraftBtn:hover {
+      background: #fef2f2;
+      color: #b91c1c;
+      transform: translateY(-1px);
+    }
+    #deleteEngineeringDraftBtn:active { transform: translateY(0); }
 
     /* ── Deploy button ── */
     #deployEquipmentBtn {
@@ -360,24 +398,37 @@ $stmt->close();
                PAGE HEADER
                ══════════════════════════════════════════ -->
           <div id="equipmentHeader">
+            <div class="header-back-row">
+              <button id="backToEngineeringBtn" type="button">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M10.5 3L5.5 8L10.5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Back to Engineering
+              </button>
+            </div>
+
             <!-- Eyebrow / breadcrumb -->
             <div id="equipmentEyebrow">Equipment &rsaquo; New Build</div>
 
             <!-- Title row -->
             <div id="equipmentTitleRow">
-              <h1>Build New Equipment</h1>
+              <div class="header-title-group">
+                <h1>Build New Equipment</h1>
+              </div>
               <div class="header-btn-group">
-                <button id="backToEngineeringBtn" type="button">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M10.5 3L5.5 8L10.5 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  Back to Engineering
-                </button>
                 <button id="saveEngineeringItemsBtn">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   Save Draft
+                </button>
+                <button id="deleteEngineeringDraftBtn" type="button">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M3.5 4.5H12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <path d="M6 4.5V3.5C6 3.2 6.2 3 6.5 3H9.5C9.8 3 10 3.2 10 3.5V4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5 6.5V11.5C5 12.1 5.4 12.5 6 12.5H10C10.6 12.5 11 12.1 11 11.5V6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Delete Draft
                 </button>
                 <button id="deployEquipmentBtn">
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -1620,6 +1671,48 @@ $stmt->close();
       });
 
       var saveEngineeringItemsBtn = document.getElementById('saveEngineeringItemsBtn');
+      var deleteEngineeringDraftBtn = document.getElementById('deleteEngineeringDraftBtn');
+
+      if (deleteEngineeringDraftBtn) {
+        deleteEngineeringDraftBtn.addEventListener('click', function() {
+          if (!engDraftId) {
+            alert('No draft found to delete.');
+            return;
+          }
+
+          var ok = window.confirm('Delete this draft equipment? This cannot be undone.');
+          if (!ok) return;
+
+          deleteEngineeringDraftBtn.disabled = true;
+          deleteEngineeringDraftBtn.textContent = 'Deleting...';
+
+          fetch(apiBase + '/delete_equipment_draft.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ draft_id: engDraftId })
+          })
+          .then(function(res){ return res.json(); })
+          .then(function(data) {
+            if (!data || !data.success) {
+              throw new Error((data && data.message) ? data.message : 'Delete failed');
+            }
+
+            try {
+              localStorage.removeItem('buildNewEquipment');
+              localStorage.removeItem('buildNewEquipmentCurrent');
+            } catch (e) {}
+
+            alert('Draft deleted successfully.');
+            window.location.href = 'index.php';
+          })
+          .catch(function(err) {
+            alert('Failed to delete draft: ' + (err && err.message ? err.message : 'Unknown error'));
+            deleteEngineeringDraftBtn.disabled = false;
+            deleteEngineeringDraftBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 4.5H12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 4.5V3.5C6 3.2 6.2 3 6.5 3H9.5C9.8 3 10 3.2 10 3.5V4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 6.5V11.5C5 12.1 5.4 12.5 6 12.5H10C10.6 12.5 11 12.1 11 11.5V6.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Delete Draft';
+          });
+        });
+      }
+
       if (saveEngineeringItemsBtn) {
         saveEngineeringItemsBtn.addEventListener('click', function() {
           if (!engDraftId) {

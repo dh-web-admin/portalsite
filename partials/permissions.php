@@ -246,8 +246,11 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 if (!function_exists('is_admin')) {
     // defensive no-op if helper isn't available for some reason
 } else {
-    // Only emit the UI-hide stylesheet/script for normal pages (not API endpoints)
-    if (!defined('IS_API')) {
+    // Never emit HTML/JS for API endpoints because it corrupts JSON responses.
+    $requestPath = (string)($_SERVER['SCRIPT_NAME'] ?? ($_SERVER['REQUEST_URI'] ?? ''));
+    $isApiRequest = defined('IS_API') || preg_match('#(^|/)api(/|$)#i', $requestPath);
+
+    if (!$isApiRequest) {
         $pageKey = get_current_page_key();
         $hideEdits = $pageKey ? !can_edit_page($pageKey) : !is_admin();
         if ($hideEdits) {
