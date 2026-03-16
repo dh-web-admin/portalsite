@@ -121,9 +121,9 @@ try {
         $engineering_part_id = $conn->insert_id;
         $stmtParts->close();
         
-        // If make is provided, also add it to engineering_part_specifications
+        // If make is provided, sync it to engineering_part_specifications without failing on duplicates.
         if (!empty($make)) {
-            $stmtSpec = $conn->prepare("INSERT INTO engineering_part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, '', '', '', '', '', '', '', NULL)");
+            $stmtSpec = $conn->prepare("INSERT INTO engineering_part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, '', '', '', '', '', '', '', NULL) ON DUPLICATE KEY UPDATE make = VALUES(make)");
             $stmtSpec->bind_param('ss', $name, $make);
             $stmtSpec->execute();
             $stmtSpec->close();

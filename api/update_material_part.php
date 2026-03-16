@@ -132,15 +132,15 @@ try {
                         $stmtSpec->execute();
                         $stmtSpec->close();
                     } else {
-                        // Insert new make entry
-                        $stmtSpec = $conn->prepare("INSERT INTO engineering_part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, '', '', '', '', '', '', '', NULL)");
+                        // Insert new make entry (or keep existing tuple when already present)
+                        $stmtSpec = $conn->prepare("INSERT INTO engineering_part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, '', '', '', '', '', '', '', NULL) ON DUPLICATE KEY UPDATE make = VALUES(make)");
                         $stmtSpec->bind_param('ss', $name, $make);
                         $stmtSpec->execute();
                         $stmtSpec->close();
                     }
                 } else {
-                    // Insert new make entry if old make was empty
-                    $stmtSpec = $conn->prepare("INSERT INTO engineering_part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, '', '', '', '', '', '', '', NULL)");
+                    // Insert new make entry if old make was empty (duplicate-safe)
+                    $stmtSpec = $conn->prepare("INSERT INTO engineering_part_specifications (part_name, make, model, other_numbers, supplier, supplier_name, supplier_number, supplier_email, supplier_address, supplier_price) VALUES (?, ?, '', '', '', '', '', '', '', NULL) ON DUPLICATE KEY UPDATE make = VALUES(make)");
                     $stmtSpec->bind_param('ss', $name, $make);
                     $stmtSpec->execute();
                     $stmtSpec->close();
