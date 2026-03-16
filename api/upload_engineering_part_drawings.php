@@ -48,7 +48,7 @@ try {
     $result = $stmt->get_result();
     $row = $result->fetch_assoc();
     $maxVersion = $row && $row['max_version'] ? (int) $row['max_version'] : 0;
-    $nextVersion = $maxVersion > 0 ? ($maxVersion + 1) : 2;
+    $nextVersion = $maxVersion > 0 ? ($maxVersion + 1) : 1;
     $batchVersion = 'v' . $nextVersion;
     $stmt->close();
 

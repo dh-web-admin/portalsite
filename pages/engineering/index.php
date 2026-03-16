@@ -1755,7 +1755,7 @@ $hasEditPermission = can_edit_page('engineering');
 																			quantitySpan.style.minWidth = '100px';
 
 																			var versionSpan = document.createElement('span');
-																			versionSpan.textContent = 'Version: V1';
+																			versionSpan.textContent = 'Version: V0';
 																			versionSpan.style.color = '#1f2937';
 																			versionSpan.style.minWidth = '95px';
 
@@ -2791,7 +2791,7 @@ $hasEditPermission = can_edit_page('engineering');
 								iconImg.alt = hasDrawings ? 'drawings' : 'no drawings';
 								iconBtn.title = hasDrawings ? 'Open latest drawing' : 'No drawings. Click to upload';
 								if (versionEl) {
-									versionEl.textContent = 'Version: ' + (hasDrawings ? (latestVersion || 'v2').toUpperCase() : 'V1');
+									versionEl.textContent = 'Version: ' + (hasDrawings ? (latestVersion || 'v1').toUpperCase() : 'V0');
 								}
 							}
 
