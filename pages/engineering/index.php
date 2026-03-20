@@ -2515,8 +2515,9 @@ $hasEditPermission = can_edit_page('engineering');
 										// Group parts by part name with makes
 										var partsList = {};
 										data.parts.forEach(function(part) {
-											if (!partsList[part.part_name]) {
-												partsList[part.part_name] = {
+											var partKey = part.part_id ? String(part.part_id) : ('name:' + (part.part_name || ''));
+											if (!partsList[partKey]) {
+												partsList[partKey] = {
 													part_id: part.part_id || 0,
 													part_name: part.part_name,
 													nsn_number: part.nsn_number || '',
@@ -2526,7 +2527,7 @@ $hasEditPermission = can_edit_page('engineering');
 												};
 											}
 											if (part.make) {
-												partsList[part.part_name].makes.push({
+												var makeEntry = {
 													make: part.make,
 													partNumber: part.model || '',
 													otherNumbers: part.other_numbers || '',
@@ -2539,7 +2540,15 @@ $hasEditPermission = can_edit_page('engineering');
 													supplierPartNumber: part.supplier_part_number || '',
 													supplierPrice: part.supplier_price || '',
 													supplierLnk: part.supplier_lnk || ''
+												};
+												var makeExists = partsList[partKey].makes.some(function(m) {
+													return (m.make || '') === (makeEntry.make || '')
+														&& (m.partNumber || '') === (makeEntry.partNumber || '')
+														&& (m.supplierPartNumber || '') === (makeEntry.supplierPartNumber || '');
 												});
+												if (!makeExists) {
+													partsList[partKey].makes.push(makeEntry);
+												}
 											}
 										});
 
