@@ -259,6 +259,10 @@ $hasEditPermission = can_edit_page('engineering');
 								<div style="text-align:center;">
 									<button type="button" id="addAnotherMakeBtn" style="padding:8px 16px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;color:#374151;font-weight:600;cursor:pointer;font-size:13px;transition:background 0.2s ease;">+ Add Another Make</button>
 								</div>
+								<div>
+									<label for="partNotes" style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Notes</label>
+									<textarea id="partNotes" rows="3" placeholder="Add optional notes" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;resize:vertical;"></textarea>
+								</div>
 								<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;align-items:center;">
 									<button type="button" id="deletePartBtn" style="display:none;padding:10px 16px;background:#ef4444;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;">Delete</button>
 									<button type="button" id="cancelPartModalBtn" style="padding:10px 18px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;color:#374151;font-weight:600;cursor:pointer;">Cancel</button>
@@ -2714,6 +2718,8 @@ $hasEditPermission = can_edit_page('engineering');
 							if (partInput) partInput.value = partData.part_name;
 							var nsnInput = document.getElementById('partNsn');
 							if (nsnInput) nsnInput.value = partData.nsn_number;
+							var notesInput = document.getElementById('partNotes');
+							if (notesInput) notesInput.value = partData.notes || '';
 							
 							// Reset makesList
 							var makesList = document.getElementById('makesList');
@@ -3390,6 +3396,7 @@ $hasEditPermission = can_edit_page('engineering');
 								
 								var partNumber = document.getElementById('partNumber').value.trim();
 								var partNsn = (document.getElementById('partNsn') || {}).value?.trim() || '';
+								var partNotes = (document.getElementById('partNotes') || {}).value?.trim() || '';
 								var makes = [];
 								
 								var makeItems = makesList ? makesList.querySelectorAll('.make-item') : [];
@@ -3442,7 +3449,7 @@ $hasEditPermission = can_edit_page('engineering');
 								formData.append('part_number', partNumber);
 								formData.append('nsn_number', partNsn);
 								formData.append('quantity', 1);
-								formData.append('notes', '');
+								formData.append('notes', partNotes);
 								formData.append('makes', JSON.stringify(makes));
 								formData.append('edit_mode', partModalState.editMode ? '1' : '0');
 								formData.append('original_part_name', partModalState.originalPartName || '');

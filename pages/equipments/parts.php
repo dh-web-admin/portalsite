@@ -265,7 +265,7 @@ function equipment_label($row) {
 							}
 						}
 					?>
-					<div class="part-card" data-part-name="<?php echo htmlspecialchars($part['part_name']); ?>" data-part-nsn="<?php echo htmlspecialchars($part['nsn_number']); ?>" data-part-makes='<?php echo json_encode($cardMakes); ?>'>
+					<div class="part-card" data-part-name="<?php echo htmlspecialchars($part['part_name']); ?>" data-part-nsn="<?php echo htmlspecialchars($part['nsn_number']); ?>" data-part-notes="<?php echo htmlspecialchars($part['notes']); ?>" data-part-makes='<?php echo json_encode($cardMakes); ?>'>
 						<div class="part-header">
 							<div class="part-name"><?php echo htmlspecialchars($part['part_name']); ?></div>
 							<?php if (!empty($part['quantity']) && $part['quantity'] > 1): ?>
@@ -411,6 +411,10 @@ function equipment_label($row) {
 			
 			<div style="text-align:center;">
 				<button type="button" id="addAnotherMakeBtn" style="padding:8px 16px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;color:#374151;font-weight:600;cursor:pointer;font-size:13px;transition:background 0.2s ease;">+ Add Another Make</button>
+			</div>
+			<div>
+				<label for="partNotes" style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Notes</label>
+				<textarea id="partNotes" rows="3" placeholder="Add optional notes" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;resize:vertical;"></textarea>
 			</div>
 			
 			<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;align-items:center;">
@@ -917,6 +921,7 @@ document.addEventListener('DOMContentLoaded', function(){
 			card.addEventListener('click', function(){
 				var partName = card.getAttribute('data-part-name') || '';
 				var partNsn = card.getAttribute('data-part-nsn') || '';
+				var partNotes = card.getAttribute('data-part-notes') || '';
 				var makesJson = card.getAttribute('data-part-makes') || '[]';
 				var parsedMakes = [];
 				try { parsedMakes = JSON.parse(makesJson); } catch(e) { parsedMakes = []; }
@@ -949,6 +954,8 @@ document.addEventListener('DOMContentLoaded', function(){
 				if (partInput) partInput.value = partName;
 				var nsnInput = document.getElementById('partNsn');
 				if (nsnInput) nsnInput.value = partNsn;
+				var notesInput = document.getElementById('partNotes');
+				if (notesInput) notesInput.value = partNotes;
 
 				// Fill in makes
 				if (parsedMakes && parsedMakes.length) {
@@ -1074,6 +1081,7 @@ document.addEventListener('DOMContentLoaded', function(){
 			
 			var partNumber = document.getElementById('partNumber').value.trim();
 			var partNsn = (document.getElementById('partNsn') || {}).value?.trim() || '';
+			var partNotes = (document.getElementById('partNotes') || {}).value?.trim() || '';
 			var makes = [];
 			
 			var makeItems = makesList.querySelectorAll('.make-item');
@@ -1129,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', function(){
 			formData.append('part_number', partNumber);
 			formData.append('nsn_number', partNsn);
 			formData.append('quantity', 1);
-			formData.append('notes', '');
+			formData.append('notes', partNotes);
 			formData.append('makes', JSON.stringify(makes));
 			// Pass edit metadata so the API can avoid duplicates when updating
 			formData.append('edit_mode', isEditMode ? '1' : '0');
