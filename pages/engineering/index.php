@@ -677,6 +677,30 @@ $hasEditPermission = can_edit_page('engineering');
 
 						var selectedItem = null;
 						var selectedItemId = null;
+						var selectedItemStorageKey = 'engineering:selectedItemId';
+
+						function loadStoredSelectedItemId() {
+							try {
+								var rawValue = sessionStorage.getItem(selectedItemStorageKey);
+								if (!rawValue) return null;
+								var parsed = parseInt(rawValue, 10);
+								return isNaN(parsed) ? null : parsed;
+							} catch (e) {
+								return null;
+							}
+						}
+
+						function persistSelectedItemId(itemId) {
+							try {
+								if (itemId === null || typeof itemId === 'undefined') {
+									sessionStorage.removeItem(selectedItemStorageKey);
+									return;
+								}
+								sessionStorage.setItem(selectedItemStorageKey, String(itemId));
+							} catch (e) {
+								// Ignore storage errors (e.g., disabled storage).
+							}
+						}
 
 						function setItemCardStyle(card, isSelected, isHover) {
 							if (isSelected) {
@@ -702,6 +726,9 @@ $hasEditPermission = can_edit_page('engineering');
 							var itemDetails = document.getElementById('itemDetails');
 							itemList.innerHTML = '';
 							itemDetails.innerHTML = '';
+							if (selectedItemId === null) {
+								selectedItemId = loadStoredSelectedItemId();
+							}
 							selectedItem = null;
 							var hasSelectedInList = false;
 							// Sort items alphabetically by name
@@ -739,6 +766,7 @@ $hasEditPermission = can_edit_page('engineering');
 								div.addEventListener('click', function() {
 									selectedItem = item;
 									selectedItemId = item.id;
+									persistSelectedItemId(selectedItemId);
 									refreshSelectedItemStyles();
 									showDetails(item);
 								});
@@ -746,8 +774,18 @@ $hasEditPermission = can_edit_page('engineering');
 								if (!hasSelectedInList && idx === 0) {
 									selectedItem = item;
 									selectedItemId = item.id;
+									persistSelectedItemId(selectedItemId);
 								}
 							});
+							if (!hasSelectedInList && selectedItemId !== null && sortedItems.length > 0) {
+								selectedItemId = sortedItems[0].id;
+								selectedItem = sortedItems[0];
+								persistSelectedItemId(selectedItemId);
+							}
+							if (sortedItems.length === 0) {
+								selectedItemId = null;
+								persistSelectedItemId(null);
+							}
 							refreshSelectedItemStyles();
 							if (selectedItem) showDetails(selectedItem);
 						}
