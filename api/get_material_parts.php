@@ -17,7 +17,18 @@ if ($material_id <= 0) {
 }
 
 try {
-    $stmt = $conn->prepare("SELECT emp.*, eip.id AS engineering_part_id FROM Engineering_material_parts emp JOIN Engineering_materials em ON emp.material_id = em.id LEFT JOIN engineering_item_parts eip ON eip.item_id = em.item_id AND eip.part_name COLLATE utf8mb4_unicode_ci = emp.name COLLATE utf8mb4_unicode_ci WHERE emp.material_id = ? ORDER BY emp.number ASC");
+    $stmt = $conn->prepare("SELECT emp.*, eip_one.id AS engineering_part_id
+                            FROM Engineering_material_parts emp
+                            JOIN Engineering_materials em ON emp.material_id = em.id
+                            LEFT JOIN (
+                                SELECT item_id, part_name, MIN(id) AS id
+                                FROM engineering_item_parts
+                                GROUP BY item_id, part_name
+                            ) eip_one
+                            ON eip_one.item_id = em.item_id
+                            AND eip_one.part_name COLLATE utf8mb4_unicode_ci = emp.name COLLATE utf8mb4_unicode_ci
+                            WHERE emp.material_id = ?
+                            ORDER BY emp.number ASC");
     $stmt->bind_param('i', $material_id);
     $stmt->execute();
     $result = $stmt->get_result();
