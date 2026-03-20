@@ -36,6 +36,11 @@ if (!isset($data['name']) || trim($data['name']) === '') {
 $name = trim($data['name']);
 $item_id = isset($data['item_id']) ? intval($data['item_id']) : null;
 
+if (!$item_id || $item_id <= 0) {
+    echo json_encode(['success' => false, 'message' => 'Item ID is required']);
+    exit;
+}
+
 // Create table if it doesn't exist
 $createTableSql = "CREATE TABLE IF NOT EXISTS Engineering_materials (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,8 +57,9 @@ if (!$conn->query($createTableSql)) {
     exit;
 }
 
-// Get the next auto-incremented number
-$stmt = $conn->prepare("SELECT COALESCE(MAX(number), 0) + 1 as next_number FROM Engineering_materials");
+// Number materials per engineering item so each item's sequence starts at #1.
+$stmt = $conn->prepare("SELECT COALESCE(MAX(number), 0) + 1 as next_number FROM Engineering_materials WHERE item_id = ?");
+$stmt->bind_param('i', $item_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $row = $result->fetch_assoc();
