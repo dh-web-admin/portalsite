@@ -73,6 +73,47 @@ if ($colsRes && $colsRes->num_rows === 0) {
   $conn->query("ALTER TABLE scheduled_project_details MODIFY COLUMN `day` DATE NOT NULL");
 }
 
+// Bulk save handler to persist client-side per-day details in one request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'bulk_save_project_details') {
+  header('Content-Type: application/json; charset=utf-8');
+  try {
+    $raw = file_get_contents('php://input');
+    $data = json_decode($raw, true);
+    if (!is_array($data) || !isset($data['entries']) || !is_array($data['entries'])) {
+      http_response_code(400);
+      echo json_encode(['success' => false, 'message' => 'Invalid payload']);
+      exit();
+    }
+
+    $stmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, `day`, equipments, personnel) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE equipments = VALUES(equipments), personnel = VALUES(personnel)');
+    if (!$stmt) {
+      throw new Exception('Unable to prepare statement');
+    }
+
+    foreach ($data['entries'] as $entry) {
+      $projectId = isset($entry['project_id']) ? (int)$entry['project_id'] : 0;
+      $day = isset($entry['day']) ? trim((string)$entry['day']) : '';
+      $equipments = isset($entry['equipments']) ? (string)$entry['equipments'] : '';
+      $personnel = isset($entry['personnel']) ? (string)$entry['personnel'] : '';
+
+      if ($projectId <= 0 || $day === '') {
+        continue;
+      }
+
+      $stmt->bind_param('isss', $projectId, $day, $equipments, $personnel);
+      $stmt->execute();
+    }
+    $stmt->close();
+
+    echo json_encode(['success' => true]);
+    exit();
+  } catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Unable to save details']);
+    exit();
+  }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_project_requirement') {
   header('Content-Type: application/json; charset=utf-8');
 
@@ -344,14 +385,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       $projectId = (int)$projectStmt->insert_id;
       $projectStmt->close();
 
-      $dayForDetails = date('Y-m-d', $startTs);
-      $detailsStmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, `day`, equipments, personnel) VALUES (?, ?, "", "")');
+      // Create a scheduled_project_details row for every day in the project span (inclusive)
+      $startDateOnly = date('Y-m-d', $startTs);
+      $endDateOnly = date('Y-m-d', $endTs);
+      $detailsStmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, `day`, equipments, personnel) VALUES (?, ?, "", "") ON DUPLICATE KEY UPDATE project_id = project_id');
       if (!$detailsStmt) {
         throw new Exception('Unable to prepare project details insert.');
       }
-      $detailsStmt->bind_param('is', $projectId, $dayForDetails);
-      if (!$detailsStmt->execute()) {
-        throw new Exception('Unable to save project details.');
+      $current = strtotime($startDateOnly);
+      $endDay = strtotime($endDateOnly);
+      while ($current <= $endDay) {
+        $dayStr = date('Y-m-d', $current);
+        $detailsStmt->bind_param('is', $projectId, $dayStr);
+        if (!$detailsStmt->execute()) {
+          throw new Exception('Unable to save project details for ' . $dayStr);
+        }
+        $current = strtotime('+1 day', $current);
       }
       $detailsStmt->close();
 
@@ -412,6 +461,30 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
   <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260323e" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
   <link rel="stylesheet" href="style.css?v=20260323w" />
+  <style>
+    /* Save Changes button styles */
+    .save-btn {
+      background: #f0f0f0;
+      color: #333;
+      border: 1px solid #d0d7de;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: not-allowed;
+      transition: background-color 180ms ease, box-shadow 180ms ease, transform 120ms ease;
+    }
+    .save-btn.save-active {
+      background: #3c7e55;
+      color: #ffffff;
+      border-color: #3e8559;
+      cursor: pointer;
+      transform: translateY(-1px);
+    }
+    .save-btn.save-active:hover {
+      box-shadow: 0 8px 22px rgba(45, 150, 75, 0.22);
+      transform: translateY(-2px);
+    }
+    .save-btn:disabled { opacity: 0.9; }
+  </style>
 </head>
 <body class="admin-page scheduling-page">
   <div class="admin-container">
@@ -496,6 +569,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                 </div>
                 <div class="week-range" id="weekRangeLabel">Week Range</div>
                 <div class="scheduler-actions">
+                  <button type="button" class="secondary-btn save-btn" id="saveChangesBtn" disabled style="margin-right:8px;">Save Changes</button>
                   <button type="button" class="add-project-btn" id="openAddProjectModal">Add Project</button>
                   <button type="button" class="scheduler-icon-btn" id="printWeekBtn" aria-label="Print current week schedule" title="Print current week">
                     <img src="<?php echo htmlspecialchars($printIconPath); ?>" alt="" />
@@ -560,10 +634,6 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           <span class="meta-label">Dates</span>
           <span class="meta-value" id="viewProjectDates">-</span>
         </div>
-        <div class="meta-row">
-          <span class="meta-label">Hours</span>
-          <span class="meta-value" id="viewProjectHours">-</span>
-        </div>
       </div>
 
       <div class="project-view-grid">
@@ -606,9 +676,21 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
     (function(){
       var scheduledProjects = <?php echo json_encode($scheduledProjects, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
       var projectById = {};
+      // perDayDetails stores equipments/personnel per project-day (key: projectId|YYYY-MM-DD)
+      var perDayDetails = {};
       if (Array.isArray(scheduledProjects)) {
         scheduledProjects.forEach(function(project){
           projectById[String(project.project_id)] = project;
+          try {
+            var sd = parseDateTime(project.start);
+            if (sd) {
+              var key = String(project.project_id) + '|' + formatIsoDate(sd);
+              perDayDetails[key] = {
+                equipments: String(project.equipments || ''),
+                personnel: String(project.personnel || '')
+              };
+            }
+          } catch (e) {}
         });
       }
 
@@ -618,6 +700,21 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         usersToggle.addEventListener('click', function(){
           usersGroup.classList.toggle('open');
         });
+      }
+
+      var saveChangesBtn = document.getElementById('saveChangesBtn');
+      var isDirty = false;
+
+      function setDirty(flag) {
+        isDirty = !!flag;
+        if (saveChangesBtn) {
+          saveChangesBtn.disabled = !isDirty;
+          if (isDirty) {
+            saveChangesBtn.classList.add('save-active');
+          } else {
+            saveChangesBtn.classList.remove('save-active');
+          }
+        }
       }
 
       function bindResourceCollapse(buttonId, listId) {
@@ -635,6 +732,54 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
 
       bindResourceCollapse('personnelCollapseBtn', 'personnelList');
       bindResourceCollapse('equipmentCollapseBtn', 'equipmentList');
+
+      // Save changes button handler: collect perDayDetails and POST to server
+      function saveAllChanges() {
+        if (!isDirty) return Promise.resolve({ ok: true });
+        var payload = { entries: [] };
+        for (var k in perDayDetails) {
+          if (!perDayDetails.hasOwnProperty(k)) continue;
+          var parts = k.split('|');
+          var pid = parts[0] || '';
+          var day = parts[1] || '';
+          if (!pid || !day) continue;
+          payload.entries.push({ project_id: Number(pid), day: day, equipments: perDayDetails[k].equipments || '', personnel: perDayDetails[k].personnel || '' });
+        }
+        if (payload.entries.length === 0) {
+          // nothing to save, just reload
+          window.location.reload();
+          return Promise.resolve({ ok: true });
+        }
+
+        if (saveChangesBtn) saveChangesBtn.disabled = true;
+        return fetch(window.location.pathname + '?action=bulk_save_project_details', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify(payload)
+        }).then(function(res){
+          return res.json().then(function(data){ return { ok: res.ok, data: data }; });
+        }).then(function(res){
+          if (!res.ok || !res.data || !res.data.success) {
+            throw new Error('Save failed');
+          }
+          // Clear dirty flag and reload page to reflect server state
+          setDirty(false);
+          window.location.reload();
+        }).catch(function(){
+          setDirty(true);
+          if (saveChangesBtn) saveChangesBtn.disabled = false;
+          showInfoModal('Unable To Save', 'Unable to save schedule changes right now.');
+        });
+      }
+
+      if (saveChangesBtn) {
+        saveChangesBtn.addEventListener('click', function(){
+          saveAllChanges();
+        });
+      }
 
       var requirementSources = document.querySelectorAll('.requirement-source');
       requirementSources.forEach(function(source){
@@ -659,14 +804,17 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         });
       });
 
-      function updateProjectRequirement(projectId, kind, value) {
+      function updateProjectRequirement(projectId, kind, value, day) {
         var params = new URLSearchParams();
-        params.set('action', 'add_project_requirement');
-        params.set('project_id', String(projectId));
-        params.set('kind', kind);
-        params.set('value', value);
+          params.set('action', 'add_project_requirement');
+          params.set('project_id', String(projectId));
+          params.set('kind', kind);
+          params.set('value', value);
+          if (typeof day === 'string' && day) {
+            params.set('day', day);
+          }
 
-        return fetch(window.location.pathname, {
+          return fetch(window.location.pathname, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -679,15 +827,17 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           });
         });
       }
+        function removeProjectRequirement(projectId, kind, value, day) {
+          var params = new URLSearchParams();
+          params.set('action', 'remove_project_requirement');
+          params.set('project_id', String(projectId));
+          params.set('kind', kind);
+          params.set('value', value);
+          if (typeof day === 'string' && day) {
+            params.set('day', day);
+          }
 
-      function removeProjectRequirement(projectId, kind, value) {
-        var params = new URLSearchParams();
-        params.set('action', 'remove_project_requirement');
-        params.set('project_id', String(projectId));
-        params.set('kind', kind);
-        params.set('value', value);
-
-        return fetch(window.location.pathname, {
+          return fetch(window.location.pathname, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -797,6 +947,63 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         });
       }
 
+      // Find conflicts for a specific calendar day: return projects (other than target) that have
+      // the same `kind` (equipments/personnel) assigned on the provided ISO `dayKey` (YYYY-MM-DD).
+      function findAssignmentConflictsForDay(targetProject, kind, value, dayKey) {
+        if (!targetProject || !dayKey) {
+          return [];
+        }
+        var normalizedTarget = normalizeAssignmentValue(value);
+        if (!normalizedTarget) {
+          return [];
+        }
+
+        var targetId = Number(targetProject.project_id);
+        var conflicts = [];
+
+        scheduledProjects.forEach(function(existingProject){
+          if (!existingProject) return;
+          var existingId = Number(existingProject.project_id);
+          if (Number.isNaN(existingId) || existingId === targetId) return;
+
+          // check whether the dayKey falls within the existing project's date range
+          var erange = projectDayRange(existingProject);
+          if (!erange) return;
+          var dayDate = new Date(dayKey + 'T00:00:00');
+          if (dayDate.getTime() < erange.start.getTime() || dayDate.getTime() > erange.end.getTime()) return;
+
+          // check per-day details map first
+          var key = String(existingId) + '|' + dayKey;
+          var pd = perDayDetails[key];
+          var listCsv = '';
+          if (pd) {
+            listCsv = (kind === 'personnel') ? (pd.personnel || '') : (pd.equipments || '');
+          } else {
+            // fallback: if the dayKey equals the project's start day, the server-loaded project fields may reflect that day
+            try {
+              var pstart = parseDateTime(existingProject.start);
+              if (pstart) {
+                var pstartKey = formatIsoDate(pstart);
+                if (pstartKey === dayKey) {
+                  listCsv = (kind === 'personnel') ? (existingProject.personnel || '') : (existingProject.equipments || '');
+                }
+              }
+            } catch (e) { /* ignore */ }
+          }
+
+          if (!listCsv) return;
+          var items = parseCsvList(listCsv);
+          for (var i = 0; i < items.length; i++) {
+            if (normalizeAssignmentValue(items[i]) === normalizedTarget) {
+              conflicts.push(existingProject);
+              break;
+            }
+          }
+        });
+
+        return conflicts;
+      }
+
       function formatIsoDate(dateObj) {
         var y = dateObj.getFullYear();
         var m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -815,13 +1022,21 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         return h12 + (m ? ':' + String(m).padStart(2, '0') : '') + ' ' + suffix;
       }
 
+      function formatFriendlyRange(startDate, endDate) {
+        if (!startDate || !endDate) return '';
+        var s = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        var e = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        var left = s.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        var right = e.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return left + ' - ' + right;
+      }
+
       var viewProjectModal = document.getElementById('viewProjectModal');
       var closeViewProjectModal = document.getElementById('closeViewProjectModal');
       var closeProjectViewBtn = document.getElementById('closeProjectViewBtn');
       var deleteProjectBtn = document.getElementById('deleteProjectBtn');
       var viewProjectTitle = document.getElementById('viewProjectTitle');
       var viewProjectDates = document.getElementById('viewProjectDates');
-      var viewProjectHours = document.getElementById('viewProjectHours');
       var viewProjectPersonnel = document.getElementById('viewProjectPersonnel');
       var viewProjectEquipments = document.getElementById('viewProjectEquipments');
       var decisionModal = document.getElementById('decisionModal');
@@ -1115,10 +1330,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           viewProjectTitle.textContent = project.project_name || 'Project';
         }
         if (viewProjectDates && startDate && endDate) {
-          viewProjectDates.textContent = formatIsoDate(startDate) + ' -> ' + formatIsoDate(endDate);
-        }
-        if (viewProjectHours && startDate && endDate) {
-          viewProjectHours.textContent = formatHourLabel(startDate) + ' - ' + formatHourLabel(endDate);
+          viewProjectDates.textContent = formatFriendlyRange(startDate, endDate);
         }
 
         renderViewChips(viewProjectPersonnel, parseCsvList(project.personnel), 'personnel');
@@ -1197,11 +1409,19 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           weekRangeLabel.textContent = rangeFormatter.format(currentWeekStart) + ' - ' + rangeFormatter.format(weekEnd);
         }
 
-        function renderProjectTile(project, startDayIndex, endDayIndex, rowIndex) {
+        function renderProjectTile(project, dayIndex, rowIndex) {
           var tile = document.createElement('div');
-          tile.className = 'project-tile day-bubble spanning-bubble';
-          tile.style.gridColumn = String(startDayIndex + 1) + ' / ' + String(endDayIndex + 2);
+          tile.className = 'project-tile day-bubble';
+          tile.style.gridColumn = String(dayIndex + 1) + ' / ' + String(dayIndex + 2);
           tile.style.gridRow = String(rowIndex + 1);
+          // attach the concrete day for per-day assignments
+          try {
+            var dayDate = new Date(currentWeekStart);
+            dayDate.setDate(currentWeekStart.getDate() + Number(dayIndex));
+            tile.dataset.day = formatIsoDate(dayDate);
+          } catch (e) {
+            tile.dataset.day = '';
+          }
           var tileColor = getProjectColor(project);
           tile.style.background = tileColor;
           tile.style.borderColor = tileColor;
@@ -1213,8 +1433,10 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
 
           var reqMeta = document.createElement('div');
           reqMeta.className = 'project-tile-req';
-          var personnelsText = project.personnel ? project.personnel : '-';
-          var equipmentsText = project.equipments ? project.equipments : '-';
+          var perKey = String(project.project_id) + '|' + (tile.dataset.day || '');
+          var perData = perDayDetails[perKey] || null;
+          var personnelsText = perData ? (perData.personnel || '-') : (project.personnel ? project.personnel : '-');
+          var equipmentsText = perData ? (perData.equipments || '-') : (project.equipments ? project.equipments : '-');
           reqMeta.textContent = 'Crew Members: ' + personnelsText + '\nEquipments: ' + equipmentsText;
           tile.appendChild(reqMeta);
 
@@ -1270,7 +1492,8 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
               return;
             }
 
-            var conflicts = findAssignmentConflicts(project, payload.kind, payload.value);
+            var dayKey = tile.dataset.day || '';
+            var conflicts = findAssignmentConflictsForDay(project, payload.kind, payload.value, dayKey);
             if (conflicts.length > 0) {
               renderConflictVisualization(project, conflicts);
               var confirmMove = await showDecisionModal({
@@ -1290,32 +1513,40 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             tile.classList.add('is-saving');
             try {
               var removePromises = conflicts.map(function(conflictProject){
-                return removeProjectRequirement(conflictProject.project_id, payload.kind, payload.value)
+                return removeProjectRequirement(conflictProject.project_id, payload.kind, payload.value, dayKey)
                   .then(function(result){
                     if (!result.ok || !result.data || !result.data.success) {
                       throw new Error('Remove failed');
                     }
 
-                    var fromProject = projectById[String(conflictProject.project_id)];
-                    if (fromProject) {
-                      fromProject.equipments = result.data.equipments || '';
-                      fromProject.personnel = result.data.personnel || '';
-                    }
+                    // update only the specific day for the conflicting project
+                    try {
+                      var k = String(conflictProject.project_id) + '|' + (dayKey || '');
+                      perDayDetails[k] = {
+                        equipments: String(result.data.equipments || ''),
+                        personnel: String(result.data.personnel || '')
+                      };
+                      setDirty(true);
+                    } catch (e) {}
                   });
               });
 
               await Promise.all(removePromises);
 
-              var result = await updateProjectRequirement(project.project_id, payload.kind, payload.value);
+              var result = await updateProjectRequirement(project.project_id, payload.kind, payload.value, dayKey);
               if (!result.ok || !result.data || !result.data.success) {
                 throw new Error('Save failed');
               }
 
-              var targetProject = projectById[String(project.project_id)];
-              if (targetProject) {
-                targetProject.equipments = result.data.equipments || '';
-                targetProject.personnel = result.data.personnel || '';
-              }
+              // update only the specific day for the target project
+              try {
+                var key = String(project.project_id) + '|' + (dayKey || '');
+                perDayDetails[key] = {
+                  equipments: String(result.data.equipments || ''),
+                  personnel: String(result.data.personnel || '')
+                };
+                setDirty(true);
+              } catch (e) {}
               renderProjectTiles();
             } catch (err) {
               await showInfoModal('Unable To Save', 'Unable to add requirement to this project. Please try again.');
@@ -1404,7 +1635,10 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
               laneEnds[laneIndex] = entry.endDayIndex;
             }
 
-            renderProjectTile(entry.project, entry.startDayIndex, entry.endDayIndex, laneIndex);
+            // render a tile for each day in the project's clamped range
+            for (var d = entry.startDayIndex; d <= entry.endDayIndex; d++) {
+              renderProjectTile(entry.project, d, laneIndex);
+            }
           });
 
           var visibleRows = Math.max(6, laneEnds.length);
@@ -1515,7 +1749,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             var removeValue = chipBtn.getAttribute('data-remove-value') || '';
             if ((removeKind === 'personnel' || removeKind === 'equipments') && removeValue) {
               chipBtn.disabled = true;
-              removeProjectRequirement(activeViewProjectId, removeKind, removeValue)
+                removeProjectRequirement(activeViewProjectId, removeKind, removeValue)
                 .then(function(result){
                   if (!result.ok || !result.data || !result.data.success) {
                     throw new Error('Remove failed');
@@ -1525,6 +1759,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                     current.equipments = result.data.equipments || '';
                     current.personnel = result.data.personnel || '';
                     openProjectViewModal(current);
+                    setDirty(true);
                   }
                   if (typeof rerenderProjects === 'function') {
                     rerenderProjects();
