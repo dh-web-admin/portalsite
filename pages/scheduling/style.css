@@ -1,7 +1,842 @@
 /* scheduling Page Styles */
 
-/* This file contains page-specific styles for scheduling */
-/* Base styles, admin layout, and dashboard styles are inherited from parent CSS files */
+.scheduling-page .main-content {
+  text-align: left;
+  padding: 10px 14px 16px;
+}
 
-/* Add any scheduling specific overrides or additional styles here */
+.scheduling-page .scheduling-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(820px, 1fr);
+  gap: 14px;
+  align-items: start;
+  width: 100%;
+  max-width: 1600px;
+}
 
+.scheduling-page .resource-sidebar {
+  background: #edf1f7;
+  border: 1px solid #d4dce8;
+  border-radius: 12px;
+  padding: 10px 8px;
+  position: sticky;
+  top: 14px;
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+}
+
+.scheduling-page .resource-section-title {
+  margin: 8px 4px 10px;
+  color: #8a98af;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.scheduling-page .resource-group {
+  margin-bottom: 10px;
+}
+
+.scheduling-page .resource-section-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 0;
+}
+
+.scheduling-page .resource-section-toggle .resource-section-title {
+  margin-bottom: 8px;
+}
+
+.scheduling-page .collapse-icon {
+  color: #8090a9;
+  font-size: 0.72rem;
+  transition: transform 0.16s ease;
+  margin-right: 4px;
+}
+
+.scheduling-page
+  .resource-section-toggle[aria-expanded="false"]
+  .collapse-icon {
+  transform: rotate(-90deg);
+}
+
+.scheduling-page .resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.scheduling-page .resource-list.is-collapsed {
+  display: none;
+}
+
+.scheduling-page .resource-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #d1d8e5;
+  border-radius: 9px;
+  background: #f4f7fb;
+  padding: 8px;
+  cursor: grab;
+  user-select: none;
+}
+
+.scheduling-page .resource-card:active,
+.scheduling-page .resource-card.is-dragging {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
+.scheduling-page .resource-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e0e8f5;
+  color: #50607d;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.64rem;
+  font-weight: 700;
+  flex: 0 0 24px;
+}
+
+.scheduling-page .resource-avatar.equipment {
+  background: #e8edf5;
+  color: #4d5b73;
+}
+
+.scheduling-page .resource-texts {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.scheduling-page .resource-name {
+  color: #1f2f49;
+  font-weight: 700;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scheduling-page .resource-sub {
+  color: #7c8aa1;
+  font-size: 0.68rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scheduling-page .resource-empty {
+  color: #7988a0;
+  font-size: 0.86rem;
+  padding: 6px;
+}
+
+.scheduling-page .scheduler-panel {
+  background: #f3f5f9;
+  border: 1px solid #d7dee9;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.scheduling-page .scheduling-title {
+  margin: 10px 0 0;
+  color: #132b4f;
+  font-size: 2.05rem;
+  font-weight: 700;
+}
+
+.scheduling-page .scheduler-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.scheduling-page .week-controls {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.scheduling-page .week-btn {
+  border: 1px solid #d2d8e3;
+  background: #f7f9fc;
+  color: #425473;
+  border-radius: 8px;
+  min-width: 34px;
+  height: 30px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.scheduling-page .week-btn.today {
+  padding: 0 12px;
+}
+
+.scheduling-page .week-range {
+  color: #273a59;
+  font-weight: 700;
+  font-size: 0.94rem;
+  margin-left: 8px;
+}
+
+.scheduling-page .add-project-btn {
+  margin-left: auto;
+  border: 1px solid #29539c;
+  background: #2f65bc;
+  color: #ffffff;
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scheduling-page .add-project-btn:hover {
+  background: #2556a8;
+}
+
+.scheduling-page .scheduling-subtitle {
+  margin-top: 8px;
+  color: #6a7992;
+  font-size: 0.84rem;
+}
+
+.scheduling-page .scheduling-form-error {
+  margin-top: 10px;
+  color: #b42318;
+  font-weight: 700;
+}
+
+.scheduling-page .schedule-calendar {
+  margin-top: 10px;
+  background: #f7f9fc;
+  border: 1px solid #d6deea;
+  border-radius: 12px;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.scheduling-page .weekly-board {
+  min-width: 920px;
+  display: grid;
+  grid-template-rows: 40px auto;
+}
+
+.scheduling-page .weekly-days-row {
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid #d5dce8;
+  background: #f1f5fb;
+}
+
+.scheduling-page .weekly-days-row .day-head-cell {
+  min-height: 40px;
+  border-right: 1px solid #d5dce8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.scheduling-page .weekly-days-row .day-head-cell:last-child {
+  border-right: 0;
+}
+
+.scheduling-page .weekly-days-row .dow {
+  color: #7d8da8;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.scheduling-page .weekly-days-row .dom {
+  color: #152c4d;
+  font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.scheduling-page .weekly-day-columns {
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 66px;
+  min-height: 460px;
+  gap: 8px;
+  padding: 8px;
+  position: relative;
+  border-bottom: 1px solid #dfe5ef;
+  background-color: #f7f9fc;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 65px,
+    #e8edf5 66px
+  );
+}
+
+.scheduling-page .project-tile {
+  position: relative;
+  border-radius: 7px;
+  border: 1px solid #2f67c3;
+  background: #2f67c3;
+  color: #ffffff;
+  padding: 5px 6px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px rgba(13, 44, 99, 0.22);
+  pointer-events: auto;
+  min-height: 68px;
+  width: 100%;
+  transition:
+    box-shadow 0.15s ease,
+    outline-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.scheduling-page .project-tile.spanning-bubble {
+  align-self: stretch;
+}
+
+.scheduling-page .project-tile-name {
+  font-size: 0.66rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scheduling-page .project-tile-meta {
+  margin-top: 2px;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  opacity: 0.92;
+}
+
+.scheduling-page .project-tile-req {
+  margin-top: 4px;
+  font-size: 0.58rem;
+  line-height: 1.25;
+  opacity: 0.92;
+  white-space: pre-line;
+}
+
+.scheduling-page .project-tile.is-drop-target {
+  outline: 2px dashed #ffffff;
+  outline-offset: -3px;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.25),
+    0 6px 14px rgba(8, 33, 74, 0.35);
+}
+
+.scheduling-page .project-tile.is-saving {
+  opacity: 0.7;
+}
+
+.scheduling-page .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.scheduling-page .modal-overlay[hidden] {
+  display: none !important;
+}
+
+.scheduling-page .modal-card {
+  width: min(520px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #d3deef;
+  box-shadow: 0 24px 60px rgba(17, 24, 39, 0.28);
+  padding: 14px;
+}
+
+.scheduling-page .project-view-card {
+  width: min(640px, 100%);
+  border-radius: 16px;
+  border: 1px solid #d8e0ed;
+  box-shadow: 0 24px 56px rgba(16, 33, 62, 0.26);
+  padding: 20px 22px;
+}
+
+.scheduling-page #viewProjectModal .modal-head {
+  margin-bottom: 12px;
+}
+
+.scheduling-page #viewProjectTitle {
+  margin: 0;
+  color: #1b2b47;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.scheduling-page #viewProjectModal .modal-close-btn {
+  border: 1px solid #d5dde9;
+  border-radius: 11px;
+  width: 32px;
+  height: 32px;
+  background: #f7f9fc;
+  color: #5e6f8a;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.scheduling-page .project-view-meta {
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.scheduling-page .meta-row {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  align-items: center;
+  gap: 14px;
+}
+
+.scheduling-page .meta-label {
+  color: #8191ac;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.scheduling-page .meta-value {
+  color: #1f2f49;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.scheduling-page .project-view-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.scheduling-page .project-view-section h3 {
+  margin: 0 0 9px;
+  color: #4a5d7e;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.scheduling-page .chip-drop-area {
+  min-height: 82px;
+  border: 1px dashed #c7d5ea;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fafcff;
+}
+
+.scheduling-page .assign-chip {
+  border: 1px solid #d2d9e8;
+  background: #eef2f9;
+  cursor: pointer;
+  text-align: left;
+}
+
+.scheduling-page .assign-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  color: #2b3b58;
+  padding: 4px 9px;
+  font-size: 0.82rem;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.scheduling-page .assign-chip:hover {
+  background: #e4ebf8;
+}
+
+.scheduling-page .assign-chip:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.scheduling-page .assign-chip-x {
+  color: #95a3b9;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.scheduling-page .chip-empty {
+  color: #8b99af;
+  font-size: 0.82rem;
+}
+
+.scheduling-page .project-view-helper {
+  margin: 12px 0 0;
+  color: #8595af;
+  font-size: 0.8rem;
+}
+
+.scheduling-page .project-view-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scheduling-page .danger-btn {
+  border: 1px solid #ecb6b1;
+  background: #fdeeee;
+  color: #cb3e34;
+  border-radius: 11px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scheduling-page #viewProjectModal .secondary-btn {
+  border-radius: 11px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
+
+.scheduling-page .danger-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scheduling-page .modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.scheduling-page .modal-head h2 {
+  margin: 0;
+  color: #1f2d44;
+}
+
+.scheduling-page .modal-close-btn {
+  border: 1px solid #d5deee;
+  background: #f5f7fc;
+  color: #2b3d5b;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.scheduling-page .decision-modal-card {
+  width: min(500px, 100%);
+  border-radius: 14px;
+  border: 1px solid #cfdae9;
+  box-shadow: 0 26px 58px rgba(15, 30, 56, 0.34);
+}
+
+.scheduling-page .decision-modal-message {
+  margin: 0;
+  color: #2a3f5f;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.scheduling-page .conflict-projects-chips {
+  margin: 12px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scheduling-page .conflict-project-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  max-width: 140px;
+  word-break: break-word;
+}
+
+.scheduling-page .decision-modal-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.scheduling-page .decision-modal-actions .primary-btn,
+.scheduling-page .decision-modal-actions .secondary-btn {
+  min-width: 120px;
+}
+
+.scheduling-page .project-form {
+  display: grid;
+  gap: 8px;
+}
+
+.scheduling-page .project-form label {
+  color: #314a70;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.scheduling-page .project-form input,
+.scheduling-page .project-form textarea {
+  border: 1px solid #cbd8ed;
+  border-radius: 10px;
+  padding: 8px 9px;
+  font-size: 0.84rem;
+}
+
+.scheduling-page .project-form select {
+  border: 1px solid #cbd8ed;
+  border-radius: 10px;
+  padding: 8px 9px;
+  font-size: 0.84rem;
+  background: #ffffff;
+}
+
+.scheduling-page .date-time-row {
+  display: grid;
+  grid-template-columns: 1fr 170px;
+  gap: 8px;
+}
+
+.scheduling-page .project-form .picker-select {
+  border: 1px solid #cbd8ed;
+  border-radius: 10px;
+  padding: 6px;
+  font-size: 0.92rem;
+  background: #ffffff;
+}
+
+.scheduling-page .project-form .picker-select option {
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.scheduling-page .requirements-title {
+  margin: 10px 0 2px;
+  color: #1f2d44;
+  font-size: 1rem;
+}
+
+.scheduling-page .project-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.scheduling-page .secondary-btn,
+.scheduling-page .primary-btn {
+  border: 1px solid #c9d7ef;
+  border-radius: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.scheduling-page .secondary-btn {
+  background: #f5f7fc;
+  color: #2f4161;
+}
+
+.scheduling-page .primary-btn {
+  background: #2f68c5;
+  border-color: #2b57a0;
+  color: #ffffff;
+}
+
+.scheduling-page .visualization-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.scheduling-page .timeline-label {
+  color: #4a5d7e;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.scheduling-page .timeline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  background: #f0f5fb;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.scheduling-page .day-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+}
+
+.scheduling-page .day-label {
+  color: #314a70;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.scheduling-page .day-connector {
+  width: 12px;
+  height: 2px;
+  background: #c5d4eb;
+  flex: 0 0 auto;
+}
+
+.scheduling-page .projects-label {
+  color: #4a5d7e;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.scheduling-page .projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scheduling-page .project-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: #f5f8fc;
+  border: 1px solid #d8e0ed;
+}
+
+.scheduling-page .project-row.target-project {
+  background: #eef5ff;
+  border: 1px solid #c5ddf8;
+  font-weight: 600;
+}
+
+.scheduling-page .project-row.conflict-project {
+  background: #fef9f5;
+  border: 1px solid #ede0d6;
+}
+
+.scheduling-page .project-color-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.scheduling-page .project-name {
+  flex: 1;
+  color: #1f2f49;
+  font-size: 0.82rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheduling-page .project-dates {
+  color: #7c8aa1;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 980px) {
+  .scheduling-page .scheduling-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduling-page .resource-sidebar {
+    position: static;
+    max-height: 380px;
+  }
+
+  .scheduling-page .weekly-day-columns {
+    min-height: 360px;
+  }
+
+  .scheduling-page .scheduler-topbar {
+    flex-wrap: wrap;
+  }
+
+  .scheduling-page .date-time-row {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduling-page .project-view-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduling-page .decision-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .scheduling-page .decision-modal-actions .primary-btn,
+  .scheduling-page .decision-modal-actions .secondary-btn {
+    width: 100%;
+  }
+
+  .scheduling-page .conflict-projects-chips {
+    justify-content: center;
+  }
+
+  .scheduling-page .conflict-project-chip {
+    flex: 0 1 calc(50% - 4px);
+    min-width: 100px;
+  }
+}
