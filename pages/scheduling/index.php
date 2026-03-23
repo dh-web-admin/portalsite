@@ -449,6 +449,16 @@ if ($projectsRes) {
   }
 }
 
+// Load per-day details for projects so client can initialize per-day view correctly
+$perDayDetails = [];
+$spdRes = $conn->query('SELECT project_id, `day`, COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details');
+if ($spdRes) {
+  while ($r = $spdRes->fetch_assoc()) {
+    $key = $r['project_id'] . '|' . $r['day'];
+    $perDayDetails[$key] = ['equipments' => $r['equipments'], 'personnel' => $r['personnel']];
+  }
+}
+
 $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'localhost') ? '/PortalSite' : '') . '/assets/images/print.svg';
 ?>
 <!DOCTYPE html>
@@ -675,19 +685,21 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
   <script>
     (function(){
       var scheduledProjects = <?php echo json_encode($scheduledProjects, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+      var serverPerDayDetails = <?php echo json_encode($perDayDetails, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || {};
       var projectById = {};
       // perDayDetails stores equipments/personnel per project-day (key: projectId|YYYY-MM-DD)
       var perDayDetails = {};
       if (Array.isArray(scheduledProjects)) {
         scheduledProjects.forEach(function(project){
           projectById[String(project.project_id)] = project;
+          // if server provided per-day details include them
           try {
-            var sd = parseDateTime(project.start);
-            if (sd) {
-              var key = String(project.project_id) + '|' + formatIsoDate(sd);
-              perDayDetails[key] = {
-                equipments: String(project.equipments || ''),
-                personnel: String(project.personnel || '')
+            // seed from server-provided per-day mapping first
+            for (var k in serverPerDayDetails) {
+              if (!serverPerDayDetails.hasOwnProperty(k)) continue;
+              perDayDetails[String(k)] = {
+                equipments: String(serverPerDayDetails[k].equipments || ''),
+                personnel: String(serverPerDayDetails[k].personnel || '')
               };
             }
           } catch (e) {}
