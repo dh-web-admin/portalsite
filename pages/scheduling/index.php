@@ -482,11 +482,11 @@ if ($projectsRes) {
         <button type="button" class="modal-close-btn" id="closeAddProjectModal" aria-label="Close add project form">X</button>
       </div>
 
-      <form method="post" class="project-form">
+      <form method="post" class="project-form" autocomplete="off">
         <input type="hidden" name="action" value="add_scheduled_project" />
 
         <label for="project_name">Project Name</label>
-        <input id="project_name" name="project_name" type="text" required />
+        <input id="project_name" name="project_name" type="text" required autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
 
         <label for="project_start_date">Start Date</label>
         <input id="project_start_date" name="project_start_date" type="date" required />
