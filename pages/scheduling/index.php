@@ -385,7 +385,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             <aside class="resource-sidebar" aria-label="Scheduler resources">
               <div class="resource-group">
                 <button type="button" class="resource-section-toggle" id="personnelCollapseBtn" aria-expanded="true" aria-controls="personnelList">
-                  <span class="resource-section-title">Personnel</span>
+                  <span class="resource-section-title">Crew Members</span>
                   <span class="collapse-icon" aria-hidden="true">&#9662;</span>
                 </button>
                 <div class="resource-list" id="personnelList">
@@ -410,7 +410,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                         <span class="resource-avatar"><?php echo htmlspecialchars($initials); ?></span>
                         <span class="resource-texts">
                           <span class="resource-name"><?php echo htmlspecialchars($name); ?></span>
-                          <span class="resource-sub"><?php echo htmlspecialchars($roleLabel !== '' ? ucfirst($roleLabel) : 'Personnel'); ?></span>
+                          <span class="resource-sub"><?php echo htmlspecialchars($roleLabel !== '' ? ucfirst($roleLabel) : 'Crew Member'); ?></span>
                         </span>
                       </div>
                     <?php endforeach; ?>
@@ -528,8 +528,8 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       </div>
 
       <div class="project-view-grid">
-        <section class="project-view-section" aria-label="Assigned personnel">
-          <h3>Personnel</h3>
+        <section class="project-view-section" aria-label="Assigned Crew Members">
+          <h3>Crew Members</h3>
           <div class="chip-drop-area" id="viewProjectPersonnel"></div>
         </section>
 
@@ -539,7 +539,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         </section>
       </div>
 
-      <p class="project-view-helper">Drag personnel or equipment from the left rail and drop on project tiles to assign.</p>
+      <p class="project-view-helper">Drag crew members or equipment from the left rail and drop on project tiles to assign.</p>
 
       <div class="project-view-actions">
         <button type="button" class="danger-btn" id="deleteProjectBtn">Delete Project</button>
@@ -1176,7 +1176,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           reqMeta.className = 'project-tile-req';
           var personnelsText = project.personnel ? project.personnel : '-';
           var equipmentsText = project.equipments ? project.equipments : '-';
-          reqMeta.textContent = 'Personnels: ' + personnelsText + '\nEquipments: ' + equipmentsText;
+          reqMeta.textContent = 'Crew Members: ' + personnelsText + '\nEquipments: ' + equipmentsText;
           tile.appendChild(reqMeta);
 
           var tooltip = [];
@@ -1185,7 +1185,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             tooltip.push('Equipments: ' + project.equipments);
           }
           if (project.personnel) {
-            tooltip.push('Personnel: ' + project.personnel);
+            tooltip.push('Crew Members: ' + project.personnel);
           }
           if (tooltip.length > 0) {
             tile.title = tooltip.join('\n');
