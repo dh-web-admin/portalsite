@@ -223,7 +223,7 @@
 }
 
 .scheduling-page .add-project-btn {
-  margin-left: auto;
+  margin-left: 0;
   border: 1px solid #29539c;
   background: #2f65bc;
   color: #ffffff;
@@ -236,6 +236,37 @@
 
 .scheduling-page .add-project-btn:hover {
   background: #2556a8;
+}
+
+.scheduling-page .scheduler-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scheduling-page .scheduler-icon-btn {
+  border: 1px solid #c7d5e8;
+  border-radius: 9px;
+  background: #eef3fb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(91, 127, 163, 0.1);
+}
+
+.scheduling-page .scheduler-icon-btn:hover {
+  background: #e5edf9;
+}
+
+.scheduling-page .scheduler-icon-btn img {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .scheduling-page .scheduling-subtitle {
@@ -342,6 +373,8 @@
     box-shadow 0.15s ease,
     outline-color 0.15s ease,
     opacity 0.15s ease;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .scheduling-page .project-tile.spanning-bubble {
@@ -349,7 +382,7 @@
 }
 
 .scheduling-page .project-tile-name {
-  font-size: 0.66rem;
+  font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
@@ -366,7 +399,7 @@
 
 .scheduling-page .project-tile-req {
   margin-top: 4px;
-  font-size: 0.58rem;
+  font-size: 0.78rem;
   line-height: 1.25;
   opacity: 0.92;
   white-space: pre-line;
@@ -431,6 +464,8 @@
 }
 
 .scheduling-page #viewProjectModal .modal-close-btn {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
   border: 1px solid #d5dde9;
   border-radius: 11px;
   width: 32px;
@@ -876,4 +911,22 @@
     flex: 0 1 calc(50% - 4px);
     min-width: 100px;
   }
+}
+
+/* Top-level print rules to show only #print-root when printing from same page */
+body.printing > * {
+  display: none !important;
+}
+body.printing #print-root {
+  display: block !important;
+  visibility: visible !important;
+  position: static !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+body.printing #print-root .scheduler-panel {
+  box-shadow: none !important;
+  border: 1px solid #d6deea !important;
+  background: #fff !important;
 }

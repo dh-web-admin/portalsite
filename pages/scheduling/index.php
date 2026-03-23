@@ -360,6 +360,8 @@ if ($projectsRes) {
     $scheduledProjects[] = $row;
   }
 }
+
+$printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'localhost') ? '/PortalSite' : '') . '/assets/images/print.svg';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -370,7 +372,7 @@ if ($projectsRes) {
   <link rel="stylesheet" href="../../assets/css/base.css" />
   <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260323e" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
-  <link rel="stylesheet" href="style.css?v=20260323v" />
+  <link rel="stylesheet" href="style.css?v=20260323w" />
 </head>
 <body class="admin-page scheduling-page">
   <div class="admin-container">
@@ -454,7 +456,12 @@ if ($projectsRes) {
                   <button type="button" class="week-btn" id="nextWeekBtn" aria-label="Next week">&#x203A;</button>
                 </div>
                 <div class="week-range" id="weekRangeLabel">Week Range</div>
-                <button type="button" class="add-project-btn" id="openAddProjectModal">Add Project</button>
+                <div class="scheduler-actions">
+                  <button type="button" class="scheduler-icon-btn" id="printWeekBtn" aria-label="Print current week schedule" title="Print current week">
+                    <img src="<?php echo htmlspecialchars($printIconPath); ?>" alt="" />
+                  </button>
+                  <button type="button" class="add-project-btn" id="openAddProjectModal">Add Project</button>
+                </div>
               </div>
 
               <h1 class="scheduling-title">Scheduling</h1>
@@ -1094,6 +1101,7 @@ if ($projectsRes) {
       var prevWeekBtn = document.getElementById('prevWeekBtn');
       var todayWeekBtn = document.getElementById('todayWeekBtn');
       var nextWeekBtn = document.getElementById('nextWeekBtn');
+      var printWeekBtn = document.getElementById('printWeekBtn');
 
       if (weeklyDaysRow && weeklyDayColumns && weekRangeLabel) {
         var dayCount = 7;
@@ -1364,6 +1372,62 @@ if ($projectsRes) {
           weeklyDayColumns.style.gridTemplateRows = 'repeat(' + String(visibleRows) + ', minmax(66px, auto))';
         }
 
+        function printCurrentWeekSchedule() {
+          var schedulerPanel = document.querySelector('.scheduler-panel');
+          if (!schedulerPanel) {
+            showInfoModal('Unable To Print', 'Schedule preview is unavailable right now.');
+            return;
+          }
+
+          // Remove any existing temporary print container
+          var existing = document.getElementById('print-root');
+          if (existing) {
+            try { existing.parentNode.removeChild(existing); } catch (e) {}
+          }
+
+          // Clone the scheduler panel for printing
+          var panelClone = schedulerPanel.cloneNode(true);
+          // Remove interactive controls from the clone
+          var addBtn = panelClone.querySelector('#openAddProjectModal');
+          if (addBtn) addBtn.remove();
+          var printBtn = panelClone.querySelector('#printWeekBtn');
+          if (printBtn) printBtn.remove();
+
+          // Create print root container and append cloned panel
+          var printRoot = document.createElement('div');
+          printRoot.id = 'print-root';
+          printRoot.style.display = 'none';
+          printRoot.className = 'scheduling-page';
+          printRoot.appendChild(panelClone);
+          document.body.appendChild(printRoot);
+
+          // Use a body class to hide everything except #print-root during print (handled by CSS @media print rules)
+          document.body.classList.add('printing');
+
+          // Ensure printRoot is shown when printing
+          printRoot.style.display = '';
+
+          // Clean up after printing
+          var cleanup = function() {
+            document.body.classList.remove('printing');
+            try { if (printRoot && printRoot.parentNode) printRoot.parentNode.removeChild(printRoot); } catch (e) {}
+            window.removeEventListener('afterprint', cleanup);
+            // In some browsers afterprint may not fire; set a brief timeout fallback
+            setTimeout(function(){ try { var ex = document.getElementById('print-root'); if (ex) ex.parentNode.removeChild(ex); } catch(e){} }, 1000);
+          };
+
+          window.addEventListener('afterprint', cleanup);
+
+          // Trigger the print dialog from the same window
+          try {
+            window.print();
+          } catch (e) {
+            // If print is blocked/fails, show info and cleanup
+            cleanup();
+            showInfoModal('Print Failed', 'Unable to open print dialog. Please try again.');
+          }
+        }
+
         renderDayColumns();
         renderWeekHeader();
         renderProjectTiles();
@@ -1391,6 +1455,10 @@ if ($projectsRes) {
             renderWeekHeader();
             renderProjectTiles();
           });
+        }
+
+        if (printWeekBtn) {
+          printWeekBtn.addEventListener('click', printCurrentWeekSchedule);
         }
       }
 
