@@ -154,7 +154,76 @@ body.admin-page {
   height: calc(100vh - var(--admin-header-h));
   bottom: 0;
   overflow-y: auto;
+  overflow-x: visible;
   z-index: 5;
+  transition: transform 0.28s ease;
+  will-change: transform;
+}
+
+.side-nav-collapse-btn {
+  position: absolute;
+  top: 18px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(102, 126, 234, 0.35);
+  background: #ffffff;
+  color: #3d53a8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(12, 24, 53, 0.22);
+  z-index: 6;
+}
+
+.side-nav > .side-nav-collapse-btn {
+  position: absolute !important;
+  top: 18px !important;
+  right: 8px !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  z-index: 6 !important;
+}
+
+.side-nav-collapse-btn .chevron {
+  font-size: 13px;
+  line-height: 1;
+  transition: transform 0.28s ease;
+}
+
+.side-nav.is-collapsed,
+body.admin-page.sidebar-collapsed .side-nav {
+  transform: none;
+  width: 20px;
+  min-width: 20px;
+  padding: 0;
+  overflow: visible;
+}
+
+.side-nav.is-collapsed .side-nav-collapse-btn .chevron,
+body.admin-page.sidebar-collapsed .side-nav-collapse-btn .chevron {
+  transform: rotate(180deg);
+}
+
+.side-nav.is-collapsed > :not(.side-nav-collapse-btn),
+body.admin-page.sidebar-collapsed .side-nav > :not(.side-nav-collapse-btn) {
+  display: none !important;
+}
+
+.side-nav.is-collapsed > .side-nav-collapse-btn,
+body.admin-page.sidebar-collapsed .side-nav > .side-nav-collapse-btn {
+  top: 14px !important;
+  right: -14px !important;
 }
 
 .side-nav h3 {
@@ -267,12 +336,21 @@ body.admin-page {
   height: calc(100vh - var(--admin-header-h));
   overflow-y: auto;
   overflow-x: visible; /* Allow horizontal overflow for hover effects */
+  min-width: 0;
 }
 
 /* When a sidebar is present, push the content over to make room. We use the
    adjacent sibling selector so non-admin pages (no sidebar) keep full width. */
-.admin-layout > .side-nav + .content-area {
+.admin-layout > .side-nav ~ .content-area {
   margin-left: 240px;
+  width: calc(100% - 240px);
+  transition: margin-left 0.28s ease;
+}
+
+.admin-layout.sidebar-collapsed > .side-nav ~ .content-area,
+body.admin-page.sidebar-collapsed .admin-layout > .side-nav ~ .content-area {
+  margin-left: 20px;
+  width: calc(100% - 20px);
 }
 
 .main-content {
@@ -365,8 +443,15 @@ body.admin-page {
     padding: 30px 20px;
   }
 
-  .admin-layout > .side-nav + .content-area {
+  .admin-layout > .side-nav ~ .content-area {
     margin-left: 240px;
+    width: calc(100% - 240px);
+  }
+
+  .admin-layout.sidebar-collapsed > .side-nav ~ .content-area,
+  body.admin-page.sidebar-collapsed .admin-layout > .side-nav ~ .content-area {
+    margin-left: 20px;
+    width: calc(100% - 20px);
   }
 }
 
@@ -422,6 +507,12 @@ body.admin-page {
     width: 200px;
     padding: 16px 12px;
     z-index: 999;
+    transform: none;
+    transition: left 0.3s ease;
+  }
+
+  .side-nav-collapse-btn {
+    display: none;
   }
 
   .nav-btn {
@@ -440,8 +531,9 @@ body.admin-page {
     padding: 20px 15px;
   }
 
-  .admin-layout > .side-nav + .content-area {
+  .admin-layout > .side-nav ~ .content-area {
     margin-left: 200px;
+    width: calc(100% - 200px);
   }
 }
 
@@ -487,6 +579,7 @@ body.admin-page {
     width: 200px;
     transition: left 0.3s ease;
     z-index: 1001;
+    transform: none;
   }
 
   .side-nav.mobile-open {

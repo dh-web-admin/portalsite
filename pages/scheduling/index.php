@@ -368,9 +368,9 @@ if ($projectsRes) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scheduling</title>
   <link rel="stylesheet" href="../../assets/css/base.css" />
-  <link rel="stylesheet" href="../../assets/css/admin-layout.css" />
+  <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260323e" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
-  <link rel="stylesheet" href="style.css?v=20260323u" />
+  <link rel="stylesheet" href="style.css?v=20260323v" />
 </head>
 <body class="admin-page scheduling-page">
   <div class="admin-container">
