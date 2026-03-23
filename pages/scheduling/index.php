@@ -457,10 +457,10 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                 </div>
                 <div class="week-range" id="weekRangeLabel">Week Range</div>
                 <div class="scheduler-actions">
+                  <button type="button" class="add-project-btn" id="openAddProjectModal">Add Project</button>
                   <button type="button" class="scheduler-icon-btn" id="printWeekBtn" aria-label="Print current week schedule" title="Print current week">
                     <img src="<?php echo htmlspecialchars($printIconPath); ?>" alt="" />
                   </button>
-                  <button type="button" class="add-project-btn" id="openAddProjectModal">Add Project</button>
                 </div>
               </div>
 
