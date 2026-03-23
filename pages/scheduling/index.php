@@ -34,9 +34,10 @@ $conn->query('CREATE TABLE IF NOT EXISTS scheduled_projects (
 
 $conn->query('CREATE TABLE IF NOT EXISTS scheduled_project_details (
   project_id INT NOT NULL,
+  `day` DATE NOT NULL,
   equipments TEXT NULL,
   personnel TEXT NULL,
-  PRIMARY KEY (project_id),
+  PRIMARY KEY (project_id, `day`),
   CONSTRAINT fk_scheduled_project_details_project FOREIGN KEY (project_id)
     REFERENCES scheduled_projects(project_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
@@ -57,6 +58,19 @@ if (!isset($projectColumns['start']) && isset($projectColumns['start_datetime'])
 }
 if (!isset($projectColumns['end']) && isset($projectColumns['end_datetime'])) {
   $endColumnSql = '`end_datetime`';
+}
+
+// If the table existed previously without a `day` column, add it and migrate existing rows
+$colsRes = $conn->query("SHOW COLUMNS FROM scheduled_project_details LIKE 'day'");
+if ($colsRes && $colsRes->num_rows === 0) {
+  // add the day column with a temporary default
+  $conn->query("ALTER TABLE scheduled_project_details ADD COLUMN `day` DATE NOT NULL DEFAULT '1970-01-01'");
+  // populate day with the project's start date where possible
+  $conn->query('UPDATE scheduled_project_details spd JOIN scheduled_projects sp ON spd.project_id = sp.project_id SET spd.`day` = DATE(sp.' . $startColumnSql . ')');
+  // change primary key to (project_id, day)
+  $conn->query('ALTER TABLE scheduled_project_details DROP PRIMARY KEY, ADD PRIMARY KEY (project_id, `day`)');
+  // remove temporary default (set to no default)
+  $conn->query("ALTER TABLE scheduled_project_details MODIFY COLUMN `day` DATE NOT NULL");
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_project_requirement') {
@@ -89,19 +103,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       exit();
     }
 
-    $ensureStmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, equipments, personnel) VALUES (?, "", "") ON DUPLICATE KEY UPDATE project_id = project_id');
+    // determine target day (optional POST param 'day'), otherwise use project's start date
+    $day = isset($_POST['day']) ? trim($_POST['day']) : null;
+    if ($day === null || $day === '') {
+      $projStmt = $conn->prepare('SELECT ' . $startColumnSql . ' AS start FROM scheduled_projects WHERE project_id = ? LIMIT 1');
+      $projStmt->bind_param('i', $projectId);
+      $projStmt->execute();
+      $projRes = $projStmt->get_result();
+      $projRow = $projRes ? $projRes->fetch_assoc() : null;
+      $projStmt->close();
+      $day = $projRow && !empty($projRow['start']) ? date('Y-m-d', strtotime($projRow['start'])) : date('Y-m-d');
+    }
+
+    $ensureStmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, `day`, equipments, personnel) VALUES (?, ?, "", "") ON DUPLICATE KEY UPDATE project_id = project_id');
     if (!$ensureStmt) {
       throw new Exception('Unable to ensure project details row');
     }
-    $ensureStmt->bind_param('i', $projectId);
+    $ensureStmt->bind_param('is', $projectId, $day);
     $ensureStmt->execute();
     $ensureStmt->close();
 
-    $detailsStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? LIMIT 1');
+    $detailsStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
     if (!$detailsStmt) {
       throw new Exception('Unable to fetch project details');
     }
-    $detailsStmt->bind_param('i', $projectId);
+    $detailsStmt->bind_param('is', $projectId, $day);
     $detailsStmt->execute();
     $detailsRes = $detailsStmt->get_result();
     $details = $detailsRes ? $detailsRes->fetch_assoc() : ['equipments' => '', 'personnel' => ''];
@@ -117,22 +143,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $updatedCsv = implode(', ', $items);
 
     if ($kind === 'equipments') {
-      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET equipments = ? WHERE project_id = ?');
+      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET equipments = ? WHERE project_id = ? AND `day` = ?');
     } else {
-      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET personnel = ? WHERE project_id = ?');
+      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET personnel = ? WHERE project_id = ? AND `day` = ?');
     }
     if (!$updateStmt) {
       throw new Exception('Unable to update project details');
     }
-    $updateStmt->bind_param('si', $updatedCsv, $projectId);
+    $updateStmt->bind_param('sis', $updatedCsv, $projectId, $day);
     $updateStmt->execute();
     $updateStmt->close();
 
-    $finalStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? LIMIT 1');
+    $finalStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
     if (!$finalStmt) {
       throw new Exception('Unable to fetch updated details');
     }
-    $finalStmt->bind_param('i', $projectId);
+    $finalStmt->bind_param('is', $projectId, $day);
     $finalStmt->execute();
     $finalRes = $finalStmt->get_result();
     $finalDetails = $finalRes ? $finalRes->fetch_assoc() : ['equipments' => '', 'personnel' => ''];
@@ -165,11 +191,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   }
 
   try {
-    $detailsStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? LIMIT 1');
+    // determine target day (optional POST param 'day'), otherwise use project's start date
+    $day = isset($_POST['day']) ? trim($_POST['day']) : null;
+    if ($day === null || $day === '') {
+      $projStmt = $conn->prepare('SELECT ' . $startColumnSql . ' AS start FROM scheduled_projects WHERE project_id = ? LIMIT 1');
+      $projStmt->bind_param('i', $projectId);
+      $projStmt->execute();
+      $projRes = $projStmt->get_result();
+      $projRow = $projRes ? $projRes->fetch_assoc() : null;
+      $projStmt->close();
+      $day = $projRow && !empty($projRow['start']) ? date('Y-m-d', strtotime($projRow['start'])) : date('Y-m-d');
+    }
+
+    $detailsStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
     if (!$detailsStmt) {
       throw new Exception('Unable to fetch project details');
     }
-    $detailsStmt->bind_param('i', $projectId);
+    $detailsStmt->bind_param('is', $projectId, $day);
     $detailsStmt->execute();
     $detailsRes = $detailsStmt->get_result();
     $details = $detailsRes ? $detailsRes->fetch_assoc() : null;
@@ -192,22 +230,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $updatedCsv = implode(', ', $items);
     if ($kind === 'equipments') {
-      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET equipments = ? WHERE project_id = ?');
+      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET equipments = ? WHERE project_id = ? AND `day` = ?');
     } else {
-      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET personnel = ? WHERE project_id = ?');
+      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET personnel = ? WHERE project_id = ? AND `day` = ?');
     }
     if (!$updateStmt) {
       throw new Exception('Unable to update project details');
     }
-    $updateStmt->bind_param('si', $updatedCsv, $projectId);
+    $updateStmt->bind_param('sis', $updatedCsv, $projectId, $day);
     $updateStmt->execute();
     $updateStmt->close();
 
-    $finalStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? LIMIT 1');
+    $finalStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
     if (!$finalStmt) {
       throw new Exception('Unable to fetch updated details');
     }
-    $finalStmt->bind_param('i', $projectId);
+    $finalStmt->bind_param('is', $projectId, $day);
     $finalStmt->execute();
     $finalRes = $finalStmt->get_result();
     $finalDetails = $finalRes ? $finalRes->fetch_assoc() : ['equipments' => '', 'personnel' => ''];
@@ -306,11 +344,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       $projectId = (int)$projectStmt->insert_id;
       $projectStmt->close();
 
-      $detailsStmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, equipments, personnel) VALUES (?, "", "")');
+      $dayForDetails = date('Y-m-d', $startTs);
+      $detailsStmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, `day`, equipments, personnel) VALUES (?, ?, "", "")');
       if (!$detailsStmt) {
         throw new Exception('Unable to prepare project details insert.');
       }
-      $detailsStmt->bind_param('i', $projectId);
+      $detailsStmt->bind_param('is', $projectId, $dayForDetails);
       if (!$detailsStmt->execute()) {
         throw new Exception('Unable to save project details.');
       }
@@ -353,7 +392,7 @@ if ($eqStmt) {
 }
 
 $scheduledProjects = [];
-$projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id ORDER BY sp.' . $startColumnSql . ' ASC';
+$projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id AND spd.`day` = DATE(sp.' . $startColumnSql . ') ORDER BY sp.' . $startColumnSql . ' ASC';
 $projectsRes = $conn->query($projectsSql);
 if ($projectsRes) {
   while ($row = $projectsRes->fetch_assoc()) {
