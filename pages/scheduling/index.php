@@ -495,6 +495,14 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
     }
     .save-btn:disabled { opacity: 0.9; }
   </style>
+  <style>
+    /* Project tile requirement styling */
+    .project-tile-req { white-space: pre-line; margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.9); }
+    .project-tile-req .req-row { display:block; margin: 2px 0; }
+    .project-tile-req .req-label { display:inline-block; font-weight:600; margin-right:6px; opacity:0.95; }
+    .project-tile-req .personnel-value { color: #D0F3FF; }
+    .project-tile-req .equipments-value { color: #FFF3B8; }
+  </style>
 </head>
 <body class="admin-page scheduling-page">
   <div class="admin-container">
@@ -1449,7 +1457,22 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           var perData = perDayDetails[perKey] || null;
           var personnelsText = perData ? (perData.personnel || '-') : (project.personnel ? project.personnel : '-');
           var equipmentsText = perData ? (perData.equipments || '-') : (project.equipments ? project.equipments : '-');
-          reqMeta.textContent = 'Crew Members: ' + personnelsText + '\nEquipments: ' + equipmentsText;
+
+          function escapeHtml(s){ return String(s || '').replace(/[&<>\"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+          var row1 = document.createElement('div');
+          row1.className = 'req-row';
+          var label1 = document.createElement('span'); label1.className = 'req-label'; label1.textContent = 'Crew Members:';
+          var val1 = document.createElement('span'); val1.className = 'personnel-value'; val1.innerHTML = escapeHtml(personnelsText);
+          row1.appendChild(label1); row1.appendChild(val1);
+
+          var row2 = document.createElement('div');
+          row2.className = 'req-row';
+          var label2 = document.createElement('span'); label2.className = 'req-label'; label2.textContent = 'Equipments:';
+          var val2 = document.createElement('span'); val2.className = 'equipments-value'; val2.innerHTML = escapeHtml(equipmentsText);
+          row2.appendChild(label2); row2.appendChild(val2);
+
+          reqMeta.appendChild(row1); reqMeta.appendChild(row2);
           tile.appendChild(reqMeta);
 
           var tooltip = [];
