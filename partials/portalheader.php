@@ -66,7 +66,5 @@ if (!empty($_SESSION['email'])) {
 <!-- Global logout confirmation (ensures consistent prompt on all pages) -->
 <script src="<?php echo htmlspecialchars(base_url('/assets/js/logout-confirm.js')); ?>" defer></script>
 
-<!-- Responsive helper stylesheet (loaded late; conservative rules only) -->
-<link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/assets/css/responsive.css')); ?>" />
 
 <?php // Dev preview mode removed ?>

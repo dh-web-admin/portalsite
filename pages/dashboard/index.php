@@ -89,11 +89,30 @@ switch ($role) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="theme-color" content="#667eea">
-    <title>Admin Dashboard</title>
+    <title>Dark horse Dashboard</title>
     <link rel="stylesheet" href="../../assets/css/base.css">
     <link rel="stylesheet" href="../../assets/css/admin-layout.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
   <link rel="stylesheet" href="style.css" />
+    <style>
+        /* Dashboard-specific wallpaper applied to the visible admin container so it shows
+             through the layout. Also ensure the main layout backgrounds are transparent
+             so the wallpaper is visible. */
+        .admin-container {
+            background-image: url('../../assets/images/bg.svg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center top;
+        }
+
+        /* Override layout backgrounds on this page only so the wallpaper is not hidden */
+        .admin-container,
+        .admin-layout,
+        .content-area,
+        .main-content {
+            background-color: transparent !important;
+        }
+    </style>
 </head>
 <body class="admin-page">
     <div class="admin-container">

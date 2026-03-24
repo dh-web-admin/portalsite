@@ -20,7 +20,7 @@ if (session_status() === PHP_SESSION_NONE) {
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 
     @session_set_cookie_params([
-        'lifetime' => 86400,
+        'lifetime' => 21600,
         'path' => '/',
         'domain' => '',
         'secure' => $isHttps,
@@ -28,7 +28,28 @@ if (session_status() === PHP_SESSION_NONE) {
         'samesite' => 'Lax',
     ]);
 
+    // Ensure server-side session GC matches cookie lifetime (6 hours)
+    @ini_set('session.gc_maxlifetime', '21600');
     @session_start();
+
+    // expire session after 30 minutes of inactivity
+    try {
+        $inactiveLimit = 1800; // seconds (30 minutes)
+        if (isset($_SESSION['last_activity']) && (time() - (int)$_SESSION['last_activity'] > $inactiveLimit)) {
+            // clear session and remove session cookie
+            $_SESSION = [];
+            if (ini_get('session.use_cookies')) {
+                $params = session_get_cookie_params();
+                setcookie(session_name(), '', time() - 42000,
+                    $params['path'], $params['domain'], $params['secure'], $params['httponly']
+                );
+            }
+            @session_unset();
+            @session_destroy();
+            // start a fresh session for this request
+            @session_start();
+        }
+    } catch (Throwable $e) {}
 
     // remember-me auto login
     if (!isset($_SESSION['email']) && isset($_COOKIE['remember_token'])) {
@@ -67,4 +88,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
         $stmt->close();
     }
+
+    // update last activity timestamp for inactivity checks
+    try { $_SESSION['last_activity'] = time(); } catch (Throwable $e) {}
 }
