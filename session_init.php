@@ -20,7 +20,7 @@ if (session_status() === PHP_SESSION_NONE) {
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 
     @session_set_cookie_params([
-        'lifetime' => 2592000,
+        'lifetime' => 86400,
         'path' => '/',
         'domain' => '',
         'secure' => $isHttps,
@@ -48,7 +48,7 @@ if (session_status() === PHP_SESSION_NONE) {
             if (isset($user['id'])) $_SESSION['user_id'] = (int)$user['id'];
 
             $newToken = bin2hex(random_bytes(32));
-            $expires  = date('Y-m-d H:i:s', time() + 2592000);
+            $expires  = date('Y-m-d H:i:s', time() + 86400);
 
             $updateStmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
             $updateStmt->bind_param("sss", $newToken, $expires, $user['email']);
@@ -56,7 +56,7 @@ if (session_status() === PHP_SESSION_NONE) {
             $updateStmt->close();
 
             setcookie('remember_token', $newToken, [
-                'expires'  => time() + 2592000,
+                'expires'  => time() + 86400,
                 'path'     => '/',
                 'domain'   => '',
                 'secure'   => $isHttps,

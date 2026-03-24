@@ -1072,6 +1072,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       var decisionConfirmBtn = document.getElementById('decisionConfirmBtn');
       var decisionResolver = null;
       var activeViewProjectId = null;
+      var activeViewProjectDay = null;
       var rerenderProjects = null;
 
       var projectColorPalette = [
@@ -1337,11 +1338,12 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         });
       }
 
-      function openProjectViewModal(project) {
+      function openProjectViewModal(project, dayKey) {
         if (!project || !viewProjectModal) {
           return;
         }
         activeViewProjectId = Number(project.project_id);
+        activeViewProjectDay = typeof dayKey === 'string' ? dayKey : '';
 
         var startDate = parseDateTime(project.start);
         var endDate = parseDateTime(project.end);
@@ -1349,12 +1351,33 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         if (viewProjectTitle) {
           viewProjectTitle.textContent = project.project_name || 'Project';
         }
-        if (viewProjectDates && startDate && endDate) {
-          viewProjectDates.textContent = formatFriendlyRange(startDate, endDate);
+        if (viewProjectDates) {
+          if (activeViewProjectDay) {
+            try {
+              var dayDateObj = new Date(activeViewProjectDay + 'T00:00:00');
+              if (!isNaN(dayDateObj.getTime())) {
+                viewProjectDates.textContent = dayDateObj.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              } else if (startDate && endDate) {
+                viewProjectDates.textContent = formatFriendlyRange(startDate, endDate);
+              }
+            } catch (e) {
+              if (startDate && endDate) {
+                viewProjectDates.textContent = formatFriendlyRange(startDate, endDate);
+              }
+            }
+          } else if (startDate && endDate) {
+            viewProjectDates.textContent = formatFriendlyRange(startDate, endDate);
+          }
         }
 
-        renderViewChips(viewProjectPersonnel, parseCsvList(project.personnel), 'personnel');
-        renderViewChips(viewProjectEquipments, parseCsvList(project.equipments), 'equipments');
+        // prefer per-day details when available
+        var perKey = String(project.project_id) + '|' + (activeViewProjectDay || '');
+        var pd = perDayDetails[perKey] || null;
+        var personnels = pd ? (pd.personnel || '') : (project.personnel || '');
+        var equipments = pd ? (pd.equipments || '') : (project.equipments || '');
+
+        renderViewChips(viewProjectPersonnel, parseCsvList(personnels), 'personnel');
+        renderViewChips(viewProjectEquipments, parseCsvList(equipments), 'equipments');
 
         viewProjectModal.hidden = false;
       }
@@ -1594,7 +1617,8 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             if (tile.dataset.justDropped === '1') {
               return;
             }
-            openProjectViewModal(project);
+            var dayKey = tile.dataset.day || '';
+            openProjectViewModal(project, dayKey);
           });
 
           weeklyDayColumns.appendChild(tile);
@@ -1776,7 +1800,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       if (closeProjectViewBtn) {
         closeProjectViewBtn.addEventListener('click', closeProjectViewModalFn);
       }
-      if (viewProjectModal) {
+          if (viewProjectModal) {
         viewProjectModal.addEventListener('click', function(e){
           var chipBtn = e.target.closest('.assign-chip');
           if (chipBtn && activeViewProjectId) {
@@ -1784,18 +1808,27 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             var removeValue = chipBtn.getAttribute('data-remove-value') || '';
             if ((removeKind === 'personnel' || removeKind === 'equipments') && removeValue) {
               chipBtn.disabled = true;
-                removeProjectRequirement(activeViewProjectId, removeKind, removeValue)
+                removeProjectRequirement(activeViewProjectId, removeKind, removeValue, activeViewProjectDay)
                 .then(function(result){
                   if (!result.ok || !result.data || !result.data.success) {
                     throw new Error('Remove failed');
                   }
+
+                  try {
+                    var key = String(activeViewProjectId) + '|' + (activeViewProjectDay || '');
+                    perDayDetails[key] = {
+                      equipments: String(result.data.equipments || ''),
+                      personnel: String(result.data.personnel || '')
+                    };
+                    setDirty(true);
+                  } catch (e) {}
+
                   var current = projectById[String(activeViewProjectId)];
                   if (current) {
-                    current.equipments = result.data.equipments || '';
-                    current.personnel = result.data.personnel || '';
-                    openProjectViewModal(current);
-                    setDirty(true);
+                    // re-open modal showing the same day
+                    openProjectViewModal(current, activeViewProjectDay);
                   }
+
                   if (typeof rerenderProjects === 'function') {
                     rerenderProjects();
                   }
