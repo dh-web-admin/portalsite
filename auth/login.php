@@ -67,10 +67,12 @@ function isActiveForm($formName, $activeForm){
           <input type="password" id="password" name="password" required />
           <button type="button" id="togglePassword" class="pw-toggle" aria-pressed="false" aria-controls="password" aria-label="Show password" title="Show password">Show</button>
         </div>
+        <!-- Keep Me Logged In option temporarily disabled for now
         <div style="display: flex; align-items: center; gap: 8px; margin: 10px 0;">
           <input type="checkbox" id="remember_me" name="remember_me" value="1" style="width: auto; margin: 0;" />
           <label for="remember_me" style="margin: 0; font-size: 14px; cursor: pointer;">Keep me Logged in</label>
         </div>
+        -->
         <button type="submit" name="login">Login</button>
         <div style="margin-top: 15px; text-align: center; padding: 10px; background-color: #f0f4f8; border-radius: 6px;">
           <p style="margin: 0; color: #555; font-size: 14px;">
