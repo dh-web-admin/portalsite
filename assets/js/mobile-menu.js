@@ -67,9 +67,13 @@
 
   // Initialize on page load
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initMobileMenu);
+    document.addEventListener("DOMContentLoaded", function () {
+      initMobileMenu();
+      moveModalsToBody();
+    });
   } else {
     initMobileMenu();
+    moveModalsToBody();
   }
 
   // Reinitialize on window resize
@@ -94,4 +98,27 @@
       }
     }, 250);
   });
+
+  // Move modal overlays to document.body so they are not clipped by layout containers
+  function moveModalsToBody() {
+    try {
+      var modals = document.querySelectorAll(".modal-overlay");
+      modals.forEach(function (m) {
+        if (!m) return;
+        // ensure fixed positioning and high z-index so overlay covers viewport
+        m.style.position = "fixed";
+        m.style.top = m.style.top || "0";
+        m.style.left = m.style.left || "0";
+        m.style.right = m.style.right || "0";
+        m.style.bottom = m.style.bottom || "0";
+        m.style.zIndex = m.style.zIndex || "99999";
+        // move to body if not already direct child
+        if (m.parentNode && m.parentNode !== document.body) {
+          document.body.appendChild(m);
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
 })();
