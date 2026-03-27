@@ -184,6 +184,10 @@ $hasEditPermission = can_edit_page('engineering');
 										<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">NSN Number</label>
 										<input type="text" id="partNsn" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 									</div>
+									<div style="flex:0.6;min-width:140px;">
+										<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">Quantity *</label>
+										<input type="number" id="partQuantity" min="1" step="1" value="1" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+									</div>
 								</div>
 								<div id="makesList" style="display:flex;flex-direction:column;gap:12px;">
 									<div class="make-item" style="padding:12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
@@ -250,6 +254,10 @@ $hasEditPermission = can_edit_page('engineering');
 													<div>
 														<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>
 														<input type="text" class="make-supplier-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
+													</div>
+													<div>
+														<label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Quantity</label>
+														<input type="number" class="make-supplier-quantity" min="1" step="1" value="1" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" />
 													</div>
 												</div>
 											</div>
@@ -2677,6 +2685,8 @@ $hasEditPermission = can_edit_page('engineering');
 							var modal = document.getElementById('addPartModal');
 							var form = document.getElementById('addPartForm');
 							if (form) form.reset();
+							var qtyInput = document.getElementById('partQuantity');
+							if (qtyInput) qtyInput.value = '1';
 							
 							// Reset makesList to single item
 							var makesList = document.getElementById('makesList');
@@ -2718,6 +2728,8 @@ $hasEditPermission = can_edit_page('engineering');
 							if (partInput) partInput.value = partData.part_name;
 							var nsnInput = document.getElementById('partNsn');
 							if (nsnInput) nsnInput.value = partData.nsn_number;
+							var qtyInput = document.getElementById('partQuantity');
+							if (qtyInput) qtyInput.value = (partData.quantity && !isNaN(partData.quantity)) ? partData.quantity : '1';
 							var notesInput = document.getElementById('partNotes');
 							if (notesInput) notesInput.value = partData.notes || '';
 							
@@ -2781,6 +2793,8 @@ $hasEditPermission = can_edit_page('engineering');
 							if (spnum) spnum.value = makeData.supplierPartNumber || '';
 							if (sprice) sprice.value = makeData.supplierPrice || '';
 							if (sl) sl.value = makeData.supplierLnk || '';
+							var squ = makeItem.querySelector('.make-supplier-quantity');
+							if (squ) squ.value = (makeData.supplierQuantity || makeData.supplier_quantity || '1');
 						}
 
 						function setDrawingListMessage(container, message, tone) {
@@ -3209,6 +3223,8 @@ $hasEditPermission = can_edit_page('engineering');
 						function closePartModal() {
 							if (partModal) partModal.style.display = 'none';
 							if (addPartForm) addPartForm.reset();
+							var qtyReset = document.getElementById('partQuantity');
+							if (qtyReset) qtyReset.value = '1';
 							var items = makesList ? makesList.querySelectorAll('.make-item') : [];
 							for (var i = 1; i < items.length; i++) {
 								items[i].remove();
@@ -3275,6 +3291,8 @@ $hasEditPermission = can_edit_page('engineering');
 								'<input type="text" class="make-supplier-part-number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
 								'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Lnk</label>' +
 								'<input type="text" class="make-supplier-lnk" placeholder="https://..." style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
+								'<div><label style="display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:4px;">Quantity</label>' +
+								'<input type="number" class="make-supplier-quantity" min="1" step="1" value="1" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:14px;" /></div>' +
 								'</div></div></div>';
 							makesList.appendChild(makeItem);
 							initSupplierDetailsToggle();
@@ -3396,6 +3414,14 @@ $hasEditPermission = can_edit_page('engineering');
 								
 								var partNumber = document.getElementById('partNumber').value.trim();
 								var partNsn = (document.getElementById('partNsn') || {}).value?.trim() || '';
+								var partQtyInput = document.getElementById('partQuantity');
+								var partQtyRaw = (partQtyInput || {}).value?.trim() || '1';
+								var partQuantity = parseFloat(partQtyRaw);
+								if (isNaN(partQuantity) || partQuantity <= 0) {
+									alert('Quantity must be at least 1');
+									if (partQtyInput) partQtyInput.focus();
+									return;
+								}
 								var partNotes = (document.getElementById('partNotes') || {}).value?.trim() || '';
 								var makes = [];
 								
@@ -3428,7 +3454,8 @@ $hasEditPermission = can_edit_page('engineering');
 											supplierAddress: (item.querySelector('.make-supplier-address') || {}).value?.trim() || '',
 											supplierPartNumber: (item.querySelector('.make-supplier-part-number') || {}).value?.trim() || '',
 											supplierPrice: priceVal,
-											supplierLnk: (item.querySelector('.make-supplier-lnk') || {}).value?.trim() || ''
+											supplierLnk: (item.querySelector('.make-supplier-lnk') || {}).value?.trim() || '',
+											supplierQuantity: (item.querySelector('.make-supplier-quantity') || {}).value?.trim() || '1'
 										});
 									}
 								});
@@ -3448,7 +3475,7 @@ $hasEditPermission = can_edit_page('engineering');
 								formData.append('item_id', currentItemForParts.id);
 								formData.append('part_number', partNumber);
 								formData.append('nsn_number', partNsn);
-								formData.append('quantity', 1);
+								formData.append('quantity', partQuantity);
 								formData.append('notes', partNotes);
 								formData.append('makes', JSON.stringify(makes));
 								formData.append('edit_mode', partModalState.editMode ? '1' : '0');
@@ -3491,7 +3518,8 @@ $hasEditPermission = can_edit_page('engineering');
 									supplier_email: s.supplierEmail || '',
 									supplier_address: s.supplierAddress || '',
 									part_name: partName || '',
-									nsn_number: nsnNumber || ''
+									nsn_number: nsnNumber || '',
+									supplier_quantity: s.supplierQuantity || s.supplier_quantity || ''
 								};
 							}).filter(function(s) {
 								return (s.supplier_name || s.supplier || s.supplier_email);
