@@ -428,7 +428,7 @@ if ($empStmt) {
 }
 
 $equipments = [];
-$eqStmt = $conn->prepare('SELECT equipment_id, COALESCE(NULLIF(dhss_equipment_number, ""), NULLIF(equipment_number, ""), CONCAT("#", equipment_id)) AS equipment_label, COALESCE(NULLIF(type, ""), "Equipment") AS equipment_type FROM equipments ORDER BY equipment_id ASC');
+$eqStmt = $conn->prepare('SELECT equipment_id, COALESCE(NULLIF(dhss_equipment_number, ""), NULLIF(equipment_number, ""), CONCAT("#", equipment_id)) AS equipment_label, COALESCE(NULLIF(type, ""), "Equipment") AS equipment_type, COALESCE(NULLIF(operating_condition, ""), "") AS operating_condition FROM equipments ORDER BY equipment_id ASC');
 if ($eqStmt) {
   $eqStmt->execute();
   $eqRes = $eqStmt->get_result();
@@ -502,6 +502,25 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
     .project-tile-req .req-label { display:inline-block; font-weight:600; margin-right:6px; opacity:0.95; }
     .project-tile-req .personnel-value { color: #D0F3FF; }
     .project-tile-req .equipments-value { color: #FFF3B8; }
+    /* Single solid status indicator for equipment (green/yellow/red/neutral) */
+    .status-dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:10px; vertical-align:middle; background: #9ca3af; }
+    .status-dot.good { background-color: #16a34a; }
+    .status-dot.warn { background-color: #f59e0b; }
+    .status-dot.bad { background-color: #ef4444; }
+    .status-dot.neutral { background-color: #9ca3af; opacity:0.95; }
+    .resource-link { color: inherit; text-decoration: none; }
+    .resource-link:hover .resource-name { text-decoration: underline; }
+    .decision-modal-message { margin: 0 0 8px; text-align: center; }
+    .decision-modal-message a { display: inline-block; margin-top: 12px; background: #f0f7ff; color: #1e63d6; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-weight: 700; }
+    .decision-modal-message a:hover { background: #e6f0ff; text-decoration: underline; }
+    #decisionModal .modal-head { text-align: center; }
+    #decisionModal .decision-modal-actions { display:flex; justify-content:center; gap:16px; margin-top:18px; }
+    #decisionModal .decision-modal-actions button { min-width:120px; }
+    /* Red warning light */
+    .modal-warning-light { display:inline-block; width:14px; height:14px; border-radius:50%; background:#ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.28); vertical-align:middle; }
+    .modal-warning-wrap { text-align:center; }
+    .modal-warning-row { display:flex; align-items:center; gap:12px; justify-content:center; }
+    .modal-warning-text { font-weight:600; }
   </style>
 </head>
 <body class="admin-page scheduling-page">
@@ -562,11 +581,24 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                         $equipmentLabel = (string)($equipment['equipment_label'] ?? '');
                         $equipmentType = trim((string)($equipment['equipment_type'] ?? 'Equipment'));
                         $equipmentInitial = strtoupper(substr($equipmentLabel, 0, 1));
+                        $operating = trim((string)($equipment['operating_condition'] ?? ''));
+                        $op = strtolower($operating);
+                        $opClass = 'neutral';
+                        if ($op === 'green' || strpos($op, 'green') !== false || strpos($op, 'good') !== false || $op === 'ok') {
+                          $opClass = 'good';
+                        } elseif ($op === 'yellow' || strpos($op, 'yellow') !== false || strpos($op, 'warn') !== false) {
+                          $opClass = 'warn';
+                        } elseif ($op === 'red' || strpos($op, 'red') !== false || strpos($op, 'bad') !== false) {
+                          $opClass = 'bad';
+                        }
                       ?>
-                      <div class="resource-card requirement-source" draggable="true" data-requirement-kind="equipments" data-requirement-value="<?php echo htmlspecialchars($equipmentLabel); ?>">
+                      <div class="resource-card requirement-source" draggable="true" data-eid="<?php echo (int)$equipment['equipment_id']; ?>" data-requirement-kind="equipments" data-requirement-value="<?php echo htmlspecialchars($equipmentLabel); ?>">
+                        <span class="status-dot <?php echo htmlspecialchars($opClass); ?>" aria-hidden="true" title="<?php echo htmlspecialchars($operating === '' ? 'Unknown' : $operating); ?>"></span>
                         <span class="resource-avatar equipment"><?php echo htmlspecialchars($equipmentInitial); ?></span>
                         <span class="resource-texts">
-                          <span class="resource-name"><?php echo htmlspecialchars($equipmentLabel); ?></span>
+                          <a class="resource-link" href="../equipments/equipment.php?id=<?php echo urlencode((string)$equipment['equipment_id']); ?>" target="_blank" rel="noopener noreferrer" draggable="false">
+                                <span class="resource-name"><?php echo htmlspecialchars($equipmentLabel); ?></span>
+                              </a>
                           <span class="resource-sub"><?php echo htmlspecialchars($equipmentType); ?></span>
                         </span>
                       </div>
@@ -693,6 +725,16 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
   <script>
     (function(){
       var scheduledProjects = <?php echo json_encode($scheduledProjects, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+      // Map of equipment_id => operating_condition (string)
+      var equipmentStatus = <?php
+        $__eq_status = [];
+        foreach ($equipments as $__eq_row) {
+          $__id = isset($__eq_row['equipment_id']) ? (int)$__eq_row['equipment_id'] : 0;
+          $__op = isset($__eq_row['operating_condition']) ? $__eq_row['operating_condition'] : '';
+          if ($__id) $__eq_status[$__id] = $__op;
+        }
+        echo json_encode($__eq_status, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+      ?>;
       var serverPerDayDetails = <?php echo json_encode($perDayDetails, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?> || {};
       var projectById = {};
       // perDayDetails stores equipments/personnel per project-day (key: projectId|YYYY-MM-DD)
@@ -805,6 +847,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       requirementSources.forEach(function(source){
         source.addEventListener('dragstart', function(e){
           var value = source.getAttribute('data-requirement-value') || '';
+          var eid = source.getAttribute('data-eid') || '';
           if (!value) {
             e.preventDefault();
             return;
@@ -814,6 +857,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             kind: source.getAttribute('data-requirement-kind') || '',
             value: value
           };
+          if (eid) payload.equipment_id = eid;
           e.dataTransfer.setData('text/plain', JSON.stringify(payload));
           e.dataTransfer.effectAllowed = 'copy';
           source.classList.add('is-dragging');
@@ -822,6 +866,26 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         source.addEventListener('dragend', function(){
           source.classList.remove('is-dragging');
         });
+
+        // Open equipment detail in new tab when clicking anywhere on the card (unless dragging or clicking an interactive element)
+        source.addEventListener('click', function(e){
+          try {
+            if (e.button !== 0) return;
+            if (source.classList.contains('is-dragging')) return;
+            if (e.target.closest('a') || e.target.closest('button') || e.target.closest('input')) return;
+            var anchor = source.querySelector('.resource-link');
+            if (anchor && anchor.getAttribute && anchor.getAttribute('href')) {
+              window.open(anchor.getAttribute('href'), '_blank', 'noopener');
+            }
+          } catch (err) {
+            // ignore
+          }
+        });
+      });
+
+      // Make anchors non-draggable so native drag doesn't start from them
+      document.querySelectorAll('.resource-link').forEach(function(a){
+        try { a.setAttribute('draggable', 'false'); } catch(err) {}
       });
 
       function updateProjectRequirement(projectId, kind, value, day) {
@@ -1062,6 +1126,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       var decisionModal = document.getElementById('decisionModal');
       var decisionModalTitle = document.getElementById('decisionModalTitle');
       var decisionModalMessage = document.getElementById('decisionModalMessage');
+      var decisionModalHead = decisionModal ? decisionModal.querySelector('.modal-head') : null;
       var conflictVisualization = document.getElementById('conflictVisualization');
       var existingProjectTile = document.getElementById('existingProjectTile');
       var destinationProjectTile = document.getElementById('destinationProjectTile');
@@ -1115,8 +1180,24 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           resolveDecision(false);
         }
 
-        decisionModalTitle.textContent = config.title || 'Confirm Action';
-        decisionModalMessage.textContent = config.message || '';
+        // Respect explicit empty title (allow hiding header)
+        if (Object.prototype.hasOwnProperty.call(config, 'title')) {
+          decisionModalTitle.textContent = config.title;
+        } else {
+          decisionModalTitle.textContent = 'Confirm Action';
+        }
+        if (decisionModalHead) {
+          if (String(decisionModalTitle.textContent || '').trim() === '') {
+            decisionModalHead.style.display = 'none';
+          } else {
+            decisionModalHead.style.display = '';
+          }
+        }
+        if (config.messageHtml) {
+          decisionModalMessage.innerHTML = config.messageHtml || '';
+        } else {
+          decisionModalMessage.textContent = config.message || '';
+        }
         decisionConfirmBtn.textContent = config.confirmText || 'OK';
         decisionCancelBtn.textContent = config.cancelText || 'Cancel';
         decisionCancelBtn.hidden = config.showCancel === false;
@@ -1540,6 +1621,27 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             }
             if (!payload || (payload.kind !== 'equipments' && payload.kind !== 'personnel') || !payload.value) {
               return;
+            }
+
+            // If this is an equipment assignment, and we have an equipment_id, warn if operating condition is red/bad
+            if (payload.kind === 'equipments' && payload.equipment_id) {
+              try {
+                var op = String(equipmentStatus[String(payload.equipment_id)] || '').toLowerCase();
+                if (op === 'red' || op.indexOf('red') !== -1 || op.indexOf('bad') !== -1) {
+                  var eqUrl = '../equipments/equipment.php?id=' + encodeURIComponent(String(payload.equipment_id));
+                  var proceed = await showDecisionModal({
+                    title: '',
+                    messageHtml: '<div class="modal-warning-wrap"><div class="modal-warning-row"><span class="modal-warning-light" aria-hidden="true"></span><div class="modal-warning-text">this equipment is currently not in a condition to operate.</div></div><a href="' + eqUrl + '" target="_blank" rel="noopener noreferrer">click here to view more details</a></div>',
+                    confirmText: 'Proceed Anyway',
+                    cancelText: 'Cancel',
+                    showCancel: true,
+                    fallbackValue: false
+                  });
+                  if (!proceed) {
+                    return;
+                  }
+                }
+              } catch (e) {}
             }
 
             if (projectHasAssignment(project, payload.kind, payload.value)) {
