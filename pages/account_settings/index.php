@@ -299,12 +299,13 @@ $pageStyleVersion = file_exists($pageStyleFile) ? filemtime($pageStyleFile) : ti
                                 </form>
                             </div>
 
-                            <div class="left-save-wrap">
-                                <button type="button" id="accSaveBtn" class="ac-btn-primary" onclick="accSubmit(event)">
-                                    <span>Save Details</span>
-                                    <span class="ac-spinner" style="opacity:0;" aria-hidden="true"></span>
-                                </button>
-                            </div>
+                        </div>
+
+                        <div class="left-save-wrap">
+                            <button form="accDetailsForm" type="submit" id="accSaveBtn" class="ac-btn-primary ac-save-bottom">
+                                <span>Save Details</span>
+                                <span class="ac-spinner" style="opacity:0;" aria-hidden="true"></span>
+                            </button>
                         </div>
                     </div>
 
@@ -413,6 +414,7 @@ $pageStyleVersion = file_exists($pageStyleFile) ? filemtime($pageStyleFile) : ti
                             </div>
                         </form>
                     </div>
+                        <!-- Save button removed from card footer; it will appear inside the left avatar column -->
                 </div>
             </div>
         </main>

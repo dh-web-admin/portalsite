@@ -91,6 +91,7 @@
   box-shadow: var(--ac-shadow-card);
   overflow: hidden;
   box-sizing: border-box;
+  align-items: stretch;
 }
 
 /* ── Avatar column ── */
@@ -497,10 +498,12 @@
 
 /* Save button wrapper */
 .left-save-wrap {
-  margin-top: 18px;
+  /* allow this to be pushed to the bottom by the avatar column flex container */
+  margin-top: auto;
   display: flex;
   justify-content: center;
   width: 100%;
+  padding-bottom: 12px;
 }
 
 /* ── Vertical divider ── */
@@ -516,6 +519,31 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+/* Ensure avatar column stretches and acts as a vertical flex container */
+.ac-avatar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 24px 32px;
+  background: linear-gradient(160deg, #f9f7ff 0%, #efeaff 100%);
+  gap: 0;
+  min-width: 0;
+  align-self: stretch;
+  height: 100%;
+}
+
+.ac-save-bottom {
+  min-width: 140px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--ac-indigo), var(--ac-indigo-dark));
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  box-shadow: var(--ac-shadow-btn);
+  cursor: pointer;
 }
 
 .ac-section-head {
@@ -605,6 +633,32 @@
 
 .ac-field label {
   font-size: 12.5px;
+
+  /* Footer row spanning card for actions */
+  .ac-card-footer {
+    grid-column: 1 / -1;
+    padding: 18px 40px 24px 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+  }
+
+  .ac-save-bottom {
+    min-width: 160px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(
+      135deg,
+      var(--ac-indigo),
+      var(--ac-indigo-dark)
+    );
+    color: #fff;
+    font-weight: 700;
+    border: none;
+    box-shadow: var(--ac-shadow-btn);
+    cursor: pointer;
+  }
   font-weight: 700;
   color: var(--ac-text-soft);
   margin-bottom: 6px;
