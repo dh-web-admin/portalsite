@@ -115,6 +115,27 @@ $first_name = isset($_POST['first_name']) ? trim($_POST['first_name']) : null;
 $last_name = isset($_POST['last_name']) ? trim($_POST['last_name']) : null;
 
 // upsert into user_details
+// Ensure we do not overwrite an existing profile picture with NULL when the request
+// didn't include a new upload. Fetch existing value and reuse it if no new file
+// was provided (remove_picture is handled earlier and exits).
+$existingPic = null;
+$q = $conn->prepare('SELECT profile_picture FROM user_details WHERE user_id = ? LIMIT 1');
+if ($q) {
+    $q->bind_param('i', $user_id);
+    $q->execute();
+    $res = $q->get_result();
+    $r = $res ? $res->fetch_assoc() : null;
+    $q->close();
+    if ($r && !empty($r['profile_picture'])) {
+        $existingPic = $r['profile_picture'];
+    }
+}
+
+if ($profileUrl === null && $existingPic !== null) {
+    // preserve existing picture when no new upload
+    $profileUrl = $existingPic;
+}
+
 $stmt = $conn->prepare('INSERT INTO user_details (user_id, profile_picture, street_address, city, state, phone) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE profile_picture = VALUES(profile_picture), street_address = VALUES(street_address), city = VALUES(city), state = VALUES(state), phone = VALUES(phone), updated_at = CURRENT_TIMESTAMP');
 $stmt->bind_param('isssss', $user_id, $profileUrl, $street, $city, $state, $phone);
 $ok = $stmt->execute();
