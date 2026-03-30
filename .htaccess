@@ -1,8 +1,5 @@
 RewriteEngine On
 
-# Do not rewrite requests for common static asset types — ensures CSS/JS/images are served directly
-RewriteRule \.(css|js|png|jpg|jpeg|gif|webp|svg|ico|ttf|woff|woff2)$ - [L]
-
 # Redirect to HTTPS (Railway provides SSL)
 RewriteCond %{HTTP:X-Forwarded-Proto} !https
 RewriteCond %{HTTPS} off

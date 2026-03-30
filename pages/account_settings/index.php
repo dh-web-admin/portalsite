@@ -1,14 +1,8 @@
 <?php
-// Show runtime errors temporarily to help debug blank page issues
-ini_set('display_errors', '1');
-error_reporting(E_ALL);
-
 require_once __DIR__ . '/../../session_init.php';
 
-// Use a relative redirect so the login URL works whether the app is mounted
-// at the domain root or in a subfolder (e.g., /PortalSite)
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    header('Location: ../../auth/login.php');
+    header('Location: /auth/login.php');
     exit();
 }
 
@@ -98,18 +92,20 @@ $hasPhoto = !empty($profileImage);
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta name="theme-color" content="#4f46e5">
     <title>Account Details</title>
+    <link rel="stylesheet" href="../../assets/css/base.css">
+    <link rel="stylesheet" href="../../assets/css/admin-layout.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <?php
-    // Use base_url to build asset links so they work in both local (/PortalSite) and production roots.
-    ?>
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/assets/css/base.css')); ?>">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/assets/css/admin-layout.css')); ?>">
-    <link rel="stylesheet" href="<?php echo htmlspecialchars(base_url('/assets/css/dashboard.css')); ?>">
-    <?php
-    // Compute version based on file modification time to bust caches when file changes
-    $styleFile = __DIR__ . '/style.css';
-    $ver = '1';
-    if (file_exists($styleFile)) { $ver = filemtime($styleFile); }
-    $styleHref = base_url('/pages/account_settings/style.css') . '?v=' . $ver;
+    // Compute an environment-aware path for the page stylesheet so it loads
+    // whether the app is mounted at root or in a subfolder (e.g. /PortalSite)
+    $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+    $base = '';
+    if ($scriptPath) {
+        // climb three levels: /<app>/pages/account_settings/index.php -> /<app>
+        $base = dirname(dirname(dirname($scriptPath)));
+        $base = rtrim($base, '/\\');
+    }
+    $styleHref = ($base === '') ? '/pages/account_settings/style.css?v=1' : $base . '/pages/account_settings/style.css?v=1';
     ?>
     <link rel="stylesheet" href="<?php echo htmlspecialchars($styleHref); ?>">
 </head>
