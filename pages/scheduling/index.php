@@ -415,7 +415,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 $employees = [];
-$empStmt = $conn->prepare('SELECT name, COALESCE(role, "") AS role FROM users WHERE name IS NOT NULL AND name <> "" ORDER BY name ASC');
+// include profile picture when available (either in user_details.profile_picture or legacy users.profile_image)
+$hasProfile = false;
+$c3 = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_image'");
+if ($c3 && $c3->num_rows > 0) $hasProfile = true;
+
+$empSql = 'SELECT name, COALESCE(role, "") AS role, ';
+if ($hasProfile) {
+  $empSql .= 'COALESCE(ud.profile_picture, u.profile_image) AS picture';
+} else {
+  $empSql .= 'ud.profile_picture AS picture';
+}
+$empSql .= ' FROM users u LEFT JOIN user_details ud ON ud.user_id = u.id WHERE name IS NOT NULL AND name <> "" ORDER BY name ASC';
+$empStmt = $conn->prepare($empSql);
 if ($empStmt) {
   $empStmt->execute();
   $empRes = $empStmt->get_result();
@@ -556,7 +568,13 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                         }
                       ?>
                       <div class="resource-card requirement-source" draggable="true" data-requirement-kind="personnel" data-requirement-value="<?php echo htmlspecialchars($name); ?>">
-                        <span class="resource-avatar"><?php echo htmlspecialchars($initials); ?></span>
+                        <span class="resource-avatar">
+                          <?php if (!empty($employee['picture'])): ?>
+                            <img src="<?php echo htmlspecialchars($employee['picture']); ?>" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" />
+                          <?php else: ?>
+                            <?php echo htmlspecialchars($initials); ?>
+                          <?php endif; ?>
+                        </span>
                         <span class="resource-texts">
                           <span class="resource-name"><?php echo htmlspecialchars($name); ?></span>
                           <span class="resource-sub"><?php echo htmlspecialchars($roleLabel !== '' ? ucfirst($roleLabel) : 'Crew Member'); ?></span>
