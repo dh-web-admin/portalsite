@@ -95,7 +95,19 @@ $hasPhoto = !empty($profileImage);
     <link rel="stylesheet" href="../../assets/css/base.css">
     <link rel="stylesheet" href="../../assets/css/admin-layout.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="/PortalSite/pages/account_settings/style.css?v=1">
+    <?php
+    // Compute an environment-aware path for the page stylesheet so it loads
+    // whether the app is mounted at root or in a subfolder (e.g. /PortalSite)
+    $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '';
+    $base = '';
+    if ($scriptPath) {
+        // climb three levels: /<app>/pages/account_settings/index.php -> /<app>
+        $base = dirname(dirname(dirname($scriptPath)));
+        $base = rtrim($base, '/\\');
+    }
+    $styleHref = ($base === '') ? '/pages/account_settings/style.css?v=1' : $base . '/pages/account_settings/style.css?v=1';
+    ?>
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($styleHref); ?>">
 </head>
 <body class="admin-page">
 <div class="admin-container">
