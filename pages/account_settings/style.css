@@ -156,21 +156,27 @@
 
 .left-avatar-remove {
   position: absolute;
-  right: 6px;
-  top: 6px;
-  background: rgba(0,0,0,0.56);
-  color: #fff;
-  border: none;
-  padding: 6px 8px;
-  border-radius: 999px;
-  font-size: 12px;
+  right: 8px;
+  top: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.95);
+  color: #111827;
+  border: 1px solid rgba(2,6,23,0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 6px 14px rgba(2,6,23,0.12);
   opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 150ms ease, transform 150ms ease;
-  z-index: 20;
+  transform: translateY(-6px) scale(0.96);
+  transition: opacity 140ms ease, transform 140ms ease;
+  z-index: 30;
 }
-.left-avatar-box:hover .left-avatar-remove { opacity: 1; transform: translateY(0); }
+.left-avatar-box:hover .left-avatar-remove { opacity: 1; transform: translateY(0) scale(1); }
 .left-avatar-frame {
   width: 160px;
   height: 160px;
