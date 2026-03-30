@@ -131,6 +131,7 @@ $hasPhoto = !empty($profileImage);
                         <div class="left-avatar-box" id="accAvatarWrap">
                             <?php if ($hasPhoto): ?>
                                 <img src="<?php echo htmlspecialchars($profileImage); ?>" alt="<?php echo htmlspecialchars($name); ?>'s photo" id="accAvatarImg" class="left-avatar-img left-avatar-plain">
+                                <button type="button" id="accRemoveBtn" class="left-avatar-remove" title="Remove photo">✕</button>
                             <?php else: ?>
                                 <div class="left-avatar-frame left-avatar-empty" id="accAvatarInitials"><?php echo htmlspecialchars($initials); ?></div>
                             <?php endif; ?>
@@ -283,6 +284,12 @@ $hasPhoto = !empty($profileImage);
 
     let hasPhoto = <?php echo $hasPhoto ? 'true' : 'false'; ?>;
 
+    // If page loaded with a photo, ensure the upload button shows 'Change Photo'
+    if (hasPhoto && uploadBtn) uploadBtn.textContent = 'Change Photo';
+    // Attach remove handler if the remove button exists on load
+    const existingRemoveBtn = document.getElementById('accRemoveBtn');
+    if (existingRemoveBtn) existingRemoveBtn.addEventListener('click', accRemovePhoto);
+
     /* Trigger file picker */
     window.accTriggerPicker = function () { photoInput.click(); };
 
@@ -311,13 +318,23 @@ $hasPhoto = !empty($profileImage);
                 }
                 img.src = ev.target.result;
 
-            // overlay removed: no hover overlay element will be appended
+                // Ensure remove button exists
+                let rem = document.getElementById('accRemoveBtn');
+                if (!rem) {
+                    rem = document.createElement('button');
+                    rem.id = 'accRemoveBtn';
+                    rem.type = 'button';
+                    rem.className = 'left-avatar-remove';
+                    rem.title = 'Remove photo';
+                    rem.textContent = '✕';
+                    avatarWrap.appendChild(rem);
+                }
+                rem.removeEventListener('click', accRemovePhoto);
+                rem.addEventListener('click', accRemovePhoto);
 
-            // Swap Upload → Change Photo button label
-            if (!hasPhoto && uploadBtn) {
-                uploadBtn.textContent = 'Change Photo';
+                // Swap Upload → Change Photo button label
+                if (uploadBtn) uploadBtn.textContent = 'Change Photo';
                 hasPhoto = true;
-            }
         };
         reader.readAsDataURL(file);
     });
@@ -382,6 +399,36 @@ $hasPhoto = !empty($profileImage);
 
         return false;
     };
+
+    /* Remove photo handler: call API to remove stored picture */
+    function accRemovePhoto(ev) {
+        ev && ev.preventDefault();
+        if (!confirm('Remove profile photo?')) return;
+        const fd = new FormData();
+        fd.append('remove_picture', '1');
+        fetch('../../api/save_user_details.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(r => r.text())
+            .then(text => {
+                let data = null;
+                try { data = JSON.parse(text); } catch (err) { console.error('remove: invalid json', text); showStatus('error','Network error'); return; }
+                if (data && data.success) {
+                    // remove img and show initials
+                    const img = document.getElementById('accAvatarImg'); if (img) img.remove();
+                    const rem = document.getElementById('accRemoveBtn'); if (rem) rem.remove();
+                    const initials = document.createElement('div');
+                    initials.id = 'accAvatarInitials';
+                    initials.className = 'left-avatar-frame left-avatar-empty';
+                    initials.textContent = <?php echo json_encode($initials); ?>;
+                    avatarWrap.insertBefore(initials, avatarWrap.firstChild);
+                    if (uploadBtn) uploadBtn.textContent = 'Upload Photo';
+                    hasPhoto = false;
+                    showStatus('success','Photo removed');
+                } else {
+                    showStatus('error', data && data.error ? data.error : 'Could not remove photo');
+                }
+            })
+            .catch(err => { console.error('remove error', err); showStatus('error','Network error'); });
+    }
 
     /* Password toggle */
     window.accTogglePw = function (id, btn) {

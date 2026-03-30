@@ -39,6 +39,42 @@ if (file_exists($migrationsPath) && is_readable($migrationsPath)) {
 
 // handle file upload
 $profileUrl = null;
+// Handle remove request (AJAX from client)
+if (isset($_POST['remove_picture']) && $_POST['remove_picture']) {
+    // fetch existing value
+    $stmt = $conn->prepare('SELECT profile_picture FROM user_details WHERE user_id = ? LIMIT 1');
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $stmt->close();
+
+    // attempt to unlink the stored file if it appears local
+    if ($row && !empty($row['profile_picture'])) {
+        $pp = $row['profile_picture'];
+        $uPrefix = '/uploads/profile_images/';
+        if (strpos($pp, $uPrefix) !== false) {
+            $rel = substr($pp, strpos($pp, $uPrefix));
+            $filePath = __DIR__ . '/..' . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+            if (file_exists($filePath)) @unlink($filePath);
+        }
+    }
+
+    // clear DB values
+    $upd = $conn->prepare('UPDATE user_details SET profile_picture = NULL WHERE user_id = ?');
+    if ($upd) { $upd->bind_param('i',$user_id); $upd->execute(); $upd->close(); }
+
+    // also clear legacy users.profile_image if the column exists
+    $colRes = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_image'");
+    if ($colRes && $colRes->num_rows > 0) {
+        $upd2 = $conn->prepare('UPDATE users SET profile_image = NULL WHERE id = ?');
+        if ($upd2) { $upd2->bind_param('i',$user_id); $upd2->execute(); $upd2->close(); }
+    }
+
+    if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['profile_image'])) unset($_SESSION['profile_image']);
+    echo json_encode(['success' => true]);
+    exit;
+}
 if (!empty($_FILES['profile_picture']) && is_uploaded_file($_FILES['profile_picture']['tmp_name'])) {
     $file = $_FILES['profile_picture'];
     $allowed = ['image/jpeg','image/png','image/webp','image/gif'];

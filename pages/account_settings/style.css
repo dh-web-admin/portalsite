@@ -151,6 +151,26 @@
   width: 100%;
   margin-bottom: 14px;
 }
+/* allow absolutely-positioned remove control inside avatar box */
+.left-avatar-box { position: relative; }
+
+.left-avatar-remove {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  background: rgba(0,0,0,0.56);
+  color: #fff;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 150ms ease, transform 150ms ease;
+  z-index: 20;
+}
+.left-avatar-box:hover .left-avatar-remove { opacity: 1; transform: translateY(0); }
 .left-avatar-frame {
   width: 160px;
   height: 160px;
