@@ -124,6 +124,11 @@ if (($first_name !== null && $first_name !== '') || ($last_name !== null && $las
 }
 
 if ($ok) {
+    // If we saved a new profile image, ensure session reflects it so header can show immediately
+    if (!empty($profileUrl) && session_status() === PHP_SESSION_ACTIVE) {
+        $_SESSION['profile_image'] = $profileUrl;
+    }
+
     echo json_encode(['success' => true, 'url' => $profileUrl]);
 } else {
     echo json_encode(['success' => false, 'error' => 'DB error']);

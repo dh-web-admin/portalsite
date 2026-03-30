@@ -130,9 +130,7 @@ $hasPhoto = !empty($profileImage);
 
                         <div class="left-avatar-box" id="accAvatarWrap">
                             <?php if ($hasPhoto): ?>
-                                <div class="left-avatar-frame">
-                                    <img src="<?php echo htmlspecialchars($profileImage); ?>" alt="<?php echo htmlspecialchars($name); ?>'s photo" id="accAvatarImg" class="left-avatar-img">
-                                </div>
+                                <img src="<?php echo htmlspecialchars($profileImage); ?>" alt="<?php echo htmlspecialchars($name); ?>'s photo" id="accAvatarImg" class="left-avatar-img left-avatar-plain">
                             <?php else: ?>
                                 <div class="left-avatar-frame left-avatar-empty" id="accAvatarInitials"><?php echo htmlspecialchars($initials); ?></div>
                             <?php endif; ?>
@@ -295,20 +293,23 @@ $hasPhoto = !empty($profileImage);
 
         const reader = new FileReader();
         reader.onload = function (ev) {
-            // Remove initials placeholder if present
-            const initials = document.getElementById('accAvatarInitials');
-            if (initials) initials.remove();
+                // Remove initials placeholder or existing frame if present
+                const initials = document.getElementById('accAvatarInitials');
+                if (initials) initials.remove();
+                const existingFrame = avatarWrap.querySelector('.left-avatar-frame');
+                if (existingFrame) existingFrame.remove();
 
-            // Create / update avatar <img>
-            let img = document.getElementById('accAvatarImg');
-            if (!img) {
-                img = document.createElement('img');
-                img.id        = 'accAvatarImg';
-                img.className = 'left-avatar-img';
-                img.alt       = 'Profile photo';
-                avatarWrap.insertBefore(img, avatarWrap.firstChild);
-            }
-            img.src = ev.target.result;
+                // Create / update avatar <img> (rendered without the square frame)
+                let img = document.getElementById('accAvatarImg');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.id        = 'accAvatarImg';
+                    img.className = 'left-avatar-img left-avatar-plain';
+                    img.alt       = 'Profile photo';
+                    // insert at start
+                    avatarWrap.insertBefore(img, avatarWrap.firstChild);
+                }
+                img.src = ev.target.result;
 
             // overlay removed: no hover overlay element will be appended
 

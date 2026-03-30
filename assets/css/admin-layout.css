@@ -56,6 +56,19 @@ body.admin-page {
   margin-right: 20px;
 }
 
+/* When a user profile image is used in the header, show it as a small circular avatar */
+.welcome-logo.welcome-profile {
+  width: 44px;
+  height: 44px;
+  object-fit: cover; /* crop to fill */
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 4px; /* white frame */
+  box-shadow: 0 4px 14px rgba(2, 6, 23, 0.12);
+  margin-left: auto;
+  margin-right: 12px;
+}
+
 /* Header actions shown for non-admin users (positioned to the right of logo, horizontal layout) */
 .header-actions {
   display: flex;
@@ -82,6 +95,21 @@ body.admin-page {
   min-height: 36px;
   transition: all 0.2s ease;
   white-space: nowrap;
+}
+
+/* Small avatar used inside header action buttons when user has uploaded a profile image */
+.header-action-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  object-fit: cover;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.header-action-avatar.sm {
+  width: 28px;
+  height: 28px;
 }
 
 .header-action-btn:hover {

@@ -152,8 +152,8 @@
   margin-bottom: 14px;
 }
 .left-avatar-frame {
-  width: 130px;
-  height: 130px;
+  width: 160px;
+  height: 160px;
   border-radius: 12px;
   background: #fff;
   display: flex;
@@ -176,6 +176,19 @@
   display: block;
 }
 
+/* When the photo is rendered directly (no surrounding frame), use this class */
+.left-avatar-img.left-avatar-plain {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 50%; /* make plain avatar circular */
+  box-shadow: none;
+  background: transparent;
+  display: block;
+  padding: 0;
+  margin: 0;
+}
+
 .left-upload-wrap {
   width: 100%;
   display: flex;
@@ -183,7 +196,7 @@
   margin-bottom: 18px;
 }
 .left-upload-btn {
-  width: 140px;
+  width: 160px;
   height: 36px;
   border-radius: 10px;
   border: none;
