@@ -1,8 +1,14 @@
 <?php
+// Show runtime errors temporarily to help debug blank page issues
+ini_set('display_errors', '1');
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../../session_init.php';
 
+// Use a relative redirect so the login URL works whether the app is mounted
+// at the domain root or in a subfolder (e.g., /PortalSite)
 if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    header('Location: /auth/login.php');
+    header('Location: ../../auth/login.php');
     exit();
 }
 
