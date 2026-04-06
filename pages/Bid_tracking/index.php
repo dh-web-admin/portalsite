@@ -1321,19 +1321,30 @@ foreach ($bidColumns as $c) {
 
                       // Render a custom UI for some specific columns
                       if ($col === 'reason') {
-                        // Fetch all distinct reasons from the bids table for datalist
-                        $reasonOpts = [];
-                        $rRes = $conn->query("SELECT DISTINCT reason FROM bids WHERE reason IS NOT NULL AND TRIM(reason) != '' ORDER BY reason ASC");
-                        if ($rRes) { while ($rRow = $rRes->fetch_assoc()) { $reasonOpts[] = $rRow['reason']; } }
+                        // Use static list of reasons provided by user
+                        $reasonOpts = [
+                          'CANCELLED STABILIZATION',
+                          'CONTRACTOR WAS HIGH',
+                          "DON'T KNOW GC",
+                          'HIGH',
+                          'DID NOT BID',
+                          'DID NOT BID (UNION)',
+                          'PROJECT DIDNOT GO',
+                          'DID IT THEMSELVES',
+                          'GOING TO REBID',
+                          'NOTHING TO BID'
+                        ];
                         ?>
                         <div class="field">
                           <label><?php echo htmlspecialchars($label); ?></label>
-                          <input type="text" data-col="reason" name="reason" id="editReasonInput" list="reasonDatalist" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;width:100%;box-sizing:border-box;" autocomplete="off" />
-                          <datalist id="reasonDatalist">
+                          <select class="reason-select" data-col="reason" name="reason" id="editReasonSelect" style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;width:100%;box-sizing:border-box;">
+                            <option value=""></option>
                             <?php foreach ($reasonOpts as $rOpt): ?>
-                              <option value="<?php echo htmlspecialchars($rOpt); ?>">
+                              <option value="<?php echo htmlspecialchars($rOpt); ?>"><?php echo htmlspecialchars($rOpt); ?></option>
                             <?php endforeach; ?>
-                          </datalist>
+                            <option value="Other">Other</option>
+                          </select>
+                          <input type="text" data-col="reason_other" name="reason_other" id="editReasonOther" placeholder="Specify other reason" style="display:none;margin-top:8px;padding:8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;width:100%;box-sizing:border-box;" autocomplete="off" />
                         </div>
                         <?php
                       } else {
