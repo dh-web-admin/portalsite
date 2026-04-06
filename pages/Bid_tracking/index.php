@@ -3162,8 +3162,8 @@ foreach ($bidColumns as $c) {
     yearFilterEl.appendChild(opt);
   }
 
-  // Default to current year unless session value exists (session restore runs after this)
-  yearFilterEl.value = nowYShort;
+  // Default to All Years unless session value exists (session restore runs after this)
+  yearFilterEl.value = '';
   // trigger filtering without persisting across refresh
   yearFilterEl.addEventListener('change', function(){ try { applyFiltersAndGrouping(); } catch(e){} });
 })();
