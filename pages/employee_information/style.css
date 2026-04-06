@@ -5,3 +5,119 @@
 
 /* Add any employee_information specific overrides or additional styles here */
 
+.employees-page {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 18px;
+  width: min(1100px, calc(100vw - 72px));
+  margin: 0 auto;
+  padding: 18px 0;
+}
+
+.emp-list-col {
+  background: #f8f6ff;
+  border: 1px solid #eceff6;
+  border-radius: 12px;
+  padding: 14px;
+  height: 560px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.emp-list-head h3 {
+  margin: 0 0 8px 8px;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.emp-list {
+  overflow: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emp-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #f1f5f9;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.emp-item:hover {
+  background: #f3f6ff;
+}
+.emp-item.active {
+  background: linear-gradient(135deg, #eef2ff, #f8f7ff);
+  border-color: #e6e9ff;
+}
+
+.emp-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.emp-avatar img {
+  width: 44px !important;
+  height: 44px !important;
+  object-fit: cover;
+  display: block;
+}
+.emp-initials {
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.emp-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.emp-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.emp-role {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.emp-detail-col {
+  background: #fff;
+  border: 1px solid #eef2f6;
+  border-radius: 12px;
+  padding: 18px;
+  min-height: 560px;
+}
+.emp-list-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.emp-detail-empty {
+  color: #64748b;
+}
