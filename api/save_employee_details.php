@@ -54,15 +54,16 @@ try {
     // remove any remaining trailing pluses and trim
     $clean_detail = trim(preg_replace('/\++$/', '', $clean_detail));
 
-    // If items array is empty, treat as "no change" (do not delete existing)
+    // remove existing rows for this detail
+    $delDetail->bind_param('is', $user_id, $clean_detail);
+    $delDetail->execute();
+
+    // If items array is empty, that means user cleared this detail — keep it deleted.
     if (count($items) === 0) {
       continue;
     }
 
-    // remove existing rows for this detail, then insert the new ones
-    $delDetail->bind_param('is', $user_id, $clean_detail);
-    $delDetail->execute();
-
+    // insert the new ones
     foreach ($items as $it) {
       $it = trim((string)$it);
       if ($it === '') continue;
