@@ -133,7 +133,7 @@ if ($q) {
                           <?php endif; ?>
                         </div>
                         <div class="resource-texts">
-                          <div class="resource-name"><?php echo htmlspecialchars($display); ?></div>
+                          <div class="resource-name"><a class="emp-open-link" href="index.php?user_id=<?php echo (int)$emp['id']; ?>" target="_blank" style="color:inherit;text-decoration:none;"><?php echo htmlspecialchars($display); ?></a></div>
                           <div class="resource-sub"><?php echo htmlspecialchars(ucfirst($emp['role'] ?: 'user')); ?></div>
                         </div>
                       </div>
@@ -437,8 +437,26 @@ if ($q) {
         });
       });
 
-      // Auto-select first employee on load so saved details appear immediately
+      // Ensure clicking the employee name link opens a new tab and doesn't get swallowed by the card click
+      document.querySelectorAll('.emp-open-link').forEach(function(link){
+        link.addEventListener('click', function(ev){
+          ev.stopPropagation();
+          ev.preventDefault();
+          try { window.open(link.href, '_blank', 'noopener'); } catch(e) { window.location.href = link.href; }
+        });
+      });
+
+      // Auto-select employee on load: prefer `user_id` URL param, then active card, then first card
       (function autoSelectFirst(){
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var uid = params.get('user_id');
+          if (uid) {
+            var card = document.querySelector('.resource-card[data-user-id="' + uid + '"]');
+            if (card) { try { card.click(); } catch(e) { card.classList.add('active'); loadDetailsForUser(uid); } return; }
+          }
+        } catch(e) {}
+
         var active = document.querySelector('.resource-card.active');
         if (active) {
           var id = active.getAttribute('data-user-id');

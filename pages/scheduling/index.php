@@ -420,7 +420,7 @@ $hasProfile = false;
 $c3 = $conn->query("SHOW COLUMNS FROM users LIKE 'profile_image'");
 if ($c3 && $c3->num_rows > 0) $hasProfile = true;
 
-$empSql = 'SELECT name, COALESCE(role, "") AS role, ';
+$empSql = 'SELECT u.id, name, COALESCE(role, "") AS role, ';
 if ($hasProfile) {
   $empSql .= 'COALESCE(ud.profile_picture, u.profile_image) AS picture';
 } else {
@@ -576,7 +576,9 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                           <?php endif; ?>
                         </span>
                         <span class="resource-texts">
-                          <span class="resource-name"><?php echo htmlspecialchars($name); ?></span>
+                          <a class="resource-link" href="../employee_information/index.php?user_id=<?php echo (int)$employee['id']; ?>" target="_blank" rel="noopener noreferrer" draggable="false">
+                                <span class="resource-name"><?php echo htmlspecialchars($name); ?></span>
+                              </a>
                           <span class="resource-sub"><?php echo htmlspecialchars($roleLabel !== '' ? ucfirst($roleLabel) : 'Crew Member'); ?></span>
                         </span>
                       </div>
