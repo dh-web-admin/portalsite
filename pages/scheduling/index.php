@@ -506,6 +506,10 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       transform: translateY(-2px);
     }
     .save-btn:disabled { opacity: 0.9; }
+    /* Week range / today indicator */
+    .week-range { display:inline-flex; align-items:center; gap:10px; }
+    .today-indicator { font-size:0.95em; color:#666; padding:4px 8px; border-radius:6px; background:transparent; }
+    .today-indicator.today-in-week { background:#e6f7ea; color:#1e7a3e; font-weight:700; border:1px solid #cdebd3; }
   </style>
   <style>
     /* Project tile requirement styling */
@@ -637,7 +641,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                   <button type="button" class="week-btn today" id="todayWeekBtn">Today</button>
                   <button type="button" class="week-btn" id="nextWeekBtn" aria-label="Next week">&#x203A;</button>
                 </div>
-                <div class="week-range" id="weekRangeLabel">Week Range</div>
+                <div class="week-range" id="weekRangeLabel">Week Range <span class="today-indicator" id="todayIndicator" aria-hidden="true"></span></div>
                 <div class="scheduler-actions">
                   <button type="button" class="secondary-btn save-btn" id="saveChangesBtn" disabled style="margin-right:8px;">Save Changes</button>
                   <button type="button" class="add-project-btn" id="openAddProjectModal">Add Project</button>
@@ -1550,7 +1554,30 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           var weekEnd = new Date(currentWeekStart);
           weekEnd.setDate(currentWeekStart.getDate() + 6);
           var rangeFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          weekRangeLabel.textContent = rangeFormatter.format(currentWeekStart) + ' - ' + rangeFormatter.format(weekEnd);
+          var rangeText = rangeFormatter.format(currentWeekStart) + ' - ' + rangeFormatter.format(weekEnd);
+          // set HTML so the today indicator element remains in the DOM
+          try {
+            weekRangeLabel.innerHTML = rangeText + ' <span class="today-indicator" id="todayIndicator" aria-hidden="true"></span>';
+          } catch (e) {
+            weekRangeLabel.textContent = rangeText;
+          }
+
+          // update today indicator
+          try {
+            var todayEl = document.getElementById('todayIndicator');
+            if (todayEl) {
+              var today = new Date();
+              var nice = today.toLocaleString('en-US', { month: 'short', day: 'numeric' });
+              todayEl.textContent = 'Today: ' + nice;
+              var wkEnd = new Date(currentWeekStart);
+              wkEnd.setDate(currentWeekStart.getDate() + 6);
+              if (today.getTime() >= currentWeekStart.getTime() && today.getTime() <= wkEnd.getTime()) {
+                todayEl.classList.add('today-in-week');
+              } else {
+                todayEl.classList.remove('today-in-week');
+              }
+            }
+          } catch (e) { /* ignore */ }
         }
 
         function renderProjectTile(project, dayIndex, rowIndex) {
