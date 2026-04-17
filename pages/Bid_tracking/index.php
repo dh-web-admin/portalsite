@@ -592,15 +592,33 @@ foreach ($bidColumns as $c) {
                     globalSearchBox.innerHTML = '';
                     const rows = document.querySelectorAll('#bidsTable tbody tr');
                     if (!val) {
-                      rows.forEach(row => row.style.display = '');
+                      rows.forEach(row => {
+                        row.style.display = '';
+                        row.classList.remove('search-row-match');
+                        row.querySelectorAll('td').forEach(td => td.classList && td.classList.remove('search-cell-match'));
+                      });
                       return;
                     }
                     rows.forEach(row => {
                       let match = false;
+                      // clear previous cell matches
+                      row.querySelectorAll('td').forEach(td => td.classList && td.classList.remove('search-cell-match'));
+
                       row.querySelectorAll('td').forEach(td => {
-                        if ((td.textContent || '').toLowerCase().includes(val)) match = true;
+                        const text = (td.textContent || '').toLowerCase();
+                        if (text.includes(val)) {
+                          match = true;
+                          td.classList.add('search-cell-match');
+                        }
                       });
-                      row.style.display = match ? '' : 'none';
+
+                      if (match) {
+                        row.style.display = '';
+                        row.classList.add('search-row-match');
+                      } else {
+                        row.style.display = 'none';
+                        row.classList.remove('search-row-match');
+                      }
                     });
                   });
                   // Remove dropdown suggestion logic for now, as table filtering is now live
@@ -620,6 +638,11 @@ foreach ($bidColumns as $c) {
                   }
                 }
                 </script>
+                <style>
+                /* Highlighting for matched search results */
+                .search-row-match { background: rgba(59,130,246,0.04); }
+                .search-cell-match { background: rgba(59,130,246,0.12); font-weight:600; }
+                </style>
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;margin-left:auto;">
                   <label for="orderBySelect" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">order by:</label>
                   <select id="orderBySelect" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:140px;">
