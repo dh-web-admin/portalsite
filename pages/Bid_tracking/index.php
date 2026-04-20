@@ -589,6 +589,20 @@ foreach ($bidColumns as $c) {
                 if (globalSearchInput && globalSearchBox) {
                   globalSearchInput.addEventListener('input', function() {
                     const val = this.value.trim().toLowerCase();
+                    // Store term globally and re-run filter/grouping so search respects
+                    // year/status/order and pagination.
+                    try {
+                      bidTrackingSearchTerm = val;
+                      if (globalSearchBox) globalSearchBox.innerHTML = '';
+                      if (typeof applyFiltersAndGrouping === 'function') {
+                        applyFiltersAndGrouping();
+                        return;
+                      }
+                    } catch(e) {
+                      // fall through to local DOM filter fallback
+                    }
+
+                    // Fallback: operate directly on visible DOM rows
                     globalSearchBox.innerHTML = '';
                     const rows = document.querySelectorAll('#bidsTable tbody tr');
                     if (!val) {
@@ -601,9 +615,7 @@ foreach ($bidColumns as $c) {
                     }
                     rows.forEach(row => {
                       let match = false;
-                      // clear previous cell matches
                       row.querySelectorAll('td').forEach(td => td.classList && td.classList.remove('search-cell-match'));
-
                       row.querySelectorAll('td').forEach(td => {
                         const text = (td.textContent || '').toLowerCase();
                         if (text.includes(val)) {
@@ -611,7 +623,6 @@ foreach ($bidColumns as $c) {
                           td.classList.add('search-cell-match');
                         }
                       });
-
                       if (match) {
                         row.style.display = '';
                         row.classList.add('search-row-match');
@@ -3158,6 +3169,7 @@ foreach ($bidColumns as $c) {
           var yearFilterTopEl = document.getElementById('yearFilterTop');
           var statusFilterTopEl = document.getElementById('statusFilterTop');
           var orderByEl = document.getElementById('orderBySelect');
+          var bidTrackingSearchTerm = '';
           var paginationControlsEl = document.getElementById('paginationControls');
           var currentPage = 1;
           var pageSize = 50;
@@ -3367,6 +3379,20 @@ function applyFiltersAndGrouping() {
     filtered = filtered.filter(function(it){ return it.status === selectedStatus; });
   }
 
+  // 2.5) Search-term filter: if a global search term is present, further
+  // restrict the filtered set to items that contain the term in any field.
+  try {
+    if (typeof bidTrackingSearchTerm === 'string' && bidTrackingSearchTerm.trim()) {
+      var _term = bidTrackingSearchTerm.trim().toLowerCase();
+      filtered = filtered.filter(function(it){
+        try {
+          var hay = (String(it.project || '') + ' ' + String(it.project_name || '') + ' ' + JSON.stringify(it.obj || {})).toLowerCase();
+          return hay.indexOf(_term) !== -1;
+        } catch(e) { return false; }
+      });
+    }
+  } catch(e) {}
+
   // 3) Default rendering: group rows by status in the requested order
   //    and sort rows within each status by bid_date ascending (nulls last).
   //    Status rendering order: bidding -> pending -> win -> lost -> completed
@@ -3445,6 +3471,17 @@ function applyFiltersAndGrouping() {
       if (idx !== 0 && prevProj !== curProj) {
         var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
       }
+      // Clear previous search highlights and apply new ones if search term present
+      try {
+        w.it.row.classList.remove('search-row-match');
+        w.it.row.querySelectorAll('td').forEach(function(td){ if (td.classList) td.classList.remove('search-cell-match'); });
+        if (typeof bidTrackingSearchTerm === 'string' && bidTrackingSearchTerm.trim()) {
+          var _t = bidTrackingSearchTerm.trim().toLowerCase();
+          var any = false;
+          w.it.row.querySelectorAll('td').forEach(function(td){ try { if ((td.textContent||'').toLowerCase().indexOf(_t) !== -1) { if (td.classList) td.classList.add('search-cell-match'); any = true; } } catch(e){} });
+          if (any) w.it.row.classList.add('search-row-match');
+        }
+      } catch(e) {}
       frag.appendChild(w.it.row);
       try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
       prevProj = curProj;
@@ -3473,6 +3510,16 @@ function applyFiltersAndGrouping() {
       if (idx !== 0 && prevProj !== curProj) {
         var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
       }
+      try {
+        w.it.row.classList.remove('search-row-match');
+        w.it.row.querySelectorAll('td').forEach(function(td){ if (td.classList) td.classList.remove('search-cell-match'); });
+        if (typeof bidTrackingSearchTerm === 'string' && bidTrackingSearchTerm.trim()) {
+          var _t2 = bidTrackingSearchTerm.trim().toLowerCase();
+          var any2 = false;
+          w.it.row.querySelectorAll('td').forEach(function(td){ try { if ((td.textContent||'').toLowerCase().indexOf(_t2) !== -1) { if (td.classList) td.classList.add('search-cell-match'); any2 = true; } } catch(e){} });
+          if (any2) w.it.row.classList.add('search-row-match');
+        }
+      } catch(e) {}
       frag.appendChild(w.it.row);
       try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
       prevProj = curProj;
