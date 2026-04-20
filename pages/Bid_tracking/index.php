@@ -1406,7 +1406,7 @@ foreach ($bidColumns as $c) {
 
 
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
-                  <button type="button" id="closeEditBid" style="background:#fff;border:1px solid #e6edf0;color:#0f172a;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;">Cancel</button>
+                  <button type="button" id="closeEditBid" style="background:#fff;border:1px solid #e6edf0;color:#0f172a;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;">Close</button>
                   <button type="button" id="deleteBidBtn" style="background:#fee2e2;border:1px solid rgba(239,68,68,0.12);color:#7f1d1d;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;">Delete</button>
                   <button type="submit" id="saveEditBid" style="background:#10b981;border:none;color:#fff;padding:10px 16px;border-radius:8px;font-weight:700;cursor:pointer;">Save</button>
                 </div>
@@ -2831,7 +2831,7 @@ foreach ($bidColumns as $c) {
                         .catch(function(){});
                     }
                   } catch(e){}
-                  try { closeEditModal(); } catch(e){}
+                  // Keep the edit modal open after saving so users can continue editing.
                   try { showToast('Saved', 'success'); } catch(e){}
                   try {
                     // Update the in-memory originalRows and the row DOM so changes persist without a full reload
