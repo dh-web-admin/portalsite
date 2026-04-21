@@ -101,6 +101,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = "User registered successfully";
                 // clear old values on success
                 $old = ['name'=>'','email'=>'','role'=>''];
+                // Send notification email to the newly created user with their credentials
+                try {
+                    $to = $email_input;
+                    $creator = (isset($_SESSION['name']) && $_SESSION['name']) ? $_SESSION['name'] : (isset($_SESSION['email']) ? $_SESSION['email'] : 'Admin');
+                    $subject = 'Your DarkHorse account';
+                    $plainPassword = $password_input;
+
+                    $messageHtml = "<html><body>" .
+                        "<p>Hello " . htmlspecialchars($name, ENT_QUOTES) . ",</p>" .
+                        "<p>Your DarkHorse Login has been successfully created. You can go to <a href=\"https://app.darkhorsespreader.com\">app.darkhorsespreader.com</a> to access your employee portal.</p>" .
+                        "<p><strong>email:</strong> " . htmlspecialchars($email_input, ENT_QUOTES) . "<br/>" .
+                        "<strong>password:</strong> " . htmlspecialchars($plainPassword, ENT_QUOTES) . "</p>" .
+                        "<p><strong>Once you login to your account, please go ahead and change your password by navigating to Account Settings on the top right corner of the portal.</strong></p>" .
+                        "<p>Thanks,<br/>" . htmlspecialchars($creator, ENT_QUOTES) . "</p>" .
+                        "</body></html>";
+
+                    // Headers for HTML email
+                    $headers = "MIME-Version: 1.0" . "\r\n";
+                    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
+                    // From header: use creator email when available
+                    $fromEmail = (isset($_SESSION['email']) && $_SESSION['email']) ? $_SESSION['email'] : 'no-reply@darkhorsespreader.com';
+                    $headers .= 'From: ' . $creator . " <" . $fromEmail . ">" . "\r\n";
+
+                    $mailSent = @mail($to, $subject, $messageHtml, $headers);
+                    if (!$mailSent) {
+                        // Non-fatal: record a notice so admin sees email didn't send
+                        $success .= " (Email delivery failed — user created but notification email was not sent.)";
+                    } else {
+                        $success .= " (Notification email sent)";
+                    }
+                } catch (Throwable $ex) {
+                    // swallow email exceptions but note failure
+                    $success .= " (User created; email not sent.)";
+                }
             } else {
                 $error = "Error registering user: " . $conn->error;
             }
