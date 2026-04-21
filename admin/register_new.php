@@ -102,37 +102,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // clear old values on success
                 $old = ['name'=>'','email'=>'','role'=>''];
                 // Send notification email to the newly created user with their credentials
+                // Use the same mail helper used by the daily bid notifications (Mailjet/PHPMailer wrapper)
                 try {
                     $to = $email_input;
                     $creator = (isset($_SESSION['name']) && $_SESSION['name']) ? $_SESSION['name'] : (isset($_SESSION['email']) ? $_SESSION['email'] : 'Admin');
                     $subject = 'Your DarkHorse account';
                     $plainPassword = $password_input;
 
-                    $messageHtml = "<html><body>" .
+                    $text = "Hello " . $name . "\n\n" .
+                        "Your DarkHorse Login has been successfully created. You can go to https://app.darkhorsespreader.com to access your employee portal.\n\n" .
+                        "email: " . $email_input . "\n" .
+                        "password: " . $plainPassword . "\n\n" .
+                        "Once you login to your account, please go ahead and change your password by navigating to Account Settings on the top right corner of the portal.\n\n" .
+                        "Thanks,\n" . $creator;
+
+                    $html = "<div style=\"font-family:Arial,sans-serif;color:#333;line-height:1.6;\">" .
                         "<p>Hello " . htmlspecialchars($name, ENT_QUOTES) . ",</p>" .
                         "<p>Your DarkHorse Login has been successfully created. You can go to <a href=\"https://app.darkhorsespreader.com\">app.darkhorsespreader.com</a> to access your employee portal.</p>" .
                         "<p><strong>email:</strong> " . htmlspecialchars($email_input, ENT_QUOTES) . "<br/>" .
                         "<strong>password:</strong> " . htmlspecialchars($plainPassword, ENT_QUOTES) . "</p>" .
                         "<p><strong>Once you login to your account, please go ahead and change your password by navigating to Account Settings on the top right corner of the portal.</strong></p>" .
                         "<p>Thanks,<br/>" . htmlspecialchars($creator, ENT_QUOTES) . "</p>" .
-                        "</body></html>";
+                        "</div>";
 
-                    // Headers for HTML email
-                    $headers = "MIME-Version: 1.0" . "\r\n";
-                    $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-                    // From header: use creator email when available
-                    $fromEmail = (isset($_SESSION['email']) && $_SESSION['email']) ? $_SESSION['email'] : 'no-reply@darkhorsespreader.com';
-                    $headers .= 'From: ' . $creator . " <" . $fromEmail . ">" . "\r\n";
+                    // Load mailer helper (reuse the same candidate list as the cron script)
+                    $mailerCandidates = [
+                        __DIR__ . '/../auth/mailjet_helper.php',
+                        __DIR__ . '/../partials/mailer.php',
+                        __DIR__ . '/../partials/mailer_helper.php',
+                        __DIR__ . '/../config/email_config.php'
+                    ];
+                    foreach ($mailerCandidates as $cand) {
+                        if (file_exists($cand)) { require_once $cand; break; }
+                    }
 
-                    $mailSent = @mail($to, $subject, $messageHtml, $headers);
-                    if (!$mailSent) {
-                        // Non-fatal: record a notice so admin sees email didn't send
-                        $success .= " (Email delivery failed — user created but notification email was not sent.)";
-                    } else {
+                    // Normalize to sendMail($to,$subject,$text,$html) if possible
+                    if (!function_exists('sendMail')) {
+                        if (function_exists('send_mailjet')) {
+                            function sendMail($to, $subject, $text, $html) { return send_mailjet($to, $subject, $text, $html); }
+                        } elseif (function_exists('sendMailjet')) {
+                            function sendMail($to, $subject, $text, $html) { return sendMailjet($to, $subject, $text, $html); }
+                        } elseif (function_exists('send_email')) {
+                            function sendMail($to, $subject, $text, $html) { return send_email($to, $subject, $text, $html); }
+                        } elseif (function_exists('sendEmail')) {
+                            function sendMail($to, $subject, $text, $html) { $ok = sendEmail($to, $subject, $html, true); return $ok ? ['success'=>true] : ['success'=>false,'error'=>'sendEmail failed']; }
+                        } else {
+                            // Fallback to PHP mail()
+                            function sendMail($to, $subject, $text, $html) {
+                                $headers = "MIME-Version: 1.0\r\n" .
+                                    "Content-type:text/html;charset=UTF-8\r\n";
+                                $from = isset($_SESSION['email']) && $_SESSION['email'] ? $_SESSION['email'] : 'no-reply@darkhorsespreader.com';
+                                $headers .= 'From: ' . (isset($_SESSION['name'])?$_SESSION['name']:'Admin') . " <" . $from . ">\r\n";
+                                $sent = @mail($to, $subject, $html, $headers);
+                                return $sent ? ['success'=>true] : ['success'=>false,'error'=>'php-mail-failed'];
+                            }
+                        }
+                    }
+
+                    $sent = sendMail($to, $subject, $text, $html);
+
+                    $mailOk = false;
+                    if (is_array($sent)) {
+                        $mailOk = !empty($sent['success']);
+                    } elseif (is_bool($sent)) {
+                        $mailOk = $sent;
+                    }
+
+                    if ($mailOk) {
                         $success .= " (Notification email sent)";
+                    } else {
+                        $success .= " (Email delivery failed — user created but notification email was not sent.)";
                     }
                 } catch (Throwable $ex) {
-                    // swallow email exceptions but note failure
                     $success .= " (User created; email not sent.)";
                 }
             } else {
