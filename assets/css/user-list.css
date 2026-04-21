@@ -28,6 +28,16 @@
   letter-spacing: 0.5px;
 }
 
+/* Hide the Actions column header while keeping action buttons visible in rows */
+.user-table thead th:last-child {
+  display: none;
+}
+
+/* More specific rule to ensure header is hidden across themes/cache */
+.user-table th.col-actions {
+  display: none !important;
+}
+
 .user-table tr:hover {
   background: #f8f9fa;
 }
@@ -49,6 +59,18 @@
   font-size: 13px;
   font-weight: 500;
   transition: all 0.2s ease;
+}
+
+/* Make the unified Edit button clearly visible */
+.btn-edit-all {
+  background: #667eea;
+  color: #fff;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+.btn-edit-all:hover {
+  background: #5568d3;
 }
 
 .user-actions button.edit-btn {
@@ -208,4 +230,79 @@
 
 .password-toggle button:hover {
   color: #5568d3;
+}
+
+/* Unified Edit Modal styles */
+#userEditModal {
+  display: none; /* default - JS toggles to flex */
+  align-items: center;
+  justify-content: center;
+}
+#userEditModal[style*="display:flex"] {
+  display: flex !important;
+}
+#userEditModal > div {
+  max-width: 720px;
+  width: 100%;
+  padding: 22px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+#userEditModal h2 {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+}
+#userEditModal input,
+#userEditModal select {
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+#userEditModal .add-user-btn {
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.16);
+}
+#userEditModal .add-user-btn:hover {
+  background: #2563eb;
+}
+#userEditModal .nav-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  border: none;
+}
+#userEditModal .nav-btn[style*="background:#f44336"],
+#userEditModal .nav-btn[style*="background:#ef4444"] {
+  background: #ef4444 !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.12);
+}
+#userEditModal .nav-btn:hover {
+  opacity: 0.95;
+}
+
+/* Modal save button (green) */
+#userEditModal .modal-save-btn {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
+}
+#userEditModal .modal-save-btn:hover {
+  background: #059669;
+}
+/* Ensure modal buttons align nicely */
+#userEditModal .modal-actions {
+  display: flex;
+  gap: 10px;
 }

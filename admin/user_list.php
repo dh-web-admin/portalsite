@@ -70,7 +70,6 @@ if ($result) {
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Role</th>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -84,12 +83,7 @@ if ($result) {
                                 </td>
                                 <td>
                                     <div class="user-actions">
-                                        <form method="POST" action="remove_user.php" onsubmit="return confirm('Delete user <?php echo htmlspecialchars($u['email']); ?>?')" style="display:inline">
-                                            <input type="hidden" name="email" value="<?php echo htmlspecialchars($u['email']); ?>">
-                                            <button type="submit" class="nav-btn-remove" style="padding:6px 10px;">Remove</button>
-                                        </form>
-                                        <button class="nav-btn btn-edit" style="padding:6px 10px; min-width:60px;">Edit Role</button>
-                                        <button class="nav-btn btn-reset-pass" style="padding:6px 10px; width:auto; color:black;">Reset Password</button>
+                                        <button class="nav-btn btn-edit-all" data-user-id="<?php echo htmlspecialchars($u['id']); ?>" data-user-email="<?php echo htmlspecialchars($u['email']); ?>" data-user-name="<?php echo htmlspecialchars($u['name']); ?>" data-user-role="<?php echo htmlspecialchars($u['role']); ?>" style="padding:8px 12px; background:#667eea; color:#fff; border:none; border-radius:6px;">Edit</button>
                                     </div>
                                 </td>
                             </tr>
@@ -100,6 +94,42 @@ if ($result) {
             </main>
         </div>
     </div>
+
+                <!-- Unified Edit Modal -->
+                <div id="userEditModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2500; align-items:center; justify-content:center;">
+                    <div style="background:#fff; width:720px; max-width:95%; border-radius:10px; padding:20px; box-shadow:0 8px 30px rgba(0,0,0,0.25); position:relative;">
+                        <button id="modalCloseBtn" style="position:absolute; right:12px; top:12px; background:none;border:none;font-size:18px;cursor:pointer;">✕</button>
+                        <h2 id="modalTitle">Edit User</h2>
+                        <div style="display:flex; gap:18px;">
+                            <div style="flex:1;">
+                                <div style="margin-bottom:10px;"><strong>Name</strong><div id="modalName">&nbsp;</div></div>
+                                <div style="margin-bottom:10px;"><strong>Email</strong><div id="modalEmail">&nbsp;</div></div>
+                                <div style="margin-bottom:10px;"><strong>Role</strong>
+                                    <select id="modalRole" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+                                    <?php
+                                        $roles = ['admin','projectmanager','estimator','accounting','superintendent','foreman','mechanic','operator','laborer','developer','data_entry'];
+                                        foreach ($roles as $r) {
+                                            echo "<option value=\"$r\">$r</option>";
+                                        }
+                                    ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="margin-bottom:10px;"><strong>Reset Password</strong>
+                                    <input id="modalNewPassword" type="password" placeholder="New password" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-top:6px;">
+                                    <input id="modalConfirmPassword" type="password" placeholder="Confirm password" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-top:8px;">
+                                    <div style="margin-top:8px; display:flex; gap:8px;"><button id="modalGenPassword" class="nav-btn" type="button" style="padding:8px 10px;">Generate</button><button id="modalCopyPassword" class="nav-btn" type="button" style="padding:8px 10px;">Copy</button></div>
+                                </div>
+                                <div class="modal-actions" style="margin-top:14px; display:flex; gap:10px;">
+                                    <button id="modalSaveBtn" class="modal-save-btn" style="flex:1;">Save Changes</button>
+                                    <button id="modalRemoveBtn" class="nav-btn" style="flex:1; background:#f44336; color:#fff; border:none;">Remove User</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="modalStatus" style="margin-top:10px;color:#10b981;font-weight:600;display:none"></div>
+                    </div>
+                </div>
 
     <script>
     (function(){
@@ -139,6 +169,77 @@ if ($result) {
             document.body.appendChild(t);
             setTimeout(function(){ t.remove(); }, 3000);
         }
+
+        // Unified Edit modal handlers
+        var editModal = document.getElementById('userEditModal');
+        var modalCloseBtn = document.getElementById('modalCloseBtn');
+        var modalName = document.getElementById('modalName');
+        var modalEmail = document.getElementById('modalEmail');
+        var modalRole = document.getElementById('modalRole');
+        var modalNewPassword = document.getElementById('modalNewPassword');
+        var modalConfirmPassword = document.getElementById('modalConfirmPassword');
+        var modalGenPassword = document.getElementById('modalGenPassword');
+        var modalCopyPassword = document.getElementById('modalCopyPassword');
+        var modalSaveBtn = document.getElementById('modalSaveBtn');
+        var modalRemoveBtn = document.getElementById('modalRemoveBtn');
+        var modalStatus = document.getElementById('modalStatus');
+
+        function openEditModal(opts) {
+            modalName.textContent = opts.name || '';
+            modalEmail.textContent = opts.email || '';
+            modalRole.value = opts.role || '';
+            modalNewPassword.value = '';
+            modalConfirmPassword.value = '';
+            modalStatus.style.display = 'none';
+            editModal.style.display = 'flex';
+            editModal.dataset.userId = opts.id || '';
+        }
+
+        function closeEditModal() { editModal.style.display = 'none'; }
+
+        document.addEventListener('click', function(e){
+            var btn = e.target.closest('.btn-edit-all');
+            if (btn) {
+                var id = btn.getAttribute('data-user-id');
+                var email = btn.getAttribute('data-user-email');
+                var name = btn.getAttribute('data-user-name');
+                var role = btn.getAttribute('data-user-role');
+                openEditModal({ id: id, email: email, name: name, role: role });
+            }
+        });
+
+        if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeEditModal);
+
+        // Password generator
+        function generatePassword(len){ len = len||12; var upper='ABCDEFGHIJKLMNOPQRSTUVWXYZ', lower='abcdefghijklmnopqrstuvwxyz', nums='0123456789', specials='!@#$%^&*()'; var all = upper+lower+nums+specials; var pwd=''; pwd += upper[Math.floor(Math.random()*upper.length)]; pwd += nums[Math.floor(Math.random()*nums.length)]; pwd += specials[Math.floor(Math.random()*specials.length)]; for (var i=pwd.length;i<len;i++) pwd += all[Math.floor(Math.random()*all.length)]; return pwd.split('').sort(function(){return 0.5-Math.random();}).join(''); }
+        if (modalGenPassword) modalGenPassword.addEventListener('click', function(){ var p = generatePassword(12); modalNewPassword.value = p; modalConfirmPassword.value = p; });
+        if (modalCopyPassword) modalCopyPassword.addEventListener('click', function(){ var v = modalNewPassword.value||''; if (!v) { toasts('No password to copy', true); return; } navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(v).then(function(){ toasts('Copied') }) : (function(){ var ta=document.createElement('textarea'); ta.value=v; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toasts('Copied'); })(); });
+
+        // Save changes (role +/- password)
+        if (modalSaveBtn) modalSaveBtn.addEventListener('click', function(){
+            var id = editModal.dataset.userId; if (!id) return;
+            var roleVal = modalRole.value;
+            var newPass = modalNewPassword.value || '';
+            var confirm = modalConfirmPassword.value || '';
+            if (newPass || confirm) {
+                if (newPass.length < 8) { toasts('Password must be at least 8 characters', true); return; }
+                if (!/[0-9]/.test(newPass) || !/[A-Z]/.test(newPass) || !/[!@#$%^&*()_+\-=[\]{};:'"\\|,.<>\/\?]/.test(newPass)) { toasts('Password must include number, uppercase, and special char', true); return; }
+                if (newPass !== confirm) { toasts('Passwords do not match', true); return; }
+            }
+            var form = new FormData(); form.append('id', id); form.append('role', roleVal); if (newPass) form.append('password', newPass);
+            fetch('../api/update_user.php', { method: 'POST', body: form, credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(json){ if (json.success) { modalStatus.style.display='block'; modalStatus.style.color='#10b981'; modalStatus.textContent = 'Saved'; toasts('User updated'); setTimeout(function(){ window.location.reload(); }, 700); } else { modalStatus.style.display='block'; modalStatus.style.color='#f44336'; modalStatus.textContent = json.error || 'Update failed'; } }).catch(function(e){ console.error(e); modalStatus.style.display='block'; modalStatus.style.color='#f44336'; modalStatus.textContent = 'Update failed'; });
+        });
+
+        // Remove user
+        if (modalRemoveBtn) modalRemoveBtn.addEventListener('click', function(){
+            if (!confirm('Delete this user?')) return;
+            var email = modalEmail.textContent || '';
+            var form = new FormData(); form.append('email', email);
+            fetch('remove_user.php', { method: 'POST', body: form, credentials: 'same-origin' }).then(function(r){ return r.text(); }).then(function(text){ if (text.indexOf('has been removed') !== -1 || text.indexOf('has been removed.') !== -1) { toasts('User removed'); closeEditModal(); setTimeout(function(){ window.location.reload(); }, 700); } else { // try to parse error
+                    toasts('Remove may have failed', true);
+                    console.log('Remove response:', text);
+                } }).catch(function(e){ console.error(e); toasts('Remove failed', true); });
+        });
 
         var openPopup = null; // current popup row element
         table.querySelectorAll('tbody tr').forEach(function(row){
