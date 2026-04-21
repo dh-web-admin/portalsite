@@ -103,7 +103,15 @@ if ($result) {
                         <div style="display:flex; gap:18px;">
                             <div style="flex:1;">
                                 <div style="margin-bottom:10px;"><strong>Name</strong><div id="modalName">&nbsp;</div></div>
-                                <div style="margin-bottom:10px;"><strong>Email</strong><div id="modalEmail">&nbsp;</div></div>
+                                <div style="margin-bottom:10px;">
+                                    <strong>Email</strong>
+                                    <div id="modalEmail">&nbsp;</div>
+                                    <div id="modalEmailActions" style="margin-top:6px;">
+                                        <input id="modalNewEmailInput" type="email" placeholder="Enter email" style="display:none; padding:8px; border-radius:6px; border:1px solid #ddd; width:70%; margin-right:8px;">
+                                        <button id="modalConfirmAddEmail" class="nav-btn" style="display:none; padding:8px 12px; border-radius:6px; background:#059669; color:#fff; border:none; font-weight:700;">Add</button>
+                                        <button id="modalAddEmailBtn" class="nav-btn" style="display:none; padding:8px 12px; border-radius:6px; background:#3b82f6; color:#fff; border:none; font-weight:700;">Add Email</button>
+                                    </div>
+                                </div>
                                 <div style="margin-bottom:10px;"><strong>Role</strong>
                                     <select id="modalRole" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
                                     <?php
@@ -116,17 +124,22 @@ if ($result) {
                                 </div>
                             </div>
                             <div style="flex:1;">
-                                <div style="margin-bottom:10px;"><strong>Reset Password</strong>
-                                    <input id="modalNewPassword" type="password" placeholder="New password" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-top:6px;">
-                                    <input id="modalConfirmPassword" type="password" placeholder="Confirm password" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-top:8px;">
-                                    <div style="margin-top:8px; display:flex; gap:8px;"><button id="modalGenPassword" class="nav-btn" type="button" style="padding:8px 10px;">Generate</button><button id="modalCopyPassword" class="nav-btn" type="button" style="padding:8px 10px;">Copy</button></div>
+                                <div style="margin-bottom:10px;">
+                                    <button id="modalShowResetBtn" type="button" class="nav-btn" style="background:#e5e7eb;color:#111;padding:8px 12px;border-radius:6px;font-weight:700;">Reset Password</button>
+                                    <div id="modalPasswordSection" style="display:none;margin-top:10px;">
+                                        <input id="modalNewPassword" type="password" placeholder="New password" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-top:6px;">
+                                        <input id="modalConfirmPassword" type="password" placeholder="Confirm password" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; margin-top:8px;">
+                                        <div style="margin-top:8px; display:flex; gap:8px;"><button id="modalGenPassword" class="nav-btn" type="button" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer;">Generate</button><button id="modalCopyPassword" class="nav-btn" type="button" style="padding:8px 10px; border-radius:6px; border:1px solid #d1d5db; background:#fff; cursor:pointer;">Copy</button></div>
+                                    </div>
                                 </div>
-                                <div class="modal-actions" style="margin-top:14px; display:flex; gap:10px;">
-                                    <button id="modalSaveBtn" class="modal-save-btn" style="flex:1;">Save Changes</button>
-                                    <button id="modalRemoveBtn" class="nav-btn" style="flex:1; background:#f44336; color:#fff; border:none;">Remove User</button>
-                                </div>
+                                
                             </div>
                         </div>
+                        <div class="modal-actions" style="margin-top:18px; display:flex; gap:12px; justify-content:flex-end;">
+                            <button id="modalSaveBtn" class="modal-save-btn" style="min-width:160px;">Save Changes</button>
+                            <button id="modalRemoveBtn" class="nav-btn" style="background:#f44336; color:#fff; border:none;">Remove User</button>
+                        </div>
+
                         <div id="modalStatus" style="margin-top:10px;color:#10b981;font-weight:600;display:none"></div>
                     </div>
                 </div>
@@ -175,18 +188,33 @@ if ($result) {
         var modalCloseBtn = document.getElementById('modalCloseBtn');
         var modalName = document.getElementById('modalName');
         var modalEmail = document.getElementById('modalEmail');
+        var modalAddEmailBtn = document.getElementById('modalAddEmailBtn');
+        var modalNewEmailInput = document.getElementById('modalNewEmailInput');
+        var modalConfirmAddEmail = document.getElementById('modalConfirmAddEmail');
         var modalRole = document.getElementById('modalRole');
         var modalNewPassword = document.getElementById('modalNewPassword');
         var modalConfirmPassword = document.getElementById('modalConfirmPassword');
         var modalGenPassword = document.getElementById('modalGenPassword');
         var modalCopyPassword = document.getElementById('modalCopyPassword');
+        var modalShowResetBtn = document.getElementById('modalShowResetBtn');
+        var modalPasswordSection = document.getElementById('modalPasswordSection');
         var modalSaveBtn = document.getElementById('modalSaveBtn');
         var modalRemoveBtn = document.getElementById('modalRemoveBtn');
         var modalStatus = document.getElementById('modalStatus');
 
         function openEditModal(opts) {
             modalName.textContent = opts.name || '';
-            modalEmail.textContent = opts.email || '';
+            var emailVal = opts.email || '';
+            modalEmail.textContent = emailVal || '';
+            // If no email present, show Add Email button and hide password reset
+            if (!emailVal) {
+                if (modalAddEmailBtn) modalAddEmailBtn.style.display = 'inline-block';
+                if (modalShowResetBtn) modalShowResetBtn.style.display = 'none';
+                if (modalPasswordSection) modalPasswordSection.style.display = 'none';
+            } else {
+                if (modalAddEmailBtn) modalAddEmailBtn.style.display = 'none';
+                if (modalShowResetBtn) modalShowResetBtn.style.display = '';
+            }
             modalRole.value = opts.role || '';
             modalNewPassword.value = '';
             modalConfirmPassword.value = '';
@@ -209,6 +237,36 @@ if ($result) {
         });
 
         if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeEditModal);
+
+        // Show/hide the password inputs when Reset Password is clicked
+        if (modalAddEmailBtn) modalAddEmailBtn.addEventListener('click', function(){
+            // reveal the inline email input and confirm button
+            modalNewEmailInput.style.display = 'inline-block';
+            modalConfirmAddEmail.style.display = 'inline-block';
+            modalAddEmailBtn.style.display = 'none';
+            try{ modalNewEmailInput.focus(); }catch(e){}
+        });
+
+        if (modalConfirmAddEmail) modalConfirmAddEmail.addEventListener('click', function(){
+            var newEmail = (modalNewEmailInput.value || '').trim();
+            if (!newEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(newEmail)) { toasts('Enter a valid email', true); return; }
+            var form = new FormData();
+            form.append('id', editModal.dataset.userId || '');
+            form.append('email', newEmail);
+            // ensure the API receives a valid role (update_user.php requires role validation)
+            try { form.append('role', (modalRole && modalRole.value) ? modalRole.value : ''); } catch(e) {}
+            fetch('../api/update_user.php', { method: 'POST', body: form, credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(json){ if (json.success) { modalEmail.textContent = newEmail; modalNewEmailInput.style.display = 'none'; modalConfirmAddEmail.style.display = 'none'; if (modalShowResetBtn) modalShowResetBtn.style.display = ''; toasts('Email added'); } else { toasts(json.error || 'Failed to add email', true); } }).catch(function(e){ console.error(e); toasts('Request failed', true); });
+        });
+
+        if (modalShowResetBtn) {
+            modalShowResetBtn.addEventListener('click', function(){
+                if (!modalPasswordSection) return;
+                var visible = modalPasswordSection.style.display !== 'none';
+                modalPasswordSection.style.display = visible ? 'none' : 'block';
+                modalShowResetBtn.textContent = visible ? 'Reset Password' : 'Cancel Reset';
+                if (!visible && modalNewPassword) try{ modalNewPassword.focus(); } catch(e){}
+            });
+        }
 
         // Password generator
         function generatePassword(len){ len = len||12; var upper='ABCDEFGHIJKLMNOPQRSTUVWXYZ', lower='abcdefghijklmnopqrstuvwxyz', nums='0123456789', specials='!@#$%^&*()'; var all = upper+lower+nums+specials; var pwd=''; pwd += upper[Math.floor(Math.random()*upper.length)]; pwd += nums[Math.floor(Math.random()*nums.length)]; pwd += specials[Math.floor(Math.random()*specials.length)]; for (var i=pwd.length;i<len;i++) pwd += all[Math.floor(Math.random()*all.length)]; return pwd.split('').sort(function(){return 0.5-Math.random();}).join(''); }
@@ -234,11 +292,19 @@ if ($result) {
         if (modalRemoveBtn) modalRemoveBtn.addEventListener('click', function(){
             if (!confirm('Delete this user?')) return;
             var email = modalEmail.textContent || '';
-            var form = new FormData(); form.append('email', email);
-            fetch('remove_user.php', { method: 'POST', body: form, credentials: 'same-origin' }).then(function(r){ return r.text(); }).then(function(text){ if (text.indexOf('has been removed') !== -1 || text.indexOf('has been removed.') !== -1) { toasts('User removed'); closeEditModal(); setTimeout(function(){ window.location.reload(); }, 700); } else { // try to parse error
-                    toasts('Remove may have failed', true);
-                    console.log('Remove response:', text);
-                } }).catch(function(e){ console.error(e); toasts('Remove failed', true); });
+            var id = editModal.dataset.userId || '';
+            var form = new FormData();
+            if (id) form.append('id', id); else form.append('email', email);
+            fetch('../api/remove_user.php', { method: 'POST', body: form, credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(json){
+                if (json && json.success) {
+                    toasts('User removed');
+                    closeEditModal();
+                    setTimeout(function(){ window.location.reload(); }, 700);
+                } else {
+                    toasts(json && json.error ? json.error : 'Remove failed', true);
+                    console.log('Remove response:', json);
+                }
+            }).catch(function(e){ console.error(e); toasts('Remove failed', true); });
         });
 
         var openPopup = null; // current popup row element

@@ -273,6 +273,11 @@
   background: #2563eb;
 }
 #userEditModal .nav-btn {
+  /* Override global .nav-btn (which is block/full-width for side navs) so
+     modal buttons don't expand to the container width. Keep them inline
+     and allow explicit min-widths to control sizing. */
+  display: inline-block;
+  width: auto;
   padding: 10px 14px;
   border-radius: 8px;
   font-weight: 700;
@@ -298,6 +303,27 @@
   font-weight: 700;
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.12);
 }
+#modalGenPassword,
+#modalCopyPassword {
+  display: inline-block;
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+}
+#modalGenPassword:hover,
+#modalCopyPassword:hover {
+  background: #f8fafc;
+}
+
+/* Small responsive spacing for the two helper buttons */
+#modalGenPassword {
+  margin-right: 8px;
+}
 #userEditModal .modal-save-btn:hover {
   background: #059669;
 }
@@ -305,4 +331,10 @@
 #userEditModal .modal-actions {
   display: flex;
   gap: 10px;
+}
+
+/* Ensure the Remove button matches the Save button width inside the modal */
+#userEditModal .modal-actions .nav-btn,
+#userEditModal .modal-actions .modal-save-btn {
+  min-width: 160px;
 }
