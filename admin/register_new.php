@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("ssss", $name, $email_input, $hashed_password, $role);
             
             if ($stmt->execute()) {
-                $success = "User registered successfully";
+                $success = "User registration successful.";
                 // clear old values on success
                 $old = ['name'=>'','email'=>'','role'=>''];
                 // Send notification email to the newly created user with their credentials
@@ -169,12 +169,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     if ($mailOk) {
-                        $success .= " (Notification email sent)";
+                        $success = "User registration successful.<br/>An email with login credentials has been sent to the user";
                     } else {
-                        $success .= " (Email delivery failed — user created but notification email was not sent.)";
+                        $success = "User registration successful.<br/>Email delivery failed — user created but notification email was not sent.";
                     }
                 } catch (Throwable $ex) {
-                    $success .= " (User created; email not sent.)";
+                    $success = "User registration successful.<br/>User created; email not sent.";
                 }
             } else {
                 $error = "Error registering user: " . $conn->error;
