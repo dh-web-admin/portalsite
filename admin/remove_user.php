@@ -37,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     if ($email === '') {
         $error = 'Email is required';
-    } elseif (!preg_match('/^[A-Za-z0-9._%+-]+@darkhorsespreader\.com$/i', $email)) {
-        $error = 'Email must be a valid @darkhorsespreader.com address';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Please enter a valid email address';
     } elseif ($email === $adminEmail) {
         $error = 'You cannot delete your own account';
     } else {
@@ -94,8 +94,8 @@ $stmt->close();
                     <form method="POST" action="" id="removeForm">
                         <div class="form-group">
                             <label for="email">User Email</label>
-                            <input type="email" id="email" name="email" required placeholder="user@darkhorsespreader.com">
-                            <small style="display:block; margin-top:4px; color:#666; font-size:12px;">Must be a @darkhorsespreader.com address</small>
+                            <input type="email" id="email" name="email" required placeholder="user@example.com">
+                            <small style="display:block; margin-top:4px; color:#666; font-size:12px;">Enter the user's email address</small>
                         </div>
                         <button type="submit" class="add-user-btn">Remove User</button>
                     </form>
@@ -118,12 +118,12 @@ $stmt->close();
         var emailInput = document.getElementById('email');
         
         form.addEventListener('submit', function(e){
-            var emailVal = emailInput.value.trim();
-            if (!/^[A-Za-z0-9._%+-]+@darkhorsespreader\.com$/i.test(emailVal)) {
-                e.preventDefault();
-                alert('Email must be a valid @darkhorsespreader.com address.');
-                emailInput.focus();
-            }
+                var emailVal = emailInput.value.trim();
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                    e.preventDefault();
+                    alert('Please enter a valid email address.');
+                    emailInput.focus();
+                }
         });
     })();
     </script>
