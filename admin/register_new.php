@@ -39,9 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
 
     // Server-side validation
-    // Email must end with @darkhorsespreader.com
-    if (!preg_match('/^[A-Za-z0-9._%+-]+@darkhorsespreader\.com$/i', $email_input)) {
-        $error = "Email must be a valid @darkhorsespreader.com address.";
+    // Accept any valid email address (no domain restriction)
+    if (!filter_var($email_input, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
     }
 
     // Password rules: at least 8 chars, 1 number, 1 uppercase, 1 special char
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-group">
                             <label for="email">Email:</label>
                             <input type="email" id="email" name="email" required value="<?php echo $old['email'] ?? ''; ?>">
-                            <small class="hint">Must be a @darkhorsespreader.com address</small>
+                            <small class="hint">We'll email the user their credentials</small>
                         </div>
 
                         <div class="form-group" style="position:relative;">
@@ -255,8 +255,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             var emailVal = email.value.trim();
             var pwdVal = passwordHidden.value;
 
-            if (!/^[A-Za-z0-9._%+-]+@darkhorsespreader\.com$/i.test(emailVal)) {
-                errors.push('Email must be a valid @darkhorsespreader.com address.');
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                errors.push('Please enter a valid email address.');
             }
 
             if (!pwdVal) {
