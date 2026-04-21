@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email_input = trim($_POST['email'] ?? '');
     $password_input = $_POST['password'] ?? '';
     $role = $_POST['role'] ?? '';
+    $non_user = isset($_POST['non_user_employee']) && $_POST['non_user_employee'] == '1';
 
     // Preserve values for redisplay on error
     $old = [
@@ -37,15 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'email' => htmlspecialchars($email_input, ENT_QUOTES),
         'role' => htmlspecialchars($role, ENT_QUOTES)
     ];
+    if ($non_user) $old['non_user'] = true;
 
     // Server-side validation
-    // Accept any valid email address (no domain restriction)
-    if (!filter_var($email_input, FILTER_VALIDATE_EMAIL)) {
-        $error = "Please enter a valid email address.";
+    // Accept any valid email address (no domain restriction) unless this is a non-user employee
+    if (!$non_user) {
+        if (!filter_var($email_input, FILTER_VALIDATE_EMAIL)) {
+            $error = "Please enter a valid email address.";
+        }
     }
 
-    // Password rules: at least 8 chars, 1 number, 1 uppercase, 1 special char
-    if (empty($error)) {
+    // Password rules: at least 8 chars, 1 number, 1 uppercase, 1 special char (only for real users)
+    if (empty($error) && !$non_user) {
         if (strlen($password_input) < 8
             || !preg_match('/[0-9]/', $password_input)
             || !preg_match('/[A-Z]/', $password_input)
@@ -81,106 +85,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     if (empty($error)) {
-        // Check if email already exists (use prepared statement)
-        $check_sql = "SELECT id FROM users WHERE email = ? LIMIT 1";
-        $check_stmt = $conn->prepare($check_sql);
-        $check_stmt->bind_param('s', $email_input);
-        $check_stmt->execute();
-        $check_result = $check_stmt->get_result();
+        if (!$non_user) {
+            // Check if email already exists (use prepared statement)
+            $check_sql = "SELECT id FROM users WHERE email = ? LIMIT 1";
+            $check_stmt = $conn->prepare($check_sql);
+            $check_stmt->bind_param('s', $email_input);
+            $check_stmt->execute();
+            $check_result = $check_stmt->get_result();
 
-        if ($check_result && $check_result->num_rows > 0) {
-            $error = "Email already exists";
-        } else {
-            // Insert new user with hashed password
-            $hashed_password = password_hash($password_input, PASSWORD_DEFAULT);
-            $sql = "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssss", $name, $email_input, $hashed_password, $role);
-            
+            if ($check_result && $check_result->num_rows > 0) {
+                $error = "Email already exists";
+            }
+        }
+
+        if (empty($error)) {
+            if ($non_user) {
+                // Insert a non-user employee (no email/password)
+                $sql = "INSERT INTO users (name, role) VALUES (?, ?)";
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("ss", $name, $role);
+            } else {
+                // Insert new user with hashed password
+                $hashed_password = password_hash($password_input, PASSWORD_DEFAULT);
+                $sql = "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("ssss", $name, $email_input, $hashed_password, $role);
+            }
+
             if ($stmt->execute()) {
-                $success = "User registration successful.";
                 // clear old values on success
                 $old = ['name'=>'','email'=>'','role'=>''];
-                // Send notification email to the newly created user with their credentials
-                // Use the same mail helper used by the daily bid notifications (Mailjet/PHPMailer wrapper)
-                try {
-                    $to = $email_input;
-                    $creator = (isset($_SESSION['name']) && $_SESSION['name']) ? $_SESSION['name'] : (isset($_SESSION['email']) ? $_SESSION['email'] : 'Admin');
-                    $subject = 'Your DarkHorse account';
-                    $plainPassword = $password_input;
+                if ($non_user) {
+                    $success = "User registration successful.";
+                } else {
+                    // Send notification email to the newly created user with their credentials
+                    // Use the same mail helper used by the daily bid notifications (Mailjet/PHPMailer wrapper)
+                    try {
+                        $to = $email_input;
+                        $creator = (isset($_SESSION['name']) && $_SESSION['name']) ? $_SESSION['name'] : (isset($_SESSION['email']) ? $_SESSION['email'] : 'Admin');
+                        $subject = 'Your DarkHorse account';
+                        $plainPassword = $password_input;
 
-                    $text = "Hello " . $name . "\n\n" .
-                        "Your DarkHorse Login has been successfully created. You can go to https://app.darkhorsespreader.com to access your employee portal.\n\n" .
-                        "email: " . $email_input . "\n" .
-                        "password: " . $plainPassword . "\n\n" .
-                        "Once you login to your account, please go ahead and change your password by navigating to Account Settings on the top right corner of the portal.\n\n" .
-                        "Thanks,\n" . $creator;
+                        $text = "Hello " . $name . "\n\n" .
+                            "Your DarkHorse Login has been successfully created. You can go to https://app.darkhorsespreader.com to access your employee portal.\n\n" .
+                            "email: " . $email_input . "\n" .
+                            "password: " . $plainPassword . "\n\n" .
+                            "Once you login to your account, please go ahead and change your password by navigating to Account Settings on the top right corner of the portal.\n\n" .
+                            "Thanks,\n" . $creator;
 
-                    $html = "<div style=\"font-family:Arial,sans-serif;color:#333;line-height:1.6;\">" .
-                        "<p>Hello " . htmlspecialchars($name, ENT_QUOTES) . ",</p>" .
-                        "<p>Your DarkHorse Login has been successfully created. You can go to <a href=\"https://app.darkhorsespreader.com\">app.darkhorsespreader.com</a> to access your employee portal.</p>" .
-                        "<p><strong>email:</strong> " . htmlspecialchars($email_input, ENT_QUOTES) . "<br/>" .
-                        "<strong>password:</strong> " . htmlspecialchars($plainPassword, ENT_QUOTES) . "</p>" .
-                        "<p><strong>Once you login to your account, please go ahead and change your password by navigating to Account Settings on the top right corner of the portal.</strong></p>" .
-                        "<p>Thanks,<br/>" . htmlspecialchars($creator, ENT_QUOTES) . "</p>" .
-                        "</div>";
+                        $html = "<div style=\"font-family:Arial,sans-serif;color:#333;line-height:1.6;\">" .
+                            "<p>Hello " . htmlspecialchars($name, ENT_QUOTES) . ",</p>" .
+                            "<p>Your DarkHorse Login has been successfully created. You can go to <a href=\"https://app.darkhorsespreader.com\">app.darkhorsespreader.com</a> to access your employee portal.</p>" .
+                            "<p><strong>email:</strong> " . htmlspecialchars($email_input, ENT_QUOTES) . "<br/>" .
+                            "<strong>password:</strong> " . htmlspecialchars($plainPassword, ENT_QUOTES) . "</p>" .
+                            "<p><strong>Once you login to your account, please go ahead and change your password by navigating to Account Settings on the top right corner of the portal.</strong></p>" .
+                            "<p>Thanks,<br/>" . htmlspecialchars($creator, ENT_QUOTES) . "</p>" .
+                            "</div>";
 
-                    // Load mailer helper (reuse the same candidate list as the cron script)
-                    $mailerCandidates = [
-                        __DIR__ . '/../auth/mailjet_helper.php',
-                        __DIR__ . '/../partials/mailer.php',
-                        __DIR__ . '/../partials/mailer_helper.php',
-                        __DIR__ . '/../config/email_config.php'
-                    ];
-                    foreach ($mailerCandidates as $cand) {
-                        if (file_exists($cand)) { require_once $cand; break; }
-                    }
+                        // Load mailer helper (reuse the same candidate list as the cron script)
+                        $mailerCandidates = [
+                            __DIR__ . '/../auth/mailjet_helper.php',
+                            __DIR__ . '/../partials/mailer.php',
+                            __DIR__ . '/../partials/mailer_helper.php',
+                            __DIR__ . '/../config/email_config.php'
+                        ];
+                        foreach ($mailerCandidates as $cand) {
+                            if (file_exists($cand)) { require_once $cand; break; }
+                        }
 
-                    // Normalize to sendMail($to,$subject,$text,$html) if possible
-                    if (!function_exists('sendMail')) {
-                        if (function_exists('send_mailjet')) {
-                            function sendMail($to, $subject, $text, $html) { return send_mailjet($to, $subject, $text, $html); }
-                        } elseif (function_exists('sendMailjet')) {
-                            function sendMail($to, $subject, $text, $html) { return sendMailjet($to, $subject, $text, $html); }
-                        } elseif (function_exists('send_email')) {
-                            function sendMail($to, $subject, $text, $html) { return send_email($to, $subject, $text, $html); }
-                        } elseif (function_exists('sendEmail')) {
-                            function sendMail($to, $subject, $text, $html) { $ok = sendEmail($to, $subject, $html, true); return $ok ? ['success'=>true] : ['success'=>false,'error'=>'sendEmail failed']; }
-                        } else {
-                            // Fallback to PHP mail()
-                            function sendMail($to, $subject, $text, $html) {
-                                $headers = "MIME-Version: 1.0\r\n" .
-                                    "Content-type:text/html;charset=UTF-8\r\n";
-                                $from = isset($_SESSION['email']) && $_SESSION['email'] ? $_SESSION['email'] : 'no-reply@darkhorsespreader.com';
-                                $headers .= 'From: ' . (isset($_SESSION['name'])?$_SESSION['name']:'Admin') . " <" . $from . ">\r\n";
-                                $sent = @mail($to, $subject, $html, $headers);
-                                return $sent ? ['success'=>true] : ['success'=>false,'error'=>'php-mail-failed'];
+                        // Normalize to sendMail($to,$subject,$text,$html) if possible
+                        if (!function_exists('sendMail')) {
+                            if (function_exists('send_mailjet')) {
+                                function sendMail($to, $subject, $text, $html) { return send_mailjet($to, $subject, $text, $html); }
+                            } elseif (function_exists('sendMailjet')) {
+                                function sendMail($to, $subject, $text, $html) { return sendMailjet($to, $subject, $text, $html); }
+                            } elseif (function_exists('send_email')) {
+                                function sendMail($to, $subject, $text, $html) { return send_email($to, $subject, $text, $html); }
+                            } elseif (function_exists('sendEmail')) {
+                                function sendMail($to, $subject, $text, $html) { $ok = sendEmail($to, $subject, $html, true); return $ok ? ['success'=>true] : ['success'=>false,'error'=>'sendEmail failed']; }
+                            } else {
+                                // Fallback to PHP mail()
+                                function sendMail($to, $subject, $text, $html) {
+                                    $headers = "MIME-Version: 1.0\r\n" .
+                                        "Content-type:text/html;charset=UTF-8\r\n";
+                                    $from = isset($_SESSION['email']) && $_SESSION['email'] ? $_SESSION['email'] : 'no-reply@darkhorsespreader.com';
+                                    $headers .= 'From: ' . (isset($_SESSION['name'])?$_SESSION['name']:'Admin') . " <" . $from . ">\r\n";
+                                    $sent = @mail($to, $subject, $html, $headers);
+                                    return $sent ? ['success'=>true] : ['success'=>false,'error'=>'php-mail-failed'];
+                                }
                             }
                         }
-                    }
 
-                    $sent = sendMail($to, $subject, $text, $html);
+                        $sent = sendMail($to, $subject, $text, $html);
 
-                    $mailOk = false;
-                    if (is_array($sent)) {
-                        $mailOk = !empty($sent['success']);
-                    } elseif (is_bool($sent)) {
-                        $mailOk = $sent;
-                    }
+                        $mailOk = false;
+                        if (is_array($sent)) {
+                            $mailOk = !empty($sent['success']);
+                        } elseif (is_bool($sent)) {
+                            $mailOk = $sent;
+                        }
 
-                    if ($mailOk) {
-                        $success = "User registration successful.<br/>An email with login credentials has been sent to the user";
-                    } else {
-                        $success = "User registration successful.<br/>Email delivery failed — user created but notification email was not sent.";
+                        if ($mailOk) {
+                            $success = "User registration successful.<br/>An email with login credentials has been sent to the user";
+                        } else {
+                            $success = "User registration successful.<br/>Email delivery failed — user created but notification email was not sent.";
+                        }
+                    } catch (Throwable $ex) {
+                        $success = "User registration successful.<br/>User created; email not sent.";
                     }
-                } catch (Throwable $ex) {
-                    $success = "User registration successful.<br/>User created; email not sent.";
                 }
             } else {
                 $error = "Error registering user: " . $conn->error;
             }
         }
-
         if (isset($check_stmt) && $check_stmt) $check_stmt->close();
     }
 }
@@ -200,15 +217,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="admin-page">
     <div class="admin-container">
     <?php include __DIR__ . '/../partials/portalheader.php'; ?>
-    <?php // Dev preview mode removed ?>
+    
+  
 
         <div class="admin-layout">
             <?php include __DIR__ . '/../partials/sidebar.php'; ?>
 
             <main class="content-area">
                 <div class="register-container">
-                    <a href="../pages/dashboard/" class="back-btn">Back to Dashboard</a>
                     <h1>Register New User</h1>
+                    <div class="non-user-top" style="margin:18px 0 6px 0;padding:12px 14px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;text-align:center;font-weight:600;">
+                        <label style="cursor:pointer;"><input type="checkbox" id="nonUserTopCheckbox" <?php echo (!empty($old['non_user']) || (isset($_POST['non_user_employee']) && $_POST['non_user_employee'])) ? 'checked' : ''; ?> style="margin-right:8px;transform:scale(1.05);"> Non-user employee (no login)</label>
+                        <div class="hint" style="font-weight:400;margin-top:6px;">If checked, no email or password is required; only name and role will be saved.</div>
+                    </div>
                     
                     <?php if (isset($error)): ?>
                         <div class="error"><?php echo $error; ?></div>
@@ -226,11 +247,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="form-group">
                             <label for="email">Email:</label>
-                            <input type="email" id="email" name="email" required value="<?php echo $old['email'] ?? ''; ?>">
-                            <small class="hint">We'll email the user their credentials</small>
+                            <div class="email-fields">
+                                <input type="email" id="email" name="email" required value="<?php echo $old['email'] ?? ''; ?>">
+                                <small class="hint">We'll email the user their credentials</small>
+                            </div>
                         </div>
 
-                        <div class="form-group" style="position:relative;">
+                        <input type="hidden" id="nonUserHidden" name="non_user_employee" value="<?php echo (!empty($old['non_user']) ? '1' : '0'); ?>">
+
+                        <div id="passwordSection" class="form-group" style="position:relative;">
                             <label>Password:</label>
                             <input type="hidden" id="passwordHidden" name="password" />
                             <button type="button" id="generatePasswordBtn" class="add-user-btn" style="margin-bottom:6px;">Auto Generate Password</button>
@@ -257,7 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </select>
                         </div>
 
-                        <button type="submit" class="add-user-btn">Register User</button>
+                        <button type="submit" id="submitBtn" class="add-user-btn">Register User</button>
                     </form>
                 </div>
             </main>
@@ -277,6 +302,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Client-side validation and password toggle keep working below
         var form = document.getElementById('registerForm');
         var email = document.getElementById('email');
+        var nonUserCheckbox = document.getElementById('nonUserTopCheckbox');
+        var nonUserHidden = document.getElementById('nonUserHidden');
+        var passwordSection = document.getElementById('passwordSection');
     var passwordHidden = document.getElementById('passwordHidden');
     var generateBtn = document.getElementById('generatePasswordBtn');
     var generatedWrap = document.getElementById('generatedPasswordWrap');
@@ -291,19 +319,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             successMsg.style.fontWeight = '700';
         }
 
+        // initialize visibility based on checkbox
+        var heading = document.querySelector('.register-container h1');
+        var submitBtn = document.getElementById('submitBtn');
+        function updateVisibility() {
+            var checked = nonUserCheckbox && nonUserCheckbox.checked;
+            var emailGroup = email ? email.closest('.form-group') : null;
+            var emailFields = document.querySelector('.email-fields');
+            if (checked) {
+                if (emailGroup) emailGroup.style.display = 'none';
+                if (emailFields) emailFields.style.display = 'none';
+                if (passwordSection) passwordSection.style.display = 'none';
+                if (heading) heading.textContent = 'Register New Employee';
+                if (submitBtn) submitBtn.textContent = 'Register Employee';
+                if (nonUserHidden) nonUserHidden.value = '1';
+            } else {
+                if (emailGroup) emailGroup.style.display = '';
+                if (emailFields) emailFields.style.display = '';
+                if (passwordSection) passwordSection.style.display = '';
+                if (heading) heading.textContent = 'Register New User';
+                if (submitBtn) submitBtn.textContent = 'Register User';
+                if (nonUserHidden) nonUserHidden.value = '0';
+            }
+        }
+        if (nonUserCheckbox) {
+            nonUserCheckbox.addEventListener('change', function(){
+                updateVisibility();
+            });
+            updateVisibility();
+        }
+
         form.addEventListener('submit', function(e){
             var errors = [];
-            var emailVal = email.value.trim();
+            var emailVal = email ? email.value.trim() : '';
             var pwdVal = passwordHidden.value;
+            var nonUser = nonUserCheckbox && nonUserCheckbox.checked;
 
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-                errors.push('Please enter a valid email address.');
-            }
+            if (!nonUser) {
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                    errors.push('Please enter a valid email address.');
+                }
 
-            if (!pwdVal) {
-                errors.push('Please generate a password before registering.');
-            } else if (pwdVal.length < 8 || !/[0-9]/.test(pwdVal) || !/[A-Z]/.test(pwdVal) || !/[!@#$%^&*()_+\-=[\]{};:'"\\|,.<>\/\?]/.test(pwdVal)) {
-                errors.push('Generated password does not meet requirements. Please regenerate.');
+                if (!pwdVal) {
+                    errors.push('Please generate a password before registering.');
+                } else if (pwdVal.length < 8 || !/[0-9]/.test(pwdVal) || !/[A-Z]/.test(pwdVal) || !/[!@#$%^&*()_+\-=[\]{};:'"\\|,.<>\/\?]/.test(pwdVal)) {
+                    errors.push('Generated password does not meet requirements. Please regenerate.');
+                }
             }
 
             if (errors.length) {
