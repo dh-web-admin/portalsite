@@ -499,7 +499,7 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
             <main class="content-area">
                 <div class="main-content">
                     <h1>Permissions Management</h1>
-                    <div class="perm-help">Control page access and editing privileges for each employee in your organization.</div>
+                    <div class="perm-help">Control page access and editing privileges for each employee .</div>
 
                     <table class="user-table" id="permUserTable">
                         <thead>
