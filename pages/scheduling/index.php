@@ -820,7 +820,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
 
         <label for="project_details" style="margin-top:8px; display:block;">
           <span style="display:block; font-size:0.95em; margin-bottom:6px;">Details</span>
-          <textarea id="project_details" name="project_details" placeholder="Project details (shared)" style="width:100%; padding:8px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box; min-height:80px;"></textarea>
+          <textarea id="project_details" name="project_details" placeholder="Project details " style="width:100%; padding:8px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box; min-height:80px;"></textarea>
         </label>
 
         <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
@@ -854,7 +854,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         </div>
           <div class="meta-row">
             <span class="meta-label">Details</span>
-            <span class="meta-value"><textarea id="viewProjectDetails" placeholder="Project details (shared)" style="width:100%; max-width:420px; min-height:80px; padding:8px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box;"></textarea></span>
+            <span class="meta-value"><textarea id="viewProjectDetails" placeholder="Project details" style="width:100%; max-width:420px; min-height:80px; padding:8px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box;"></textarea></span>
           </div>
       </div>
 
