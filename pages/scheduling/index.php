@@ -32,6 +32,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS scheduled_projects (
   `end` DATETIME NOT NULL,
   exclude_weekends TINYINT(1) NOT NULL DEFAULT 0,
   location VARCHAR(255) DEFAULT ''
+  ,details TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 $conn->query('CREATE TABLE IF NOT EXISTS scheduled_project_details (
@@ -70,6 +71,11 @@ if (!isset($projectColumns['exclude_weekends'])) {
 if (!isset($projectColumns['location'])) {
   $conn->query("ALTER TABLE scheduled_projects ADD COLUMN location VARCHAR(255) DEFAULT ''");
   $projectColumns['location'] = true;
+}
+// Ensure details column exists for older schemas
+if (!isset($projectColumns['details'])) {
+  $conn->query("ALTER TABLE scheduled_projects ADD COLUMN details TEXT NULL");
+  $projectColumns['details'] = true;
 }
 
 // If the table existed previously without a `day` column, add it and migrate existing rows
@@ -400,6 +406,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   header('Content-Type: application/json; charset=utf-8');
   $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : 0;
   $location = isset($_POST['location']) ? trim((string)$_POST['location']) : '';
+  $details = isset($_POST['details']) ? trim((string)$_POST['details']) : '';
   if ($projectId <= 0) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid project id']);
@@ -407,9 +414,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   }
 
   try {
-    $up = $conn->prepare('UPDATE scheduled_projects SET location = ? WHERE project_id = ? LIMIT 1');
+    $up = $conn->prepare('UPDATE scheduled_projects SET location = ?, details = ? WHERE project_id = ? LIMIT 1');
     if (!$up) throw new Exception('Unable to prepare update');
-    $up->bind_param('si', $location, $projectId);
+    $up->bind_param('ssi', $location, $details, $projectId);
     $up->execute();
     $ok = $up->affected_rows >= 0; // 0 may mean no change but request succeeded
     $up->close();
@@ -419,7 +426,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       exit();
     }
 
-    echo json_encode(['success' => true, 'location' => $location]);
+    echo json_encode(['success' => true, 'location' => $location, 'details' => $details]);
     exit();
   } catch (Throwable $e) {
     http_response_code(500);
@@ -462,13 +469,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $conn->begin_transaction();
     try {
-      $projectStmt = $conn->prepare('INSERT INTO scheduled_projects (project_name, ' . $startColumnSql . ', ' . $endColumnSql . ', exclude_weekends, location) VALUES (?, ?, ?, ?, ?)');
+      $projectStmt = $conn->prepare('INSERT INTO scheduled_projects (project_name, ' . $startColumnSql . ', ' . $endColumnSql . ', exclude_weekends, location, details) VALUES (?, ?, ?, ?, ?, ?)');
       if (!$projectStmt) {
         throw new Exception('Unable to prepare project insert.');
       }
       $excludeWeekendsInsert = isset($_POST['exclude_weekends']) && ($_POST['exclude_weekends'] === '1' || $_POST['exclude_weekends'] === 'on' || $_POST['exclude_weekends'] == true) ? 1 : 0;
       $locationInsert = trim((string)($_POST['project_location'] ?? ''));
-      $projectStmt->bind_param('sssis', $projectName, $startDb, $endDb, $excludeWeekendsInsert, $locationInsert);
+      $detailsInsert = trim((string)($_POST['project_details'] ?? ''));
+      $projectStmt->bind_param('sssiss', $projectName, $startDb, $endDb, $excludeWeekendsInsert, $locationInsert, $detailsInsert);
       if (!$projectStmt->execute()) {
         throw new Exception('Unable to save project.');
       }
@@ -552,7 +560,7 @@ if ($eqStmt) {
 }
 
 $scheduledProjects = [];
-$projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel, COALESCE(sp.exclude_weekends, 0) AS exclude_weekends, COALESCE(sp.location, "") AS location FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id AND spd.`day` = DATE(sp.' . $startColumnSql . ') ORDER BY sp.' . $startColumnSql . ' ASC';
+ $projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel, COALESCE(sp.exclude_weekends, 0) AS exclude_weekends, COALESCE(sp.location, "") AS location, COALESCE(sp.details, "") AS details FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id AND spd.`day` = DATE(sp.' . $startColumnSql . ') ORDER BY sp.' . $startColumnSql . ' ASC';
 $projectsRes = $conn->query($projectsSql);
 if ($projectsRes) {
   while ($row = $projectsRes->fetch_assoc()) {
@@ -805,6 +813,16 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         <label for="project_end_date">End Date</label>
         <input id="project_end_date" name="project_end_date" type="date" required />
 
+        <label for="project_location" style="margin-top:8px; display:block;">
+          <span style="display:block; font-size:0.95em; margin-bottom:6px;">Location</span>
+          <input id="project_location" name="project_location" type="text" placeholder="Project location " style="width:100%; padding:8px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box;" />
+        </label>
+
+        <label for="project_details" style="margin-top:8px; display:block;">
+          <span style="display:block; font-size:0.95em; margin-bottom:6px;">Details</span>
+          <textarea id="project_details" name="project_details" placeholder="Project details (shared)" style="width:100%; padding:8px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box; min-height:80px;"></textarea>
+        </label>
+
         <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
           <input id="exclude_weekends" name="exclude_weekends" type="checkbox" value="1" checked />
           <span style="font-size:0.95em;">Exclude weekends (skip Saturdays & Sundays)</span>
@@ -834,6 +852,10 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           <span class="meta-label">Location</span>
           <span class="meta-value"><input id="viewProjectLocation" type="text" placeholder="Project location" style="width:260px;padding:6px;border-radius:6px;border:1px solid #d1d5db;" /></span>
         </div>
+          <div class="meta-row">
+            <span class="meta-label">Details</span>
+            <span class="meta-value"><textarea id="viewProjectDetails" placeholder="Project details (shared)" style="width:100%; max-width:420px; min-height:80px; padding:8px; border-radius:6px; border:1px solid #d1d5db; box-sizing:border-box;"></textarea></span>
+          </div>
       </div>
 
       <div class="project-view-grid">
@@ -1124,11 +1146,12 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         });
       }
 
-      function updateProjectMeta(projectId, location) {
+      function updateProjectMeta(projectId, location, details) {
         var params = new URLSearchParams();
         params.set('action', 'update_project_meta');
         params.set('project_id', String(projectId));
         params.set('location', String(location || ''));
+        params.set('details', String(details || ''));
 
         return fetch(window.location.pathname, {
           method: 'POST',
@@ -1312,6 +1335,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       var viewProjectPersonnel = document.getElementById('viewProjectPersonnel');
       var viewProjectEquipments = document.getElementById('viewProjectEquipments');
       var viewProjectLocation = document.getElementById('viewProjectLocation');
+      var viewProjectDetails = document.getElementById('viewProjectDetails');
       var saveProjectMetaBtn = document.getElementById('saveProjectMetaBtn');
       var decisionModal = document.getElementById('decisionModal');
       var decisionModalTitle = document.getElementById('decisionModalTitle');
@@ -1647,10 +1671,13 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         var personnels = pd ? (pd.personnel || '') : (project.personnel || '');
         var equipments = pd ? (pd.equipments || '') : (project.equipments || '');
 
-        // set shared project location
+        // set shared project location & details
         try {
           if (viewProjectLocation) {
             viewProjectLocation.value = String(project.location || '');
+          }
+          if (viewProjectDetails) {
+            viewProjectDetails.value = String(project.details || '');
           }
         } catch (e) {}
 
@@ -2303,9 +2330,11 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         saveProjectMetaBtn.addEventListener('click', function(){
           if (!activeViewProjectId) return;
           var val = '';
+          var detailsVal = '';
           try { val = String(viewProjectLocation.value || '').trim(); } catch (e) { val = ''; }
+          try { detailsVal = String(viewProjectDetails.value || '').trim(); } catch (e) { detailsVal = ''; }
           saveProjectMetaBtn.disabled = true;
-          updateProjectMeta(activeViewProjectId, val).then(function(result){
+          updateProjectMeta(activeViewProjectId, val, detailsVal).then(function(result){
             if (!result.ok || !result.data || !result.data.success) {
               throw new Error('Save failed');
             }
@@ -2314,17 +2343,19 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
               var proj = projectById[String(activeViewProjectId)];
               if (proj) {
                 proj.location = String(result.data.location || '');
+                proj.details = String(result.data.details || '');
               }
               for (var i = 0; i < scheduledProjects.length; i++) {
                 if (Number(scheduledProjects[i].project_id) === Number(activeViewProjectId)) {
                   scheduledProjects[i].location = String(result.data.location || '');
+                  scheduledProjects[i].details = String(result.data.details || '');
                 }
               }
-              showInfoModal('Saved', 'Project location saved.');
+              showInfoModal('Saved', 'Project saved.');
               if (typeof rerenderProjects === 'function') rerenderProjects();
             } catch (e) {}
           }).catch(function(){
-            showInfoModal('Unable To Save', 'Unable to save project location.');
+            showInfoModal('Unable To Save', 'Unable to save project.');
           }).finally(function(){
             saveProjectMetaBtn.disabled = false;
           });
