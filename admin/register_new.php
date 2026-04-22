@@ -90,11 +90,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $check_sql = "SELECT id FROM users WHERE email = ? LIMIT 1";
             $check_stmt = $conn->prepare($check_sql);
             $check_stmt->bind_param('s', $email_input);
-            $check_stmt->execute();
-            $check_result = $check_stmt->get_result();
-
-            if ($check_result && $check_result->num_rows > 0) {
-                $error = "Email already exists";
+            try {
+                $check_stmt->execute();
+                $check_result = $check_stmt->get_result();
+                if ($check_result && $check_result->num_rows > 0) {
+                    $error = "Email already exists";
+                }
+            } catch (mysqli_sql_exception $dbex) {
+                error_log('register_new.php email check DB error: ' . $dbex->getMessage());
+                $error = "Database error while validating email";
             }
         }
 
@@ -112,7 +116,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param("ssss", $name, $email_input, $hashed_password, $role);
             }
 
-            if ($stmt->execute()) {
+            try {
+                $execOk = $stmt->execute();
+            } catch (mysqli_sql_exception $dbex) {
+                error_log('register_new.php insert DB error: ' . $dbex->getMessage());
+                $execOk = false;
+                $error = "Error registering user: database error";
+            }
+
+            if ($execOk) {
                 // clear old values on success
                 $old = ['name'=>'','email'=>'','role'=>''];
                 if ($non_user) {
