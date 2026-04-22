@@ -104,8 +104,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($error)) {
             if ($non_user) {
-                // Insert a non-user employee (no email/password)
-                $sql = "INSERT INTO users (name, role) VALUES (?, ?)";
+                // Insert a non-user employee (no email/password). Some production DBs
+                // run in strict mode and require a value for the `password` column.
+                // Provide an explicit NULL for password to avoid "Field 'password' doesn't have a default value" errors.
+                $sql = "INSERT INTO users (name, role, password) VALUES (?, ?, NULL)";
                 $stmt = $conn->prepare($sql);
                 $stmt->bind_param("ss", $name, $role);
             } else {
