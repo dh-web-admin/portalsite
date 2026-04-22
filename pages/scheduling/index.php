@@ -25,12 +25,14 @@ if (!can_access($role, 'scheduling')) {
 
 $formError = '';
 
-$conn->query('CREATE TABLE IF NOT EXISTS scheduled_projects (
+$conn->query("CREATE TABLE IF NOT EXISTS scheduled_projects (
   project_id INT AUTO_INCREMENT PRIMARY KEY,
   project_name VARCHAR(255) NOT NULL,
   `start` DATETIME NOT NULL,
-  `end` DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+  `end` DATETIME NOT NULL,
+  exclude_weekends TINYINT(1) NOT NULL DEFAULT 0,
+  location VARCHAR(255) DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 $conn->query('CREATE TABLE IF NOT EXISTS scheduled_project_details (
   project_id INT NOT NULL,
@@ -58,6 +60,16 @@ if (!isset($projectColumns['start']) && isset($projectColumns['start_datetime'])
 }
 if (!isset($projectColumns['end']) && isset($projectColumns['end_datetime'])) {
   $endColumnSql = '`end_datetime`';
+}
+// Ensure exclude_weekends column exists for older schemas
+if (!isset($projectColumns['exclude_weekends'])) {
+  $conn->query("ALTER TABLE scheduled_projects ADD COLUMN exclude_weekends TINYINT(1) NOT NULL DEFAULT 0");
+  $projectColumns['exclude_weekends'] = true;
+}
+// Ensure location column exists for older schemas
+if (!isset($projectColumns['location'])) {
+  $conn->query("ALTER TABLE scheduled_projects ADD COLUMN location VARCHAR(255) DEFAULT ''");
+  $projectColumns['location'] = true;
 }
 
 // If the table existed previously without a `day` column, add it and migrate existing rows
@@ -340,6 +352,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   }
 }
 
+// Delete a single scheduled_project_details row for a project on a specific day
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_project_day') {
+  header('Content-Type: application/json; charset=utf-8');
+  $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : 0;
+  $day = isset($_POST['day']) ? trim((string)$_POST['day']) : '';
+  if ($projectId <= 0 || $day === '') {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
+    exit();
+  }
+
+  // basic YYYY-MM-DD validation
+  if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid date']);
+    exit();
+  }
+
+  try {
+    $delStmt = $conn->prepare('DELETE FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
+    if (!$delStmt) {
+      throw new Exception('Unable to prepare delete');
+    }
+    $delStmt->bind_param('is', $projectId, $day);
+    $delStmt->execute();
+    $deleted = $delStmt->affected_rows > 0;
+    $delStmt->close();
+
+    if (!$deleted) {
+      http_response_code(404);
+      echo json_encode(['success' => false, 'message' => 'Day not found']);
+      exit();
+    }
+
+    echo json_encode(['success' => true]);
+    exit();
+  } catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Unable to delete day']);
+    exit();
+  }
+}
+
+// Update project meta (location shared across all days)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_project_meta') {
+  header('Content-Type: application/json; charset=utf-8');
+  $projectId = isset($_POST['project_id']) ? (int)$_POST['project_id'] : 0;
+  $location = isset($_POST['location']) ? trim((string)$_POST['location']) : '';
+  if ($projectId <= 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Invalid project id']);
+    exit();
+  }
+
+  try {
+    $up = $conn->prepare('UPDATE scheduled_projects SET location = ? WHERE project_id = ? LIMIT 1');
+    if (!$up) throw new Exception('Unable to prepare update');
+    $up->bind_param('si', $location, $projectId);
+    $up->execute();
+    $ok = $up->affected_rows >= 0; // 0 may mean no change but request succeeded
+    $up->close();
+    if (!$ok) {
+      http_response_code(500);
+      echo json_encode(['success' => false, 'message' => 'Unable to update']);
+      exit();
+    }
+
+    echo json_encode(['success' => true, 'location' => $location]);
+    exit();
+  } catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Unable to update project']);
+    exit();
+  }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_scheduled_project') {
   $projectName = trim($_POST['project_name'] ?? '');
   $startDateRaw = trim($_POST['project_start_date'] ?? '');
@@ -374,11 +462,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $conn->begin_transaction();
     try {
-      $projectStmt = $conn->prepare('INSERT INTO scheduled_projects (project_name, ' . $startColumnSql . ', ' . $endColumnSql . ') VALUES (?, ?, ?)');
+      $projectStmt = $conn->prepare('INSERT INTO scheduled_projects (project_name, ' . $startColumnSql . ', ' . $endColumnSql . ', exclude_weekends, location) VALUES (?, ?, ?, ?, ?)');
       if (!$projectStmt) {
         throw new Exception('Unable to prepare project insert.');
       }
-      $projectStmt->bind_param('sss', $projectName, $startDb, $endDb);
+      $excludeWeekendsInsert = isset($_POST['exclude_weekends']) && ($_POST['exclude_weekends'] === '1' || $_POST['exclude_weekends'] === 'on' || $_POST['exclude_weekends'] == true) ? 1 : 0;
+      $locationInsert = trim((string)($_POST['project_location'] ?? ''));
+      $projectStmt->bind_param('sssis', $projectName, $startDb, $endDb, $excludeWeekendsInsert, $locationInsert);
       if (!$projectStmt->execute()) {
         throw new Exception('Unable to save project.');
       }
@@ -392,10 +482,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       if (!$detailsStmt) {
         throw new Exception('Unable to prepare project details insert.');
       }
+      $excludeWeekends = isset($_POST['exclude_weekends']) && ($_POST['exclude_weekends'] === '1' || $_POST['exclude_weekends'] === 'on' || $_POST['exclude_weekends'] == true);
       $current = strtotime($startDateOnly);
       $endDay = strtotime($endDateOnly);
       while ($current <= $endDay) {
         $dayStr = date('Y-m-d', $current);
+        // if excluding weekends and this day is Saturday(6) or Sunday(7), skip
+        if ($excludeWeekends) {
+          $dow = (int)date('N', strtotime($dayStr));
+          if ($dow >= 6) { // 6 = Saturday, 7 = Sunday
+            $current = strtotime('+1 day', $current);
+            continue;
+          }
+        }
         $detailsStmt->bind_param('is', $projectId, $dayStr);
         if (!$detailsStmt->execute()) {
           throw new Exception('Unable to save project details for ' . $dayStr);
@@ -453,7 +552,7 @@ if ($eqStmt) {
 }
 
 $scheduledProjects = [];
-$projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id AND spd.`day` = DATE(sp.' . $startColumnSql . ') ORDER BY sp.' . $startColumnSql . ' ASC';
+$projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel, COALESCE(sp.exclude_weekends, 0) AS exclude_weekends, COALESCE(sp.location, "") AS location FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id AND spd.`day` = DATE(sp.' . $startColumnSql . ') ORDER BY sp.' . $startColumnSql . ' ASC';
 $projectsRes = $conn->query($projectsSql);
 if ($projectsRes) {
   while ($row = $projectsRes->fetch_assoc()) {
@@ -537,6 +636,24 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
     .modal-warning-wrap { text-align:center; }
     .modal-warning-row { display:flex; align-items:center; gap:12px; justify-content:center; }
     .modal-warning-text { font-weight:600; }
+  </style>
+  <style>
+    /* Show tile delete button only on hover */
+    .project-tile { position: relative; }
+    .tile-delete-day {
+      opacity: 0;
+      transition: opacity 140ms ease, transform 140ms ease;
+      transform: translateY(-4px);
+      pointer-events: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .project-tile:hover .tile-delete-day,
+    .project-tile:focus-within .tile-delete-day {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .tile-delete-day:focus { outline: 2px solid rgba(255,255,255,0.15); }
   </style>
 </head>
 <body class="admin-page scheduling-page">
@@ -688,6 +805,11 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         <label for="project_end_date">End Date</label>
         <input id="project_end_date" name="project_end_date" type="date" required />
 
+        <label style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+          <input id="exclude_weekends" name="exclude_weekends" type="checkbox" value="1" checked />
+          <span style="font-size:0.95em;">Exclude weekends (skip Saturdays & Sundays)</span>
+        </label>
+
         <div class="project-form-actions">
           <button type="button" class="secondary-btn" id="cancelAddProjectModal">Cancel</button>
           <button type="submit" class="primary-btn">Save Project</button>
@@ -708,6 +830,10 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           <span class="meta-label">Dates</span>
           <span class="meta-value" id="viewProjectDates">-</span>
         </div>
+        <div class="meta-row">
+          <span class="meta-label">Location</span>
+          <span class="meta-value"><input id="viewProjectLocation" type="text" placeholder="Project location" style="width:260px;padding:6px;border-radius:6px;border:1px solid #d1d5db;" /></span>
+        </div>
       </div>
 
       <div class="project-view-grid">
@@ -725,6 +851,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       <p class="project-view-helper">Drag crew members or equipment from the left rail and drop on project tiles to assign.</p>
 
       <div class="project-view-actions">
+        <button type="button" class="primary-btn" id="saveProjectMetaBtn" style="margin-right:8px;">Save</button>
         <button type="button" class="danger-btn" id="deleteProjectBtn">Delete Project</button>
         <button type="button" class="secondary-btn" id="closeProjectViewBtn">Close</button>
       </div>
@@ -978,6 +1105,43 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         });
       }
 
+      // Delete a single day for a project
+      function deleteProjectDay(projectId, day) {
+        var params = new URLSearchParams();
+        params.set('action', 'delete_project_day');
+        params.set('project_id', String(projectId));
+        params.set('day', String(day));
+
+        return fetch(window.location.pathname, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: params.toString()
+        }).then(function(res){
+          return res.json().then(function(data){ return { ok: res.ok, data: data }; });
+        });
+      }
+
+      function updateProjectMeta(projectId, location) {
+        var params = new URLSearchParams();
+        params.set('action', 'update_project_meta');
+        params.set('project_id', String(projectId));
+        params.set('location', String(location || ''));
+
+        return fetch(window.location.pathname, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: params.toString()
+        }).then(function(res){
+          return res.json().then(function(data){ return { ok: res.ok, data: data }; });
+        });
+      }
+
       function parseDateTime(value) {
         if (!value || typeof value !== 'string') {
           return null;
@@ -1147,6 +1311,8 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       var viewProjectDates = document.getElementById('viewProjectDates');
       var viewProjectPersonnel = document.getElementById('viewProjectPersonnel');
       var viewProjectEquipments = document.getElementById('viewProjectEquipments');
+      var viewProjectLocation = document.getElementById('viewProjectLocation');
+      var saveProjectMetaBtn = document.getElementById('saveProjectMetaBtn');
       var decisionModal = document.getElementById('decisionModal');
       var decisionModalTitle = document.getElementById('decisionModalTitle');
       var decisionModalMessage = document.getElementById('decisionModalMessage');
@@ -1481,6 +1647,13 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         var personnels = pd ? (pd.personnel || '') : (project.personnel || '');
         var equipments = pd ? (pd.equipments || '') : (project.equipments || '');
 
+        // set shared project location
+        try {
+          if (viewProjectLocation) {
+            viewProjectLocation.value = String(project.location || '');
+          }
+        } catch (e) {}
+
         renderViewChips(viewProjectPersonnel, parseCsvList(personnels), 'personnel');
         renderViewChips(viewProjectEquipments, parseCsvList(equipments), 'equipments');
 
@@ -1770,6 +1943,55 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
             openProjectViewModal(project, dayKey);
           });
 
+          // Add a small delete button to remove this project-day
+          try {
+            tile.style.position = tile.style.position || 'relative';
+            var delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'tile-delete-day';
+            delBtn.title = 'Delete this day';
+            delBtn.innerHTML = '&#x2715;';
+            delBtn.style.position = 'absolute';
+            delBtn.style.top = '6px';
+            delBtn.style.right = '8px';
+            delBtn.style.background = 'transparent';
+            delBtn.style.border = 'none';
+            delBtn.style.color = 'rgba(255,255,255,0.95)';
+            delBtn.style.fontSize = '14px';
+            delBtn.style.lineHeight = '1';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.padding = '0';
+            
+            delBtn.setAttribute('aria-label', 'Delete this day');
+
+            delBtn.addEventListener('click', function(e){
+              e.stopPropagation();
+              var dayKey = tile.dataset.day || '';
+              if (!dayKey) return;
+              if (!confirm('Delete this day for the project?')) return;
+              delBtn.disabled = true;
+              deleteProjectDay(project.project_id, dayKey).then(function(result){
+                if (result && result.ok && result.data && result.data.success) {
+                  try {
+                    var key = String(project.project_id) + '|' + dayKey;
+                    if (perDayDetails.hasOwnProperty(key)) {
+                      delete perDayDetails[key];
+                    }
+                  } catch (e) {}
+                  if (typeof rerenderProjects === 'function') rerenderProjects();
+                } else {
+                  showInfoModal('Unable To Delete', (result && result.data && result.data.message) ? result.data.message : 'Unable to delete this day right now.');
+                }
+              }).catch(function(){
+                showInfoModal('Unable To Delete', 'Unable to delete this day right now.');
+              }).finally(function(){
+                delBtn.disabled = false;
+              });
+            });
+
+            tile.appendChild(delBtn);
+          } catch (e) {}
+
           weeklyDayColumns.appendChild(tile);
         }
 
@@ -1843,8 +2065,35 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
               laneEnds[laneIndex] = entry.endDayIndex;
             }
 
-            // render a tile for each day in the project's clamped range
+            // render a tile for each day in the project's clamped range (skip weekends if project excludes them)
+            function projectHasPerDayEntries(pid) {
+              for (var kk in perDayDetails) {
+                if (!Object.prototype.hasOwnProperty.call(perDayDetails, kk)) continue;
+                if (String(kk).indexOf(String(pid) + '|') === 0) return true;
+              }
+              return false;
+            }
+
+            var hasPerDayRows = projectHasPerDayEntries(entry.project.project_id);
+
             for (var d = entry.startDayIndex; d <= entry.endDayIndex; d++) {
+              try {
+                var dayDate = new Date(weekStart);
+                dayDate.setDate(weekStart.getDate() + d);
+                var isWeekend = (dayDate.getDay() === 0 || dayDate.getDay() === 6); // 0=Sun,6=Sat
+                if (entry.project && entry.project.exclude_weekends && isWeekend) {
+                  continue;
+                }
+
+                // If this project has per-day rows tracked in `perDayDetails`, only render days that still exist there.
+                if (hasPerDayRows) {
+                  var perKey = String(entry.project.project_id) + '|' + formatIsoDate(dayDate);
+                  if (!Object.prototype.hasOwnProperty.call(perDayDetails, perKey)) {
+                    // this specific day was removed server-side -> skip rendering
+                    continue;
+                  }
+                }
+              } catch (e) {}
               renderProjectTile(entry.project, d, laneIndex);
             }
           });
@@ -2048,6 +2297,38 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         if (addProjectModal) {
           addProjectModal.hidden = false;
         }
+      }
+
+      if (saveProjectMetaBtn) {
+        saveProjectMetaBtn.addEventListener('click', function(){
+          if (!activeViewProjectId) return;
+          var val = '';
+          try { val = String(viewProjectLocation.value || '').trim(); } catch (e) { val = ''; }
+          saveProjectMetaBtn.disabled = true;
+          updateProjectMeta(activeViewProjectId, val).then(function(result){
+            if (!result.ok || !result.data || !result.data.success) {
+              throw new Error('Save failed');
+            }
+            // update client-side project objects
+            try {
+              var proj = projectById[String(activeViewProjectId)];
+              if (proj) {
+                proj.location = String(result.data.location || '');
+              }
+              for (var i = 0; i < scheduledProjects.length; i++) {
+                if (Number(scheduledProjects[i].project_id) === Number(activeViewProjectId)) {
+                  scheduledProjects[i].location = String(result.data.location || '');
+                }
+              }
+              showInfoModal('Saved', 'Project location saved.');
+              if (typeof rerenderProjects === 'function') rerenderProjects();
+            } catch (e) {}
+          }).catch(function(){
+            showInfoModal('Unable To Save', 'Unable to save project location.');
+          }).finally(function(){
+            saveProjectMetaBtn.disabled = false;
+          });
+        });
       }
 
       function closeModal() {
