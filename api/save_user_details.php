@@ -39,6 +39,13 @@ if (file_exists($migrationsPath) && is_readable($migrationsPath)) {
 
 // handle file upload
 $profileUrl = null;
+// Ensure logs directory exists for diagnostics
+$logDir = __DIR__ . '/../logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+$logFile = $logDir . '/profile_uploads.log';
+
 // Handle remove request (AJAX from client)
 if (isset($_POST['remove_picture']) && $_POST['remove_picture']) {
     // fetch existing value
@@ -56,7 +63,12 @@ if (isset($_POST['remove_picture']) && $_POST['remove_picture']) {
         if (strpos($pp, $uPrefix) !== false) {
             $rel = substr($pp, strpos($pp, $uPrefix));
             $filePath = __DIR__ . '/..' . str_replace('/', DIRECTORY_SEPARATOR, $rel);
-            if (file_exists($filePath)) @unlink($filePath);
+            $removed = false;
+            if (file_exists($filePath)) {
+                $removed = @unlink($filePath) ? true : false;
+            }
+            // log removal attempt
+            @file_put_contents($logFile, date('c') . " REMOVE_ATTEMPT user_id={$user_id} path={$filePath} existed=" . (file_exists($filePath) ? '1' : '0') . " removed=" . ($removed ? '1' : '0') . "\n", FILE_APPEND | LOCK_EX);
         }
     }
 
@@ -72,6 +84,7 @@ if (isset($_POST['remove_picture']) && $_POST['remove_picture']) {
     }
 
     if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['profile_image'])) unset($_SESSION['profile_image']);
+    @file_put_contents($logFile, date('c') . " REMOVE_DB user_id={$user_id} cleared profile_picture and users.profile_image if present\n", FILE_APPEND | LOCK_EX);
     echo json_encode(['success' => true]);
     exit;
 }
@@ -103,6 +116,8 @@ if (!empty($_FILES['profile_picture']) && is_uploaded_file($_FILES['profile_pict
     if ($profileUrl === '') $profileUrl = '/uploads/profile_images/' . $filename;
     // set permissions on saved file
     @chmod($target, 0644);
+    // log upload
+    @file_put_contents($logFile, date('c') . " UPLOAD user_id={$user_id} filename={$filename} target={$target} url={$profileUrl}\n", FILE_APPEND | LOCK_EX);
 }
 
 // collect other fields
