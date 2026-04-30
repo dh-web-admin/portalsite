@@ -2900,12 +2900,14 @@ foreach ($bidColumns as $c) {
                             // Remove any hidden delete inputs so they won't be processed again
                             try { dels.forEach(function(id){ var inp = modalEl.querySelector('input[name="delete_general_contractor_ids[]"][value="' + id.replace(/"/g,'\"') + '"]'); if (inp && inp.parentNode) inp.parentNode.removeChild(inp); }); } catch(e){}
                             // Refresh GC display across the table
+                            try { gcProjectCache = {}; } catch(e){}
                             try { if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects(); } catch(e){}
-                          }).catch(function(){ try { if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects(); } catch(e){} });
+                          }).catch(function(){ try { gcProjectCache = {}; } catch(e){}; try { if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects(); } catch(e){} });
                         } catch(e) { console.warn('delete gc ids failed', e); }
                       })();
 
                       // Ensure GC display and highlights are refreshed immediately
+                      try { gcProjectCache = {}; } catch(e){}
                       if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects();
                       var pk = newBid ? (newBid.dhss_project_number || '') : '';
                       var clientSel = document.getElementById('editClientWinner');
@@ -3163,6 +3165,9 @@ foreach ($bidColumns as $c) {
           var pageSize = 50;
           var totalPages = 1;
           var refreshMultiSelectById = function(){};
+          var searchRefreshTimer = null;
+          var gcProjectCache = {};
+          var gcProjectInFlight = {};
 
           // Build last 5 years dropdown (auto updates each year)
         (function initYearOptions(){
@@ -3199,7 +3204,7 @@ foreach ($bidColumns as $c) {
               function syncSelectValues(fromEl, toEl){ try { if(!fromEl||!toEl) return; var vals = Array.from(fromEl.selectedOptions).map(function(o){return o.value;}); Array.from(toEl.options).forEach(function(opt){ opt.selected = vals.indexOf(opt.value) !== -1; }); if (!Array.from(toEl.options).some(function(o){ return o.selected; }) && toEl.options.length) toEl.options[0].selected = true; } catch(e){} }
               // Initialize selection
               syncSelectValues(yearFilterEl, yearFilterTopEl);
-              yearFilterTopEl.addEventListener('change', function(){ try { if (yearFilterEl) { syncSelectValues(yearFilterTopEl, yearFilterEl); yearFilterEl.dispatchEvent(new Event('change')); } refreshMultiSelectById('yearFilter'); saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+              yearFilterTopEl.addEventListener('change', function(){ try { if (yearFilterEl) { syncSelectValues(yearFilterTopEl, yearFilterEl); yearFilterEl.dispatchEvent(new Event('change')); } refreshMultiSelectById('yearFilter'); saveTopFiltersToSession(); } catch(e){} });
               // Keep header year select in sync when header changes
               yearFilterEl.addEventListener('change', function(){ try { if (yearFilterTopEl) syncSelectValues(yearFilterEl, yearFilterTopEl); refreshMultiSelectById('yearFilterTop'); } catch(e){} });
             }
@@ -3212,7 +3217,7 @@ foreach ($bidColumns as $c) {
               // initialize selection sync
               function syncSelectValues2(fromEl, toEl){ try { if(!fromEl||!toEl) return; var vals = Array.from(fromEl.selectedOptions).map(function(o){return o.value;}); Array.from(toEl.options).forEach(function(opt){ opt.selected = vals.indexOf(opt.value) !== -1; }); if (!Array.from(toEl.options).some(function(o){ return o.selected; }) && toEl.options.length) toEl.options[0].selected = true; } catch(e){} }
               syncSelectValues2(statusFilterEl, statusFilterTopEl);
-              statusFilterTopEl.addEventListener('change', function(){ try { if (statusFilterEl) { syncSelectValues2(statusFilterTopEl, statusFilterEl); statusFilterEl.dispatchEvent(new Event('change')); } refreshMultiSelectById('statusFilter'); saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+              statusFilterTopEl.addEventListener('change', function(){ try { if (statusFilterEl) { syncSelectValues2(statusFilterTopEl, statusFilterEl); statusFilterEl.dispatchEvent(new Event('change')); } refreshMultiSelectById('statusFilter'); saveTopFiltersToSession(); } catch(e){} });
               statusFilterEl.addEventListener('change', function(){ try { if (statusFilterTopEl) syncSelectValues2(statusFilterEl, statusFilterTopEl); refreshMultiSelectById('statusFilterTop'); } catch(e){} });
             }
           } catch(e){}
@@ -3504,7 +3509,11 @@ foreach ($bidColumns as $c) {
                 while (n && !n.hasAttribute('data-bid') && !n.classList.contains('group-spacer')) { details.push(n); n = n.nextElementSibling; }
               } catch(e) { details = []; }
               var projName = (obj.project_name || '').toString().trim();
-              return { row: r, detailRows: details, obj: obj, project: proj, project_name: projName, yearPrefix: yearPrefix, status: st, date: dateVal };
+              var searchText = '';
+              try {
+                searchText = (String(proj || '') + ' ' + String(projName || '') + ' ' + JSON.stringify(obj || {})).toLowerCase();
+              } catch(e) {}
+              return { row: r, detailRows: details, obj: obj, project: proj, project_name: projName, yearPrefix: yearPrefix, status: st, date: dateVal, search_text: searchText };
             });
           })();
 
@@ -3561,7 +3570,8 @@ function applyFiltersAndGrouping() {
       var _term = bidTrackingSearchTerm.trim().toLowerCase();
       filtered = filtered.filter(function(it){
         try {
-          var hay = (String(it.project || '') + ' ' + String(it.project_name || '') + ' ' + JSON.stringify(it.obj || {})).toLowerCase();
+          var hay = it.search_text || '';
+          if (!hay) hay = (String(it.project || '') + ' ' + String(it.project_name || '') + ' ' + JSON.stringify(it.obj || {})).toLowerCase();
           return hay.indexOf(_term) !== -1;
         } catch(e) { return false; }
       });
@@ -3790,12 +3800,19 @@ function updateFilterIndicator() {
                   applyFiltersAndGrouping();
                 } catch(e){}
               };
-              globalSearchInputEl.addEventListener('input', runSearchRefresh);
+              var runSearchRefreshDebounced = function(){
+                try {
+                  clearTimeout(searchRefreshTimer);
+                  var self = this;
+                  searchRefreshTimer = setTimeout(function(){ runSearchRefresh.call(self); }, 140);
+                } catch(e){}
+              };
+              globalSearchInputEl.addEventListener('input', runSearchRefreshDebounced);
               globalSearchInputEl.addEventListener('change', runSearchRefresh);
               globalSearchInputEl.addEventListener('search', runSearchRefresh);
               globalSearchInputEl.addEventListener('keyup', function(e){
                 try {
-                  if (e && (e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete')) runSearchRefresh.call(this);
+                  if (e && e.key === 'Enter') runSearchRefresh.call(this);
                 } catch(err){}
               });
             }
@@ -3822,6 +3839,7 @@ function populateClientWinners(projectKey, selectedValue) {
         fetch('../../api/get_general_contractors.php?dhss_project_number=' + encodeURIComponent(key), { credentials: 'same-origin' })
           .then(function(r){ return r.json(); })
           .then(function(j){
+            try { if (key) gcProjectCache[key] = j || {}; } catch(e){}
             if (j && j.success && Array.isArray(j.contractors) && j.contractors.length) {
               var seen = new Set();
               j.contractors.forEach(function(c){
@@ -3846,7 +3864,7 @@ function populateClientWinners(projectKey, selectedValue) {
                 }
               } catch(e){}
               try {
-                clientSel.onchange = function(){ try { var selOpt = clientSel.options[clientSel.selectedIndex]; var name = selOpt ? (selOpt.getAttribute('data-name') || selOpt.textContent) : ''; var id = clientSel.value || ''; if (!id) { /* clear winners for project */ fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: new FormData() }).catch(function(){}); } else { var fd = new FormData(); fd.append('id', id); fd.append('dhss_project_number', key); fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: fd }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.success) { try { loadGcList(key); applyGcWinnerHighlight(key, name); showToast && showToast('Winner updated', 'success'); } catch(e){} } else { showToast && showToast('Failed to set winner', 'error'); } }).catch(function(){ showToast && showToast('Failed to set winner', 'error'); }); } } catch(e){} };
+                clientSel.onchange = function(){ try { var selOpt = clientSel.options[clientSel.selectedIndex]; var name = selOpt ? (selOpt.getAttribute('data-name') || selOpt.textContent) : ''; var id = clientSel.value || ''; if (!id) { /* clear winners for project */ try { if (key && gcProjectCache) delete gcProjectCache[key]; } catch(e) {} fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: new FormData() }).catch(function(){}); } else { var fd = new FormData(); fd.append('id', id); fd.append('dhss_project_number', key); fetch('../../api/set_winner_general_contractor.php', { method:'POST', credentials:'same-origin', body: fd }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.success) { try { if (key && gcProjectCache) delete gcProjectCache[key]; loadGcList(key); if (typeof syncGcDisplayForProjects === 'function') syncGcDisplayForProjects(); applyGcWinnerHighlight(key, name); showToast && showToast('Winner updated', 'success'); } catch(e){} } else { showToast && showToast('Failed to set winner', 'error'); } }).catch(function(){ showToast && showToast('Failed to set winner', 'error'); }); } } catch(e){} };
               } catch(e){}
               try { applyGcWinnerHighlight(key, clientSel.options[clientSel.selectedIndex] ? (clientSel.options[clientSel.selectedIndex].getAttribute('data-name') || clientSel.options[clientSel.selectedIndex].textContent) : ''); } catch(e){}
               return;
@@ -3993,123 +4011,135 @@ function syncGcDisplayForProjects() {
       if (key === 'general_contractor' && lower.hasOwnProperty('general_contractor_name')) return lower['general_contractor_name'];
       return '';
     }
-    var projects = Array.from(new Set(rows.map(function(r){ try { var obj = JSON.parse(r.getAttribute('data-bid') || '{}') || {}; return (obj.dhss_project_number || '').toString().trim(); } catch(e) { return ''; } }).filter(function(x){ return x; })));
+    var projectRowsMap = {};
+    rows.forEach(function(r){
+      try {
+        var obj = JSON.parse(r.getAttribute('data-bid') || '{}') || {};
+        var pk = (obj.dhss_project_number || '').toString().trim();
+        if (!pk) return;
+        if (!projectRowsMap[pk]) projectRowsMap[pk] = [];
+        projectRowsMap[pk].push({ row: r, obj: obj });
+      } catch(e){}
+    });
+
+    var projects = Object.keys(projectRowsMap);
+    var headerCols = Array.from(document.querySelectorAll('#bidsTable thead th')).map(function(th){ return th.getAttribute('data-col') || ''; });
+    var clearCellKeys = ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number','general_contractor_email','gc_email','general_contractor_address','gc_address','client_win_price','is_union','winner'];
+    var cellMap = [
+      'general_contractor','gc_name','general_contractor_name',
+      'gc_number','general_contractor_number',
+      'general_contractor_email','gc_email',
+      'general_contractor_address','gc_address',
+      'client_win_price','is_union','winner'
+    ];
+
+    function renderProjectGcData(proj, payload) {
+      try {
+        var rowSet = projectRowsMap[proj] || [];
+        if (!rowSet.length) return;
+
+        var chosen = null;
+        if (payload && Array.isArray(payload.contractors) && payload.contractors.length) {
+          if (payload.contractors.length === 1) chosen = payload.contractors[0];
+          else chosen = payload.contractors.find(function(c){ return c.winner && (c.winner == 1 || c.winner === '1' || c.winner === true); }) || payload.contractors[0];
+        }
+
+        rowSet.forEach(function(item){
+          try {
+            var r = item.row;
+            var obj = item.obj || {};
+            if (chosen) {
+              cellMap.forEach(function(k){
+                try {
+                  var td = findCell(r, k);
+                  if (!td) return;
+                  var v = getGcVal(chosen, k);
+                  if ((k || '').toLowerCase() === 'winner' && v !== '') v = (v == 1 || v === '1') ? 'Yes' : 'No';
+                  td.textContent = (v || '').toString();
+                } catch(e){}
+              });
+
+              try {
+                var parentId = obj.bid_id || '';
+                var contractorsToShow = Array.isArray(payload.contractors) ? payload.contractors.slice() : [];
+                if (chosen && chosen.id) {
+                  contractorsToShow = contractorsToShow.filter(function(c){ try { return !(c && c.id && String(c.id) === String(chosen.id)); } catch(e){ return true; } });
+                }
+
+                var detailRows = [];
+                if (parentId) {
+                  detailRows = Array.from(r.parentNode.querySelectorAll('tr.gc-detail-row[data-parent-bid-id="' + parentId + '"]')) || [];
+                }
+
+                if (contractorsToShow.length > detailRows.length) {
+                  var toCreate = contractorsToShow.length - detailRows.length;
+                  for (var ci = 0; ci < toCreate; ci++) {
+                    var newTr = document.createElement('tr');
+                    newTr.className = 'gc-detail-row';
+                    if (parentId) newTr.setAttribute('data-parent-bid-id', parentId);
+                    newTr.style.background = 'rgba(249,250,251,0.6)';
+                    newTr.style.fontSize = '12px';
+                    for (var hc = 0; hc < headerCols.length; hc++) {
+                      var colKey = headerCols[hc] || '';
+                      var td = document.createElement('td');
+                      if (colKey) td.setAttribute('data-col', colKey);
+                      newTr.appendChild(td);
+                    }
+                    if (detailRows.length) {
+                      var ref = detailRows[detailRows.length - 1];
+                      ref.parentNode.insertBefore(newTr, ref.nextSibling);
+                    } else {
+                      r.parentNode.insertBefore(newTr, r.nextSibling);
+                    }
+                    detailRows.push(newTr);
+                  }
+                }
+
+                for (var di = 0; di < Math.max(detailRows.length, contractorsToShow.length); di++) {
+                  var dr = detailRows[di];
+                  var gc = contractorsToShow[di] || null;
+                  if (!dr) continue;
+                  headerCols.forEach(function(colName){
+                    try {
+                      var td = findCell(dr, colName);
+                      if (!td) return;
+                      var isGc = gcSet.has((colName || '').toString().toLowerCase());
+                      if (!isGc) return;
+                      if (!gc) { td.textContent = ''; return; }
+                      var v = getGcVal(gc, colName);
+                      if ((colName || '').toLowerCase() === 'winner' && v !== '') v = (v == 1 || v === '1') ? 'Yes' : 'No';
+                      td.textContent = (v || '').toString();
+                    } catch(e){}
+                  });
+                }
+              } catch(e) {}
+            } else {
+              clearCellKeys.forEach(function(k){
+                try { var td = findCell(r, k); if (td) td.textContent = ''; } catch(e){}
+              });
+            }
+          } catch(e){}
+        });
+      } catch(e) {}
+    }
+
     projects.forEach(function(proj){
       try {
+        if (gcProjectCache.hasOwnProperty(proj)) {
+          renderProjectGcData(proj, gcProjectCache[proj]);
+          return;
+        }
+        if (gcProjectInFlight[proj]) return;
+
+        gcProjectInFlight[proj] = true;
         fetch('../../api/get_general_contractors.php?dhss_project_number=' + encodeURIComponent(proj), { credentials: 'same-origin' })
           .then(function(r){ return r.json(); })
-              .then(function(j){
-            try {
-                  // Determine which contractor to show in table cells.
-                  // If multiple contractors exist for the project, prefer the one marked `winner`.
-                  // If only one contractor exists, show that contractor's info.
-                  var chosen = null;
-                  if (j && Array.isArray(j.contractors) && j.contractors.length) {
-                    if (j.contractors.length === 1) {
-                      chosen = j.contractors[0];
-                    } else {
-                      // multiple contractors: prefer winner, otherwise fallback to first
-                      chosen = j.contractors.find(function(c){ return c.winner && (c.winner == 1 || c.winner === '1' || c.winner === true); }) || j.contractors[0];
-                    }
-                  }
-                  rows.forEach(function(r){
-                    try {
-                      var obj = JSON.parse(r.getAttribute('data-bid') || '{}') || {};
-                      if ((obj.dhss_project_number || '').toString().trim() === proj) {
-                        if (chosen) {
-                          // Update primary row cells (case-insensitive data-col match)
-                          var cellMap = [
-                            'general_contractor','gc_name','general_contractor_name',
-                            'gc_number','general_contractor_number',
-                            'general_contractor_email','gc_email',
-                            'general_contractor_address','gc_address',
-                            'client_win_price','is_union','winner'
-                          ];
-                          cellMap.forEach(function(k){
-                            try {
-                              var td = findCell(r, k);
-                              if (!td) return;
-                              var v = getGcVal(chosen, k);
-                              if ((k || '').toLowerCase() === 'winner' && v !== '') v = (v == 1 || v === '1') ? 'Yes' : 'No';
-                              td.textContent = (v || '').toString();
-                            } catch(e){}
-                          });
-                          // Also refresh the contractor-detail rows that sit under this bid row
-                          try {
-                            var parentId = obj.bid_id || '';
-                            // Build list of contractors to render in details (skip the primary contractor)
-                            var contractorsToShow = Array.isArray(j.contractors) ? j.contractors.slice() : [];
-                            if (chosen && chosen.id) {
-                              contractorsToShow = contractorsToShow.filter(function(c){ try { return !(c && c.id && String(c.id) === String(chosen.id)); } catch(e){ return true; } });
-                            }
-
-                            // Find existing detail rows for this parent bid
-                            var detailRows = [];
-                            if (parentId) {
-                              detailRows = Array.from(r.parentNode.querySelectorAll('tr.gc-detail-row[data-parent-bid-id="' + parentId + '"]')) || [];
-                            }
-
-                            // Helper: header columns order/data-col keys
-                            var headerCols = Array.from(document.querySelectorAll('#bidsTable thead th')).map(function(th){ return th.getAttribute('data-col') || ''; });
-
-                            // Ensure we have enough detail rows; clone last detail row or create new empty ones
-                            if (contractorsToShow.length > detailRows.length) {
-                              var toCreate = contractorsToShow.length - detailRows.length;
-                              var template = detailRows.length ? detailRows[detailRows.length-1] : null;
-                              for (var ci = 0; ci < toCreate; ci++) {
-                                var newTr = document.createElement('tr');
-                                newTr.className = 'gc-detail-row';
-                                if (parentId) newTr.setAttribute('data-parent-bid-id', parentId);
-                                newTr.style.background = 'rgba(249,250,251,0.6)'; newTr.style.fontSize = '12px';
-                                // create tds for each header column
-                                for (var hc = 0; hc < headerCols.length; hc++) {
-                                  var colKey = headerCols[hc] || '';
-                                  var td = document.createElement('td');
-                                  if (colKey) td.setAttribute('data-col', colKey);
-                                  newTr.appendChild(td);
-                                }
-                                // insert after last existing detail row or main row
-                                if (detailRows.length) {
-                                  var ref = detailRows[detailRows.length-1];
-                                  ref.parentNode.insertBefore(newTr, ref.nextSibling);
-                                } else {
-                                  r.parentNode.insertBefore(newTr, r.nextSibling);
-                                }
-                                detailRows.push(newTr);
-                              }
-                            }
-
-                            // Populate detail rows from contractorsToShow
-                            for (var di = 0; di < Math.max(detailRows.length, contractorsToShow.length); di++) {
-                              var dr = detailRows[di];
-                              var gc = contractorsToShow[di] || null;
-                              if (!dr) continue;
-                              // Fill GC-related cells; leave non-GC cells untouched
-                              headerCols.forEach(function(colName){
-                                try {
-                                  var td = findCell(dr, colName);
-                                  if (!td) return;
-                                  var isGc = gcSet.has((colName || '').toString().toLowerCase());
-                                  if (!isGc) return;
-                                  if (!gc) { td.textContent = ''; return; }
-                                  var v = getGcVal(gc, colName);
-                                  if ((colName || '').toLowerCase() === 'winner' && v !== '') v = (v == 1 || v === '1') ? 'Yes' : 'No';
-                                  td.textContent = (v || '').toString();
-                                } catch(e){}
-                              });
-                            }
-                          } catch(e) {}
-                        } else {
-                          // no contractors: clear common GC-related cells
-                          ['general_contractor','gc_name','general_contractor_name','gc_number','general_contractor_number','general_contractor_email','gc_email','general_contractor_address','gc_address','client_win_price','is_union','winner'].forEach(function(k){
-                            try { var td = findCell(r, k); if (td) td.textContent = ''; } catch(e){}
-                          });
-                        }
-                      }
-                    } catch(e) {}
-                  });
-            } catch(e) {}
-          }).catch(function(){});
+          .then(function(j){
+            gcProjectCache[proj] = j || {};
+            renderProjectGcData(proj, gcProjectCache[proj]);
+          })
+          .catch(function(){})
+          .finally(function(){ delete gcProjectInFlight[proj]; });
       } catch(e) {}
     });
   } catch(e) { console.warn('syncGcDisplayForProjects failed', e); }
@@ -4132,7 +4162,6 @@ function syncGcDisplayForProjects() {
           });
           <?php } ?>
 
-          if (yearFilterEl) yearFilterEl.addEventListener('change', applyFiltersAndGrouping);
           if (statusFilterEl) {
             // Restore saved status filter if present (use single-value fallback)
             try {
