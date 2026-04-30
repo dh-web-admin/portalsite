@@ -520,6 +520,44 @@ foreach ($bidColumns as $c) {
       background: #e5e7eb !important; /* darker gray for primary rows */
       font-weight: 600;
     }
+
+    /* Multi-select dropdown (collapsible) used for status/year filters */
+    .multi-select {
+      position: relative;
+      display: inline-block;
+    }
+    .multi-select-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(15,23,42,0.08);
+      background: #fff;
+      cursor: pointer;
+      min-width: 110px;
+      font-weight:700;
+      color:#334155;
+      height:34px;
+    }
+    .multi-select-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      background: #fff;
+      border: 1px solid rgba(15,23,42,0.08);
+      box-shadow: 0 6px 20px rgba(2,6,23,0.08);
+      padding: 8px;
+      border-radius: 8px;
+      z-index: 4000;
+      min-width: 160px;
+      max-height: 260px;
+      overflow-y: auto;
+      display: none;
+    }
+    .multi-select-menu.show { display: block; }
+    .multi-select-menu label { display:flex; align-items:center; gap:8px; padding:6px 8px; cursor:pointer; }
+    .multi-select-menu label:hover { background:#f8fafc; }
   </style>
 </head>
 <body class="admin-page">
@@ -539,7 +577,7 @@ foreach ($bidColumns as $c) {
               <div id="compactFilters" style="display:flex;align-items:center;gap:10px;padding:6px 12px;border-radius:10px;background:#f3f4f6;border:1px solid rgba(15,23,42,0.06);margin-left:8px;flex:1 1 auto;">
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-right:1px solid rgba(15,23,42,0.06);">
                   <label for="statusFilterTop" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">Status</label>
-                  <select id="statusFilterTop" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:110px;"> 
+                  <select id="statusFilterTop" multiple size="6" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;font-size:13px;min-width:110px;"> 
                     <option value="all">All</option>
                     <option value="won">Won</option>
                     <option value="lost">Lost</option>
@@ -550,7 +588,7 @@ foreach ($bidColumns as $c) {
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-right:1px solid rgba(15,23,42,0.06);">
                   <label for="yearFilterTop" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">DHSS Project#</label>
-                  <select id="yearFilterTop" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;appearance:none;height:34px;font-size:13px;min-width:120px;"></select>
+                  <select id="yearFilterTop" multiple size="6" style="font-weight:700;color:#334155;padding:6px 10px;border-radius:8px;border:1px solid rgba(15,23,42,0.08);background:#fff;font-size:13px;min-width:120px;"></select>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;flex:1 1 240px;position:relative;min-width:180px;max-width:400px;">
                   <input id="globalProjectSearch" type="text" placeholder="Search projects..." style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;flex:1 1 auto;min-width:120px;max-width:400px;" autocomplete="off" />
@@ -583,57 +621,6 @@ foreach ($bidColumns as $c) {
                 }
                 </style>
                 <script>
-                // Global project search autocomplete
-                const globalSearchInput = document.getElementById('globalProjectSearch');
-                const globalSearchBox = document.getElementById('globalProjectSearchSuggestions');
-                if (globalSearchInput && globalSearchBox) {
-                  globalSearchInput.addEventListener('input', function() {
-                    const val = this.value.trim().toLowerCase();
-                    // Store term globally and re-run filter/grouping so search respects
-                    // year/status/order and pagination.
-                    try {
-                      bidTrackingSearchTerm = val;
-                      if (globalSearchBox) globalSearchBox.innerHTML = '';
-                      if (typeof applyFiltersAndGrouping === 'function') {
-                        applyFiltersAndGrouping();
-                        return;
-                      }
-                    } catch(e) {
-                      // fall through to local DOM filter fallback
-                    }
-
-                    // Fallback: operate directly on visible DOM rows
-                    globalSearchBox.innerHTML = '';
-                    const rows = document.querySelectorAll('#bidsTable tbody tr');
-                    if (!val) {
-                      rows.forEach(row => {
-                        row.style.display = '';
-                        row.classList.remove('search-row-match');
-                        row.querySelectorAll('td').forEach(td => td.classList && td.classList.remove('search-cell-match'));
-                      });
-                      return;
-                    }
-                    rows.forEach(row => {
-                      let match = false;
-                      row.querySelectorAll('td').forEach(td => td.classList && td.classList.remove('search-cell-match'));
-                      row.querySelectorAll('td').forEach(td => {
-                        const text = (td.textContent || '').toLowerCase();
-                        if (text.includes(val)) {
-                          match = true;
-                          td.classList.add('search-cell-match');
-                        }
-                      });
-                      if (match) {
-                        row.style.display = '';
-                        row.classList.add('search-row-match');
-                      } else {
-                        row.style.display = 'none';
-                        row.classList.remove('search-row-match');
-                      }
-                    });
-                  });
-                  // Remove dropdown suggestion logic for now, as table filtering is now live
-                }
                 // Optionally scroll to or highlight the project row in the table
                 function highlightProjectRow(dhssProjectNumber) {
                   if (!dhssProjectNumber) return;
@@ -827,14 +814,14 @@ foreach ($bidColumns as $c) {
                           // Insert status header cell before DHSS project # (NEW: status filter dropdown)
                           if ($col === 'dhss_project_number') {
                             echo '<th class="col-status" data-col="status">
-                                    <select id="statusFilter" class="th-filter" title="Filter status" hidden style="display:none;">
-                                      <option value="all" selected>All</option>
-                                      <option value="won">Won</option>
-                                      <option value="lost">Lost</option>
-                                      <option value="bidding">Bidding</option>
-                                      <option value="pending">Pending</option>
-                                      <option value="completed">Completed</option>
-                                    </select>
+                                      <select id="statusFilter" class="th-filter" title="Filter status" multiple size="6" hidden style="margin-top:2px;display:none;">
+                                        <option value="all">All</option>
+                                        <option value="won">Won</option>
+                                        <option value="lost">Lost</option>
+                                        <option value="bidding">Bidding</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="completed">Completed</option>
+                                      </select>
                                   </th>';
                           }
 
@@ -862,7 +849,7 @@ foreach ($bidColumns as $c) {
                             echo '<th class="col-dhss" data-col="' . htmlspecialchars($col) . '">
                                     <div class="th-with-filter" style="flex-direction:column;align-items:flex-start;gap:2px;">
                                       <span class="th-label">' . htmlspecialchars($label) . '</span>
-                                      <select id="yearFilter" class="th-filter" title="Filter by year" hidden style="margin-top:2px;display:none;"></select>
+                                      <select id="yearFilter" class="th-filter" title="Filter by year" multiple size="6" hidden style="margin-top:2px;display:none;"></select>
                                     </div>
                                   </th>';
                           } else {
@@ -3170,10 +3157,12 @@ foreach ($bidColumns as $c) {
           var statusFilterTopEl = document.getElementById('statusFilterTop');
           var orderByEl = document.getElementById('orderBySelect');
           var bidTrackingSearchTerm = '';
+          var globalSearchInputEl = document.getElementById('globalProjectSearch');
           var paginationControlsEl = document.getElementById('paginationControls');
           var currentPage = 1;
           var pageSize = 50;
           var totalPages = 1;
+          var refreshMultiSelectById = function(){};
 
           // Build last 5 years dropdown (auto updates each year)
         (function initYearOptions(){
@@ -3206,12 +3195,151 @@ foreach ($bidColumns as $c) {
           try {
             if (yearFilterTopEl && yearFilterEl) {
               yearFilterTopEl.innerHTML = yearFilterEl.innerHTML;
-              yearFilterTopEl.value = yearFilterEl.value;
-              yearFilterTopEl.addEventListener('change', function(){ try { if (yearFilterEl) { yearFilterEl.value = this.value; yearFilterEl.dispatchEvent(new Event('change')); } saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+              // keep multi-select behavior in sync
+              function syncSelectValues(fromEl, toEl){ try { if(!fromEl||!toEl) return; var vals = Array.from(fromEl.selectedOptions).map(function(o){return o.value;}); Array.from(toEl.options).forEach(function(opt){ opt.selected = vals.indexOf(opt.value) !== -1; }); if (!Array.from(toEl.options).some(function(o){ return o.selected; }) && toEl.options.length) toEl.options[0].selected = true; } catch(e){} }
+              // Initialize selection
+              syncSelectValues(yearFilterEl, yearFilterTopEl);
+              yearFilterTopEl.addEventListener('change', function(){ try { if (yearFilterEl) { syncSelectValues(yearFilterTopEl, yearFilterEl); yearFilterEl.dispatchEvent(new Event('change')); } refreshMultiSelectById('yearFilter'); saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
               // Keep header year select in sync when header changes
-              yearFilterEl.addEventListener('change', function(){ try { if (yearFilterTopEl) yearFilterTopEl.value = yearFilterEl.value; } catch(e){} });
+              yearFilterEl.addEventListener('change', function(){ try { if (yearFilterTopEl) syncSelectValues(yearFilterEl, yearFilterTopEl); refreshMultiSelectById('yearFilterTop'); } catch(e){} });
             }
           } catch(e){}
+
+          // Mirror status options to the compact top selector (if present)
+          try {
+            if (statusFilterTopEl && statusFilterEl) {
+              statusFilterTopEl.innerHTML = statusFilterEl.innerHTML;
+              // initialize selection sync
+              function syncSelectValues2(fromEl, toEl){ try { if(!fromEl||!toEl) return; var vals = Array.from(fromEl.selectedOptions).map(function(o){return o.value;}); Array.from(toEl.options).forEach(function(opt){ opt.selected = vals.indexOf(opt.value) !== -1; }); if (!Array.from(toEl.options).some(function(o){ return o.selected; }) && toEl.options.length) toEl.options[0].selected = true; } catch(e){} }
+              syncSelectValues2(statusFilterEl, statusFilterTopEl);
+              statusFilterTopEl.addEventListener('change', function(){ try { if (statusFilterEl) { syncSelectValues2(statusFilterTopEl, statusFilterEl); statusFilterEl.dispatchEvent(new Event('change')); } refreshMultiSelectById('statusFilter'); saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
+              statusFilterEl.addEventListener('change', function(){ try { if (statusFilterTopEl) syncSelectValues2(statusFilterEl, statusFilterTopEl); refreshMultiSelectById('statusFilterTop'); } catch(e){} });
+            }
+          } catch(e){}
+
+          // Convert visible multi-select <select> elements into collapsible checkbox menus
+          try {
+            var multiSelectInstances = {};
+
+            function updateMultiSelectLabel(btn, sel, fallbackLabel){
+              try {
+                var vals = Array.from(sel.selectedOptions)
+                  .map(function(o){ return (o.textContent || o.value || '').trim(); })
+                  .filter(function(v){ return v !== '' && v.toLowerCase() !== 'all years'; });
+                if (!vals.length) {
+                  btn.textContent = fallbackLabel || 'All';
+                  return;
+                }
+                btn.textContent = vals.slice(0, 3).join(', ') + (vals.length > 3 ? '…' : '');
+              } catch(e){}
+            }
+
+            function refreshMultiSelectInstance(instance){
+              if (!instance || !instance.sel || !instance.menu || !instance.btn) return;
+              try {
+                var selectedSet = {};
+                Array.from(instance.sel.selectedOptions).forEach(function(opt){ selectedSet[opt.value] = true; });
+                Array.from(instance.menu.querySelectorAll('input[type=checkbox]')).forEach(function(chk){
+                  chk.checked = !!selectedSet[chk.value];
+                });
+                updateMultiSelectLabel(instance.btn, instance.sel, instance.placeholder);
+              } catch(e){}
+            }
+
+            refreshMultiSelectById = function(selId){
+              try { refreshMultiSelectInstance(multiSelectInstances[selId]); } catch(e){}
+            };
+
+            function buildMultiSelectFromSelect(selId, containerAfterId, placeholder) {
+              var sel = document.getElementById(selId);
+              if (!sel) return null;
+              // hide original select (keep in DOM for filtering logic)
+              sel.style.display = 'none';
+              try {
+                var hasInitialSelected = Array.from(sel.options).some(function(o){ return o.selected; });
+                if (!hasInitialSelected && sel.options.length) sel.options[0].selected = true;
+              } catch(e){}
+
+              // create wrapper
+              var wrap = document.createElement('div'); wrap.className = 'multi-select';
+              var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'multi-select-button'; btn.textContent = placeholder || 'Select';
+              wrap.appendChild(btn);
+
+              var menu = document.createElement('div'); menu.className = 'multi-select-menu';
+              // populate options
+              Array.from(sel.options).forEach(function(opt){
+                var lab = document.createElement('label');
+                var chk = document.createElement('input'); chk.type = 'checkbox'; chk.value = opt.value; chk.checked = opt.selected;
+                lab.appendChild(chk);
+                var span = document.createElement('span'); span.textContent = opt.textContent || opt.value; span.style.fontWeight='600'; span.style.color='#0f172a';
+                lab.appendChild(span);
+                menu.appendChild(lab);
+                chk.addEventListener('change', function(){
+                  // sync back to original select
+                  try {
+                    var isAllStatus = (opt.value === 'all');
+                    var isAllYears = (opt.value === '');
+                    if (isAllStatus || isAllYears) {
+                      // selecting 'all' clears others
+                      if (chk.checked) {
+                        Array.from(menu.querySelectorAll('input[type=checkbox]')).forEach(function(c){ if (c !== chk) c.checked = false; });
+                      }
+                    } else {
+                      // uncheck catch-all options if another value is selected
+                      if (chk.checked) {
+                        var allStatusChk = Array.from(menu.querySelectorAll('input[type=checkbox]')).find(function(c){ return c.value === 'all'; });
+                        var allYearsChk = Array.from(menu.querySelectorAll('input[type=checkbox]')).find(function(c){ return c.value === ''; });
+                        if (allStatusChk) allStatusChk.checked = false;
+                        if (allYearsChk) allYearsChk.checked = false;
+                      }
+                    }
+                    Array.from(menu.querySelectorAll('input[type=checkbox]')).forEach(function(c){
+                      for (var i=0;i<sel.options.length;i++){ if (sel.options[i].value === c.value) sel.options[i].selected = c.checked; }
+                    });
+                    // if user unselects everything, default back to first option
+                    var anySelected = Array.from(sel.options).some(function(o){ return o.selected; });
+                    if (!anySelected && sel.options.length) {
+                      sel.options[0].selected = true;
+                    }
+                    // update button label
+                    updateMultiSelectLabel(btn, sel, placeholder || 'All');
+                    sel.dispatchEvent(new Event('change'));
+                  } catch(e) {}
+                });
+              });
+
+              wrap.appendChild(menu);
+              // insert after the original select
+              sel.parentNode.insertBefore(wrap, sel.nextSibling);
+
+              // toggle menu
+              btn.addEventListener('click', function(ev){ ev.stopPropagation(); menu.classList.toggle('show'); });
+              menu.addEventListener('click', function(ev){ ev.stopPropagation(); });
+              document.addEventListener('click', function(ev){
+                try {
+                  if (wrap && !wrap.contains(ev.target)) menu.classList.remove('show');
+                } catch(e) {
+                  menu.classList.remove('show');
+                }
+              });
+
+              // helper to set initial label
+              updateMultiSelectLabel(btn, sel, placeholder || 'All');
+
+              var instance = { wrap:wrap, sel:sel, menu:menu, btn:btn, placeholder:(placeholder || 'All') };
+              multiSelectInstances[selId] = instance;
+
+              sel.addEventListener('change', function(){ refreshMultiSelectInstance(instance); });
+
+              return instance;
+            }
+
+            // init the four filter selects (top + header) if present
+            buildMultiSelectFromSelect('statusFilterTop', null, 'All');
+            buildMultiSelectFromSelect('yearFilterTop', null, 'All Years');
+            buildMultiSelectFromSelect('statusFilter', null, 'All');
+            buildMultiSelectFromSelect('yearFilter', null, 'All Years');
+          } catch(e) { console.warn('multi-select init failed', e); }
 
           // Top-filter session persistence (per-browser-session; not global/local)
           var TOP_STATUS_KEY = 'bidTracking_top_status';
@@ -3221,8 +3349,12 @@ foreach ($bidColumns as $c) {
           function saveTopFiltersToSession() {
             try {
               if (window.sessionStorage) {
-                if (statusFilterTopEl) sessionStorage.setItem(TOP_STATUS_KEY, statusFilterTopEl.value || 'all');
-                if (yearFilterTopEl) sessionStorage.setItem(TOP_YEAR_KEY, yearFilterTopEl.value || '');
+                if (statusFilterTopEl) {
+                  try { var ss = Array.from(statusFilterTopEl.selectedOptions).map(function(o){return o.value;}); sessionStorage.setItem(TOP_STATUS_KEY, JSON.stringify(ss)); } catch(e) { sessionStorage.setItem(TOP_STATUS_KEY, JSON.stringify(['all'])); }
+                }
+                if (yearFilterTopEl) {
+                  try { var ys = Array.from(yearFilterTopEl.selectedOptions).map(function(o){return o.value;}); sessionStorage.setItem(TOP_YEAR_KEY, JSON.stringify(ys)); } catch(e) { sessionStorage.setItem(TOP_YEAR_KEY, JSON.stringify([''])); }
+                }
                 if (orderByEl) sessionStorage.setItem(TOP_ORDER_KEY, orderByEl.value || 'date_asc');
               }
             } catch(e) { }
@@ -3235,12 +3367,22 @@ foreach ($bidColumns as $c) {
                 var y = sessionStorage.getItem(TOP_YEAR_KEY);
                 var o = sessionStorage.getItem(TOP_ORDER_KEY);
                 if (s !== null && statusFilterTopEl) {
-                  statusFilterTopEl.value = s;
-                  if (statusFilterEl) { statusFilterEl.value = s; statusFilterEl.dispatchEvent(new Event('change')); }
+                  try {
+                    var sval = JSON.parse(s);
+                    Array.from(statusFilterTopEl.options).forEach(function(opt){ opt.selected = (sval.indexOf(opt.value) !== -1); });
+                    if (statusFilterEl) { Array.from(statusFilterEl.options).forEach(function(opt){ opt.selected = (sval.indexOf(opt.value) !== -1); }); statusFilterEl.dispatchEvent(new Event('change')); }
+                    refreshMultiSelectById('statusFilterTop');
+                    refreshMultiSelectById('statusFilter');
+                  } catch(e) { statusFilterTopEl.value = s; if (statusFilterEl) { statusFilterEl.value = s; statusFilterEl.dispatchEvent(new Event('change')); } }
                 }
                 if (y !== null && yearFilterTopEl) {
-                  yearFilterTopEl.value = y;
-                  if (yearFilterEl) { yearFilterEl.value = y; yearFilterEl.dispatchEvent(new Event('change')); }
+                  try {
+                    var yval = JSON.parse(y);
+                    Array.from(yearFilterTopEl.options).forEach(function(opt){ opt.selected = (yval.indexOf(opt.value) !== -1); });
+                    if (yearFilterEl) { Array.from(yearFilterEl.options).forEach(function(opt){ opt.selected = (yval.indexOf(opt.value) !== -1); }); yearFilterEl.dispatchEvent(new Event('change')); }
+                    refreshMultiSelectById('yearFilterTop');
+                    refreshMultiSelectById('yearFilter');
+                  } catch(e) { yearFilterTopEl.value = y; if (yearFilterEl) { yearFilterEl.value = y; yearFilterEl.dispatchEvent(new Event('change')); } }
                 }
                 if (o !== null && orderByEl) {
                   orderByEl.value = o;
@@ -3258,18 +3400,25 @@ foreach ($bidColumns as $c) {
                 sessionStorage.removeItem(TOP_ORDER_KEY);
               }
               if (statusFilterTopEl) {
-                statusFilterTopEl.value = 'all';
-                if (statusFilterEl) { statusFilterEl.value = 'all'; statusFilterEl.dispatchEvent(new Event('change')); }
+                // clear multi-select to default: select 'all'
+                Array.from(statusFilterTopEl.options).forEach(function(opt){ opt.selected = (opt.value === 'all'); });
+                if (statusFilterEl) { Array.from(statusFilterEl.options).forEach(function(opt){ opt.selected = (opt.value === 'all'); }); statusFilterEl.dispatchEvent(new Event('change')); }
               }
               if (yearFilterTopEl) {
-                yearFilterTopEl.value = '';
-                if (yearFilterEl) { yearFilterEl.value = ''; yearFilterEl.dispatchEvent(new Event('change')); }
+                Array.from(yearFilterTopEl.options).forEach(function(opt){ opt.selected = (opt.value === ''); });
+                if (yearFilterEl) { Array.from(yearFilterEl.options).forEach(function(opt){ opt.selected = (opt.value === ''); }); yearFilterEl.dispatchEvent(new Event('change')); }
               }
               if (orderByEl) {
                 orderByEl.value = 'grouped';
                 try { localStorage.setItem('bidTracking_orderBy', 'grouped'); } catch(e){}
-                applyFiltersAndGrouping();
               }
+              if (globalSearchInputEl) globalSearchInputEl.value = '';
+              bidTrackingSearchTerm = '';
+              refreshMultiSelectById('statusFilterTop');
+              refreshMultiSelectById('statusFilter');
+              refreshMultiSelectById('yearFilterTop');
+              refreshMultiSelectById('yearFilter');
+              applyFiltersAndGrouping();
             } catch(e) {}
           }
 
@@ -3361,22 +3510,48 @@ foreach ($bidColumns as $c) {
 
 function applyFiltersAndGrouping() {
   if (!tbody || !table) return;
+  try {
+    if (globalSearchInputEl) {
+      bidTrackingSearchTerm = (globalSearchInputEl.value || '').toString().trim().toLowerCase();
+    }
+  } catch(e) {}
 
-  var selectedYear = yearFilterEl ? yearFilterEl.value : '';
-  var selectedStatus = statusFilterEl ? statusFilterEl.value : 'all';
+  function getSelectedValues(sel){ if(!sel) return []; try { return Array.from(sel.selectedOptions).map(function(o){ return o.value; }); } catch(e){ return []; } }
+
+  var selectedYears = yearFilterEl ? getSelectedValues(yearFilterEl) : [];
+  var selectedStatuses = statusFilterEl ? getSelectedValues(statusFilterEl) : ['all'];
+  // normalize status selection to canonical lowercase/alphanumeric (match normStatus used for rows)
+  function normalizeStatusVal(s){ try { return (s || '').toString().trim().toLowerCase().replace(/[^a-z0-9]/g,''); } catch(e){ return s; } }
+  try {
+    if (selectedStatuses && selectedStatuses.length) {
+      selectedStatuses = selectedStatuses.map(normalizeStatusVal).filter(function(x){ return x !== null && typeof x !== 'undefined'; });
+      // accept common aliases: treat 'won' and 'win' as equivalent
+      if (selectedStatuses.indexOf('won') !== -1 && selectedStatuses.indexOf('win') === -1) selectedStatuses.push('win');
+      if (selectedStatuses.indexOf('win') !== -1 && selectedStatuses.indexOf('won') === -1) selectedStatuses.push('won');
+    }
+  } catch(e) {}
 
   // Always show status filter (including when 'All Years' is selected)
   if (statusFilterEl) statusFilterEl.hidden = false;
 
   // 1) Year filter (projects starting with YY)
   var filtered = originalRows.filter(function(it){
-    if (!selectedYear) return true;
-    return it.project && it.project.indexOf(selectedYear) === 0;
+    // if no years selected or 'All Years' selected (empty string present), include all
+    if (!selectedYears || !selectedYears.length) return true;
+    if (selectedYears.indexOf('') !== -1) return true;
+    try {
+      if (!it.project) return false;
+      for (var yi=0; yi<selectedYears.length; yi++) {
+        var yv = selectedYears[yi]; if (!yv) continue;
+        if (String(it.project).indexOf(yv) === 0) return true;
+      }
+      return false;
+    } catch(e){ return false; }
   });
 
   // 2) Status filter (applies only within selected year set)
-  if (selectedStatus && selectedStatus !== 'all') {
-    filtered = filtered.filter(function(it){ return it.status === selectedStatus; });
+  if (selectedStatuses && selectedStatuses.length && selectedStatuses.indexOf('all') === -1) {
+    filtered = filtered.filter(function(it){ return selectedStatuses.indexOf(it.status) !== -1; });
   }
 
   // 2.5) Search-term filter: if a global search term is present, further
@@ -3395,15 +3570,22 @@ function applyFiltersAndGrouping() {
 
   // 3) Default rendering: group rows by status in the requested order
   //    and sort rows within each status by bid_date ascending (nulls last).
-  //    Status rendering order: bidding -> pending -> win -> lost -> completed
-  var statusOrder = ['bidding','pending','win','lost','completed'];
+  //    Status rendering order: bidding -> pending -> won/win -> lost -> completed
+  var statusOrder = ['bidding','pending','won','win','lost','completed'];
   function statusIndex(s) { var idx = statusOrder.indexOf((s||'').toString()); return idx === -1 ? statusOrder.length : idx; }
 
   // Determine current ordering preference; but default rendering groups by status
   var _order = (orderByEl && orderByEl.value) ? orderByEl.value : (localStorage.getItem ? localStorage.getItem('bidTracking_orderBy') || 'date_asc' : 'date_asc');
   try { if (orderByEl) { try { orderByEl.value = _order; } catch(e){} } } catch(e){}
 
-  var filterSignature = [selectedYear || '', selectedStatus || 'all', _order || 'grouped'].join('|');
+  var hasYearFilter = !!(selectedYears && selectedYears.length && selectedYears.indexOf('') === -1);
+  var hasStatusFilter = !!(selectedStatuses && selectedStatuses.length && selectedStatuses.indexOf('all') === -1);
+  var filterSignature = [
+    (hasYearFilter ? selectedYears.slice().sort().join(',') : 'all-years'),
+    (hasStatusFilter ? selectedStatuses.slice().sort().join(',') : 'all-status'),
+    (bidTrackingSearchTerm || '').trim().toLowerCase(),
+    _order || 'grouped'
+  ].join('|');
   if (filterSignature !== lastFilterSignature) {
     currentPage = 1;
     lastFilterSignature = filterSignature;
@@ -3412,10 +3594,12 @@ function applyFiltersAndGrouping() {
   // Flattened list of items (preserve detailRows reference)
   var flatItems = filtered.map(function(it){ return { it: it, date: it.date }; });
 
+  try { console.debug('applyFiltersAndGrouping: years=', selectedYears, 'statuses=', selectedStatuses, 'filteredBeforeStatus=', filtered.length); } catch(e) {}
+
   // If no filters are applied (year == '' and status == 'all'), show the
   // legacy grouped-by-status view. Otherwise respect the user's order selection
   // and perform a global sort.
-  var doGlobalSort = ((orderByEl && orderByEl.value && orderByEl.value !== 'grouped') || !(selectedYear === '' && selectedStatus === 'all'));
+  var doGlobalSort = ((orderByEl && orderByEl.value && orderByEl.value !== 'grouped') || hasYearFilter || hasStatusFilter);
 
   // helpers for comparisons
   function cmpDateItems(pa, pb){
@@ -3555,19 +3739,22 @@ function updateFilterIndicator() {
     var indicatorDiv = document.getElementById('filterIndicator');
     if (!indicatorDiv) return;
 
-    var selectedYear = yearFilterEl ? yearFilterEl.value : '';
-    var selectedStatus = statusFilterEl ? statusFilterEl.value : 'all';
     var selectedOrder = orderByEl ? orderByEl.value : 'grouped';
+
+    var selYears = [];
+    try { if (yearFilterEl) selYears = Array.from(yearFilterEl.selectedOptions).map(function(o){return o.value;}); } catch(e) { selYears = []; }
+    var selStatuses = [];
+    try { if (statusFilterEl) selStatuses = Array.from(statusFilterEl.selectedOptions).map(function(o){return o.value;}); } catch(e) { selStatuses = ['all']; }
 
     var filterParts = [];
 
     // Check if any filters are applied
-    if (selectedStatus && selectedStatus !== 'all') {
-      filterParts.push(selectedStatus + ' only');
+    if (selStatuses && selStatuses.length && selStatuses.indexOf('all') === -1) {
+      filterParts.push(selStatuses.join(', ') + ' only');
     }
 
-    if (selectedYear) {
-      filterParts.push(selectedYear + ' only');
+    if (selYears && selYears.length && selYears.indexOf('') === -1) {
+      filterParts.push(selYears.join(', ') + ' only');
     }
 
     if (selectedOrder && selectedOrder !== 'grouped') {
@@ -3593,6 +3780,26 @@ function updateFilterIndicator() {
     console.warn('updateFilterIndicator error:', e);
   }
 }
+
+          // Wire global search inside the same scope so filtering is always synced
+          try {
+            if (globalSearchInputEl) {
+              var runSearchRefresh = function(){
+                try {
+                  bidTrackingSearchTerm = (this.value || '').toString().toLowerCase().trim();
+                  applyFiltersAndGrouping();
+                } catch(e){}
+              };
+              globalSearchInputEl.addEventListener('input', runSearchRefresh);
+              globalSearchInputEl.addEventListener('change', runSearchRefresh);
+              globalSearchInputEl.addEventListener('search', runSearchRefresh);
+              globalSearchInputEl.addEventListener('keyup', function(e){
+                try {
+                  if (e && (e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete')) runSearchRefresh.call(this);
+                } catch(err){}
+              });
+            }
+          } catch(e){}
 
         // Populate Client Winner select for a given project key. Keep unique order from visible rows.
 // Populate Client Winner select for a given project key using ONLY `general_contractor`
@@ -3927,25 +4134,18 @@ function syncGcDisplayForProjects() {
 
           if (yearFilterEl) yearFilterEl.addEventListener('change', applyFiltersAndGrouping);
           if (statusFilterEl) {
-            // Restore saved status filter if present
+            // Restore saved status filter if present (use single-value fallback)
             try {
               var savedStatus = null;
               try { savedStatus = localStorage.getItem('bidTracking_statusFilter'); } catch(e) { savedStatus = null; }
-              if (savedStatus !== null && savedStatus !== undefined && statusFilterEl.querySelector('option[value="' + savedStatus + '"]')) {
-                statusFilterEl.value = savedStatus;
+              if (savedStatus !== null && savedStatus !== undefined) {
+                try { Array.from(statusFilterEl.options).forEach(function(opt){ opt.selected = (opt.value === savedStatus); }); } catch(e) {}
               }
             } catch(e) {}
 
-            // Mirror status to the compact top status selector
-            try {
-              if (statusFilterTopEl) {
-                statusFilterTopEl.value = statusFilterEl.value || 'all';
-                statusFilterTopEl.addEventListener('change', function(){ try { if (statusFilterEl) { statusFilterEl.value = this.value; statusFilterEl.dispatchEvent(new Event('change')); } saveTopFiltersToSession(); applyFiltersAndGrouping(); } catch(e){} });
-                statusFilterEl.addEventListener('change', function(){ try { statusFilterTopEl.value = statusFilterEl.value; } catch(e){} });
-              }
-            } catch(e){}
-            statusFilterEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_statusFilter', this.value || ''); applyFiltersAndGrouping(); } catch(e){} });
-            try { if (statusFilterTopEl) statusFilterTopEl.addEventListener('change', function(){ try { localStorage.setItem('bidTracking_statusFilter', this.value || ''); saveTopFiltersToSession(); } catch(e){} }); } catch(e){}
+            // Mirror status to the compact top status selector handled earlier; ensure localStorage stores first selected value
+            statusFilterEl.addEventListener('change', function(){ try { var first = (this.selectedOptions && this.selectedOptions.length) ? this.selectedOptions[0].value : ''; localStorage.setItem('bidTracking_statusFilter', first || ''); applyFiltersAndGrouping(); } catch(e){} });
+            try { if (statusFilterTopEl) statusFilterTopEl.addEventListener('change', function(){ try { var first = (this.selectedOptions && this.selectedOptions.length) ? this.selectedOptions[0].value : ''; localStorage.setItem('bidTracking_statusFilter', first || ''); saveTopFiltersToSession(); } catch(e){} }); } catch(e){}
           }
 
           // Order-by control: restore and wire change events
@@ -4316,9 +4516,9 @@ function syncGcDisplayForProjects() {
           function openPrintModal(){
             if (!printModal) return;
             buildPrintColumns(); buildPrintYearOptions();
-            // default filter values mirror current selections
-            try { if (printStatus && statusFilterEl) printStatus.value = statusFilterEl.value || 'all'; } catch(e){}
-            try { if (printYear && yearFilterEl) printYear.value = yearFilterEl.value || ''; } catch(e){}
+            // default filter values mirror first current selections (multi-selects -> pick first)
+            try { if (printStatus && statusFilterEl) { var ssel = Array.from(statusFilterEl.selectedOptions).map(function(o){return o.value;}); printStatus.value = (ssel && ssel.length) ? ssel[0] : 'all'; } } catch(e){}
+            try { if (printYear && yearFilterEl) { var ysel = Array.from(yearFilterEl.selectedOptions).map(function(o){return o.value;}); printYear.value = (ysel && ysel.length) ? ysel[0] : ''; } } catch(e){}
             try { if (printOrder && orderByEl) printOrder.value = orderByEl.value || 'grouped'; } catch(e){}
             // build initial preview
             buildPrintPreview();
