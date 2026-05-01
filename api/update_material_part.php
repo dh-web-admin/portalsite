@@ -39,7 +39,7 @@ if ($part_id <= 0 || empty($name) || $number === '') {
 
 try {
     // First, get the old part info before updating (to sync with Parts and Suppliers)
-    $stmtOld = $conn->prepare("SELECT emp.name, emp.make, em.item_id 
+    $stmtOld = $conn->prepare("SELECT emp.name, emp.make, emp.material_id, em.item_id 
                                FROM Engineering_material_parts emp 
                                JOIN Engineering_materials em ON emp.material_id = em.id 
                                WHERE emp.id = ?");
@@ -51,10 +51,11 @@ try {
     
     $old_name = $oldPart ? $oldPart['name'] : null;
     $old_make = $oldPart ? $oldPart['make'] : null;
+    $material_id = $oldPart ? (int)$oldPart['material_id'] : 0;
     $item_id = $oldPart ? $oldPart['item_id'] : null;
 
-    $stmtCheckNumber = $conn->prepare("SELECT id FROM Engineering_material_parts WHERE number = ? AND id <> ? LIMIT 1");
-    $stmtCheckNumber->bind_param('si', $number, $part_id);
+    $stmtCheckNumber = $conn->prepare("SELECT id FROM Engineering_material_parts WHERE material_id = ? AND number = ? AND id <> ? LIMIT 1");
+    $stmtCheckNumber->bind_param('isi', $material_id, $number, $part_id);
     $stmtCheckNumber->execute();
     $resultCheckNumber = $stmtCheckNumber->get_result();
     $numberExists = $resultCheckNumber ? $resultCheckNumber->fetch_assoc() : null;

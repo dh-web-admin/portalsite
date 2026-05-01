@@ -77,8 +77,8 @@ try {
     
     $item_id = $material['item_id'];
 
-    $stmt = $conn->prepare("SELECT id FROM Engineering_material_parts WHERE number = ? LIMIT 1");
-    $stmt->bind_param('s', $number);
+    $stmt = $conn->prepare("SELECT id FROM Engineering_material_parts WHERE material_id = ? AND number = ? LIMIT 1");
+    $stmt->bind_param('is', $material_id, $number);
     $stmt->execute();
     $duplicateResult = $stmt->get_result();
     $duplicateRow = $duplicateResult ? $duplicateResult->fetch_assoc() : null;
