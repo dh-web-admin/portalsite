@@ -3511,7 +3511,20 @@ foreach ($bidColumns as $c) {
               var projName = (obj.project_name || '').toString().trim();
               var searchText = '';
               try {
-                searchText = (String(proj || '') + ' ' + String(projName || '') + ' ' + JSON.stringify(obj || {})).toLowerCase();
+                var parts = [];
+                // Search over raw bid object values (all bid columns)
+                parts.push(String(proj || ''));
+                parts.push(String(projName || ''));
+                parts.push(JSON.stringify(obj || {}));
+                // Search over rendered primary row text (what user sees in table)
+                parts.push((r.textContent || ''));
+                // Search over rendered contractor/detail rows linked to this bid row
+                if (details && details.length) {
+                  details.forEach(function(dr){
+                    try { parts.push((dr && dr.textContent) ? dr.textContent : ''); } catch(_e) {}
+                  });
+                }
+                searchText = parts.join(' ').toLowerCase().replace(/\s+/g, ' ').trim();
               } catch(e) {}
               return { row: r, detailRows: details, obj: obj, project: proj, project_name: projName, yearPrefix: yearPrefix, status: st, date: dateVal, search_text: searchText };
             });

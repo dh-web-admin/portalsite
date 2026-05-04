@@ -31,6 +31,7 @@ $length = isset($data['length']) ? trim($data['length']) : '';
 $width = isset($data['width']) ? trim($data['width']) : '';
 $area = isset($data['area']) ? trim($data['area']) : '';
 $quantity = isset($data['quantity']) ? trim($data['quantity']) : '';
+$description = isset($data['description']) ? trim($data['description']) : '';
 
 if ($part_id <= 0 || empty($name) || $number === '') {
     echo json_encode(['success' => false, 'message' => 'Part record, part ID, and name are required']);
@@ -54,6 +55,12 @@ try {
     $material_id = $oldPart ? (int)$oldPart['material_id'] : 0;
     $item_id = $oldPart ? $oldPart['item_id'] : null;
 
+    // Ensure description column exists for older schemas
+    $colCheck = $conn->query("SHOW COLUMNS FROM Engineering_material_parts LIKE 'description'");
+    if (!$colCheck || $colCheck->num_rows === 0) {
+        $conn->query("ALTER TABLE Engineering_material_parts ADD COLUMN description TEXT");
+    }
+
     $stmtCheckNumber = $conn->prepare("SELECT id FROM Engineering_material_parts WHERE material_id = ? AND number = ? AND id <> ? LIMIT 1");
     $stmtCheckNumber->bind_param('isi', $material_id, $number, $part_id);
     $stmtCheckNumber->execute();
@@ -69,10 +76,10 @@ try {
     // Update the material part
     $stmt = $conn->prepare("UPDATE Engineering_material_parts 
         SET number = ?, name = ?, make = ?, part_number = ?, material_type = ?, 
-            thickness = ?, length = ?, width = ?, area = ?, quantity = ?
+            thickness = ?, length = ?, width = ?, area = ?, quantity = ?, description = ?
         WHERE id = ?");
     
-    $stmt->bind_param('ssssssssssi', 
+    $stmt->bind_param('sssssssssssi', 
         $number,
         $name,
         $make,
@@ -83,6 +90,7 @@ try {
         $width,
         $area,
         $quantity,
+        $description,
         $part_id
     );
     
@@ -101,15 +109,15 @@ try {
             $stmtCheck->close();
             
             if ($exists) {
-                // Update existing part name
-                $stmtSync = $conn->prepare("UPDATE engineering_item_parts SET part_name = ? WHERE item_id = ? AND part_name = ?");
-                $stmtSync->bind_param('sis', $name, $item_id, $old_name);
+                // Update existing part name and notes
+                $stmtSync = $conn->prepare("UPDATE engineering_item_parts SET part_name = ?, notes = ? WHERE item_id = ? AND part_name = ?");
+                $stmtSync->bind_param('ssis', $name, $description, $item_id, $old_name);
                 $stmtSync->execute();
                 $stmtSync->close();
             } else {
                 // Insert new part if it doesn't exist
-                $stmtSync = $conn->prepare("INSERT INTO engineering_item_parts (item_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, '', NULL, '')");
-                $stmtSync->bind_param('is', $item_id, $name);
+                $stmtSync = $conn->prepare("INSERT INTO engineering_item_parts (item_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, '', NULL, ?)");
+                $stmtSync->bind_param('iss', $item_id, $name, $description);
                 $stmtSync->execute();
                 $stmtSync->close();
             }

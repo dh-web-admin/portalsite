@@ -309,6 +309,10 @@ $hasEditPermission = can_edit_page('engineering');
 									<span style="font-size:0.85em; color:#1e40af; font-style:italic;">All unit of measurements are in inches</span>
 								</div>
 							</div>
+							<div style="margin-top:12px;">
+								<label style="display:block; margin-bottom:6px; font-weight:500;">Description</label>
+								<textarea id="materialPartDescriptionInput" placeholder="Enter description" style="width:100%; padding:8px; border-radius:4px; border:1px solid #b0b8c1; font-size:1em; min-height:80px; resize:vertical;"></textarea>
+							</div>
 							<div style="display:grid; grid-template-columns: 1fr 1fr; gap:18px;">
 								<div>
 									<label style="display:block; margin-bottom:6px; font-weight:500;">Name *</label>
@@ -2227,6 +2231,7 @@ $hasEditPermission = can_edit_page('engineering');
 							document.getElementById('materialPartWidthInput').value = '';
 							document.getElementById('materialPartAreaInput').value = '';
 							document.getElementById('materialPartQuantityInput').value = '';
+							document.getElementById('materialPartDescriptionInput').value = '';
 							if (partIdInput) partIdInput.value = '';
 							
 							// Fetch next number (material number + letter suffix)
@@ -2280,6 +2285,7 @@ $hasEditPermission = can_edit_page('engineering');
 							document.getElementById('materialPartWidthInput').value = part.width || '';
 							document.getElementById('materialPartAreaInput').value = part.area || '';
 							document.getElementById('materialPartQuantityInput').value = part.quantity || '';
+							document.getElementById('materialPartDescriptionInput').value = part.description || '';
 							
 							// Show modal
 							modal.style.display = 'flex';
@@ -2316,7 +2322,8 @@ $hasEditPermission = can_edit_page('engineering');
 								length: document.getElementById('materialPartLengthInput').value.trim(),
 								width: document.getElementById('materialPartWidthInput').value.trim(),
 								area: document.getElementById('materialPartAreaInput').value.trim(),
-								quantity: document.getElementById('materialPartQuantityInput').value.trim()
+								quantity: document.getElementById('materialPartQuantityInput').value.trim(),
+								description: document.getElementById('materialPartDescriptionInput').value.trim()
 							};
 							
 							if (currentPartEditId) {

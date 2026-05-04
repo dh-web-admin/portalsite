@@ -31,6 +31,7 @@ $length = isset($data['length']) ? trim($data['length']) : '';
 $width = isset($data['width']) ? trim($data['width']) : '';
 $area = isset($data['area']) ? trim($data['area']) : '';
 $quantity = isset($data['quantity']) ? trim($data['quantity']) : '';
+$description = isset($data['description']) ? trim($data['description']) : '';
 
 if ($material_id <= 0 || empty($name) || $number === '') {
     echo json_encode(['success' => false, 'message' => 'Material ID, part ID, and name are required']);
@@ -52,6 +53,7 @@ try {
         width VARCHAR(50),
         area VARCHAR(50),
         quantity VARCHAR(50),
+        description TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX (material_id)
@@ -60,6 +62,12 @@ try {
     if (!$conn->query($createTable)) {
         echo json_encode(['success' => false, 'message' => 'Failed to create table: ' . $conn->error]);
         exit;
+    }
+
+    // Ensure description column exists for older schemas
+    $colCheck = $conn->query("SHOW COLUMNS FROM Engineering_material_parts LIKE 'description'");
+    if (!$colCheck || $colCheck->num_rows === 0) {
+        $conn->query("ALTER TABLE Engineering_material_parts ADD COLUMN description TEXT");
     }
     
     // Get material data for sync
@@ -91,10 +99,10 @@ try {
     
     // Insert the new part
     $stmt = $conn->prepare("INSERT INTO Engineering_material_parts 
-        (material_id, number, name, make, part_number, material_type, thickness, length, width, area, quantity) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        (material_id, number, name, make, part_number, material_type, thickness, length, width, area, quantity, description) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     
-    $stmt->bind_param('issssssssss', 
+    $stmt->bind_param('isssssssssss', 
         $material_id,
         $number,
         $name,
@@ -105,7 +113,8 @@ try {
         $length,
         $width,
         $area,
-        $quantity
+        $quantity,
+        $description
     );
     
     if ($stmt->execute()) {
@@ -115,8 +124,8 @@ try {
 
         // Also add this part to the Parts and Suppliers section (engineering_item_parts)
         // Add part name to engineering_item_parts
-        $stmtParts = $conn->prepare("INSERT INTO engineering_item_parts (item_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, '', NULL, '')");
-        $stmtParts->bind_param('is', $item_id, $name);
+        $stmtParts = $conn->prepare("INSERT INTO engineering_item_parts (item_id, part_name, nsn_number, quantity, notes) VALUES (?, ?, '', NULL, ?)");
+        $stmtParts->bind_param('iss', $item_id, $name, $description);
         $stmtParts->execute();
         $engineering_part_id = $conn->insert_id;
         $stmtParts->close();
