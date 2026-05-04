@@ -19,6 +19,11 @@ $client_win_price = isset($_POST['client_win_price']) ? trim($_POST['client_win_
 $is_union = isset($_POST['is_union']) ? intval($_POST['is_union']) : null;
 $winner = isset($_POST['winner']) ? ($_POST['winner'] ? 1 : 0) : 0;
 
+if ($client_win_price !== null && $client_win_price !== '') {
+  $tmp = str_replace([',', '$', ' '], '', (string)$client_win_price);
+  if (preg_match('/^[+-]?\d+(?:\.\d+)?$/', $tmp)) $client_win_price = $tmp;
+}
+
 if (!$gc && !$name) {
   http_response_code(400);
   echo json_encode(['success'=>false,'message'=>'General contractor is required']);

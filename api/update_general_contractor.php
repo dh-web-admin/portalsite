@@ -40,6 +40,10 @@ if ($existingStmt) {
 
 try {
   $client_win_price = isset($_POST['client_win_price']) ? trim($_POST['client_win_price']) : null;
+  if ($client_win_price !== null && $client_win_price !== '') {
+    $tmp = str_replace([',', '$', ' '], '', (string)$client_win_price);
+    if (preg_match('/^[+-]?\d+(?:\.\d+)?$/', $tmp)) $client_win_price = $tmp;
+  }
   $sql = 'UPDATE general_contractor SET dhss_project_number = ?, general_contractor = ?, general_contractor_name = ?, general_contractor_number = ?, general_contractor_email = ?, general_contractor_address = ?, is_union = ?, winner = ?, client_win_price = ? WHERE id = ?';
   $stmt = $conn->prepare($sql);
   if (!$stmt) {
@@ -48,7 +52,7 @@ try {
     exit;
   }
   $iu = ($is_union === null) ? 0 : intval($is_union);
-  $stmt->bind_param('ssssssisis', $dhss, $gc, $name, $num, $email, $addr, $iu, $winner, $client_win_price, $id);
+  $stmt->bind_param('ssssssiisi', $dhss, $gc, $name, $num, $email, $addr, $iu, $winner, $client_win_price, $id);
   if ($stmt->execute()) {
     $clientUpdated = 0;
     $lookupName = $existingName !== '' ? $existingName : (string)$name;

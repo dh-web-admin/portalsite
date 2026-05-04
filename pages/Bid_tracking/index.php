@@ -437,7 +437,41 @@ foreach ($bidColumns as $c) {
     /* pageBody wraps the table area and sits beneath the toolbar */
     #pageBody { flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; }
     /* make only the table container scroll vertically */
-    #tableContainer { flex: 1 1 auto; overflow-y: auto; overflow-x: auto; }
+    #tableContainer { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: auto; }
+    #dhStabilizerTotalBar {
+      flex: 0 0 auto;
+      position: sticky;
+      bottom: 0;
+      z-index: 80;
+      display:block;
+      text-align:left;
+      margin: 10px 0 0 0;
+      padding: 12px 16px;
+      border: 2px solid #0f172a;
+      border-radius: 10px;
+      background:#e0f2fe;
+      color:#0f172a;
+      font-weight:800;
+      box-shadow: 0 8px 20px rgba(2,6,23,0.12);
+    }
+    #dhStabilizerTotalLabel {
+      position: relative;
+      display:inline-block;
+      font-size:14px;
+      color:#0f172a;
+      font-weight:800;
+      text-align:left;
+    }
+    #dhStabilizerTotalValue {
+      position:absolute;
+      top:50%;
+      transform:translate(-50%, -50%);
+      left:50%;
+      font-size:16px;
+      color:#0c4a6e;
+      font-weight:800;
+      font-variant-numeric: tabular-nums;
+    }
     /* pagination bar */
     #paginationControls { flex: 0 0 auto; }
     #paginationBar { flex: 0 0 auto; display:flex; align-items:center; gap:10px; padding:8px 40px 4px 40px; border-bottom: 1px solid #e2e8f0; }
@@ -640,6 +674,7 @@ foreach ($bidColumns as $c) {
                 /* Highlighting for matched search results */
                 .search-row-match { background: rgba(59,130,246,0.04); }
                 .search-cell-match { background: rgba(59,130,246,0.12); font-weight:600; }
+                .search-term-hit { background:#fde047; color:#111827; border-radius:2px; padding:0 1px; }
                 </style>
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;margin-left:auto;">
                   <label for="orderBySelect" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">order by:</label>
@@ -828,6 +863,8 @@ foreach ($bidColumns as $c) {
                           // Build a human-friendly, title-cased label.
                           if ($col === 'dhss_project_number') {
                             $label = 'DHSS Project #';
+                          } elseif ($col === 'dh_stabilizer_price') {
+                            $label = 'DH Stabilizer Price';
                           } elseif ($col === 'gc_name' || $col === 'general_contractor_name') {
                             $label = 'General Contractor Name';
                           } elseif ($col === 'gc_number' || $col === 'general_contractor_number') {
@@ -1124,6 +1161,10 @@ foreach ($bidColumns as $c) {
                 </tbody>
               </table>
             </div>
+            <div id="dhStabilizerTotalBar">
+              <span id="dhStabilizerTotalLabel">Total</span>
+              <span id="dhStabilizerTotalValue">$0</span>
+            </div>
 
           </div>
 
@@ -1266,6 +1307,7 @@ foreach ($bidColumns as $c) {
                       if ($col === 'project_city') { $label = 'Project City'; }
                       elseif ($col === 'project_county') { $label = 'Project County'; }
                       elseif ($col === 'project_state') { $label = 'Project State'; }
+                      elseif ($col === 'dh_stabilizer_price') { $label = 'DH Stabilizer Price'; }
                       elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
                       else { $label = ucwords(str_replace('_',' ',$col)); }
                     ?>
@@ -1311,6 +1353,7 @@ foreach ($bidColumns as $c) {
                     <?php foreach ($specFields as $col) {
                       if ($col === 'gc_name') { $label = 'General Contractor Name'; }
                       elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
+                      elseif ($col === 'dh_stabilizer_price') { $label = 'DH Stabilizer Price'; }
                       elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
                       elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
                       else { $label = ucwords(str_replace('_',' ',$col)); }
@@ -1330,12 +1373,16 @@ foreach ($bidColumns as $c) {
                     <div class="toggle"><span class="chev">▾</span><span>collapse</span></div>
                   </div>
                   <div class="section-content">
-                      <?php foreach ($otherFields as $col) {
+                    <?php foreach ($otherFields as $col) {
                       if ($col === 'notes') continue;
                       // avoid duplicate Client Winner select in Additional Information (it lives under General Contractor section)
                       if ($col === 'client_winner') continue;
+                      // hide fields duplicated in the General Contractor section
+                      $lcOther = strtolower($col);
+                      if (in_array($lcOther, ['client_win_price', 'is_union', 'winner'], true)) continue;
                       if ($col === 'gc_name') { $label = 'General Contractor Name'; }
                       elseif ($col === 'gc_number') { $label = 'General Contractor Number'; }
+                      elseif ($col === 'dh_stabilizer_price') { $label = 'DH Stabilizer Price'; }
                       elseif (strpos(strtolower($col),'gc') !== false || $col === 'general_contractor') { $label = 'General Contractor'; }
                       elseif ($col === 'dhss_project_number') { $label = 'DHSS Project #'; }
                       else { $label = ucwords(str_replace('_',' ',$col)); }
@@ -1570,6 +1617,30 @@ foreach ($bidColumns as $c) {
       var addForm = document.getElementById('addProjectForm');
       var dhssInput = document.getElementById('dhssProjectNumber');
 
+      function normalizeNumericLikeValue(raw) {
+        var s = (raw === null || typeof raw === 'undefined') ? '' : String(raw).trim();
+        if (!s) return s;
+        // Accept values like 123,123.4565 (or plain numeric values) and normalize to DB-friendly numeric text.
+        var numericLike = /^\$?\s*[+-]?\d[\d,]*(?:\.\d+)?\s*$/;
+        if (!numericLike.test(s)) return s;
+        var cleaned = s.replace(/\$/g, '').replace(/,/g, '').replace(/\s+/g, '');
+        if (/^[+-]?\d+(?:\.\d+)?$/.test(cleaned)) return cleaned;
+        return s;
+      }
+
+      function normalizeFormDataNumericLike(fd, skipKeys) {
+        if (!fd || !fd.entries) return;
+        var skip = skipKeys || {};
+        Array.from(fd.entries()).forEach(function(pair){
+          var k = pair[0];
+          var v = pair[1];
+          if (skip[k]) return;
+          if (typeof v !== 'string') return;
+          var nv = normalizeNumericLikeValue(v);
+          if (nv !== v) fd.set(k, nv);
+        });
+      }
+
       function openAddModal() {
         if (!addModal) return;
         fetch('../../api/get_next_project_number.php', { credentials: 'same-origin' })
@@ -1605,6 +1676,9 @@ foreach ($bidColumns as $c) {
               }
             }
           } catch(e) { }
+
+          // Normalize comma-separated decimal inputs across all fields (except date fields).
+          try { normalizeFormDataNumericLike(fd, { bid_date: true }); } catch(e) {}
 
           var submitBtn = document.getElementById('confirmAddProject');
           if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating...'; }
@@ -1715,14 +1789,55 @@ foreach ($bidColumns as $c) {
         if (!val && val !== 0 && val !== '0') return '';
         var s = (val === null || val === undefined) ? '' : String(val);
         if (moneyCols.indexOf(col) !== -1) {
-          if (s.trim().indexOf('$') === 0) return s;
-          return '$' + s;
+          return '$' + formatNumericWithGrouping(s);
         }
         if (dateCols.indexOf(col) !== -1) {
           var out = formatDateMMDDYYYY(s);
           return out || s;
         }
         return s;
+      }
+
+      function formatNumericWithGrouping(raw) {
+        var s = (raw === null || typeof raw === 'undefined') ? '' : String(raw).trim();
+        if (!s) return '';
+        var cleaned = s.replace(/\$/g, '').replace(/,/g, '').replace(/\s+/g, '');
+        if (!/^[+-]?\d+(?:\.\d+)?$/.test(cleaned)) return s;
+        var sign = '';
+        var body = cleaned;
+        if (body.charAt(0) === '-' || body.charAt(0) === '+') {
+          sign = body.charAt(0);
+          body = body.slice(1);
+        }
+        var parts = body.split('.');
+        var intPart = parts[0] || '0';
+        var fracPart = parts.length > 1 ? parts[1] : '';
+        intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return sign + intPart + (fracPart !== '' ? ('.' + fracPart) : '');
+      }
+
+      function normalizeNumericLikeValue(raw) {
+        var s = (raw === null || typeof raw === 'undefined') ? '' : String(raw).trim();
+        if (!s) return s;
+        // Accept values like 123,123.4565 and normalize them for numeric DB columns.
+        var numericLike = /^\$?\s*[+-]?\d[\d,]*(?:\.\d+)?\s*$/;
+        if (!numericLike.test(s)) return s;
+        var cleaned = s.replace(/\$/g, '').replace(/,/g, '').replace(/\s+/g, '');
+        if (/^[+-]?\d+(?:\.\d+)?$/.test(cleaned)) return cleaned;
+        return s;
+      }
+
+      function normalizeFormDataNumericLike(fd, skipKeys) {
+        if (!fd || !fd.entries) return;
+        var skip = skipKeys || {};
+        Array.from(fd.entries()).forEach(function(pair){
+          var k = pair[0];
+          var v = pair[1];
+          if (skip[k]) return;
+          if (typeof v !== 'string') return;
+          var nv = normalizeNumericLikeValue(v);
+          if (nv !== v) fd.set(k, nv);
+        });
       }
 
       // Format any existing table cells for date columns on load
@@ -2166,7 +2281,8 @@ foreach ($bidColumns as $c) {
                   var mail = it.general_contractor_email || '';
                   var addr = it.general_contractor_address || ''; 
                   var unionVal = (typeof it.is_union !== 'undefined') ? it.is_union : ((typeof it.union !== 'undefined') ? it.union : (it.general_contractor_union || ''));
-                  var cwp = (typeof it.client_win_price !== 'undefined') ? it.client_win_price : '';
+                  var cwpRaw = (typeof it.client_win_price !== 'undefined') ? it.client_win_price : '';
+                  var cwp = formatNumericWithGrouping(cwpRaw);
                   var isWinner = (it.winner && (it.winner == 1 || it.winner === '1' || it.winner === true));
 
                   function makeCellInput(val, nameAttr, placeholder, highlightColor) {
@@ -2336,6 +2452,9 @@ foreach ($bidColumns as $c) {
                   } else {
                     el.value = iso ? formatDateMMDDYYYY(iso) : '';
                   }
+                } else if (moneyCols.indexOf(col) !== -1) {
+                  var mv = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : '';
+                  el.value = formatNumericWithGrouping(mv);
                 } else {
                   el.value = (bidObj[col] !== undefined && bidObj[col] !== null) ? bidObj[col] : '';
                 }
@@ -2788,6 +2907,15 @@ foreach ($bidColumns as $c) {
                         });
                       }
                     } catch(e) { /* ignore sanitization failures */ }
+
+                    // Normalize comma-separated decimal values for all submitted fields except date fields.
+                    try {
+                      var skipKeys = {};
+                      if (Array.isArray(dateCols)) {
+                        dateCols.forEach(function(dc){ skipKeys[dc] = true; });
+                      }
+                      normalizeFormDataNumericLike(fd, skipKeys);
+                    } catch(e) {}
 
                     return syncGcClientsToDirectory().then(function(){
                       return fetch(theUpdateUrl, { method: 'POST', credentials: 'same-origin', body: fd });
@@ -3530,6 +3658,60 @@ foreach ($bidColumns as $c) {
             });
           })();
 
+          function parseNumericLoose(raw) {
+            var s = (raw === null || typeof raw === 'undefined') ? '' : String(raw).trim();
+            if (!s) return NaN;
+            var cleaned = s.replace(/\$/g, '').replace(/,/g, '').replace(/\s+/g, '');
+            if (!/^[+-]?\d+(?:\.\d+)?$/.test(cleaned)) return NaN;
+            var n = parseFloat(cleaned);
+            return isNaN(n) ? NaN : n;
+          }
+
+          function updateDhStabilizerTotalBar(items) {
+            try {
+              var totalEl = document.getElementById('dhStabilizerTotalValue');
+              if (!totalEl) return;
+              var sum = 0;
+              (items || []).forEach(function(it) {
+                var v = '';
+                try {
+                  if (it && it.obj && typeof it.obj.dh_stabilizer_price !== 'undefined' && it.obj.dh_stabilizer_price !== null) {
+                    v = it.obj.dh_stabilizer_price;
+                  }
+                } catch(e) {}
+                if ((v === '' || v === null || typeof v === 'undefined') && it && it.row) {
+                  try {
+                    var td = it.row.querySelector('td[data-col="dh_stabilizer_price"]');
+                    if (td) v = td.textContent || '';
+                  } catch(e) {}
+                }
+                var n = parseNumericLoose(v);
+                if (!isNaN(n)) sum += n;
+              });
+              var rounded = Math.round((sum + Number.EPSILON) * 10000) / 10000;
+              totalEl.textContent = '$' + formatNumericWithGrouping(String(rounded));
+            } catch(e) {}
+          }
+
+          function syncDhStabilizerTotalPosition() {
+            try {
+              var bar = document.getElementById('dhStabilizerTotalBar');
+              var totalEl = document.getElementById('dhStabilizerTotalValue');
+              if (!bar || !totalEl) return;
+              var th = document.querySelector('#bidsTable thead th[data-col="dh_stabilizer_price"]');
+              if (!th) { totalEl.style.left = '50%'; return; }
+              var barRect = bar.getBoundingClientRect();
+              var thRect = th.getBoundingClientRect();
+              var centerX = (thRect.left + thRect.right) / 2;
+              var leftPx = centerX - barRect.left;
+              var min = 70;
+              var max = Math.max(min, barRect.width - 70);
+              if (leftPx < min) leftPx = min;
+              if (leftPx > max) leftPx = max;
+              totalEl.style.left = leftPx + 'px';
+            } catch(e) {}
+          }
+
 function applyFiltersAndGrouping() {
   if (!tbody || !table) return;
   try {
@@ -3590,6 +3772,8 @@ function applyFiltersAndGrouping() {
       });
     }
   } catch(e) {}
+  try { updateDhStabilizerTotalBar(filtered); } catch(e) {}
+  try { syncDhStabilizerTotalPosition(); } catch(e) {}
 
   // 3) Default rendering: group rows by status in the requested order
   //    and sort rows within each status by bid_date ascending (nulls last).
@@ -3643,6 +3827,96 @@ function applyFiltersAndGrouping() {
     var bn = (pb.it && pb.it.project_name) ? String(pb.it.project_name).trim() : '';
     return an.localeCompare(bn);
   }
+  function escapeRegExp(s){
+    return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  function clearSearchTermHighlights(el){
+    if (!el || !el.querySelectorAll) return;
+    try {
+      var hits = el.querySelectorAll('span.search-term-hit');
+      hits.forEach(function(hit){
+        var parent = hit.parentNode;
+        if (!parent) return;
+        parent.replaceChild(document.createTextNode(hit.textContent || ''), hit);
+        try { parent.normalize(); } catch(_e) {}
+      });
+    } catch(e) {}
+  }
+  function highlightTermInNode(node, re){
+    if (!node || !re) return;
+    if (node.nodeType === 3) {
+      var text = node.nodeValue || '';
+      if (!text) return;
+      re.lastIndex = 0;
+      if (!re.test(text)) return;
+      re.lastIndex = 0;
+      var frag = document.createDocumentFragment();
+      var lastIdx = 0;
+      var m;
+      while ((m = re.exec(text)) !== null) {
+        var idx = m.index;
+        var val = m[0];
+        if (idx > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, idx)));
+        var span = document.createElement('span');
+        span.className = 'search-term-hit';
+        span.textContent = val;
+        frag.appendChild(span);
+        lastIdx = idx + val.length;
+        if (val.length === 0) break;
+      }
+      if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+      if (node.parentNode) node.parentNode.replaceChild(frag, node);
+      return;
+    }
+    if (node.nodeType !== 1) return;
+    var tag = (node.tagName || '').toUpperCase();
+    if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') return;
+    if (node.classList && node.classList.contains('search-term-hit')) return;
+    Array.from(node.childNodes || []).forEach(function(child){ highlightTermInNode(child, re); });
+  }
+  function highlightTermInCell(cell, term){
+    if (!cell) return false;
+    clearSearchTermHighlights(cell);
+    if (!term) return false;
+    var re = new RegExp(escapeRegExp(term), 'ig');
+    highlightTermInNode(cell, re);
+    return !!cell.querySelector('span.search-term-hit');
+  }
+  function applySearchHighlights(item, term){
+    try {
+      var targets = [];
+      if (item && item.row) targets.push(item.row);
+      if (item && item.detailRows && item.detailRows.length) {
+        item.detailRows.forEach(function(dr){ if (dr) targets.push(dr); });
+      }
+      targets.forEach(function(tr){
+        try {
+          tr.classList.remove('search-row-match');
+          tr.querySelectorAll('td').forEach(function(td){
+            if (td.classList) td.classList.remove('search-cell-match');
+            clearSearchTermHighlights(td);
+          });
+        } catch(e) {}
+      });
+      if (!term) return;
+      targets.forEach(function(tr){
+        var any = false;
+        try {
+          tr.querySelectorAll('td').forEach(function(td){
+            try {
+              if ((td.textContent || '').toLowerCase().indexOf(term) !== -1) {
+                if (td.classList) td.classList.add('search-cell-match');
+                any = true;
+              }
+              var hasWordHit = highlightTermInCell(td, term);
+              if (hasWordHit) any = true;
+            } catch(e) {}
+          });
+          if (any) tr.classList.add('search-row-match');
+        } catch(e) {}
+      });
+    } catch(e) {}
+  }
 
   // Build fragment in sorted order
   var frag = document.createDocumentFragment();
@@ -3678,16 +3952,9 @@ function applyFiltersAndGrouping() {
       if (idx !== 0 && prevProj !== curProj) {
         var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
       }
-      // Clear previous search highlights and apply new ones if search term present
       try {
-        w.it.row.classList.remove('search-row-match');
-        w.it.row.querySelectorAll('td').forEach(function(td){ if (td.classList) td.classList.remove('search-cell-match'); });
-        if (typeof bidTrackingSearchTerm === 'string' && bidTrackingSearchTerm.trim()) {
-          var _t = bidTrackingSearchTerm.trim().toLowerCase();
-          var any = false;
-          w.it.row.querySelectorAll('td').forEach(function(td){ try { if ((td.textContent||'').toLowerCase().indexOf(_t) !== -1) { if (td.classList) td.classList.add('search-cell-match'); any = true; } } catch(e){} });
-          if (any) w.it.row.classList.add('search-row-match');
-        }
+        var _t = (typeof bidTrackingSearchTerm === 'string' && bidTrackingSearchTerm.trim()) ? bidTrackingSearchTerm.trim().toLowerCase() : '';
+        applySearchHighlights(w.it, _t);
       } catch(e) {}
       frag.appendChild(w.it.row);
       try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
@@ -3718,14 +3985,8 @@ function applyFiltersAndGrouping() {
         var spr = document.createElement('tr'); spr.className = 'group-spacer'; var td = document.createElement('td'); td.colSpan = colCount; spr.appendChild(td); frag.appendChild(spr);
       }
       try {
-        w.it.row.classList.remove('search-row-match');
-        w.it.row.querySelectorAll('td').forEach(function(td){ if (td.classList) td.classList.remove('search-cell-match'); });
-        if (typeof bidTrackingSearchTerm === 'string' && bidTrackingSearchTerm.trim()) {
-          var _t2 = bidTrackingSearchTerm.trim().toLowerCase();
-          var any2 = false;
-          w.it.row.querySelectorAll('td').forEach(function(td){ try { if ((td.textContent||'').toLowerCase().indexOf(_t2) !== -1) { if (td.classList) td.classList.add('search-cell-match'); any2 = true; } } catch(e){} });
-          if (any2) w.it.row.classList.add('search-row-match');
-        }
+        var _t2 = (typeof bidTrackingSearchTerm === 'string' && bidTrackingSearchTerm.trim()) ? bidTrackingSearchTerm.trim().toLowerCase() : '';
+        applySearchHighlights(w.it, _t2);
       } catch(e) {}
       frag.appendChild(w.it.row);
       try { if (w.it.detailRows && w.it.detailRows.length) w.it.detailRows.forEach(function(d){ frag.appendChild(d); }); } catch(e) {}
@@ -4068,6 +4329,7 @@ function syncGcDisplayForProjects() {
                   if (!td) return;
                   var v = getGcVal(chosen, k);
                   if ((k || '').toLowerCase() === 'winner' && v !== '') v = (v == 1 || v === '1') ? 'Yes' : 'No';
+                  if ((k || '').toLowerCase() === 'client_win_price') v = formatNumericWithGrouping(v);
                   td.textContent = (v || '').toString();
                 } catch(e){}
               });
@@ -4121,6 +4383,7 @@ function syncGcDisplayForProjects() {
                       if (!gc) { td.textContent = ''; return; }
                       var v = getGcVal(gc, colName);
                       if ((colName || '').toLowerCase() === 'winner' && v !== '') v = (v == 1 || v === '1') ? 'Yes' : 'No';
+                      if ((colName || '').toLowerCase() === 'client_win_price') v = formatNumericWithGrouping(v);
                       td.textContent = (v || '').toString();
                     } catch(e){}
                   });
@@ -4205,6 +4468,7 @@ function syncGcDisplayForProjects() {
             // Format any pre-rendered table date cells to mm/dd/yyyy
             try { formatTableDates(); } catch(e){}
             applyFiltersAndGrouping();
+            try { syncDhStabilizerTotalPosition(); } catch(e){}
             // Clear saved filter keys (localStorage/sessionStorage) after initial apply
             // so a browser refresh does not reapply the previously selected filters.
             try {
@@ -4228,6 +4492,11 @@ function syncGcDisplayForProjects() {
             // Ensure money fields in modal are wrapped and table cells prefixed
             try { wrapMoneyInputs(); } catch(e){}
             try { applyDollarPrefixToTableCells(); } catch(e){}
+            try {
+              window.addEventListener('resize', function(){ try { syncDhStabilizerTotalPosition(); } catch(e){} });
+              var tc = document.getElementById('tableContainer');
+              if (tc) tc.addEventListener('scroll', function(){ try { syncDhStabilizerTotalPosition(); } catch(e){} });
+            } catch(e){}
         } catch(e) { console.warn('filters+grouping failed', e); }
 
         // Make modal subsections collapsible

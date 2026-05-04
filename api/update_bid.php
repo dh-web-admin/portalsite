@@ -67,12 +67,28 @@ if ($bidId <= 0) {
 // Discover updatable columns from the table schema (exclude id and timestamps)
 $colsRes = $conn->query("SHOW COLUMNS FROM bids");
 $allowed = [];
+$numericCols = [];
 if ($colsRes) {
     while ($c = $colsRes->fetch_assoc()) {
         $f = $c['Field'];
         if (in_array($f, ['bid_id','created_at','updated_at'], true)) continue;
         $allowed[] = $f;
+        $t = isset($c['Type']) ? strtolower((string)$c['Type']) : '';
+        if (preg_match('/^(tinyint|smallint|mediumint|int|bigint|decimal|numeric|float|double|real)\b/', $t)) {
+            $numericCols[$f] = true;
+        }
     }
+}
+
+function normalize_numeric_like_value($raw) {
+    if ($raw === null) return null;
+    $s = trim((string)$raw);
+    if ($s === '') return $raw;
+    // Accept comma-separated decimal strings (e.g. 123,123.4565)
+    if (!preg_match('/^\$?\s*[+-]?\d[\d,]*(?:\.\d+)?\s*$/', $s)) return $raw;
+    $cleaned = str_replace([',', '$', ' '], '', $s);
+    if (preg_match('/^[+-]?\d+(?:\.\d+)?$/', $cleaned)) return $cleaned;
+    return $raw;
 }
 
 // DEBUG: log the schema info for the `status` column so we know its runtime type
@@ -90,6 +106,9 @@ foreach ($allowed as $col) {
     if (array_key_exists($col, $input)) {
         $updateFields[] = $col;
         $v = $input[$col];
+        if ($v !== '' && isset($numericCols[$col])) {
+            $v = normalize_numeric_like_value($v);
+        }
         if ($v === '') $v = null;
         $values[] = $v;
     }
