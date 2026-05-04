@@ -445,6 +445,7 @@ foreach ($bidColumns as $c) {
       z-index: 80;
       display:block;
       text-align:left;
+      overflow:hidden;
       margin: 10px 0 0 0;
       padding: 12px 16px;
       border: 2px solid #0f172a;
@@ -471,6 +472,7 @@ foreach ($bidColumns as $c) {
       color:#0c4a6e;
       font-weight:800;
       font-variant-numeric: tabular-nums;
+      white-space:nowrap;
     }
     /* pagination bar */
     #paginationControls { flex: 0 0 auto; }
@@ -3699,16 +3701,18 @@ foreach ($bidColumns as $c) {
               var totalEl = document.getElementById('dhStabilizerTotalValue');
               if (!bar || !totalEl) return;
               var th = document.querySelector('#bidsTable thead th[data-col="dh_stabilizer_price"]');
-              if (!th) { totalEl.style.left = '50%'; return; }
+              if (!th) { totalEl.style.visibility = 'hidden'; return; }
+              var thStyle = window.getComputedStyle ? window.getComputedStyle(th) : null;
+              if (th.style.display === 'none' || (thStyle && thStyle.display === 'none')) {
+                totalEl.style.visibility = 'hidden';
+                return;
+              }
               var barRect = bar.getBoundingClientRect();
               var thRect = th.getBoundingClientRect();
               var centerX = (thRect.left + thRect.right) / 2;
               var leftPx = centerX - barRect.left;
-              var min = 70;
-              var max = Math.max(min, barRect.width - 70);
-              if (leftPx < min) leftPx = min;
-              if (leftPx > max) leftPx = max;
               totalEl.style.left = leftPx + 'px';
+              totalEl.style.visibility = 'visible';
             } catch(e) {}
           }
 
