@@ -1,0 +1,55 @@
+{
+    "meta": {
+        "saved_by": "admin",
+        "user_id": 22,
+        "ts": "20260519_155809"
+    },
+    "payload": {
+        "employee": "admin",
+        "rows": [
+            {
+                "day": "SUN",
+                "date": "2026-05-17",
+                "description": "",
+                "hours": ""
+            },
+            {
+                "day": "MON",
+                "date": "2026-05-18",
+                "description": "",
+                "hours": ""
+            },
+            {
+                "day": "TUE",
+                "date": "2026-05-19",
+                "description": "",
+                "hours": ""
+            },
+            {
+                "day": "WED",
+                "date": "2026-05-20",
+                "description": "",
+                "hours": ""
+            },
+            {
+                "day": "THU",
+                "date": "2026-05-21",
+                "description": "",
+                "hours": ""
+            },
+            {
+                "day": "FRI",
+                "date": "2026-05-22",
+                "description": "",
+                "hours": ""
+            },
+            {
+                "day": "SAT",
+                "date": "2026-05-23",
+                "description": "",
+                "hours": ""
+            }
+        ],
+        "total_hours": "0.00"
+    }
+}

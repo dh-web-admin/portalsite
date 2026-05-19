@@ -594,7 +594,7 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
       // currentSunday holds the start (Sunday) of the currently displayed week
       let currentSunday = null;
 
-      function renderWeek(sunday){
+      async function renderWeek(sunday){
         currentSunday = new Date(sunday);
         const rows = document.querySelectorAll('#worksheet-table tbody tr');
         const dayNames = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -630,8 +630,23 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
           else { weekDatesEl.classList.add('other'); weekDatesEl.classList.remove('current'); weekNumEl.classList.add('other'); weekNumEl.classList.remove('current'); }
         }catch(e){}
 
-        // try loading per-week draft from localStorage
-        const weekKey = 'worksheet_week_' + currentSunday.toISOString().slice(0,10);
+        // try loading per-week data from server first (falls back to localStorage, then clear)
+        const sundayKeyDate = currentSunday.toISOString().slice(0,10);
+        const weekKey = 'worksheet_week_' + sundayKeyDate;
+
+        try{
+          const resp = await fetch('get_worksheet.php?week_start=' + encodeURIComponent(sundayKeyDate));
+          if (resp && resp.ok){
+            const j = await resp.json();
+            if (j && j.success && j.data && j.data.rows){
+              const rowsEls = document.querySelectorAll('#worksheet-table tbody tr');
+              j.data.rows.forEach((r,i)=>{ if (!rowsEls[i]) return; rowsEls[i].querySelector('textarea[name="description[]"]').value = r.description || ''; rowsEls[i].querySelector('input[name="hours[]"]').value = r.hours || ''; });
+              recalcTotals();
+              return;
+            }
+          }
+        }catch(e){ /* ignore and fallback to local */ }
+
         try{
           const d = JSON.parse(localStorage.getItem(weekKey) || 'null');
           const rowsEls = document.querySelectorAll('#worksheet-table tbody tr');
@@ -642,8 +657,9 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
           }
         }catch(e){}
 
-        // no per-week draft: clear descriptions and hours
-        document.querySelectorAll('#worksheet-table tbody textarea, #worksheet-table tbody input[name="hours[]"]').forEach(el => el.value = '');
+        // no per-week data: clear descriptions and hours
+        document.querySelectorAll('#worksheet-table tbody textarea, #worksheet-table tbody input[name="hours[]"]')
+          .forEach(el => el.value = '');
         recalcTotals();
       }
 
