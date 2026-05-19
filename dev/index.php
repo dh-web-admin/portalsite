@@ -205,6 +205,18 @@
           </div>
         </a>
 
+        <!-- Worksheet (Dev tool) -->
+        <a href="Worksheet.php" class="doc-card" data-category="essential">
+          <h2>Weekly Worksheet</h2>
+          <p>
+            Open the weekly worksheet to record hours and tasks for the current week. Save, print, and navigate weeks.
+          </p>
+          <div class="doc-card-meta">
+            <span class="badge badge-essential">Tool</span>
+            <span>Updated: <?php echo date('M j, Y'); ?></span>
+          </div>
+        </a>
+
         <!-- Setup: GitHub, Railway -->
         <a href="github-setup.html" class="doc-card" data-category="setup">
           <h2>GitHub Setup</h2>
