@@ -64,6 +64,16 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
         align-items: center;
         gap: 20px;
       }
+      .btn-back {
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: var(--surface-2);
+        border: 1px solid var(--border-strong);
+        color: var(--text);
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn-back:hover { background: var(--surface); }
       .wordmark {
         font-size: 13px;
         font-weight: 600;
@@ -425,6 +435,7 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
     <!-- Top bar -->
     <nav class="topbar">
       <div class="topbar-left">
+        <button class="btn-back" onclick="location.href='index.php'" title="Back to developer dashboard">← Back</button>
         <span class="wordmark">TimeSheet</span>
         <div class="sep"></div>
         <div class="employee-badge">
@@ -434,6 +445,7 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
       </div>
       <div class="topbar-right">
         <span id="today-string"></span>
+        
         <button class="btn btn-ghost" onclick="clearTable()">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M2 4h12M5 4V2.5a.5.5 0 01.5-.5h5a.5.5 0 01.5.5V4M6.5 7v5M9.5 7v5M3 4l.8 9.1a.5.5 0 00.5.4h7.4a.5.5 0 00.5-.4L13 4" stroke-linecap="round" stroke-linejoin="round"/>
