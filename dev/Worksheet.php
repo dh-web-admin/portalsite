@@ -692,6 +692,16 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
           .replace(/'/g,'&#39;');
       }
 
+      // Inline logo SVG (read from server) to ensure it appears in print previews
+      const logoSvgHtml = <?php
+        $logoPath = __DIR__ . '/../assets/images/Horse.svg';
+        $logoHtml = '';
+        if (is_readable($logoPath)) {
+          $logoHtml = file_get_contents($logoPath);
+        }
+        echo json_encode($logoHtml);
+      ?>;
+
       function printWeek(){
         const rows = collectData();
         const emp = <?php echo json_encode($name); ?>;
@@ -817,6 +827,7 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
       text-align: center;
       overflow: hidden;
     }
+    .brand-lockup svg { width: 100%; height: auto; display: block; }
 
     .brand-logo {
       display: block;
@@ -1057,7 +1068,7 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
   <div class="sheet">
     <div class="sheet-header">
       <div class="brand-lockup">
-        <img class="brand-logo" src="/PortalSite/assets/images/Horse.svg" alt="Dark Horse logo">
+        ${logoSvgHtml}
         <div class="brand-name">Dark Horse</div>
         <div class="brand-subtitle">Custom Spreader Trucks</div>
       </div>
