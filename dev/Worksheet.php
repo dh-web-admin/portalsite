@@ -822,12 +822,12 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
       position: absolute;
       left: 7px;
       top: 0;
-      width: 118px;
+      width: 72px;
       height: 72px;
       text-align: center;
       overflow: hidden;
     }
-    .brand-lockup svg { width: 100%; height: auto; display: block; }
+    .brand-lockup svg { width: 72px; height: 72px; display: block; }
 
     .brand-logo {
       display: block;
@@ -1120,20 +1120,53 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
 </body>
 </html>`;
 
-        const w = window.open('', '_blank');
-        if (!w) {
-          showToast('Popup blocked. Allow popups to print.', 'error');
-          return;
+        // Create a hidden iframe, write the printable HTML into it, then call print()
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+
+        try {
+          // Use srcdoc for modern browsers
+          iframe.srcdoc = html;
+        } catch (e) {
+          // Fallback: write into iframe document
+          const idoc = iframe.contentWindow.document;
+          idoc.open(); idoc.write(html); idoc.close();
         }
 
-        w.document.open();
-        w.document.write(html);
-        w.document.close();
-        w.focus();
+        iframe.onload = () => {
+          try {
+            const w = iframe.contentWindow;
+            // Wait for images to load inside iframe before printing
+            const imgs = iframe.contentDocument.images || [];
+            const loadPromises = [];
+            for (let i = 0; i < imgs.length; i++) {
+              const img = imgs[i];
+              if (!img.complete) {
+                loadPromises.push(new Promise(res => { img.addEventListener('load', res); img.addEventListener('error', res); }));
+              }
+            }
 
-        setTimeout(() => {
-          w.print();
-        }, 300);
+            (loadPromises.length ? Promise.all(loadPromises) : Promise.resolve()).then(() => {
+              try {
+                w.focus();
+                w.print();
+              } catch (err) {
+                showToast('Print failed: ' + (err.message || err), 'error');
+              }
+              setTimeout(() => { try { document.body.removeChild(iframe); } catch(e){} }, 600);
+            });
+          } catch (err) {
+            showToast('Print failed: ' + (err.message || err), 'error');
+            try { document.body.removeChild(iframe); } catch(e){}
+          }
+        };
       }
 
       function clearTable() {
