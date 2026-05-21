@@ -92,6 +92,9 @@ if (!empty($_SESSION['profile_image'])) {
     <img src="<?php echo htmlspecialchars($imgSrc); ?>" alt="<?php echo $imgAlt; ?>" class="<?php echo $imgClass; ?>" />
     <div class="header-actions" aria-hidden="false">
         <a href="<?php echo htmlspecialchars(base_url('/pages/dashboard/index.php')); ?>" class="header-action-btn">Home</a>
+        <?php if (isset($role) && $role === 'developer'): ?>
+            <a href="<?php echo htmlspecialchars(base_url('/dev/index.php')); ?>" class="header-action-btn">Dev Dashboard</a>
+        <?php endif; ?>
         <a href="<?php echo htmlspecialchars(base_url('/pages/account_settings/index.php')); ?>" class="header-action-btn" title="Account Settings">
             <?php if (!empty($profileSrc)): ?>
                 <?php
