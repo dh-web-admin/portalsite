@@ -1,5 +1,6 @@
 <?php require_once __DIR__ . '/auth_check.php'; ?>
 <?php require_once __DIR__ . '/../partials/url.php'; ?>
+<?php $subTitle = ''; /* show subtitle in top ribbon when non-empty */ ?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -35,6 +36,8 @@
         margin: 25px auto 35px;
       }
       .top-bar h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: .5px; color: #f1f5f9; }
+      .top-bar-title { display:flex; flex-direction:column; gap:6px; }
+      .top-subtitle { color: #94a3b8; font-size: 0.9rem; }
       .actions { display: flex; gap: 12px; }
       .actions a {
         text-decoration: none;
@@ -78,7 +81,7 @@
 
       .docs-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        grid-template-columns: 1fr;
         gap: 28px;
         margin-bottom: 46px;
       }
@@ -155,8 +158,14 @@
   <body>
     <div class="layout-shell">
       <div class="top-bar">
-        <h1>Developer Dashboard</h1>
+        <div class="top-bar-title">
+          <h1>Developer Dashboard</h1>
+          <?php if (!empty($subTitle)): ?>
+            <span class="top-subtitle"><?php echo htmlspecialchars($subTitle); ?></span>
+          <?php endif; ?>
+        </div>
         <div class="actions">
+          <a class="secondary" href="<?php echo htmlspecialchars(base_url('/dev/getting-started.php')); ?>">Getting Started</a>
           <a class="secondary" href="<?php echo htmlspecialchars(base_url('/pages/dashboard/')); ?>">Employee Portal</a>
           <a id="logoutLink" href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>">Logout</a>
         </div>
@@ -166,131 +175,24 @@
         <p>Access internal technical references, environment setup guides, architectural notes, and operational workflows. Use search or filters to quickly locate what you need.</p>
       </header>
 
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Search documentation..." />
-      </div>
+      <div style="max-width:980px;margin:0 auto 40px;">
+        <div class="docs-grid" id="docsGrid">
+          <a href="getting-started.php" class="doc-card" data-category="essential">
+            <h2>Getting Started</h2>
+            <p>Use this module to get access to resources and initial setup of the project.</p>
+            <div class="doc-card-meta">
+              <span class="badge badge-essential">Guide</span>
+            </div>
+          </a>
 
-      <div class="category-filter">
-        <button class="filter-btn active" data-filter="all">All Docs</button>
-        <button class="filter-btn" data-filter="essential">Essential</button>
-        <button class="filter-btn" data-filter="setup">Setup</button>
-        <button class="filter-btn" data-filter="reference">Reference</button>
-        <button class="filter-btn" data-filter="guide">Guide</button>
-      </div>
-
-      <div class="docs-grid" id="docsGrid">
-        <!-- Get Started (Onboarding) - ESSENTIAL (FIRST) -->
-        <a href="get-started.html" class="doc-card" data-category="essential">
-          <h2>Get Started (Developer Onboarding)</h2>
-          <p>
-            Step-by-step instructions to set up the project locally (XAMPP,
-            database, config), clone the repo, and the basic developer workflow.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-essential">Essential</span>
-            <span>Updated: Nov 6, 2025</span>
-          </div>
-        </a>
-
-        <!-- Daily Workflow - ESSENTIAL -->
-        <a href="daily-workflow.html" class="doc-card" data-category="essential">
-          <h2>Daily Workflow</h2>
-          <p>
-            Step-by-step guide for daily development tasks, Git commands, and
-            best practices.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-essential">Essential</span>
-            <span>Updated: Nov 6, 2025</span>
-          </div>
-        </a>
-
-        <!-- Worksheet (Dev tool) -->
-        <a href="Worksheet.php" class="doc-card" data-category="essential">
-          <h2>Weekly Worksheet</h2>
-          <p>
-            Open the weekly worksheet to record hours and tasks for the current week. Save, print, and navigate weeks.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-essential">Tool</span>
-            <span>Updated: <?php echo date('M j, Y'); ?></span>
-          </div>
-        </a>
-
-        <!-- Setup: GitHub, Railway -->
-        <a href="github-setup.html" class="doc-card" data-category="setup">
-          <h2>GitHub Setup</h2>
-          <p>
-            Initial Git configuration, repository setup, and GitHub integration
-            instructions.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-setup">Setup</span>
-            <span>Initial Setup</span>
-          </div>
-        </a>
-
-        <a href="railway-deployment.html" class="doc-card" data-category="setup">
-          <h2>Railway Deployment</h2>
-          <p>
-            Deploy PortalSite to Railway.app with database configuration and
-            environment setup.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-setup">Setup</span>
-            <span>Production Deploy</span>
-          </div>
-        </a>
-
-        <!-- Reference: Portal Organization, Pages Reorganization -->
-        <a href="portal-organization.html" class="doc-card" data-category="reference">
-          <h2>Portal Organization</h2>
-          <p>
-            Complete file structure, dependencies, and architecture overview of
-            the PortalSite application.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-reference">Reference</span>
-            <span>Updated: Nov 6, 2025</span>
-          </div>
-        </a>
-
-        <a href="pages-reorganization.html" class="doc-card" data-category="reference">
-          <h2>Pages Reorganization</h2>
-          <p>
-            New folder structure for pages, path changes, and migration guide
-            from flat to organized structure.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-reference">Reference</span>
-            <span>Updated: Nov 6, 2025</span>
-          </div>
-        </a>
-
-        <!-- Recent Maps/UI changes -->
-        <a href="changes.html" class="doc-card" data-category="reference">
-          <h2>Maps & UI Changes (Nov 14, 2025)</h2>
-          <p>
-            Changelog and verification steps for recent Maps page improvements: combined coordinates input, parsing fallbacks, updated supplier details layout, and actions bar placement.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-reference">Reference</span>
-            <span>Updated: Nov 14, 2025</span>
-          </div>
-        </a>
-
-        <!-- Guide: Responsive Design (kept last) -->
-        <a href="responsive-design.html" class="doc-card" data-category="guide">
-          <h2>Responsive Design</h2>
-          <p>
-            Mobile-first design principles, breakpoints, and responsive
-            implementation guide.
-          </p>
-          <div class="doc-card-meta">
-            <span class="badge badge-guide">Guide</span>
-            <span>Design System</span>
-          </div>
-        </a>
+          <a href="Worksheet.php" class="doc-card" data-category="essential">
+            <h2>Weekly Worksheet</h2>
+            <p>Open the weekly worksheet to record hours and tasks for the current week. Save, print, and navigate weeks.</p>
+            <div class="doc-card-meta">
+              <span class="badge badge-essential">Tool</span>
+            </div>
+          </a>
+        </div>
       </div>
 
       <footer>
