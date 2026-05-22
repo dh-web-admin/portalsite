@@ -71,6 +71,9 @@
 					<a id="logoutLink" href="<?php echo htmlspecialchars(base_url('/auth/logout.php')); ?>">Logout</a>
 				</div>
 			</div>
+			<?php if (!empty($_SESSION['flash'] ?? '')): ?>
+				<div style="max-width:980px; margin:12px auto 0; padding:10px 16px; background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.12); color:#a7f3d0; border-radius:8px;"><?php echo htmlspecialchars($_SESSION['flash']); unset($_SESSION['flash']); ?></div>
+			<?php endif; ?>
         
 			<main style="padding:24px; max-width:980px; margin:0 auto;">
 				<section class="card">
