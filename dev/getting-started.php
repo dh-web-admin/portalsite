@@ -35,6 +35,14 @@
 			/* Use plain bullets instead of icon boxes */
 			.checklist { list-style: disc; padding-left: 20px; margin: 0; }
 			.checklist li { padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.03); display:block; }
+			/* Styled numbered steps */
+			.steps { list-style: none; padding-left: 0; margin: 0; }
+			.steps li { counter-increment: step; position: relative; padding: 18px 0 18px 72px; border-bottom: 1px dashed rgba(255,255,255,0.03); }
+			.steps li:last-child { border-bottom: none; }
+			.steps li::before { content: counter(step); counter-reset: none; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); display:flex; align-items:center; justify-content:center; color:#e6eef8; font-weight:700; font-size:1rem; border:1px solid rgba(255,255,255,0.04); box-shadow: 0 6px 20px rgba(2,6,23,0.45); }
+			.steps .note { color:#9aa8b8; margin-top:8px; }
+			.note { color:#9aa8b8; margin-top:8px; }
+			code { background: rgba(255,255,255,0.02); padding:4px 8px; border-radius:6px; color:#cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace; }
 			.check-icon { display: none; }
 			.sub-items { margin:6px 0 0 0; padding-left: 18px; color:#9aa8b8; }
 			.card a { color: #60a5fa; text-decoration: underline; }
@@ -92,9 +100,13 @@
 					<section class="card" style="margin-top:18px;">
 							<h3>Setting up project folder</h3>
 							<p class="muted">Steps to create and prepare your local project folder</p>
-							<ul class="checklist">
-                                
-							</ul>
+							<ol class="steps">
+								<li><div>Open File Explorer and navigate to the directory where you installed XAMPP. Then go to <code>htdocs</code> and create a new folder named <strong>PortalSite</strong>.</div></li>
+								<li><div>Open GitHub Desktop and click <em>Clone a repository on your local drive</em>, then select <strong>dh-web-admin/portalsite</strong>.</div></li>
+								<li><div>Set the local path to the <strong>PortalSite</strong> folder. Eg: <code>C:\xampp\htdocs\PortalSite</code></div></li>
+								<li><div>Click <em>Clone</em>.</div></li>
+							</ol>
+							<div class="note"><div>You can also clone from the command line: <a href="https://github.com/dh-web-admin/portalsite" target="_blank" rel="noopener noreferrer">https://github.com/dh-web-admin/portalsite</a></div></div>
 						</section>
 
 			</main>
