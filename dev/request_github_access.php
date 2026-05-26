@@ -55,23 +55,58 @@ $subject = 'Access request: ' . htmlspecialchars($requesterName);
 $body = "<p><strong>" . htmlspecialchars($requesterName) . "</strong> (" . htmlspecialchars($requesterEmail) . ") has requested access to the GitHub repository and Railway deployment.</p>";
 $body .= "<p>GitHub username: " . htmlspecialchars($github) . "<br>Railway email: " . htmlspecialchars($railway) . "</p>";
 $body .= "<p><a href=\"" . htmlspecialchars($grantUrl) . "\" style=\"display:inline-block;padding:10px 16px;background:#1d4ed8;color:#fff;border-radius:6px;text-decoration:none;\">Grant access</a></p>";
+// Prefer existing mail helpers (Mailjet/PHPMailer) if available
+$mailerCandidates = [
+    __DIR__ . '/../auth/mailjet_helper.php',
+    __DIR__ . '/../partials/mailer.php',
+    __DIR__ . '/../partials/mailer_helper.php',
+    __DIR__ . '/../config/email_config.php'
+];
+foreach ($mailerCandidates as $cand) {
+    if (file_exists($cand)) { require_once $cand; break; }
+}
 
-$headers = "MIME-Version: 1.0\r\n";
-$headers .= "Content-type: text/html; charset=UTF-8\r\n";
-$headers .= "From: noreply@" . $_SERVER['SERVER_NAME'] . "\r\n";
-
-$sent = false;
-foreach ($devs as $d) {
-    // Use PHP mail; if unavailable, this may fail silently depending on server
-    if (mail($d['email'], $subject, $body, $headers)) {
-        $sent = true;
+// Normalize to sendMail($to,$subject,$text,$html)
+if (!function_exists('sendMail')) {
+    if (function_exists('send_mailjet')) {
+        function sendMail($to, $subject, $text, $html) { return send_mailjet($to, $subject, $text, $html); }
+    } elseif (function_exists('sendMailjet')) {
+        function sendMail($to, $subject, $text, $html) { return sendMailjet($to, $subject, $text, $html); }
+    } elseif (function_exists('send_email')) {
+        function sendMail($to, $subject, $text, $html) { return send_email($to, $subject, $text, $html); }
+    } elseif (function_exists('sendEmail')) {
+        function sendMail($to, $subject, $text, $html) { $ok = sendEmail($to, $subject, $html, true); return $ok ? ['success'=>true] : ['success'=>false,'error'=>'sendEmail failed']; }
+    } else {
+        // Fallback to PHP mail()
+        function sendMail($to, $subject, $text, $html) {
+            $headers = "MIME-Version: 1.0\r\n" .
+                "Content-type:text/html;charset=UTF-8\r\n";
+            $from = 'no-reply@' . $_SERVER['SERVER_NAME'];
+            $headers .= 'From: ' . "DarkHorse <" . $from . ">\r\n";
+            $sent = @mail($to, $subject, $html, $headers);
+            return $sent ? ['success'=>true] : ['success'=>false,'error'=>'php-mail-failed'];
+        }
     }
 }
 
-if ($sent) {
+$plain = strip_tags(preg_replace('/<br\s*\/?>/i', "\n", $body));
+$sentAny = false;
+$lastError = '';
+foreach ($devs as $d) {
+    $to = $d['email'];
+    $res = sendMail($to, $subject, $plain, $body);
+    if (is_array($res)) {
+        if (!empty($res['success'])) { $sentAny = true; }
+        elseif (!empty($res['error'])) { $lastError = $res['error']; }
+    } elseif ($res === true) {
+        $sentAny = true;
+    }
+}
+
+if ($sentAny) {
     $_SESSION['flash'] = 'Request sent to developer(s).';
 } else {
-    $_SESSION['flash'] = 'Unable to send email — check mail configuration. Request details saved.';
+    $_SESSION['flash'] = 'Unable to send email — check mail configuration. ' . ($lastError ? $lastError : 'Request details saved.');
 }
 
 // Redirect back

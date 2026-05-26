@@ -13,6 +13,32 @@ $user = $_SESSION['email'] ?? 'anonymous';
 $uid = $_SESSION['user_id'] ?? null;
 
 $dir = __DIR__ . '/worksheets';
+// First try database lookup (if config available)
+try {
+    require_once __DIR__ . '/../config/config.php'; // provides $conn
+    if (isset($conn) && $conn instanceof mysqli) {
+        $week_start = $week;
+        $uid_param = $uid ? (int)$uid : 0;
+        $stmt = $conn->prepare("SELECT payload FROM worksheets WHERE week_start = ? AND (user_id = ? OR user_email = ?) ORDER BY created_at DESC LIMIT 1");
+        if ($stmt) {
+            $stmt->bind_param('sis', $week_start, $uid_param, $user);
+            if ($stmt->execute()) {
+                $res = $stmt->get_result();
+                if ($res && $row = $res->fetch_assoc()) {
+                    $payload = json_decode($row['payload'], true);
+                    if ($payload && isset($payload['rows'])) {
+                        echo json_encode(['success'=>true,'data'=>$payload]);
+                        exit;
+                    }
+                }
+            }
+            $stmt->close();
+        }
+    }
+} catch (Throwable $e) {
+    // ignore DB errors and fall back to filesystem
+}
+
 if (!is_dir($dir)) {
     echo json_encode(['success'=>true,'data'=>null]);
     exit;
