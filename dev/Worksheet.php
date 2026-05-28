@@ -565,14 +565,23 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
       }
       document.getElementById('avatar-initials').textContent = getInitials(<?php echo json_encode($name); ?>);
 
-      function recalcTotals() {
-        const hours = Array.from(document.querySelectorAll('input[name="hours[]"]')).map(i => parseFloat(i.value) || 0);
-        const total = hours.reduce((a,b) => a+b, 0);
-        document.getElementById('total-hours').textContent = total.toFixed(2);
-        document.getElementById('metric-total').textContent = total.toFixed(2);
-        const pct = Math.min(100, Math.round((total / STD_WEEK) * 100));
+      function setTotals(total) {
+        const t = Number(total) || 0;
+        document.getElementById('total-hours').textContent = t.toFixed(2);
+        document.getElementById('metric-total').textContent = t.toFixed(2);
+        const pct = Math.min(100, Math.round((t / STD_WEEK) * 100));
         document.getElementById('metric-pct').textContent = pct + '%';
         document.getElementById('progress-bar').style.width = pct + '%';
+      }
+
+      function recalcTotals() {
+        const hours = Array.from(document.querySelectorAll('input[name="hours[]"]')).map(i => {
+          const v = String(i.value || '').trim().replace(',', '.');
+          const n = parseFloat(v);
+          return Number.isFinite(n) ? n : 0;
+        });
+        const total = hours.reduce((a,b) => a+b, 0);
+        setTotals(total);
       }
 
       function formatDateShort(d) {
@@ -639,11 +648,30 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
           if (resp && resp.ok){
             const j = await resp.json();
             if (j && j.success && j.data && j.data.rows){
-              const rowsEls = document.querySelectorAll('#worksheet-table tbody tr');
-              j.data.rows.forEach((r,i)=>{ if (!rowsEls[i]) return; rowsEls[i].querySelector('textarea[name="description[]"]').value = r.description || ''; rowsEls[i].querySelector('input[name="hours[]"]').value = r.hours || ''; });
-              recalcTotals();
-              return;
-            }
+                const rowsEls = document.querySelectorAll('#worksheet-table tbody tr');
+                j.data.rows.forEach((r,i)=>{
+                  if (!rowsEls[i]) return;
+                  rowsEls[i].querySelector('textarea[name="description[]"]').value = r.description || '';
+                  // normalize hours into input value
+                  const hrsInput = rowsEls[i].querySelector('input[name="hours[]"]');
+                  if (hrsInput) {
+                    hrsInput.value = (r.hours !== undefined && r.hours !== null) ? String(r.hours) : '';
+                  }
+                });
+
+                // compute total from rows; fall back to payload.total_hours if rows are empty
+                let totalFromRows = 0;
+                j.data.rows.forEach(r => {
+                  const v = String((r && r.hours) || '').trim().replace(',', '.');
+                  const n = parseFloat(v);
+                  if (Number.isFinite(n)) totalFromRows += n;
+                });
+                if (totalFromRows > 0) setTotals(totalFromRows);
+                else if (j.data.total_hours) setTotals(j.data.total_hours);
+                else recalcTotals();
+
+                return;
+              }
           }
         }catch(e){ /* ignore and fallback to local */ }
 
