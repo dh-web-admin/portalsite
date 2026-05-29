@@ -114,6 +114,18 @@
 							</ol>
 							<div class="note"><div>You can also clone from the command line: <a href="https://github.com/dh-web-admin/portalsite" target="_blank" rel="noopener noreferrer">https://github.com/dh-web-admin/portalsite</a></div></div>
 						</section>
+						<section class="card" style="margin-top:18px;">
+							<h3>Task Queue</h3>
+							<p class="muted">Overview of background tasks and the current processing queue for development. Use this to inspect pending jobs and retry or cancel tasks while testing integrations.</p>
+							<ul style="margin-top:12px; color:#9aa8b8;">
+								<li>View pending tasks and their payloads</li>
+								<li>Retry or cancel individual jobs</li>
+								<li>Filter by task type (emails, imports, exports)</li>
+							</ul>
+							<div style="margin-top:12px;">
+								<a class="actions" href="task_queue.php" style="text-decoration:none;"><span class="secondary">Open Task Queue</span></a>
+							</div>
+						</section>
 
 			</main>
 
