@@ -1,6 +1,6 @@
 <?php require_once __DIR__ . '/auth_check.php'; ?>
 <?php require_once __DIR__ . '/../partials/url.php'; ?>
-<?php $subTitle = ''; /* show subtitle in top ribbon when non-empty */ ?>
+<?php $subTitle = '';?>
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -188,6 +188,14 @@
           <a href="Worksheet.php" class="doc-card" data-category="essential">
             <h2>Weekly Worksheet</h2>
             <p>Open the weekly worksheet to record hours and tasks for the current week. Save, print, and navigate weeks.</p>
+            <div class="doc-card-meta">
+              <span class="badge badge-essential">Tool</span>
+            </div>
+          </a>
+          
+          <a href="dummyaccounts.php" class="doc-card" data-category="essential">
+            <h2>Dummy accounts</h2>
+            <p>Open the dummy accounts page for testing and seed user credentials.</p>
             <div class="doc-card-meta">
               <span class="badge badge-essential">Tool</span>
             </div>

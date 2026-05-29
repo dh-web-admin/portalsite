@@ -1,7 +1,5 @@
 <?php require_once __DIR__ . '/auth_check.php'; ?>
 <?php require_once __DIR__ . '/../partials/url.php'; ?>
-<?php require_once __DIR__ . '/auth_check.php'; ?>
-<?php require_once __DIR__ . '/../partials/url.php'; ?>
 <?php $subTitle = 'Getting Started'; ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -21,6 +19,8 @@
 			.top-bar h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: .5px; color: #f1f5f9; }
 			.top-bar-title { display:flex; flex-direction:column; gap:6px; }
 			.top-subtitle { color: #94a3b8; font-size: 0.9rem; }
+				.btn-back { padding:6px 10px; border-radius:8px; background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); color:#e6eef8; font-weight:600; cursor:pointer; margin-right:12px; }
+				.btn-back:hover { background: rgba(255,255,255,0.04); }
 			/* Getting Started content styles */
 			.card {
 				background: rgba(255,255,255,0.03);
@@ -60,11 +60,14 @@
 	<body>
 		<div class="layout-shell">
 			<div class="top-bar">
-				<div class="top-bar-title">
+				<div style="display:flex; align-items:center; gap:12px;">
+					<button class="btn-back" onclick="location.href='index.php'" title="Back to developer dashboard">← Back</button>
+					<div class="top-bar-title">
 					<h3>Developer Dashboard</h3>
 					<?php if (!empty($subTitle)): ?>
 						 <span class="top-subtitle"><?php echo htmlspecialchars($subTitle); ?></span>
 					<?php endif; ?>
+					</div>
 				</div>
 				<div class="actions">
 					<a class="secondary" href="<?php echo htmlspecialchars(base_url('/pages/dashboard/')); ?>">Employee Portal</a>
