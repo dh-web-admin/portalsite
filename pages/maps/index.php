@@ -744,11 +744,31 @@ $canEditMaps = can_edit_page('maps');
         return icon;
       }
       
-      // Geocoding disabled: placeholder function
-      // Suppliers without latitude/longitude will not be geocoded automatically.
+      // Geocode an address via Nominatim and plot the marker when found.
+      // Requests are intentionally simple and rate-limited by sequential callers.
       function geocodeAndPlotMarker(supplier, popupContent) {
-        console.warn('Geocoding disabled by configuration. Supplier', supplier && supplier.id, 'will not be geocoded.');
-        return;
+        try {
+          var qparts = [];
+          if (supplier.address) qparts.push(supplier.address);
+          if (supplier.city) qparts.push(supplier.city);
+          if (supplier.state) qparts.push(supplier.state);
+          if (supplier.location_name && (!supplier.address || supplier.address.trim() === '')) qparts.push(supplier.location_name);
+          var q = qparts.join(', ');
+          if (!q) { return; }
+          var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q);
+          // Use fetch to call Nominatim; browsers will send Referer header which Nominatim accepts.
+          fetch(url, { method: 'GET' }).then(function(r){ return r.json(); }).then(function(data){
+            if (data && data.length > 0) {
+              var lat = parseFloat(data[0].lat);
+              var lon = parseFloat(data[0].lon);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                // update supplier object so it's available on marker and UI
+                try { supplier.latitude = String(lat); supplier.longitude = String(lon); } catch(e){}
+                plotMarker(supplier, popupContent, lat, lon);
+              }
+            }
+          }).catch(function(e){ console.warn('Geocode failed for', q, e); });
+        } catch(e) { console.warn('geocodeAndPlotMarker error', e); }
       }
 
       // Vertical wrap behavior: when user pans past near-polar latitudes, jump the view
@@ -995,9 +1015,38 @@ $canEditMaps = can_edit_page('maps');
             }
             addNextBatch();
             
-            // Geocoding is disabled: skip suppliers without cached coordinates.
+            // Attempt to geocode suppliers without cached coordinates (rate-limited sequentially)
             if (suppliersNeedingGeocode.length > 0) {
-              // Geocoding disabled; skipping suppliers without cached coordinates.
+              var geocodeIdx = 0;
+              function geocodeNext() {
+                if (geocodeIdx >= suppliersNeedingGeocode.length) {
+                  // finished geocoding batch
+                  updateSupplierLegend(suppliersWithCoords.concat(suppliersNeedingGeocode.filter(function(s){ return s.latitude && s.longitude; })));
+                  applyFilters(true);
+                  updateSupplierDropdown();
+                  return;
+                }
+                var s = suppliersNeedingGeocode[geocodeIdx];
+                // build popupContent similar to above
+                try {
+                  var popupContent = '<div style="font-size:13px;line-height:1.4;">' + '<strong style="font-size:15px;display:block;margin-bottom:6px;">' + (s.name || 'Unknown') + '</strong>';
+                  if (s.material) popupContent += '<div><strong>Material:</strong> ' + s.material + '</div>';
+                  if (s.location_type) popupContent += '<div><strong>Type:</strong> ' + s.location_type + '</div>';
+                  if (s.address) popupContent += '<div><strong>Street Address:</strong> ' + s.address + '</div>';
+                  if (s.city) popupContent += '<div><strong>City:</strong> ' + s.city + '</div>';
+                  if (s.state) popupContent += '<div><strong>State:</strong> ' + s.state + '</div>';
+                  if (s.sales_contact) popupContent += '<div><strong>Contact:</strong> ' + s.sales_contact + '</div>';
+                  if (s.contact_number) popupContent += '<div><strong>Phone:</strong> ' + s.contact_number + '</div>';
+                  if (s.email) popupContent += '<div><strong>Email:</strong> <a href="mailto:' + s.email + '">' + s.email + '</a></div>';
+                  if (s.notes) popupContent += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + s.notes + '</em></div>';
+                  popupContent += '</div>';
+                } catch(e) { var popupContent = '<div>' + (s.name || 'Unknown') + '</div>'; }
+                geocodeAndPlotMarker(s, popupContent);
+                geocodeIdx++;
+                // Nominatim policy: avoid rapid-fire requests; wait ~1100ms between geocoding calls
+                setTimeout(geocodeNext, 1100);
+              }
+              geocodeNext();
             }
             
             // applyFilters and updateSupplierDropdown are called after batch plotting completes

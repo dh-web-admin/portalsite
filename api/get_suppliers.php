@@ -52,5 +52,47 @@ if (empty($suppliers)) {
   }
 }
 
-echo json_encode(['success' => true, 'suppliers' => $suppliers]);
+// Also include clients that have the same client_type as this service, to surface companies stored only in `clients`
+$merged = $suppliers;
+$stmt3 = $conn->prepare('SELECT client_id, client_name, contact_phone, client_email, client_address, city, state, website, notes, client_type, current_employer FROM clients WHERE LOWER(client_type) = LOWER(?)');
+if ($stmt3) {
+  $stmt3->bind_param('s', $service);
+  $stmt3->execute();
+  $res3 = $stmt3->get_result();
+  if ($res3) {
+    while ($c = $res3->fetch_assoc()) {
+      $company = trim($c['current_employer'] ?: $c['client_name']);
+      if ($company === '') continue;
+      // avoid duplicates by name (case-insensitive)
+      $found = false;
+      foreach ($merged as $ms) {
+        if (isset($ms['name']) && strcasecmp(trim($ms['name']), $company) === 0) { $found = true; break; }
+      }
+      if ($found) continue;
+      $merged[] = [
+        'id' => null,
+        'name' => $company,
+        'material' => '',
+        'sales_contact' => $c['client_name'] ?: '',
+        'contact_number' => $c['contact_phone'] ?: '',
+        'location_phone' => '',
+        'email' => $c['client_email'] ?: '',
+        'address' => $c['client_address'] ?: '',
+        'city' => $c['city'] ?: '',
+        'state' => $c['state'] ?: '',
+        'location_type' => '',
+        'supply_method' => '',
+        'notes' => $c['notes'] ?: '',
+        'service' => $c['client_type'] ?: $service,
+        'latitude' => null,
+        'longitude' => null,
+        'color' => null,
+        'location_name' => $c['current_employer'] ?: ''
+      ];
+    }
+  }
+  $stmt3->close();
+}
+
+echo json_encode(['success' => true, 'suppliers' => $merged]);
 ?>
