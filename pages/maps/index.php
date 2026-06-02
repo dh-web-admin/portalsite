@@ -2243,6 +2243,9 @@ $canEditMaps = can_edit_page('maps');
         
         inputs.forEach(function(input) {
           var field = input.getAttribute('data-field');
+          // Skip generic supplier-field autocomplete for fields that have their
+          // own specialized handlers (e.g. sales_contact uses client-based suggestions)
+          if (field === 'sales_contact') return;
           var dropdown = input.nextElementSibling;
           
           if (!dropdown || !dropdown.classList.contains('autocomplete-dropdown')) {
