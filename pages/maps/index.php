@@ -1620,151 +1620,75 @@ $canEditMaps = can_edit_page('maps');
               try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = col; } catch(e){}
               try { if (addSupplierColorHidden) addSupplierColorHidden.value = known || ''; } catch(e){}
             });
-            
-            // Clients suggestions: fetch clients matching currentService and input q, merge into autocomplete dropdown
-            var clientsByServiceCache = {};
-            function fetchClientsForService(q, cb) {
-              var svc = (typeof currentService !== 'undefined' && currentService) ? String(currentService) : '';
-              var key = svc + '||' + q;
-              if (clientsByServiceCache[key]) { cb(clientsByServiceCache[key]); return; }
-              var url = '../../api/get_clients_by_type.php?type=' + encodeURIComponent(svc) + '&q=' + encodeURIComponent(q || '');
-              fetch(url, { method: 'GET', credentials: 'same-origin' })
-                .then(function(r){ return r.json(); })
-                .then(function(data){ if (data && data.clients) { clientsByServiceCache[key] = data.clients; cb(data.clients); } else cb([]); })
-                .catch(function(){ cb([]); });
-            }
-
-            // Fetch clients by employer name (returns clients whose current_employer matches employer)
-            function fetchClientsByEmployer(employer, cb) {
-              if (!employer) { cb([]); return; }
-              var key = 'emp||' + employer;
-              if (clientsByServiceCache[key]) { cb(clientsByServiceCache[key]); return; }
-              var url = '../../api/get_clients_by_type.php?type=&q=' + encodeURIComponent(employer);
-              fetch(url, { method: 'GET', credentials: 'same-origin' })
-                .then(function(r){ return r.json(); })
-                .then(function(data){
-                  var out = [];
-                  if (data && data.clients && data.clients.length) {
-                    var want = employer.trim().toLowerCase();
-                    data.clients.forEach(function(c){ if ((c.current_employer||'').trim().toLowerCase() === want) out.push(c); });
-                  }
-                  clientsByServiceCache[key] = out;
-                  cb(out);
-                })
-                .catch(function(){ cb([]); });
-            }
-
-            addSupplierNameInput.addEventListener('input', function(e){
-              var q = (this.value || '').trim();
-              var dropdown = this.nextElementSibling; // autocomplete-dropdown
-              if (!dropdown) return;
-              dropdown.innerHTML = '';
-              dropdown.style.display = 'none';
-              if (!q) return;
-
-              fetchClientsForService(q, function(clients){
-                if (!clients || clients.length === 0) return;
-                clients.forEach(function(c){
-                  var tries = [];
-                  if (c.client_name) tries.push({label: c.client_name, type: 'contact'});
-                  if (c.current_employer) tries.push({label: c.current_employer, type: 'employer'});
-                  tries.forEach(function(opt){
-                    var display = opt.label || '';
-                    if (!display) return;
-                    // avoid duplicates
-                    if (Array.from(dropdown.children).some(function(n){ return (n.textContent||'').trim() === display; })) return;
-                    var item = document.createElement('div');
-                    item.className = 'suggestion-item client-suggestion';
-                    item.style.cssText = 'padding: 8px 12px; cursor: pointer; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9;';
-                    item.dataset.clientId = c.client_id;
-                    item.dataset.suggestType = opt.type;
-                    item.textContent = display + (c.contact_phone ? (' — ' + c.contact_phone) : '');
-                    item.addEventListener('click', function(){
-                      // If this suggestion is an employer, show all contacts for that employer first
-                      if (this.dataset && this.dataset.suggestType === 'employer') {
-                        // fetch contacts for the employer and show them in dropdown
-                        try {
-                          dropdown.innerHTML = '';
-                          var header = document.createElement('div');
-                          header.style.cssText = 'padding:8px 12px;font-weight:700;border-bottom:1px solid #f1f5f9;color:#0f172a;';
-                          header.textContent = 'Contacts at "' + display + '"';
-                          dropdown.appendChild(header);
-                          fetchClientsByEmployer(display, function(contacts){
-                            if (!contacts || contacts.length === 0) {
-                              // fallback to selecting the original client object
-                              try { addSupplierNameInput.value = display; dropdown.style.display='none'; document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
-                              return;
-                            }
-                            contacts.forEach(function(contact){
-                              var ci = document.createElement('div');
-                              ci.className = 'suggestion-item contact-suggestion';
-                              ci.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;';
-                              ci.dataset.clientId = contact.client_id;
-                              ci.textContent = (contact.client_name || '(Unnamed)') + (contact.contact_phone ? (' — ' + contact.contact_phone) : '');
-                              ci.addEventListener('click', function(){
-                                try { addSupplierNameInput.value = display; } catch(e){}
-                                try { dropdown.style.display = 'none'; } catch(e){}
-                                // link to selected contact
-                                try { document.getElementById('addLinkedClientId').value = contact.client_id; } catch(e){}
-                                try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = contact.client_name || ''; badge.style.display='inline-block'; } } catch(e){}
-                                // fill form fields with contact details
-                                try {
-                                  var form = addSupplierForm;
-                                  if (form) {
-                                    if (form.querySelector('[name="contact_number"]')) form.querySelector('[name="contact_number"]').value = contact.contact_phone || '';
-                                    if (form.querySelector('[name="email"]')) form.querySelector('[name="email"]').value = contact.client_email || '';
-                                    if (form.querySelector('[name="address"]')) form.querySelector('[name="address"]').value = contact.client_address || '';
-                                    if (form.querySelector('[name="city"]')) form.querySelector('[name="city"]').value = contact.city || '';
-                                    if (form.querySelector('[name="state"]')) form.querySelector('[name="state"]').value = contact.state || '';
-                                    if (form.querySelector('[name="notes"]')) form.querySelector('[name="notes"]').value = contact.notes || '';
-                                    if (form.querySelector('[name="location_name"]')) form.querySelector('[name="location_name"]').value = contact.current_employer || '';
-                                    if (form.querySelector('[name="sales_contact"]')) form.querySelector('[name="sales_contact"]').value = contact.client_name || '';
-                                  }
-                                } catch(e){ console.error('prefill contact failed', e); }
-                              });
-                              dropdown.appendChild(ci);
-                            });
-                          });
-                          dropdown.style.display = 'block';
-                        } catch(e){ console.error('show contacts failed', e); }
-                        return;
-                      }
-                      // default: suggestion represents a contact — select it
-                      try { addSupplierNameInput.value = display; } catch(e){}
-                      try { dropdown.style.display = 'none'; } catch(e){}
-                      try { document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
-                      try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = display; badge.style.display='inline-block'; } } catch(e){}
-                      // Fill form fields from client (overwrite to ensure consistent data)
-                      try {
-                        var form = addSupplierForm;
-                        if (form) {
-                          // Always set core contact/employer fields
-                          var mapping = {
-                            'location_name': c.current_employer || '',
-                            'contact_number': c.contact_phone || '',
-                            'email': c.client_email || '',
-                            'address': c.client_address || '',
-                            'city': c.city || '',
-                            'state': c.state || '',
-                            'notes': c.notes || ''
-                          };
-                          Object.keys(mapping).forEach(function(fname){
-                            var el = form.querySelector('[name="' + fname + '"]');
-                            if (el) el.value = mapping[fname] || '';
-                          });
-                          // set sales contact name to client_name
-                          var sc = form.querySelector('[name="sales_contact"]'); if (sc) sc.value = c.client_name || '';
-                        }
-                      } catch(e){ console.error('prefill from client failed', e); }
-                    });
-                    dropdown.appendChild(item);
-                    dropdown.style.display = 'block';
-                  });
-                });
-              });
-            });
           }
         } catch(e) { console.warn('Add Supplier color picker init failed', e); }
+
+      // Fill Add Supplier fields from an existing supplier (by name)
+      function fillAddSupplierFromSupplierName(name) {
+        var target = (name || '').trim().toLowerCase();
+        if (!target) return;
+        var form = addSupplierForm;
+        if (!form) return;
+
+        function applySupplierData(s) {
+          if (!s) return;
+          var setVal = function(sel, val){ var el = form.querySelector(sel); if (el) el.value = val || ''; };
+          setVal('[name="location_name"]', s.location_name);
+          setVal('[name="location_type"]', s.location_type);
+          setVal('[name="supply_method"]', s.supply_method);
+          setVal('[name="location_phone"]', s.location_phone);
+        }
+
+        // Prefer cached suppliers for current service
+        var found = null;
+        try {
+          (suppliersCache || []).some(function(s){
+            if (s && s.name && s.name.toString().trim().toLowerCase() === target) { found = s; return true; }
+            return false;
+          });
+        } catch(e) {}
+
+        if (found) { applySupplierData(found); return; }
+
+        // Fallback: fetch suppliers for current service and match by name
+        try {
+          var svc = (typeof currentService !== 'undefined' && currentService) ? String(currentService) : '';
+          if (!svc) return;
+          fetch('../../api/get_suppliers.php?service=' + encodeURIComponent(svc), { method:'GET', credentials:'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+              if (!data || !data.suppliers) return;
+              var match = null;
+              data.suppliers.some(function(s){ if (s && s.name && s.name.toString().trim().toLowerCase() === target) { match = s; return true; } return false; });
+              if (match) applySupplierData(match);
+            })
+            .catch(function(){ /* ignore */ });
+        } catch(e) {}
+      }
+
+      // Client lookup helper (used by sales contact autocomplete if enabled)
+      var clientsByServiceCache = {};
+      function fetchClientsForService(q, cb) {
+        var svc = (typeof currentService !== 'undefined' && currentService) ? String(currentService) : '';
+        var key = svc + '||' + q;
+        if (clientsByServiceCache[key]) { cb(clientsByServiceCache[key]); return; }
+        var url = '../../api/get_clients_by_type.php?type=' + encodeURIComponent(svc) + '&q=' + encodeURIComponent(q || '');
+        fetch(url, { method: 'GET', credentials: 'same-origin' })
+          .then(function(r){ return r.json(); })
+          .then(function(data){ if (data && data.clients) { clientsByServiceCache[key] = data.clients; cb(data.clients); } else cb([]); })
+          .catch(function(){ cb([]); });
+      }
+
+      var clientsAllCache = {};
+      function fetchAllClients(q, cb) {
+        var key = (q || '').toLowerCase();
+        if (clientsAllCache[key]) { cb(clientsAllCache[key]); return; }
+        var url = '../../api/get_clients_by_type.php?type=&q=' + encodeURIComponent(q || '');
+        fetch(url, { method: 'GET', credentials: 'same-origin' })
+          .then(function(r){ return r.json(); })
+          .then(function(data){ if (data && data.clients) { clientsAllCache[key] = data.clients; cb(data.clients); } else cb([]); })
+          .catch(function(){ cb([]); });
+      }
 
       // Sales Contact autocomplete: suggest client contacts and fill remaining fields on select
       try {
@@ -1777,8 +1701,11 @@ $canEditMaps = can_edit_page('maps');
             // clear previous suggestions
             dropdown.innerHTML = '';
             dropdown.style.display = 'none';
+            // typing a new contact clears any previously linked client
+            try { document.getElementById('addLinkedClientId').value = ''; } catch(e){}
+            try { document.getElementById('addLinkedBadge').style.display = 'none'; } catch(e){}
             if (!q) return;
-            fetchClientsForService(q, function(clients){
+            fetchAllClients(q, function(clients){
               if (!clients || clients.length === 0) return;
               clients.forEach(function(c){
                 var display = c.client_name || '';
@@ -1802,8 +1729,6 @@ $canEditMaps = can_edit_page('maps');
                       if (form.querySelector('[name="address"]')) form.querySelector('[name="address"]').value = c.client_address || '';
                       if (form.querySelector('[name="city"]')) form.querySelector('[name="city"]').value = c.city || '';
                       if (form.querySelector('[name="state"]')) form.querySelector('[name="state"]').value = c.state || '';
-                      if (form.querySelector('[name="notes"]')) form.querySelector('[name="notes"]').value = c.notes || '';
-                      if (form.querySelector('[name="location_name"]')) form.querySelector('[name="location_name"]').value = c.current_employer || '';
                       // optionally set coordinates if absent (clients may not have coords)
                     }
                   } catch(e){ console.error('prefill sales contact failed', e); }
@@ -1973,28 +1898,26 @@ $canEditMaps = can_edit_page('maps');
                     geocodeAndPlotMarker(supplierObj, popupContent);
                   }
                 }
-                // If user selected a linked client, call link API to sync empty client fields
+                // If sales contact is new (not selected from list), create a new client record
                 try {
                   var linkedClientId = document.getElementById('addLinkedClientId') ? (document.getElementById('addLinkedClientId').value || '') : '';
-                  if (linkedClientId) {
-                    var linkForm = new FormData();
-                    linkForm.append('client_id', linkedClientId);
-                    // map supplier fields to client columns (only non-empty will be sent)
-                    if (supplierObj.name) linkForm.append('client_name', supplierObj.name);
-                    if (currentService) linkForm.append('client_type', currentService);
-                    if (supplierObj.contact_number) linkForm.append('contact_phone', supplierObj.contact_number);
-                    if (supplierObj.email) linkForm.append('client_email', supplierObj.email);
-                    if (supplierObj.address) linkForm.append('client_address', supplierObj.address);
-                    if (supplierObj.city) linkForm.append('city', supplierObj.city);
-                    if (supplierObj.state) linkForm.append('state', supplierObj.state);
-                    if (supplierObj.notes) linkForm.append('notes', supplierObj.notes);
-                    if (supplierObj.location_name) linkForm.append('current_employer', supplierObj.location_name);
-                    fetch('../../api/link_supplier_to_client.php', { method: 'POST', body: linkForm, credentials: 'same-origin' })
+                  var salesName = (form.querySelector('[name="sales_contact"]')?.value || '').trim();
+                  if (!linkedClientId && salesName) {
+                    var clientForm = new FormData();
+                    clientForm.append('client_name', salesName);
+                    clientForm.append('contact_phone', form.querySelector('[name="contact_number"]')?.value || '');
+                    clientForm.append('client_email', form.querySelector('[name="email"]')?.value || '');
+                    clientForm.append('client_address', form.querySelector('[name="address"]')?.value || '');
+                    clientForm.append('city', form.querySelector('[name="city"]')?.value || '');
+                    clientForm.append('state', form.querySelector('[name="state"]')?.value || '');
+                    clientForm.append('current_employer', form.querySelector('[name="name"]')?.value || '');
+                    if (currentService) clientForm.append('client_type', currentService);
+                    fetch('../../api/add_client.php', { method: 'POST', body: clientForm, credentials: 'same-origin' })
                       .then(function(r){ return r.json(); })
-                      .then(function(res){ if (!res || !res.success) console.warn('link_supplier_to_client failed', res); })
-                      .catch(function(e){ console.error('link_supplier_to_client error', e); });
+                      .then(function(res){ if (!res || !res.success) console.warn('add_client failed', res); })
+                      .catch(function(e){ console.error('add_client error', e); });
                   }
-                } catch (e) { console.error('Link client post-save failed', e); }
+                } catch (e) { console.error('Add client post-save failed', e); }
               } catch (e) {
                 console.error('Optimistic add/plot failed', e);
               }
@@ -2396,6 +2319,9 @@ $canEditMaps = can_edit_page('maps');
             input.value = value;
             dropdown.style.display = 'none';
             input.focus();
+            if (input.id === 'addSupplierName') {
+              fillAddSupplierFromSupplierName(value);
+            }
           });
           
           dropdown.appendChild(item);
