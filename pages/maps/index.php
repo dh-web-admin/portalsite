@@ -1694,48 +1694,58 @@ $canEditMaps = can_edit_page('maps');
       try {
         var salesContactInput = addSupplierForm ? addSupplierForm.querySelector('[name="sales_contact"]') : null;
         if (salesContactInput) {
+          function renderSalesContactSuggestions(dropdown, clients) {
+            dropdown.innerHTML = '';
+            dropdown.style.display = 'none';
+            if (!clients || clients.length === 0) return;
+            clients.forEach(function(c){
+              var display = c.client_name || '';
+              if (!display) return;
+              var item = document.createElement('div');
+              item.className = 'suggestion-item client-suggestion';
+              item.dataset.clientId = c.client_id;
+              item.textContent = display + (c.current_employer ? (' — ' + c.current_employer) : '');
+              item.addEventListener('click', function(){
+                try { salesContactInput.value = display; } catch(e){}
+                try { dropdown.style.display = 'none'; } catch(e){}
+                // set linked client id and show badge
+                try { document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
+                try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = display; badge.style.display='inline-block'; } } catch(e){}
+                // Fill remaining form fields from client details
+                try {
+                  var form = addSupplierForm;
+                  if (form) {
+                    if (form.querySelector('[name="contact_number"]')) form.querySelector('[name="contact_number"]').value = c.contact_phone || '';
+                    if (form.querySelector('[name="email"]')) form.querySelector('[name="email"]').value = c.client_email || '';
+                    if (form.querySelector('[name="address"]')) form.querySelector('[name="address"]').value = c.client_address || '';
+                    if (form.querySelector('[name="city"]')) form.querySelector('[name="city"]').value = c.city || '';
+                    if (form.querySelector('[name="state"]')) form.querySelector('[name="state"]').value = c.state || '';
+                  }
+                } catch(e){ console.error('prefill sales contact failed', e); }
+              });
+              dropdown.appendChild(item);
+            });
+            dropdown.style.display = 'block';
+          }
+
+          // Show all clients on focus, then filter as user types
+          salesContactInput.addEventListener('focus', function(){
+            var dropdown = this.nextElementSibling; // autocomplete-dropdown
+            if (!dropdown) return;
+            fetchAllClients('', function(clients){
+              renderSalesContactSuggestions(dropdown, clients);
+            });
+          });
+
           salesContactInput.addEventListener('input', function(ev){
             var q = (this.value || '').trim();
             var dropdown = this.nextElementSibling; // autocomplete-dropdown
             if (!dropdown) return;
-            // clear previous suggestions
-            dropdown.innerHTML = '';
-            dropdown.style.display = 'none';
             // typing a new contact clears any previously linked client
             try { document.getElementById('addLinkedClientId').value = ''; } catch(e){}
             try { document.getElementById('addLinkedBadge').style.display = 'none'; } catch(e){}
-            if (!q) return;
             fetchAllClients(q, function(clients){
-              if (!clients || clients.length === 0) return;
-              clients.forEach(function(c){
-                var display = c.client_name || '';
-                if (!display) return;
-                var item = document.createElement('div');
-                item.className = 'suggestion-item client-suggestion';
-                item.dataset.clientId = c.client_id;
-                item.textContent = display + (c.current_employer ? (' — ' + c.current_employer) : '');
-                item.addEventListener('click', function(){
-                  try { salesContactInput.value = display; } catch(e){}
-                  try { dropdown.style.display = 'none'; } catch(e){}
-                  // set linked client id and show badge
-                  try { document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
-                  try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = display; badge.style.display='inline-block'; } } catch(e){}
-                  // Fill remaining form fields from client details (overwrite to ensure consistency)
-                  try {
-                    var form = addSupplierForm;
-                    if (form) {
-                      if (form.querySelector('[name="contact_number"]')) form.querySelector('[name="contact_number"]').value = c.contact_phone || '';
-                      if (form.querySelector('[name="email"]')) form.querySelector('[name="email"]').value = c.client_email || '';
-                      if (form.querySelector('[name="address"]')) form.querySelector('[name="address"]').value = c.client_address || '';
-                      if (form.querySelector('[name="city"]')) form.querySelector('[name="city"]').value = c.city || '';
-                      if (form.querySelector('[name="state"]')) form.querySelector('[name="state"]').value = c.state || '';
-                      // optionally set coordinates if absent (clients may not have coords)
-                    }
-                  } catch(e){ console.error('prefill sales contact failed', e); }
-                });
-                dropdown.appendChild(item);
-                dropdown.style.display = 'block';
-              });
+              renderSalesContactSuggestions(dropdown, clients);
             });
           });
         }

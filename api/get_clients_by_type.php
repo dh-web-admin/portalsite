@@ -27,7 +27,12 @@ if ($q !== '') {
   $params[] = '%'.$q.'%';
 }
 if (count($conds) > 0) $sql .= ' WHERE ' . implode(' AND ', $conds);
-$sql .= ' ORDER BY client_name ASC LIMIT 200';
+// When searching, limit results for performance; otherwise return all.
+if ($q !== '') {
+  $sql .= ' ORDER BY client_name ASC LIMIT 200';
+} else {
+  $sql .= ' ORDER BY client_name ASC';
+}
 
 $out = ['success' => true, 'clients' => []];
 if ($stmt = $conn->prepare($sql)) {
