@@ -1589,71 +1589,50 @@ $canEditMaps = can_edit_page('maps');
               var q = (this.value || '').trim();
               var dropdown = this.nextElementSibling; // autocomplete-dropdown
               if (!dropdown) return;
-              // Fetch clients and append as suggestions (mark with data-client-id)
+              dropdown.innerHTML = '';
+              dropdown.style.display = 'none';
+              if (!q) return;
+
               fetchClientsForService(q, function(clients){
                 if (!clients || clients.length === 0) return;
-      
-              // also fetch clients for this service and append to dropdown
-              fetchClientsForService(q, function(clients){
-                clients.forEach(function(c){
-                  // avoid duplicate display entries
-                  if (Array.from(dropdown.querySelectorAll('.suggestion-item')).some(function(it){ return it.textContent.trim() === c.client_name; })) return;
-                  var item = document.createElement('div');
-                  item.className = 'suggestion-item client-suggestion';
-                  item.dataset.clientId = c.client_id;
-                  item.textContent = c.client_name + ' — ' + (c.contact_phone || c.client_email || '');
-                  item.addEventListener('click', function(){
-                    addSupplierNameInput.value = c.client_name;
-                    dropdown.style.display = 'none';
-                    try { document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
-                    try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = c.client_name; badge.style.display='inline-block'; } } catch(e){}
-                    // prefill some fields if empty
-                    try { if (!document.getElementById('addSupplierPhone').value) document.getElementById('addSupplierPhone').value = c.contact_phone || ''; } catch(e){}
-                    try { if (!document.getElementById('addSupplierEmail').value) document.getElementById('addSupplierEmail').value = c.client_email || ''; } catch(e){}
-                    try { if (!document.getElementById('addSupplierAddress').value) document.getElementById('addSupplierAddress').value = c.client_address || ''; } catch(e){}
-                    try { if (!document.getElementById('addSupplierCity').value) document.getElementById('addSupplierCity').value = c.city || ''; } catch(e){}
-                    try { if (!document.getElementById('addSupplierState').value) document.getElementById('addSupplierState').value = c.state || ''; } catch(e){}
-                    try { if (!document.getElementById('addSupplierWebsite').value) document.getElementById('addSupplierWebsite').value = c.website || ''; } catch(e){}
-                  });
-                  dropdown.appendChild(item);
-                });
-              });
-                // Avoid duplicates: collect existing suggestion texts
-                var existing = Array.from(dropdown.children).map(function(n){ return (n.textContent||'').trim(); });
                 clients.forEach(function(c){
                   var display = c.client_name || c.current_employer || '';
                   if (!display) return;
-                  if (existing.indexOf(display) !== -1) return; // skip duplicate
+                  // avoid duplicates
+                  if (Array.from(dropdown.children).some(function(n){ return (n.textContent||'').trim() === display; })) return;
                   var item = document.createElement('div');
-                  item.textContent = display;
+                  item.className = 'suggestion-item client-suggestion';
                   item.style.cssText = 'padding: 8px 12px; cursor: pointer; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9;';
                   item.dataset.clientId = c.client_id;
-                  // attach click handler to populate form and mark linked client
-                  item.addEventListener('click', function(ev){
-                    addSupplierNameInput.value = display;
-                    dropdown.style.display = 'none';
-                    // set linked client id hidden input
-                          try { document.getElementById('addLinkedClientId').value = this.dataset.clientId || ''; } catch(e){}
-                          try {
-                            var badge = document.getElementById('addLinkedBadge');
-                            var badgeName = document.getElementById('addLinkedClientName');
-                            if (badge && badgeName) { badgeName.textContent = display; badge.style.display = 'inline-block'; }
-                          } catch(e){}
-                    // Prefill form fields from client
+                  item.textContent = display + (c.contact_phone ? (' — ' + c.contact_phone) : '');
+                  item.addEventListener('click', function(){
+                    try { addSupplierNameInput.value = display; } catch(e){}
+                    try { dropdown.style.display = 'none'; } catch(e){}
+                    try { document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
+                    try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = display; badge.style.display='inline-block'; } } catch(e){}
+                    // Fill form fields from client (overwrite to ensure consistent data)
                     try {
                       var form = addSupplierForm;
                       if (form) {
-                        if (form.querySelector('[name="location_name"]')) form.querySelector('[name="location_name"]').value = c.current_employer || '';
-                        if (form.querySelector('[name="contact_number"]')) form.querySelector('[name="contact_number"]').value = c.contact_phone || '';
-                        if (form.querySelector('[name="email"]')) form.querySelector('[name="email"]').value = c.client_email || '';
-                        if (form.querySelector('[name="address"]')) form.querySelector('[name="address"]').value = c.client_address || '';
-                        if (form.querySelector('[name="city"]')) form.querySelector('[name="city"]').value = c.city || '';
-                        if (form.querySelector('[name="state"]')) form.querySelector('[name="state"]').value = c.state || '';
-                        if (form.querySelector('[name="notes"]')) form.querySelector('[name="notes"]').value = c.notes || '';
+                        var mapping = {
+                          'location_name': 'current_employer',
+                          'contact_number': 'contact_phone',
+                          'email': 'client_email',
+                          'address': 'client_address',
+                          'city': 'city',
+                          'state': 'state',
+                          'notes': 'notes',
+                          'sales_contact': 'client_name'
+                        };
+                        Object.keys(mapping).forEach(function(fname){
+                          var el = form.querySelector('[name="' + fname + '"]');
+                          if (el) el.value = c[mapping[fname]] || '';
+                        });
                       }
                     } catch(e){ console.error('prefill from client failed', e); }
                   });
                   dropdown.appendChild(item);
+                  dropdown.style.display = 'block';
                 });
               });
             });
