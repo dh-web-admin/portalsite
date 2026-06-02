@@ -1218,6 +1218,39 @@ if ($historyRes && $historyRes->num_rows > 0) {
             $hasNewerVersion[$row['original_issue_id']] = true;
         }
     }
+
+    // Compute per-equipment issue numbers (local numbering starting at 1)
+    // Group rows by their canonical issue id (original_issue_id if present, else id)
+    $issueNumbers = [];
+    $canonDates = [];
+    foreach ($allRows as $r) {
+        $canonical = !empty($r['original_issue_id']) ? (int)$r['original_issue_id'] : (int)$r['id'];
+        // Prefer the canonical row's date_reported when available
+        if (isset($rowsById[$canonical]) && !empty($rowsById[$canonical]['date_reported'])) {
+            $d = $rowsById[$canonical]['date_reported'];
+        } else {
+            $d = $r['date_reported'] ?? '';
+        }
+        // keep earliest date if multiple
+        if (!isset($canonDates[$canonical]) || ($d !== '' && $d < $canonDates[$canonical])) {
+            $canonDates[$canonical] = $d;
+        }
+    }
+
+    // Build list and sort by date asc, then id asc
+    $canonList = [];
+    foreach ($canonDates as $cid => $dt) {
+        $canonList[] = ['id' => (int)$cid, 'date' => $dt];
+    }
+    usort($canonList, function($a, $b) {
+        if ($a['date'] === $b['date']) return $a['id'] - $b['id'];
+        return strcmp($a['date'], $b['date']);
+    });
+
+    $num = 1;
+    foreach ($canonList as $c) {
+        $issueNumbers[$c['id']] = $num++;
+    }
 }
 
 // Debug helper: show counts when ?debug=1 is present
@@ -1252,20 +1285,21 @@ if (count($allRows) > 0) {
             echo ' data-issue-id="' . htmlspecialchars($row['id']) . '"';
         }
         echo '>';
-        // Issue number column, with edit button and edited copy marker if needed
+        // Issue number column (per-equipment local numbering), with edit button and edited copy marker if needed
+        // Determine canonical id for this issue (original_issue_id if present, else id)
+        $canonicalId = !empty($row['original_issue_id']) ? (int)$row['original_issue_id'] : (int)$row['id'];
+        $displayNumber = isset($issueNumbers[$canonicalId]) ? $issueNumbers[$canonicalId] : (int)$row['id'];
         echo '<td class="equipment-history-edit-cell">';
-        // Show edit button for all visible rows (not hidden ones)
         if (!$hasNewer) {
             echo '<button class="equipment-history-edit-btn" aria-label="Edit">✎</button> ';
-            // Only show "edited" badge if this is an edited copy (and it's the latest in its chain)
             if (!empty($row['is_edited_copy'])) {
                 echo '<span class="equipment-edited-copy-badge equipment-copy-toggle" title="Click to show previous version">edited</span>';
             } else {
-                echo htmlspecialchars($row['id']);
+                echo htmlspecialchars($displayNumber);
             }
         } else {
-            // Hidden previous versions just show their issue number (no edit button or "edited" badge)
-            echo htmlspecialchars($row['id']);
+            // Hidden previous versions just show their issue number
+            echo htmlspecialchars($displayNumber);
         }
         echo '</td>';
         echo '<td>' . nl2br(htmlspecialchars($row['reported_issues'] ?? '')) . '</td>';
