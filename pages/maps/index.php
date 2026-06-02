@@ -203,6 +203,10 @@ $canEditMaps = can_edit_page('maps');
         <div style="font-size:20px;color:#1e293b;font-weight:700;">Add New Supplier</div>
         <div style="display:flex;align-items:center;gap:12px;">
           <div style="font-size:13px;color:#475569;font-weight:600;">Service: <span id="addSupplierServiceName" style="font-weight:700;color:#0f172a;">—</span></div>
+          <div id="addLinkedBadge" style="display:none;margin-left:12px; background:#eef2ff;color:#0f172a;padding:6px 10px;border-radius:8px;font-weight:600;font-size:13px;">
+            Linked: <span id="addLinkedClientName"></span>
+            <button id="clearAddLinked" type="button" style="margin-left:10px;background:transparent;border:none;color:#2563eb;cursor:pointer;font-weight:700;">×</button>
+          </div>
           <div style="display:flex;align-items:center;gap:8px; position:relative;">
             <button type="button" id="addSupplierColorBtn" title="Set color for all suppliers with this name" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6edf0;background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:6px;">
               <span id="addSupplierColorSwatch" style="display:block;width:18px;height:18px;border-radius:6px;background:#3b82f6;border:1px solid rgba(0,0,0,0.06);cursor:pointer;"></span>
@@ -240,6 +244,7 @@ $canEditMaps = can_edit_page('maps');
             </div>
           </div>
           <input type="hidden" name="color" id="addSupplierColor" />
+          <input type="hidden" name="linked_client_id" id="addLinkedClientId" />
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="position:relative;">
@@ -1428,6 +1433,20 @@ $canEditMaps = can_edit_page('maps');
           try {
             var lbl = document.getElementById('addSupplierServiceName');
             if (lbl) lbl.textContent = currentService || 'None selected';
+            // Reset the Add Supplier form and linked client state so each open is clean
+            try {
+              if (addSupplierForm) {
+                addSupplierForm.reset();
+                var linked = document.getElementById('addLinkedClientId'); if (linked) linked.value = '';
+                var badge = document.getElementById('addLinkedBadge'); if (badge) badge.style.display = 'none';
+                var badgeName = document.getElementById('addLinkedClientName'); if (badgeName) badgeName.textContent = '';
+                var coordsInput = document.getElementById('addSupplierCoordinates'); if (coordsInput) coordsInput.value = '';
+                var latHidden = document.getElementById('addSupplierLatitude'); var lngHidden = document.getElementById('addSupplierLongitude'); if (latHidden) latHidden.value = ''; if (lngHidden) lngHidden.value = '';
+                // clear any autocomplete dropdowns
+                var drops = addSupplierForm.querySelectorAll('.autocomplete-dropdown');
+                drops.forEach(function(d){ d.innerHTML = ''; d.style.display = 'none'; });
+              }
+            } catch(ignore) {}
             // Also ensure map resizes to avoid clipping
             setTimeout(function(){ if (typeof map !== 'undefined' && map && map.invalidateSize) map.invalidateSize(); }, 60);
           } catch (e) { /* ignore */ }
@@ -1447,6 +1466,7 @@ $canEditMaps = can_edit_page('maps');
       if (cancelSupplierBtn && addSupplierModal) {
         cancelSupplierBtn.addEventListener('click', function() {
           addSupplierModal.style.display = 'none';
+          try { document.getElementById('addLinkedClientId').value = ''; document.getElementById('addLinkedBadge').style.display='none'; } catch(e){}
         });
       }
 
@@ -1455,9 +1475,21 @@ $canEditMaps = can_edit_page('maps');
         addSupplierModal.addEventListener('click', function(e) {
           if (e.target === addSupplierModal) {
             addSupplierModal.style.display = 'none';
+                try { document.getElementById('addLinkedClientId').value = ''; document.getElementById('addLinkedBadge').style.display='none'; } catch(e){}
           }
         });
       }
+
+      // Clear linked client when clicking the badge clear button
+      try {
+        var clearAddLinkedBtn = document.getElementById('clearAddLinked');
+        if (clearAddLinkedBtn) {
+          clearAddLinkedBtn.addEventListener('click', function(){
+            try { document.getElementById('addLinkedClientId').value = ''; } catch(e){}
+            try { document.getElementById('addLinkedBadge').style.display = 'none'; } catch(e){}
+          });
+        }
+      } catch(e) {}
 
       // Parse combined coordinates for Add Supplier before submit (capture phase)
       if (addSupplierForm) {
@@ -1539,8 +1571,144 @@ $canEditMaps = can_edit_page('maps');
               try { if (addSupplierColorSwatch) addSupplierColorSwatch.style.background = col; } catch(e){}
               try { if (addSupplierColorHidden) addSupplierColorHidden.value = known || ''; } catch(e){}
             });
+            
+            // Clients suggestions: fetch clients matching currentService and input q, merge into autocomplete dropdown
+            var clientsByServiceCache = {};
+            function fetchClientsForService(q, cb) {
+              var svc = (typeof currentService !== 'undefined' && currentService) ? String(currentService) : '';
+              var key = svc + '||' + q;
+              if (clientsByServiceCache[key]) { cb(clientsByServiceCache[key]); return; }
+              var url = '../../api/get_clients_by_type.php?type=' + encodeURIComponent(svc) + '&q=' + encodeURIComponent(q || '');
+              fetch(url, { method: 'GET', credentials: 'same-origin' })
+                .then(function(r){ return r.json(); })
+                .then(function(data){ if (data && data.clients) { clientsByServiceCache[key] = data.clients; cb(data.clients); } else cb([]); })
+                .catch(function(){ cb([]); });
+            }
+
+            addSupplierNameInput.addEventListener('input', function(e){
+              var q = (this.value || '').trim();
+              var dropdown = this.nextElementSibling; // autocomplete-dropdown
+              if (!dropdown) return;
+              // Fetch clients and append as suggestions (mark with data-client-id)
+              fetchClientsForService(q, function(clients){
+                if (!clients || clients.length === 0) return;
+      
+              // also fetch clients for this service and append to dropdown
+              fetchClientsForService(q, function(clients){
+                clients.forEach(function(c){
+                  // avoid duplicate display entries
+                  if (Array.from(dropdown.querySelectorAll('.suggestion-item')).some(function(it){ return it.textContent.trim() === c.client_name; })) return;
+                  var item = document.createElement('div');
+                  item.className = 'suggestion-item client-suggestion';
+                  item.dataset.clientId = c.client_id;
+                  item.textContent = c.client_name + ' — ' + (c.contact_phone || c.client_email || '');
+                  item.addEventListener('click', function(){
+                    addSupplierNameInput.value = c.client_name;
+                    dropdown.style.display = 'none';
+                    try { document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
+                    try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = c.client_name; badge.style.display='inline-block'; } } catch(e){}
+                    // prefill some fields if empty
+                    try { if (!document.getElementById('addSupplierPhone').value) document.getElementById('addSupplierPhone').value = c.contact_phone || ''; } catch(e){}
+                    try { if (!document.getElementById('addSupplierEmail').value) document.getElementById('addSupplierEmail').value = c.client_email || ''; } catch(e){}
+                    try { if (!document.getElementById('addSupplierAddress').value) document.getElementById('addSupplierAddress').value = c.client_address || ''; } catch(e){}
+                    try { if (!document.getElementById('addSupplierCity').value) document.getElementById('addSupplierCity').value = c.city || ''; } catch(e){}
+                    try { if (!document.getElementById('addSupplierState').value) document.getElementById('addSupplierState').value = c.state || ''; } catch(e){}
+                    try { if (!document.getElementById('addSupplierWebsite').value) document.getElementById('addSupplierWebsite').value = c.website || ''; } catch(e){}
+                  });
+                  dropdown.appendChild(item);
+                });
+              });
+                // Avoid duplicates: collect existing suggestion texts
+                var existing = Array.from(dropdown.children).map(function(n){ return (n.textContent||'').trim(); });
+                clients.forEach(function(c){
+                  var display = c.client_name || c.current_employer || '';
+                  if (!display) return;
+                  if (existing.indexOf(display) !== -1) return; // skip duplicate
+                  var item = document.createElement('div');
+                  item.textContent = display;
+                  item.style.cssText = 'padding: 8px 12px; cursor: pointer; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9;';
+                  item.dataset.clientId = c.client_id;
+                  // attach click handler to populate form and mark linked client
+                  item.addEventListener('click', function(ev){
+                    addSupplierNameInput.value = display;
+                    dropdown.style.display = 'none';
+                    // set linked client id hidden input
+                          try { document.getElementById('addLinkedClientId').value = this.dataset.clientId || ''; } catch(e){}
+                          try {
+                            var badge = document.getElementById('addLinkedBadge');
+                            var badgeName = document.getElementById('addLinkedClientName');
+                            if (badge && badgeName) { badgeName.textContent = display; badge.style.display = 'inline-block'; }
+                          } catch(e){}
+                    // Prefill form fields from client
+                    try {
+                      var form = addSupplierForm;
+                      if (form) {
+                        if (form.querySelector('[name="location_name"]')) form.querySelector('[name="location_name"]').value = c.current_employer || '';
+                        if (form.querySelector('[name="contact_number"]')) form.querySelector('[name="contact_number"]').value = c.contact_phone || '';
+                        if (form.querySelector('[name="email"]')) form.querySelector('[name="email"]').value = c.client_email || '';
+                        if (form.querySelector('[name="address"]')) form.querySelector('[name="address"]').value = c.client_address || '';
+                        if (form.querySelector('[name="city"]')) form.querySelector('[name="city"]').value = c.city || '';
+                        if (form.querySelector('[name="state"]')) form.querySelector('[name="state"]').value = c.state || '';
+                        if (form.querySelector('[name="notes"]')) form.querySelector('[name="notes"]').value = c.notes || '';
+                      }
+                    } catch(e){ console.error('prefill from client failed', e); }
+                  });
+                  dropdown.appendChild(item);
+                });
+              });
+            });
           }
         } catch(e) { console.warn('Add Supplier color picker init failed', e); }
+
+      // Sales Contact autocomplete: suggest client contacts and fill remaining fields on select
+      try {
+        var salesContactInput = addSupplierForm ? addSupplierForm.querySelector('[name="sales_contact"]') : null;
+        if (salesContactInput) {
+          salesContactInput.addEventListener('input', function(ev){
+            var q = (this.value || '').trim();
+            var dropdown = this.nextElementSibling; // autocomplete-dropdown
+            if (!dropdown) return;
+            // clear previous suggestions
+            dropdown.innerHTML = '';
+            dropdown.style.display = 'none';
+            if (!q) return;
+            fetchClientsForService(q, function(clients){
+              if (!clients || clients.length === 0) return;
+              clients.forEach(function(c){
+                var display = c.client_name || '';
+                if (!display) return;
+                var item = document.createElement('div');
+                item.className = 'suggestion-item client-suggestion';
+                item.dataset.clientId = c.client_id;
+                item.textContent = display + (c.current_employer ? (' — ' + c.current_employer) : '');
+                item.addEventListener('click', function(){
+                  try { salesContactInput.value = display; } catch(e){}
+                  try { dropdown.style.display = 'none'; } catch(e){}
+                  // set linked client id and show badge
+                  try { document.getElementById('addLinkedClientId').value = c.client_id; } catch(e){}
+                  try { var badge = document.getElementById('addLinkedBadge'); var badgeName = document.getElementById('addLinkedClientName'); if (badge && badgeName) { badgeName.textContent = display; badge.style.display='inline-block'; } } catch(e){}
+                  // Fill remaining form fields from client details (overwrite to ensure consistency)
+                  try {
+                    var form = addSupplierForm;
+                    if (form) {
+                      if (form.querySelector('[name="contact_number"]')) form.querySelector('[name="contact_number"]').value = c.contact_phone || '';
+                      if (form.querySelector('[name="email"]')) form.querySelector('[name="email"]').value = c.client_email || '';
+                      if (form.querySelector('[name="address"]')) form.querySelector('[name="address"]').value = c.client_address || '';
+                      if (form.querySelector('[name="city"]')) form.querySelector('[name="city"]').value = c.city || '';
+                      if (form.querySelector('[name="state"]')) form.querySelector('[name="state"]').value = c.state || '';
+                      if (form.querySelector('[name="notes"]')) form.querySelector('[name="notes"]').value = c.notes || '';
+                      if (form.querySelector('[name="location_name"]')) form.querySelector('[name="location_name"]').value = c.current_employer || '';
+                      // optionally set coordinates if absent (clients may not have coords)
+                    }
+                  } catch(e){ console.error('prefill sales contact failed', e); }
+                });
+                dropdown.appendChild(item);
+                dropdown.style.display = 'block';
+              });
+            });
+          });
+        }
+      } catch(e) { console.warn('Sales contact autocomplete init failed', e); }
         addSupplierForm.addEventListener('submit', function(e) {
           e.preventDefault();
 
@@ -1638,6 +1806,7 @@ $canEditMaps = can_edit_page('maps');
               alert('Supplier added successfully!');
               addSupplierModal.style.display = 'none';
               addSupplierForm.reset();
+              try { document.getElementById('addLinkedClientId').value = ''; document.getElementById('addLinkedBadge').style.display='none'; } catch(e){}
               // Reload suppliers for current service
               // Reload suppliers from server to refresh authoritative list
               loadSuppliers(currentService);
@@ -1698,6 +1867,28 @@ $canEditMaps = can_edit_page('maps');
                     geocodeAndPlotMarker(supplierObj, popupContent);
                   }
                 }
+                // If user selected a linked client, call link API to sync empty client fields
+                try {
+                  var linkedClientId = document.getElementById('addLinkedClientId') ? (document.getElementById('addLinkedClientId').value || '') : '';
+                  if (linkedClientId) {
+                    var linkForm = new FormData();
+                    linkForm.append('client_id', linkedClientId);
+                    // map supplier fields to client columns (only non-empty will be sent)
+                    if (supplierObj.name) linkForm.append('client_name', supplierObj.name);
+                    if (currentService) linkForm.append('client_type', currentService);
+                    if (supplierObj.contact_number) linkForm.append('contact_phone', supplierObj.contact_number);
+                    if (supplierObj.email) linkForm.append('client_email', supplierObj.email);
+                    if (supplierObj.address) linkForm.append('client_address', supplierObj.address);
+                    if (supplierObj.city) linkForm.append('city', supplierObj.city);
+                    if (supplierObj.state) linkForm.append('state', supplierObj.state);
+                    if (supplierObj.notes) linkForm.append('notes', supplierObj.notes);
+                    if (supplierObj.location_name) linkForm.append('current_employer', supplierObj.location_name);
+                    fetch('../../api/link_supplier_to_client.php', { method: 'POST', body: linkForm, credentials: 'same-origin' })
+                      .then(function(r){ return r.json(); })
+                      .then(function(res){ if (!res || !res.success) console.warn('link_supplier_to_client failed', res); })
+                      .catch(function(e){ console.error('link_supplier_to_client error', e); });
+                  }
+                } catch (e) { console.error('Link client post-save failed', e); }
               } catch (e) {
                 console.error('Optimistic add/plot failed', e);
               }
@@ -2038,28 +2229,34 @@ $canEditMaps = can_edit_page('maps');
         });
       }
       
-      // Load field values from API or cache
+      // Load field values from API or cache. Scoped to current service when available.
       function loadFieldValues(field, input, dropdown) {
-        if (autocompleteCache[field]) {
-          // Use cached values
-          populateAutocomplete(input, dropdown, autocompleteCache[field]);
-        } else {
-          // Fetch from API
-          fetch('../../api/get_supplier_field_values.php?field=' + encodeURIComponent(field), {
-            method: 'GET',
-            credentials: 'same-origin'
-          })
-          .then(function(response) { return response.json(); })
-          .then(function(data) {
-            if (data.success && data.values) {
-              autocompleteCache[field] = data.values;
-              populateAutocomplete(input, dropdown, data.values);
-            }
-          })
-          .catch(function(error) {
-            console.error('Error loading field values:', error);
-          });
+        var service = (typeof currentService !== 'undefined' && currentService) ? String(currentService) : '';
+        var cacheKey = field + '||' + service;
+        if (autocompleteCache[cacheKey]) {
+          // Use cached values for this field+service
+          populateAutocomplete(input, dropdown, autocompleteCache[cacheKey]);
+          return;
         }
+
+        // Fetch from API, include service filter so backend can scope suggestions
+        var url = '../../api/get_supplier_field_values.php?field=' + encodeURIComponent(field);
+        if (service) url += '&service=' + encodeURIComponent(service);
+
+        fetch(url, {
+          method: 'GET',
+          credentials: 'same-origin'
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          if (data.success && data.values) {
+            autocompleteCache[cacheKey] = data.values;
+            populateAutocomplete(input, dropdown, data.values);
+          }
+        })
+        .catch(function(error) {
+          console.error('Error loading field values:', error);
+        });
       }
       
       // Populate autocomplete dropdown
@@ -2102,10 +2299,12 @@ $canEditMaps = can_edit_page('maps');
         input.style.borderRadius = '6px 6px 0 0';
       }
       
-      // Filter autocomplete based on input
+      // Filter autocomplete based on input (respect current service cache)
       function filterAutocomplete(input, dropdown, field) {
-        if (autocompleteCache[field]) {
-          populateAutocomplete(input, dropdown, autocompleteCache[field]);
+        var service = (typeof currentService !== 'undefined' && currentService) ? String(currentService) : '';
+        var cacheKey = field + '||' + service;
+        if (autocompleteCache[cacheKey]) {
+          populateAutocomplete(input, dropdown, autocompleteCache[cacheKey]);
         }
       }
       

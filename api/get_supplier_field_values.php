@@ -12,6 +12,7 @@ if (!isset($_SESSION['email'])) {
 }
 
 $field = isset($_GET['field']) ? trim($_GET['field']) : '';
+$service = isset($_GET['service']) ? trim($_GET['service']) : '';
 
 // Whitelist of allowed fields to prevent SQL injection
 $allowedFields = ['name', 'material', 'location_type', 'sales_contact', 'contact_number', 'email', 'address', 'city', 'state', 'supply_method', 'location_phone'];
@@ -22,16 +23,34 @@ if (!in_array($field, $allowedFields)) {
   exit;
 }
 
-// Fetch distinct non-empty values for the specified field
-$sql = "SELECT DISTINCT $field FROM suppliers WHERE $field IS NOT NULL AND $field != '' ORDER BY $field ASC";
-$result = $conn->query($sql);
+// Fetch distinct non-empty values for the specified field, optionally scoped to a service
+$sql = "SELECT DISTINCT $field FROM suppliers WHERE $field IS NOT NULL AND $field != ''";
+if ($service !== '') {
+  $sql .= " AND service = ?";
+}
+$sql .= " ORDER BY $field ASC";
 
 $values = [];
-if ($result && $result->num_rows > 0) {
-  while ($row = $result->fetch_assoc()) {
-    $values[] = $row[$field];
+if ($stmt = $conn->prepare($sql)) {
+  if ($service !== '') {
+    $stmt->bind_param('s', $service);
+  }
+  $stmt->execute();
+  $res = $stmt->get_result();
+  if ($res && $res->num_rows > 0) {
+    while ($row = $res->fetch_assoc()) {
+      $values[] = $row[$field];
+    }
+  }
+  $stmt->close();
+} else {
+  // Fallback: run a direct query (shouldn't happen because field is whitelisted)
+  $result = $conn->query($sql);
+  if ($result && $result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+      $values[] = $row[$field];
+    }
   }
 }
-
 echo json_encode(['success' => true, 'values' => $values]);
 ?>
