@@ -1160,7 +1160,7 @@ $hasEditPermission = can_edit_page('engineering');
 							// Header with Add button
 							var header = document.createElement('div');
 							header.style.display = 'flex';
-							header.style.justifyContent = 'flex-end';
+							header.style.justifyContent = 'flex-start';
 							header.style.alignItems = 'center';
 							header.style.marginBottom = '10px';
 
