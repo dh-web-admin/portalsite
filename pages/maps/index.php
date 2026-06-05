@@ -862,7 +862,7 @@ $canEditMaps = can_edit_page('maps');
           if (supplier && supplier.name) {
             if (!uniqueSuppliers[supplier.name]) {
               var color = normalizeSupplierColor(supplier);
-              // Ensure we have a valid color
+            
               if (!color) color = '#667eea';
               uniqueSuppliers[supplier.name] = color;
             }

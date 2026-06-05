@@ -914,7 +914,7 @@ $hasEditPermission = can_edit_page('engineering');
 							subList.style.color = '#334155';
 							subList.style.width = '100%';
 							subList.style.boxSizing = 'border-box';
-							var labels = ['In house Drawings', 'Bill of materials', 'Parts and Suppliers'];
+							var labels = ['Drawings', 'Bill of materials', 'Parts and Suppliers'];
 							labels.forEach(function(label, idx) {
 								var li = document.createElement('li');
 								li.style.display = 'flex';
@@ -965,7 +965,7 @@ $hasEditPermission = can_edit_page('engineering');
 								
 								// Single click handler on the entire li row to prevent double-firing
 								// (span + chevron as siblings could both receive a near-boundary click)
-								if (label === 'In house Drawings') {
+								if (label === 'Drawings') {
 									span.style.cursor = 'pointer';
 									li.style.cursor = 'pointer';
 									li.addEventListener('click', function(e) {
@@ -1160,17 +1160,9 @@ $hasEditPermission = can_edit_page('engineering');
 							// Header with Add button
 							var header = document.createElement('div');
 							header.style.display = 'flex';
-							header.style.justifyContent = 'space-between';
+							header.style.justifyContent = 'flex-end';
 							header.style.alignItems = 'center';
 							header.style.marginBottom = '10px';
-
-							var title = document.createElement('div');
-							title.textContent = 'In house Drawings';
-							title.style.fontWeight = '700';
-							title.style.color = '#1e293b';
-							title.style.fontSize = '1.04em';
-							title.style.letterSpacing = '0.01em';
-							header.appendChild(title);
 
 							var addBtn = document.createElement('button');
 							addBtn.textContent = 'Add drawing';
