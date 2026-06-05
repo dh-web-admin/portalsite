@@ -1241,8 +1241,13 @@ $hasEditPermission = can_edit_page('engineering');
 												groups[key].push(drw);
 											});
 
+											// Natural ascending sort: numeric-first names and alphabetic names both low -> high.
+											var sortedGroupKeys = Object.keys(groups).sort(function(a, b) {
+												return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+											});
+
 											
-											Object.keys(groups).forEach(function(key) {
+											sortedGroupKeys.forEach(function(key) {
 												groups[key].sort(function(a, b) {
 													var va = parseInt((a.version || 'v0').replace(/^v/i, ''), 10) || 0;
 													var vb = parseInt((b.version || 'v0').replace(/^v/i, ''), 10) || 0;
@@ -1254,7 +1259,7 @@ $hasEditPermission = can_edit_page('engineering');
 												});
 											});
 
-											Object.keys(groups).forEach(function(key) {
+											sortedGroupKeys.forEach(function(key) {
 												var items = groups[key];
 												var latest = items[0];
 
