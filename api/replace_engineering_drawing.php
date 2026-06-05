@@ -21,7 +21,11 @@ if (!isset($_FILES['drawing']) || empty($_FILES['drawing']['name'])) {
     exit();
 }
 
-$uploadDir = __DIR__ . '/../uploads/engineering_drawings/';
+$isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+$uploadsMount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+$uploadDir = $isProduction
+    ? rtrim($uploadsMount, '/') . '/engineering_drawings/'
+    : __DIR__ . '/../uploads/engineering_drawings/';
 if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
 try {

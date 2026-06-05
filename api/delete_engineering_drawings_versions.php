@@ -30,6 +30,10 @@ if (count($ids) === 0) {
 }
 
 try {
+    $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+    $uploadsMount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+    $uploadsBase = $isProduction ? rtrim($uploadsMount, '/') : (__DIR__ . '/../uploads');
+
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
     $types = str_repeat('i', count($ids));
 
@@ -58,7 +62,7 @@ try {
     foreach ($files as $fileUrl) {
         $name = basename($fileUrl);
         if (!$name) continue;
-        $path = __DIR__ . '/../uploads/engineering_drawings/' . $name;
+        $path = $uploadsBase . '/engineering_drawings/' . $name;
         if (file_exists($path)) {
             @unlink($path);
         }

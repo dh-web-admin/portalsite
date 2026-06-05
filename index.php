@@ -14,11 +14,13 @@ if (preg_match('#^/(?:PortalSite/)?uploads/(.+)$#i', $uri, $m)) {
         exit;
     }
 
-    $fs = '/portalsite/uploads/' . $rel;
+    $fsPrimary = '/portalsite/uploads/' . $rel;
+    $fsLegacy = __DIR__ . '/uploads/' . $rel;
+    $fs = (is_file($fsPrimary) && is_readable($fsPrimary)) ? $fsPrimary : $fsLegacy;
 
     if (!is_file($fs) || !is_readable($fs)) {
         // Debug log in a writable location
-        @file_put_contents('/tmp/upload_debug.log', date('c') . " MISS: $uri -> $fs\n", FILE_APPEND | LOCK_EX);
+        @file_put_contents('/tmp/upload_debug.log', date('c') . " MISS: $uri -> primary:$fsPrimary legacy:$fsLegacy\n", FILE_APPEND | LOCK_EX);
         http_response_code(404);
         echo 'Not found';
         exit;

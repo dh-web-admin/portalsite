@@ -21,7 +21,11 @@ if (!isset($_FILES['drawings']) || empty($_FILES['drawings']['name'][0])) {
 
 $itemId = intval($_POST['item_id']);
 $uploadedBy = $_SESSION['email'];
-$uploadDir = __DIR__ . '/../uploads/engineering_drawings/';
+$isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+$uploadsMount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+$uploadDir = $isProduction
+    ? rtrim($uploadsMount, '/') . '/engineering_drawings/'
+    : __DIR__ . '/../uploads/engineering_drawings/';
 
 // Create upload directory if it doesn't exist
 if (!is_dir($uploadDir)) {

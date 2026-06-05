@@ -18,6 +18,10 @@ if (!$input || !isset($input['id']) || !is_numeric($input['id'])) {
 $id = intval($input['id']);
 
 try {
+    $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
+    $uploadsMount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
+    $uploadsBase = $isProduction ? rtrim($uploadsMount, '/') : (__DIR__ . '/../uploads');
+
     // Fetch file_url to unlink
     $stmt = $conn->prepare('SELECT file_url FROM engineering_drawings WHERE id = ?');
     $stmt->bind_param('i', $id);
@@ -42,7 +46,7 @@ try {
     if ($affected > 0 && $fileUrl) {
         // convert URL path to filesystem path
         $filename = basename($fileUrl);
-        $filePath = __DIR__ . '/../uploads/engineering_drawings/' . $filename;
+        $filePath = $uploadsBase . '/engineering_drawings/' . $filename;
         if (file_exists($filePath)) {
             @unlink($filePath);
         }
