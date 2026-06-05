@@ -5,7 +5,8 @@ $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 // ✅ Serve uploads directly from mounted volume when requested.
 // This bypasses session/auth so static files return 200 instead of redirecting to /auth/login.php.
 if (preg_match('#^/(?:PortalSite/)?uploads/(.+)$#i', $uri, $m)) {
-    $rel = $m[1];
+    $rel = rawurldecode($m[1]);
+    $rel = str_replace('\\', '/', $rel);
 
     // Prevent traversal
     if (strpos($rel, '..') !== false) {
