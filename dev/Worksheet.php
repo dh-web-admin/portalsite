@@ -713,10 +713,18 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
       }
 
       async function saveSheet() {
+        const sundayForPayload = (currentSunday || (function(){const t=new Date(); const dow=t.getDay(); t.setDate(t.getDate()-dow); return t; })());
+        const weekStart = `${sundayForPayload.getFullYear()}-${pad(sundayForPayload.getMonth()+1)}-${pad(sundayForPayload.getDate())}`;
+        const weekEndDate = new Date(sundayForPayload);
+        weekEndDate.setDate(weekEndDate.getDate() + 6);
+        const weekEnd = `${weekEndDate.getFullYear()}-${pad(weekEndDate.getMonth()+1)}-${pad(weekEndDate.getDate())}`;
+
         const data = {
           employee: <?php echo json_encode($name); ?>,
           rows: collectData(),
-          total_hours: document.getElementById('total-hours').textContent
+          total_hours: document.getElementById('total-hours').textContent,
+          week_start: weekStart,
+          week_end: weekEnd
         };
         try { localStorage.setItem('worksheet_draft', JSON.stringify(data)); } catch(e) {}
         // also store per-week draft keyed by currentSunday
@@ -729,11 +737,25 @@ $name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
           const res = await fetch('save_worksheet.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(data)
           });
-          const j = await res.json();
-          if (j && j.success) { showToast('Worksheet saved.', 'success'); }
-          else { showToast('Save failed — please try again.', 'error'); }
+          const responseText = await res.text();
+          let j = null;
+          try { j = JSON.parse(responseText); } catch(e) {}
+
+          if (!res.ok) {
+            const msg = (j && (j.error || j.message)) ? (j.error || j.message) : ('HTTP ' + res.status);
+            showToast('Save failed: ' + msg, 'error');
+            return;
+          }
+
+          if (j && j.success) {
+            showToast('Worksheet saved.', 'success');
+          } else {
+            const msg = (j && (j.error || j.message)) ? (j.error || j.message) : 'please try again';
+            showToast('Save failed: ' + msg, 'error');
+          }
         } catch(e) {
           showToast('Saved locally (network unavailable).', '');
         }
