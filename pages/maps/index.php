@@ -966,7 +966,7 @@ $canEditMaps = can_edit_page('maps');
               updateSupplierCount();
               return map.setView([39.8283, -98.5795], 5);
             }
-            var suppliersNeedingGeocode = [];t
+            var suppliersNeedingGeocode = [];
             var suppliersWithCoords = [];
             
             // Separate suppliers with and without coordinates
