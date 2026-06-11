@@ -1,7 +1,53 @@
 <?php
 require_once __DIR__ . '/../session_init.php';
 
-$name = isset($_SESSION['name']) ? (string)$_SESSION['name'] : 'Employee';
+$name = 'Employee';
+
+$sessionName = trim((string)($_SESSION['name'] ?? ''));
+$sessionFirst = trim((string)($_SESSION['first_name'] ?? ''));
+$sessionLast = trim((string)($_SESSION['last_name'] ?? ''));
+
+if ($sessionFirst !== '' || $sessionLast !== '') {
+  $name = trim($sessionFirst . ' ' . $sessionLast);
+} elseif ($sessionName !== '') {
+  $name = $sessionName;
+}
+
+// If the session only has a first name, try to get full name from DB.
+if (isset($_SESSION['email']) && $_SESSION['email'] && strpos($name, ' ') === false) {
+  try {
+    require_once __DIR__ . '/../config/config.php';
+    if (isset($conn) && $conn instanceof mysqli) {
+      $email = (string)$_SESSION['email'];
+      $sql = "SELECT COALESCE(first_name, '') AS first_name, COALESCE(last_name, '') AS last_name, COALESCE(name, '') AS name FROM users WHERE email = ? LIMIT 1";
+      $stmt = $conn->prepare($sql);
+      if ($stmt) {
+        $stmt->bind_param('s', $email);
+        if ($stmt->execute()) {
+          $res = $stmt->get_result();
+          if ($res && $row = $res->fetch_assoc()) {
+            $dbFirst = trim((string)($row['first_name'] ?? ''));
+            $dbLast = trim((string)($row['last_name'] ?? ''));
+            $dbName = trim((string)($row['name'] ?? ''));
+
+            if ($dbFirst !== '' || $dbLast !== '') {
+              $name = trim($dbFirst . ' ' . $dbLast);
+            } elseif ($dbName !== '') {
+              $name = $dbName;
+            }
+          }
+        }
+        $stmt->close();
+      }
+    }
+  } catch (Throwable $e) {
+    // Keep fallback name if DB lookup fails.
+  }
+}
+
+if (trim($name) === '') {
+  $name = 'Employee';
+}
 ?>
 <!doctype html>
 <html lang="en">
