@@ -20,7 +20,7 @@ $railway_email = $_POST['railway_email'] ?? '';
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Access Granted</title>
+    <title>Grant Access</title>
     <style>
         body{font-family:Segoe UI,Arial;background:radial-gradient(circle at 25% 25%, #1e293b 0%, #0f172a 70%);color:#e6eef8;padding:28px}
         .card{background:rgba(255,255,255,0.03);padding:22px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);max-width:900px;margin:0 auto}

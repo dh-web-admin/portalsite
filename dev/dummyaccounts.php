@@ -69,7 +69,7 @@
           } else {
             $r3 = $conn->query("SHOW COLUMNS FROM users LIKE 'created'");
             if ($r3 && $r3->num_rows > 0) { $hasCreatedAt = true; $createdCol = 'created'; }
-          }
+          }w
         } catch (Throwable $e) { $useIsDummy = false; $hasCreatedAt = false; }
 
         // Build safe select: if created column missing, alias an empty string so SQL doesn't fail
@@ -93,7 +93,7 @@
 
         <section class="card">
           <h3>Dummy Accounts</h3>
-          <p>This page lists or seeds dummy accounts for development and testing. Use these accounts to exercise UI flows without real user data.</p>
+          <p>.</p>
 
           <div style="margin-top:14px; display:flex; gap:12px; flex-wrap:wrap;">
             <!-- Seed and bulk-delete removed; creation is per-role only -->
