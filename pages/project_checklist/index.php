@@ -179,14 +179,14 @@ try {
                       <th>Schedule Cure</th>
                       <th>Cure Provider</th>
                       <th>Turn in Paperwork</th>
-                      <th>AIA</th>
                       <th>Process Field Paperwork</th>
                       <th>Review Processed Paperwork</th>
-                      <th>Invoice</th>
                       <th>Sign Change Order</th>
                       <th>Send Signed Change Order</th>
-                      <th>Send Supplier Lein Waiver</th>
+                      <th>Invoice</th>
+                      <th>AIA</th>
                       <th>Supplier Lein Waiver</th>
+                      <th>Send Supplier Lein Waiver</th>
                       <th>DHSS Lein Waiver</th>
                     </tr>
                   </thead>
@@ -200,7 +200,7 @@ try {
                     if (!empty($has_status)) {
                       $columns[] = 'Status';
                     }
-                    $columns = array_merge($columns, array('City','County','State','Coordinates','Client','Anticipated_Start_Date','State_License','City_License','Get_Contract','Review_and_Sign_Contract','Get_Tax_Exempt_Form','Complete_Vendor_Form','Send_W9','Send_BWC','Updated_BWC','Request_Certificate_of_INS','Send_Certificate_of_INS','Send_to_Lawyer','Request_NOC','Send_NOF','File_NOC_NOF','Get_Signed_Quote','Complete_Win_Packet','Create_Foreman_Field_Folder','Add_to_Project_Calendar','Soil_Testing','Soil_Sampling','Lab','Mix_Design_Sent','Results','Mix_Design_Approval','Call_OUPS','Schedule_Mobilization','Schedule_Field_Testing','Get_Field_Testing_Results','Send_Submittals','Schedule_Fuel','Fuel_Supplier','Selected_Material_Supplier','Schedule_Material','Selected_Trucking_Company','Schedule_Trucker','Hotel','Find_Water','Water_Semi','Schedule_Men','Grade_File','Cure_Type','Schedule_Cure','Cure_Provider','Turn_in_Paperwork','AIA','Process_Field_Paperwork','Review_Processed_Paperwork','Invoice','Sign_Change_Order','Send_Signed_Change_Order','Send_Supplier_Lein_Waiver','Supplier_Lein_Waiver','DHSS_Lein_Waiver'));
+                    $columns = array_merge($columns, array('City','County','State','Coordinates','Client','Anticipated_Start_Date','State_License','City_License','Get_Contract','Review_and_Sign_Contract','Get_Tax_Exempt_Form','Complete_Vendor_Form','Send_W9','Send_BWC','Updated_BWC','Request_Certificate_of_INS','Send_Certificate_of_INS','Send_to_Lawyer','Request_NOC','Send_NOF','File_NOC_NOF','Get_Signed_Quote','Complete_Win_Packet','Create_Foreman_Field_Folder','Add_to_Project_Calendar','Soil_Testing','Soil_Sampling','Lab','Mix_Design_Sent','Results','Mix_Design_Approval','Call_OUPS','Schedule_Mobilization','Schedule_Field_Testing','Get_Field_Testing_Results','Send_Submittals','Schedule_Fuel','Fuel_Supplier','Selected_Material_Supplier','Schedule_Material','Selected_Trucking_Company','Schedule_Trucker','Hotel','Find_Water','Water_Semi','Schedule_Men','Grade_File','Cure_Type','Schedule_Cure','Cure_Provider','Turn_in_Paperwork','Process_Field_Paperwork','Review_Processed_Paperwork','Sign_Change_Order','Send_Signed_Change_Order','Invoice','AIA','Supplier_Lein_Waiver','Send_Supplier_Lein_Waiver','DHSS_Lein_Waiver'));
 
                     // Server-side filtering by status (if provided and valid AND table has column)
                     $allowed_statuses = ['Ongoing','Completed','Cancelled'];
