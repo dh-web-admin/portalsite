@@ -2555,8 +2555,53 @@ foreach ($bidColumns as $c) {
       document.addEventListener('DOMContentLoaded', function(){
         // update color when user changes selection
         var statusEl = document.getElementById('editStatus');
+        // create a lightweight custom confirmation modal
+        function createStatusConfirm() {
+          if (document.getElementById('statusConfirmModal')) return;
+          var modal = document.createElement('div');
+          modal.id = 'statusConfirmModal';
+          modal.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:12000;padding:20px;';
+          modal.innerHTML = '\n            <div style="background:#fff;border-radius:10px;padding:18px;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(2,6,23,0.18);font-family:inherit;color:#0f172a;">\n              <div id="statusConfirmMsg" style="font-weight:800;margin-bottom:12px;font-size:15px;"></div>\n              <div style="display:flex;justify-content:flex-end;gap:8px;">\n                <button id="statusConfirmCancel" style="background:#fff;border:1px solid #e6edf0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;">Cancel</button>\n                <button id="statusConfirmOk" style="background:#10b981;border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;">Confirm</button>\n              </div>\n            </div>\n          ';
+          document.body.appendChild(modal);
+          // wire buttons
+          modal.querySelector('#statusConfirmCancel').addEventListener('click', function(){ hideStatusConfirm(false); });
+          modal.querySelector('#statusConfirmOk').addEventListener('click', function(){ hideStatusConfirm(true); });
+        }
+
+        var _statusConfirmResolve = null;
+        function showStatusConfirm(msg) {
+          createStatusConfirm();
+          var m = document.getElementById('statusConfirmModal');
+          document.getElementById('statusConfirmMsg').textContent = msg || 'Confirm change?';
+          m.style.display = 'flex';
+          return new Promise(function(resolve){ _statusConfirmResolve = resolve; });
+        }
+        function hideStatusConfirm(ok) {
+          var m = document.getElementById('statusConfirmModal');
+          if (m) m.style.display = 'none';
+          try { if (_statusConfirmResolve) _statusConfirmResolve(!!ok); } catch(e){}
+          _statusConfirmResolve = null;
+        }
+
         if (statusEl) {
-          statusEl.addEventListener('change', function(){ setStatusColor(this.value); });
+          // remember previous value so we can revert if user cancels
+          statusEl.addEventListener('focus', function(){ this._prevStatus = this.value; });
+          statusEl.addEventListener('change', function(){
+            var sel = this;
+            var newVal = sel.value;
+            var prev = sel._prevStatus || '';
+            var label = newVal || 'pending';
+            // show custom confirm UI
+            showStatusConfirm('Change project status to "' + label + '"?').then(function(confirmed){
+              if (!confirmed) {
+                // revert selection and keep color in sync
+                try { sel.value = prev || 'pending'; } catch(e){}
+                setStatusColor(sel.value);
+                return;
+              }
+              setStatusColor(newVal);
+            }).catch(function(){ try{ sel.value = prev || 'pending'; setStatusColor(sel.value);}catch(e){} });
+          });
         }
 
         var closeBtn = document.getElementById('closeEditBid');
@@ -2950,6 +2995,33 @@ foreach ($bidColumns as $c) {
                   } catch(e){}
                   // Keep the edit modal open after saving so users can continue editing.
                   try { showToast('Saved', 'success'); } catch(e){}
+                  try {
+                    // If server created a new project as part of this save, show a popup with link
+                    if (data && data.created_project) {
+                      var cp = data.created_project;
+                      // create a simple modal if not present
+                      if (!document.getElementById('createdProjectModal')) {
+                        var m = document.createElement('div');
+                        m.id = 'createdProjectModal';
+                        m.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:16000;padding:20px;';
+                        m.innerHTML = "<div style='background:#fff;border-radius:10px;padding:18px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(2,6,23,0.18);'>" +
+                          "<h3 style=\"margin:0 0 8px 0;font-size:18px\">Project checklist created</h3>" +
+                          "<p style=\"margin:0 0 12px\">New Project created in Project Checklist. <a id=\"cpOpenInline\" href=\"#\" style=\"color:#10b981;font-weight:700;text-decoration:underline\">Click here to navigate to the project page</a></p>" +
+                          "<div style=\"display:flex;justify-content:flex-end;gap:8px\">" +
+                            "<button id=\"cpClose\" style=\"background:#fff;border:1px solid #e6edf0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;\">Close</button>" +
+                            "<a id=\"cpOpen\" href=\"#\" target=\"_blank\" style=\"background:#10b981;color:#fff;padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700;\">Open checklist</a>" +
+                          "</div></div>";
+                        document.body.appendChild(m);
+                        document.getElementById('cpClose').addEventListener('click', function(){ document.getElementById('createdProjectModal').style.display = 'none'; });
+                      }
+                      var modal = document.getElementById('createdProjectModal');
+                      document.getElementById('cpName').textContent = cp.project_name || '';
+                      var open = document.getElementById('cpOpen');
+                      var href = '/pages/project_checklist/index.php?project_id=' + encodeURIComponent(cp.project_id || '');
+                      open.href = href;
+                      modal.style.display = 'flex';
+                    }
+                  } catch(e) {}
                   try {
                     // Update the in-memory originalRows and the row DOM so changes persist without a full reload
                     var newBid = data.bid || null;

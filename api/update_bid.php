@@ -98,6 +98,18 @@ if ($stypeRes) {
     @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " STATUS_COLUMN: " . json_encode($sinfo) . "\n", FILE_APPEND);
 }
 
+// Fetch current row before applying updates to detect status transitions
+$currentRow = null;
+$preStmt = $conn->prepare('SELECT * FROM bids WHERE bid_id = ? LIMIT 1');
+if ($preStmt) {
+    $preStmt->bind_param('i', $bidId);
+    $preStmt->execute();
+    $resPre = $preStmt->get_result();
+    $currentRow = $resPre ? $resPre->fetch_assoc() : null;
+    $preStmt->close();
+}
+
+
 // Build update list from provided input keys intersecting allowed columns
 $updateFields = [];
 $values = [];
@@ -177,8 +189,114 @@ if ($rstmt) {
     @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " RETURNED_ROW: " . json_encode($row) . "\n", FILE_APPEND);
     $rstmt->close();
 
+    // If status transitioned to 'won', send notification to all users
+    try {
+        $prevStatus = isset($currentRow['status']) ? strtolower(preg_replace('/[^a-z0-9]/', '', $currentRow['status'])) : '';
+        $newStatus = isset($row['status']) ? strtolower(preg_replace('/[^a-z0-9]/', '', $row['status'])) : '';
+        if ($prevStatus !== 'won' && $newStatus === 'won') {
+            // create a project checklist entry mirroring this bid
+            $createdProject = null;
+            try {
+                $pname = isset($row['project_name']) ? $row['project_name'] : '';
+                $pcity = isset($row['project_city']) ? $row['project_city'] : '';
+                $pcounty = isset($row['project_county']) ? $row['project_county'] : '';
+                $pstate = isset($row['project_state']) ? $row['project_state'] : '';
+                // attempt to use a coordinates field if present on bids
+                $pcoords = '';
+                if (isset($row['coordinates'])) $pcoords = $row['coordinates'];
+                elseif (isset($row['project_coordinates'])) $pcoords = $row['project_coordinates'];
+
+                $clientName = '';
+                if (!empty($row['client_winner'])) {
+                    $cw = $row['client_winner'];
+                    if (is_numeric($cw)) {
+                        $gq = $conn->prepare('SELECT COALESCE(general_contractor_name, general_contractor) AS name FROM general_contractor WHERE id = ? LIMIT 1');
+                        if ($gq) { $gq->bind_param('i', $cw); $gq->execute(); $gr = $gq->get_result(); $grow = $gr ? $gr->fetch_assoc() : null; if ($grow) $clientName = $grow['name']; $gq->close(); }
+                    } else {
+                        $clientName = $cw;
+                    }
+                }
+
+                // Insert into Projects table with available columns
+                $cols = ['Project_Name','City','County','State','Coordinates','Client'];
+                $placeholders = implode(',', array_fill(0, count($cols), '?'));
+                $types = 'sssss'; // five strings (we'll add client separately)
+                $stmtCols = '`' . implode('`,`', $cols) . '`';
+                $ins = $conn->prepare('INSERT INTO `Projects` (' . $stmtCols . ') VALUES (' . $placeholders . ')');
+                if ($ins) {
+                    $ins->bind_param('ssssss', $pname, $pcity, $pcounty, $pstate, $pcoords, $clientName);
+                    if ($ins->execute()) {
+                        $createdProject = ['project_id' => $ins->insert_id, 'project_name' => $pname];
+                    }
+                    $ins->close();
+                }
+            } catch (Throwable $e) {
+                @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " CREATE_PROJECT_ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+            }
+
+            // load mail helper
+            require_once __DIR__ . '/../auth/mailjet_helper.php';
+            // fetch all users
+            $usersRes = $conn->query("SELECT email, name FROM users WHERE email IS NOT NULL AND email != ''");
+            $emails = [];
+            if ($usersRes) {
+                while ($u = $usersRes->fetch_assoc()) {
+                    if (!empty($u['email'])) $emails[] = $u;
+                }
+            }
+
+            // build message
+            $projectName = isset($row['project_name']) ? $row['project_name'] : '';
+            $projAddrParts = [];
+            if (!empty($row['project_address'])) $projAddrParts[] = $row['project_address'];
+            if (!empty($row['project_city'])) $projAddrParts[] = $row['project_city'];
+            if (!empty($row['project_county'])) $projAddrParts[] = $row['project_county'];
+            if (!empty($row['project_state'])) $projAddrParts[] = $row['project_state'];
+            $projectAddress = implode(', ', $projAddrParts);
+            $gc = '';
+            if (!empty($row['client_winner'])) {
+                // try to resolve client_winner id to name
+                $cw = $row['client_winner'];
+                if (is_numeric($cw)) {
+                    $gq = $conn->prepare('SELECT COALESCE(general_contractor_name, general_contractor) AS name FROM general_contractor WHERE id = ? LIMIT 1');
+                    if ($gq) { $gq->bind_param('i', $cw); $gq->execute(); $gr = $gq->get_result(); $grow = $gr ? $gr->fetch_assoc() : null; if ($grow) $gc = $grow['name']; $gq->close(); }
+                } else {
+                    $gc = $row['client_winner'];
+                }
+            }
+
+            $subject = ($projectName ? $projectName : 'Project') . ' status change';
+            $text = "Great News!\nWe have won the following project.\n\nProject details:\nProject Name: " . $projectName . "\nProject Address: " . $projectAddress . "\nGeneral Contractor: " . $gc . "\n\nClick here to navigate directly to the project: " . (isset($_SERVER['HTTP_HOST']) ? ((isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 'https') . '://' . $_SERVER['HTTP_HOST']) : '') . "/pages/Bid_tracking/?bid_id=" . $bidId . "\n";
+            $html = "<div style='font-family: Arial, sans-serif; max-width:600px;'>" .
+                    "<h2>Great News!</h2>" .
+                    "<p>We have won the following project.</p>" .
+                    "<h3>Project details:</h3>" .
+                    "<p><strong>Project Name:</strong> " . htmlspecialchars($projectName) . "<br/>" .
+                    "<strong>Project Address:</strong> " . htmlspecialchars($projectAddress) . "<br/>" .
+                    "<strong>General Contractor:</strong> " . htmlspecialchars($gc) . "</p>" .
+                    "<p><a href='/pages/Bid_tracking/?bid_id=" . intval($bidId) . "' target='_blank'>Click here to navigate directly to the project.</a></p>" .
+                    "</div>";
+
+                if (function_exists('sendMail')) {
+                    foreach ($emails as $u) {
+                        $to = $u['email'];
+                        // sendMail returns ['success'=>bool,'error'=>string]
+                        $resMail = sendMail($to, $subject, $text, $html);
+                        @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " MAIL_SEND: " . json_encode(['to'=>$to,'res'=>$resMail]) . "\n", FILE_APPEND);
+                    }
+                }
+            
+            // attach created project info to response (if any)
+            if (!empty($createdProject)) {
+                $row['created_project'] = $createdProject;
+            }
+        }
+    } catch (Throwable $e) {
+        @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " MAIL_ERROR: " . $e->getMessage() . "\n", FILE_APPEND);
+    }
+
     @ob_end_clean();
-    echo json_encode(['success' => true, 'bid' => $row]);
+    echo json_encode(['success' => true, 'bid' => $row, 'created_project' => isset($row['created_project']) ? $row['created_project'] : null]);
     exit();
 }
 

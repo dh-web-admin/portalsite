@@ -739,25 +739,48 @@ try {
       if (addBtn) addBtn.addEventListener('click', function(e){ e.preventDefault(); openModal(); });
       if (cancelBtn) cancelBtn.addEventListener('click', function(e){ e.preventDefault(); closeModal(); });
 
-      // Create action
+      // Create action with duplicate-name check
       if (createBtn) createBtn.addEventListener('click', function(e){
         e.preventDefault();
         var name = nameInput ? nameInput.value.trim() : '';
         if (!name) { alert('Please enter a project name'); if(nameInput) nameInput.focus(); return; }
 
         createBtn.disabled = true;
-        createBtn.textContent = 'Creating...';
+        createBtn.textContent = 'Checking...';
 
-        var fd = new FormData();
-        fd.append('project_name', name);
+        // Check for existing project name
+        fetch('../../api/check_project_name.php', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'project_name=' + encodeURIComponent(name) })
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            try {
+              if (j && j.success && j.exists) {
+                // show confirm modal offering to open existing project or create new
+                showDuplicateConfirm(name, j.project_id, function(choice){
+                  if (choice === 'open') {
+                    // navigate to existing project
+                    window.location.href = '/pages/project_checklist/index.php?project_id=' + encodeURIComponent(j.project_id);
+                  } else {
+                    // proceed to create new project with same name
+                    actuallyCreate(name);
+                  }
+                });
+              } else {
+                actuallyCreate(name);
+              }
+            } catch(e) { actuallyCreate(name); }
+          })
+          .catch(function(){ actuallyCreate(name); })
+          .finally(function(){ createBtn.disabled = false; createBtn.textContent = 'Create'; });
+      });
 
+      function actuallyCreate(name) {
+        createBtn.disabled = true; createBtn.textContent = 'Creating...';
+        var fd = new FormData(); fd.append('project_name', name);
         fetch('../../api/create_project_checklist.php', { method: 'POST', body: fd, credentials: 'same-origin' })
           .then(function(resp){ return resp.json(); })
           .then(function(json){
             if (json && json.success) {
-              // show toast (if helper available) then reload so new row appears
               try { if (window && typeof window.showStatusToast === 'function') window.showStatusToast('Project created', 'success'); } catch(e){}
-              // Clear any unsaved-change state before reloading to avoid false leave-confirm prompts
               try { if (window.UnsavedGuard) window.UnsavedGuard.markClean(); } catch(_){ }
               setTimeout(function(){ window.location.reload(); }, 900);
             } else {
@@ -766,12 +789,28 @@ try {
               alert(msg);
             }
           })
-          .catch(function(err){
-            console.error('Create project error', err);
-            alert('Failed to create project');
-          })
+          .catch(function(err){ console.error('Create project error', err); alert('Failed to create project'); })
           .finally(function(){ createBtn.disabled = false; createBtn.textContent = 'Create'; });
-      });
+      }
+
+      function showDuplicateConfirm(name, projectId, cb) {
+        if (!document.getElementById('duplicateProjectModal')) {
+          var m = document.createElement('div'); m.id = 'duplicateProjectModal'; m.style = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:16000;padding:20px;';
+          m.innerHTML = "<div style='background:#fff;border-radius:10px;padding:18px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(2,6,23,0.18);'>" +
+            "<h3 style=\"margin:0 0 8px 0;font-size:18px\">This project already exists</h3>" +
+            "<p style=\"margin:0 0 12px\">This project already exists. Create a new project with the same name?</p>" +
+            "<div style=\"display:flex;justify-content:flex-end;gap:8px\">" +
+              "<button id=\"dupCancel\" style=\"background:#fff;border:1px solid #e6edf0;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700;\">Cancel</button>" +
+              "<button id=\"dupCreate\" style=\"background:#10b981;color:#fff;padding:8px 12px;border-radius:8px;border:0;font-weight:700;\">Create new</button>" +
+            "</div></div>";
+          document.body.appendChild(m);
+          document.getElementById('dupCancel').addEventListener('click', function(){ m.style.display = 'none'; });
+          document.getElementById('dupCreate').addEventListener('click', function(){ m.style.display = 'none'; if (typeof m._cb === 'function') m._cb('create'); });
+        }
+        var modalEl = document.getElementById('duplicateProjectModal');
+        modalEl._cb = function(choice){ if (cb) { if (choice === 'open') cb('open'); else cb('create'); } };
+        modalEl.style.display = 'flex';
+      }
 
       // Close modal on outside click or Escape
       if (modal) {
