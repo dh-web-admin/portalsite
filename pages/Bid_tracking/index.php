@@ -1504,9 +1504,16 @@ foreach ($bidColumns as $c) {
                 <button type="button" id="emailToggleBtn" style="background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:999px;font-weight:700;cursor:pointer;">Turn On</button>
               </div>
               <div id="emailSettingsContent" style="padding:8px;border:1px solid #e6edf0;border-radius:8px;background:#fbfdfe;">
-                <p style="margin:0 0 8px 0;color:#475569;">Select how many days prior to a bid you want to receive reminders. You may select multiple values, up to 5.</p>
-                <div id="emailDaysList" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:6px;">
-                  <!-- checkboxes populated by JS -->
+                <p style="margin:0 0 8px 0;color:#475569;">Enable daily bid updates: receive a compact 6-day summary email every day.</p>
+                <div style="display:flex;flex-direction:column;gap:10px;padding-top:6px;">
+                  <label style="display:flex;align-items:center;gap:8px;color:#0f172a;">
+                    <input id="dailyNotificationCheckbox" type="checkbox" checked style="width:16px;height:16px;" />
+                    <span style="font-weight:400;color:#0f172a;">Enable daily bid updates and reminders</span>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:8px;color:#0f172a;">
+                    <input id="winNotificationCheckbox" type="checkbox" checked style="width:16px;height:16px;" />
+                    <span style="font-weight:400;color:#0f172a;">Enable project win notification (send when a bid is marked won)</span>
+                  </label>
                 </div>
               </div>
               <div id="emailSettingsActions" style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
@@ -1708,6 +1715,8 @@ foreach ($bidColumns as $c) {
 
   <script>
     (function(){
+        // Ensure email notifications are enabled by default for everyone (unless explicitly turned off)
+        try { if (localStorage.getItem('bids_email_enabled') === null) localStorage.setItem('bids_email_enabled', '1'); } catch(e) {}
       var bidColumns = <?php echo json_encode($bidColumns); ?> || [];
       var allTableColumns = <?php echo json_encode($allTableColumns); ?> || [];
       var gcColumns = <?php echo json_encode(array_values($gcBlock)); ?> || [];
@@ -4657,27 +4666,7 @@ function syncGcDisplayForProjects() {
           var emailSettingsContent = document.getElementById('emailSettingsContent');
           var emailSettingsActions = document.getElementById('emailSettingsActions');
 
-          // Only allow 1 through 5 days as options
-          var allowedDays = [1,2,3,4,5];
-          var maxSelect = 5;
-
-          function buildEmailDays() {
-            if (!emailDaysList) return;
-            emailDaysList.innerHTML = '';
-            allowedDays.forEach(function(d){
-              var id = 'email_day_' + d;
-              var wrap = document.createElement('label');
-              wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '8px'; wrap.style.padding = '6px'; wrap.style.border = '1px solid transparent'; wrap.style.borderRadius = '6px';
-              var chk = document.createElement('input'); chk.type = 'checkbox'; chk.value = String(d); chk.id = id; chk.name = 'email_days';
-              var span = document.createElement('span'); span.textContent = d + ' day' + (d === 1 ? '' : 's'); span.style.color = '#0f172a'; span.style.fontWeight = '600';
-              wrap.appendChild(chk); wrap.appendChild(span);
-              emailDaysList.appendChild(wrap);
-              chk.addEventListener('change', function(){
-                var checked = Array.from(emailDaysList.querySelectorAll('input[type=checkbox]:checked'));
-                if (checked.length > maxSelect) { this.checked = false; showToast('You may select up to ' + maxSelect + ' days', 'error'); }
-              });
-            });
-          }
+          // daily_opted replaces preferred day selection
 
           function syncEmailToggleUi(enabled){
             if (emailToggleText) emailToggleText.textContent = enabled ? 'Notifications on' : 'Email notifications are currently turned off';
@@ -4782,10 +4771,14 @@ function syncGcDisplayForProjects() {
               }
 
               if (data.exists) {
-                var pref = Array.isArray(data.preferred_days) ? data.preferred_days : [];
-                try { localStorage.setItem('bids_email_days', JSON.stringify(pref)); } catch(e){}
+                var daily_opt = (typeof data.daily_opted !== 'undefined') ? (data.daily_opted ? true : false) : true;
+                var win_opt = (typeof data.win_opted !== 'undefined') ? (data.win_opted ? true : false) : true;
+                try { localStorage.setItem('bids_email_daily', daily_opt ? '1' : '0'); } catch(e){}
                 try { localStorage.setItem('bids_email_enabled', '1'); } catch(e){}
-                setEmailEnabled(true, { skipServer: true, preferredDays: pref });
+                setEmailEnabled(true, { skipServer: true });
+                // set checkbox states
+                try { document.getElementById('dailyNotificationCheckbox').checked = !!daily_opt; } catch(e) {}
+                try { document.getElementById('winNotificationCheckbox').checked = !!win_opt; } catch(e) {}
               } else {
                 try { localStorage.removeItem('bids_email_days'); } catch(e){}
                 try { localStorage.setItem('bids_email_enabled', '0'); } catch(e){}
@@ -4808,10 +4801,12 @@ function syncGcDisplayForProjects() {
                   try { localStorage.removeItem('bids_email_days'); } catch(e){}
                 } else {
                   // Turning on: default to [1,2], auto-save, then show modal
-                  var defaultDays = [1,2];
-                  try { localStorage.setItem('bids_email_days', JSON.stringify(defaultDays)); } catch(e){}
-                  setEmailEnabled(true, { preferredDays: defaultDays });
-                  if (emailModal) emailModal.style.display = 'flex';
+                    var defaultDays = [1,2];
+                    try { localStorage.setItem('bids_email_days', JSON.stringify(defaultDays)); } catch(e){}
+                    setEmailEnabled(true, { preferredDays: defaultDays });
+                    // default win notification to enabled
+                    try { document.getElementById('winNotificationCheckbox').checked = true; } catch(e){}
+                    if (emailModal) emailModal.style.display = 'flex';
                 }
               });
             });
@@ -4821,15 +4816,18 @@ function syncGcDisplayForProjects() {
           if (saveEmailBtn) {
             saveEmailBtn.addEventListener('click', function(){
               try {
-                var sel = Array.from(emailDaysList.querySelectorAll('input[type=checkbox]:checked')).map(function(c){ return parseInt(c.value,10); });
-                if (sel.length > maxSelect) return showToast('You may select up to ' + maxSelect + ' days', 'error');
-                localStorage.setItem('bids_email_days', JSON.stringify(sel));
+                // Persist daily_opted and win_opted
+                var dailySel = !!(document.getElementById('dailyNotificationCheckbox') && document.getElementById('dailyNotificationCheckbox').checked);
+                localStorage.setItem('bids_email_enabled', dailySel ? '1' : '0');
+                try { localStorage.setItem('bids_email_daily', dailySel ? '1' : '0'); } catch(e){}
                 try { localStorage.setItem('bids_email_enabled', '1'); } catch(e){}
 
                 // Persist server-side and trigger confirmation email
                 var fd = new FormData();
                 fd.append('opted_in', '1');
-                fd.append('preferred_days', JSON.stringify(sel));
+                fd.append('daily_opted', dailySel ? '1' : '0');
+                // include win notification preference
+                try { fd.append('win_opted', document.getElementById('winNotificationCheckbox').checked ? '1' : '0'); } catch(e) { fd.append('win_opted', '1'); }
 
                 fetch('../../api/save_email_preferences.php', { method: 'POST', body: fd, credentials: 'same-origin' })
                   .then(function(resp){ return resp.text(); })

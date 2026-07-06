@@ -265,24 +265,65 @@ if ($rstmt) {
                 }
             }
 
-            $subject = ($projectName ? $projectName : 'Project') . ' status change';
-            $text = "Great News!\nWe have won the following project.\n\nProject details:\nProject Name: " . $projectName . "\nProject Address: " . $projectAddress . "\nGeneral Contractor: " . $gc . "\n\nClick here to navigate directly to the project: " . (isset($_SERVER['HTTP_HOST']) ? ((isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : 'https') . '://' . $_SERVER['HTTP_HOST']) : '') . "/pages/Bid_tracking/?bid_id=" . $bidId . "\n";
-            $html = "<div style='font-family: Arial, sans-serif; max-width:600px;'>" .
-                    "<h2>Great News!</h2>" .
-                    "<p>We have won the following project.</p>" .
-                    "<h3>Project details:</h3>" .
-                    "<p><strong>Project Name:</strong> " . htmlspecialchars($projectName) . "<br/>" .
-                    "<strong>Project Address:</strong> " . htmlspecialchars($projectAddress) . "<br/>" .
-                    "<strong>General Contractor:</strong> " . htmlspecialchars($gc) . "</p>" .
-                    "<p><a href='/pages/Bid_tracking/?bid_id=" . intval($bidId) . "' target='_blank'>Click here to navigate directly to the project.</a></p>" .
-                    "</div>";
+                $subject = 'Project Won — ' . ($projectName ? $projectName : 'Project');
+                $text = "Good morning " . (isset($u['name']) ? $u['name'] : 'user') . ",\n\nWe have won " . $projectName . "\n\nProject: " . $projectName . "\nProject Address: " . $projectAddress . "\nGeneral Contractor: " . $gc . "\n\nThis project was created in Project Checklist.\n";
+                $html = "<div style='font-family: Arial, sans-serif; max-width:600px; color:#0f172a;'>" .
+                    "<div style='background:#0b76ef;color:#fff;padding:12px;border-radius:6px;'><h2 style=\"margin:0;font-size:18px;\">Project Won Notification</h2></div>" .
+                    "<div style='padding:16px;background:#fff;border:1px solid #eef2f6;border-top:0;border-radius:0 0 6px 6px;'>" .
+                    "<div style=\"font-size:15px;margin-bottom:12px;\">Good morning " . htmlspecialchars(isset($u['name']) ? $u['name'] : 'user') . ",</div>" .
+                    "<div style=\"background:#f1f8ff;border-left:4px solid #0b76ef;padding:12px;border-radius:6px;margin-bottom:12px;\">" .
+                    "<div style=\"font-size:16px;color:#0b1726;\">We have won " . htmlspecialchars($projectName) . "</div>" .
+                    "<div style=\"color:#475569;margin-top:8px;line-height:1.45;\">" .
+                    "<div><strong>Project:</strong> " . htmlspecialchars($projectName) . "</div>" .
+                    "<div><strong>Address:</strong> " . htmlspecialchars($projectAddress) . "</div>" .
+                    "<div><strong>General Contractor:</strong> " . htmlspecialchars($gc) . "</div>" .
+                    "</div></div>" .
+                    "<div style=\"font-size:13px;color:#334155;\">This project was created in Project Checklist.</div>" .
+                    "<div style=\"margin-top:12px;font-size:13px;color:#6b7280;\">To stop receiving project-win notifications, open the Bid Tracking bell icon → Email Notifications and toggle \"Enable project win notification\".</div>" .
+                    "</div></div>";
 
                 if (function_exists('sendMail')) {
                     foreach ($emails as $u) {
                         $to = $u['email'];
-                        // sendMail returns ['success'=>bool,'error'=>string]
-                        $resMail = sendMail($to, $subject, $text, $html);
-                        @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " MAIL_SEND: " . json_encode(['to'=>$to,'res'=>$resMail]) . "\n", FILE_APPEND);
+                        // check user's preferences: only send win notifications to users who enabled it (default: enabled)
+                        try {
+                            $prefStmt = $conn->prepare('SELECT preferred_days FROM bids_email WHERE email = ? LIMIT 1');
+                            $prefStmt->bind_param('s', $to);
+                            $prefStmt->execute();
+                            $prefRes = $prefStmt->get_result();
+                            $prefRow = $prefRes ? $prefRes->fetch_assoc() : null;
+                            $prefStmt->close();
+                            $sendToUser = true;
+                            if ($prefRow && isset($prefRow['preferred_days'])) {
+                                $pd = $prefRow['preferred_days'];
+                                $decoded = json_decode($pd, true);
+                                if (is_array($decoded)) {
+                                    if (isset($decoded['win_opted'])) {
+                                        $sendToUser = intval($decoded['win_opted']) ? true : false;
+                                    } else {
+                                        // legacy array -> assume enabled
+                                        $sendToUser = true;
+                                    }
+                                } else {
+                                    $sendToUser = true; // fallback
+                                }
+                            } else {
+                                // no pref row -> default enabled
+                                $sendToUser = true;
+                            }
+                        } catch (Throwable $e) {
+                            $sendToUser = true;
+                        }
+
+                        if ($sendToUser) {
+                            // append a short note how to turn off these notifications
+                            // already includes note in HTML/text; ensure recipient name in plaintext
+                            $personalText = $text; // uses $u when available below
+                            $resMail = sendMail($to, $subject, $personalText, $html);
+                            @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " MAIL_SEND: " . json_encode(['to'=>$to,'res'=>$resMail]) . "\n", FILE_APPEND);
+                        } else {
+                            @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " SKIP_MAIL_USER_OPT_OUT: " . $to . "\n", FILE_APPEND);
+                        }
                     }
                 }
             

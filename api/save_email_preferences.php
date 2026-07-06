@@ -23,7 +23,16 @@ $userEmail = $_SESSION['email'];
 
 $raw = $_POST;
 $opted = isset($raw['opted_in']) ? (intval($raw['opted_in']) ? 1 : 0) : 1;
+// legacy: preferred days; new: daily_opted (boolean)
 $preferred = [];
+$daily_opted = 1; // default enabled
+$win_opted = 1; // default enabled
+if (isset($raw['daily_opted'])) {
+    $daily_opted = intval($raw['daily_opted']) ? 1 : 0;
+}
+if (isset($raw['win_opted'])) {
+    $win_opted = intval($raw['win_opted']) ? 1 : 0;
+}
 if (isset($raw['preferred_days'])) {
     // expected JSON array or comma-separated
     $pd = $raw['preferred_days'];
@@ -43,10 +52,12 @@ if (isset($raw['preferred_days'])) {
 // limit to 1-5 values and max 5 entries
 $preferred = array_values(array_filter(array_unique($preferred), function($v){ return $v >=1 && $v <=5; }));
 if (count($preferred) > 5) $preferred = array_slice($preferred, 0, 5);
-if ($opted === 0) {
-    // Turning off: ignore any preferred days
-    $preferred = [];
-}
+    if ($opted === 0) {
+        // Turning off: ignore any preferred days and opt-outs
+        $preferred = [];
+        $win_opted = 0;
+        $daily_opted = 0;
+    }
 
 // upsert into bids_email
 try {
@@ -66,15 +77,16 @@ try {
     } else {
         if ($row && isset($row['id'])) {
             $id = intval($row['id']);
+            // store preferred_days as JSON object to include win_opted for backward compatibility
+            $pd_payload = json_encode(['days' => $preferred, 'daily_opted' => $daily_opted, 'win_opted' => $win_opted]);
             $up = $conn->prepare('UPDATE bids_email SET opted_in = ?, preferred_days = ? WHERE id = ?');
-            $pd_json = json_encode($preferred);
-            $up->bind_param('isi', $opted, $pd_json, $id);
+            $up->bind_param('isi', $opted, $pd_payload, $id);
             $ok = $up->execute();
             $up->close();
         } else {
+            $pd_payload = json_encode(['days' => $preferred, 'daily_opted' => $daily_opted, 'win_opted' => $win_opted]);
             $ins = $conn->prepare('INSERT INTO bids_email (`email`,`opted_in`,`preferred_days`) VALUES (?,?,?)');
-            $pd_json = json_encode($preferred);
-            $ins->bind_param('sis', $userEmail, $opted, $pd_json);
+            $ins->bind_param('sis', $userEmail, $opted, $pd_payload);
             $ok = $ins->execute();
             $ins->close();
         }

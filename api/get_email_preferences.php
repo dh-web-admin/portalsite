@@ -22,16 +22,31 @@ try {
 
     if ($row && isset($row['id'])) {
         $preferred = [];
+        $daily_opted = 1;
+        $win_opted = 1;
         $pd = $row['preferred_days'] ?? '';
         if (is_string($pd) && $pd !== '') {
             $try = json_decode($pd, true);
-            if (is_array($try)) $preferred = array_values(array_map('intval', $try));
+            if (is_array($try)) {
+                // support legacy array and new object format
+                if (isset($try['days']) && is_array($try['days'])) {
+                    $preferred = array_values(array_map('intval', $try['days']));
+                    $daily_opted = isset($try['daily_opted']) ? intval($try['daily_opted']) : 1;
+                    $win_opted = isset($try['win_opted']) ? intval($try['win_opted']) : 1;
+                } else {
+                    $preferred = array_values(array_map('intval', $try));
+                    $daily_opted = 1;
+                    $win_opted = 1;
+                }
+            }
         }
         echo json_encode([
             'success' => true,
             'exists' => true,
             'opted_in' => (int)($row['opted_in'] ?? 0),
-            'preferred_days' => $preferred
+            'preferred_days' => $preferred,
+            'daily_opted' => $daily_opted,
+            'win_opted' => $win_opted
         ]);
         exit();
     }
