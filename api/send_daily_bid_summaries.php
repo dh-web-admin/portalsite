@@ -95,9 +95,9 @@ try {
 
         // Compose HTML
         $html = "<div style='font-family: Arial, sans-serif; max-width:700px; color:#0f172a; border:1px solid #eef2f6; border-radius:8px; overflow:hidden;'>";
-        $html .= "<div style='background:#0b76ef;color:#fff;padding:12px 16px;'><h2 style='margin:0;font-size:18px;'>Daily Bid Summary — 6 Day Outlook</h2></div>";
+        $html .= "<div style='background:#0b76ef;color:#fff;padding:16px 20px;'><h2 style='margin:0;font-size:20px;'>Daily Bid Summary</h2></div>";
         $html .= "<div style='padding:16px;background:#fff;'>";
-        $html .= "<div style='font-size:15px;margin-bottom:12px;'>Great News " . htmlspecialchars($name) . ",</div>";
+        $html .= "<div style='font-size:15px;margin-bottom:12px;'>Good morning " . htmlspecialchars($name) . ",</div>";
 
         // Today
         if (!empty($todayBids)) {
@@ -124,8 +124,11 @@ try {
             if ($addr) $html .= "<div><strong>Address:</strong> " . $addr . "</div>";
             if ($gc) $html .= "<div><strong>General Contractor:</strong> " . htmlspecialchars($gc) . "</div>";
             $html .= "</div></div>";
+            // add extra spacing after today
+            $html .= "<div style='height:12px;'></div>";
         } else {
-            $html .= "<div style='background:#f8fafc;border-left:4px solid #94a3b8;padding:12px;border-radius:6px;margin-bottom:12px;color:#475569;'>No bids due today</div>";
+            $html .= "<div style='background:#f8fafc;border-left:4px solid #94a3b8;padding:14px;border-radius:8px;margin-bottom:14px;color:#475569;'>No bids due today</div>";
+            $html .= "<div style='height:12px;'></div>";
         }
 
         // Tomorrow
@@ -153,14 +156,17 @@ try {
             if ($addr) $html .= htmlspecialchars($addr);
             if ($gc) $html .= " — " . htmlspecialchars($gc);
             $html .= "</div></div>";
+            $html .= "<div style='height:12px;'></div>";
         } else {
-            $html .= "<div style='background:#fffaf0;border-left:4px solid #f59e0b;padding:12px;border-radius:6px;margin-bottom:14px;color:#475569;'>No bids due tomorrow</div>";
+            $html .= "<div style='background:#fffaf0;border-left:4px solid #f59e0b;padding:14px;border-radius:8px;margin-bottom:14px;color:#475569;'>No bids due tomorrow</div>";
+            $html .= "<div style='height:12px;'></div>";
         }
 
-        // More updates
-        $html .= "<div style='margin-top:6px;'><div style='color:#0f172a;margin-bottom:8px;'>More updates</div>";
+        // More updates in its own bubble
+        $html .= "<div style='background:#eef2ff;border-left:4px solid #3b82f6;padding:14px;border-radius:8px;margin-top:8px;color:#0f172a;'>";
+        $html .= "<div style='font-weight:600;margin-bottom:8px;'>More updates</div>";
         if (!empty($more)) {
-            $html .= "<ul style='padding-left:18px;margin:0;color:#334155;line-height:1.6;'>";
+            $html .= "<ul style='padding-left:20px;margin:0;color:#334155;line-height:1.8;'>";
             foreach ($more as $m) {
                 $d = $m['date'];
                 $bb = $m['bid'];
@@ -171,7 +177,7 @@ try {
                 if (!empty($bb['project_county'])) $addrParts[] = $bb['project_county'];
                 if (!empty($bb['project_state'])) $addrParts[] = $bb['project_state'];
                 $addr = htmlspecialchars(implode(', ', $addrParts));
-                $html .= "<li>" . htmlspecialchars($d) . " — " . ($proj ? $proj . " — " . $addr : ($addr ? $addr : '')) . "</li>";
+                $html .= "<li style='margin-bottom:6px;'>" . htmlspecialchars($d) . " — " . ($proj ? $proj . " — " . $addr : ($addr ? $addr : '')) . "</li>";
             }
             $html .= "</ul>";
         } else {
@@ -184,7 +190,7 @@ try {
         $html .= "</div>"; // container
 
         // Plain text
-        $text = "Daily Bid Summary — 6 Day Outlook\n\nGreat News " . $name . ",\n\n";
+        $text = "Daily Bid Summary\n\nGood morning " . $name . ",\n\n";
         if (!empty($todayBids)) {
             $b = $todayBids[0];
             $text .= "DUE TODAY\n- " . ($b['project_name'] ?? '') . "\n";
