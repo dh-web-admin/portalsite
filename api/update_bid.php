@@ -266,11 +266,11 @@ if ($rstmt) {
             }
 
                 $subject = 'Project Won — ' . ($projectName ? $projectName : 'Project');
-                $text = "Good morning " . (isset($u['name']) ? $u['name'] : 'user') . ",\n\nWe have won " . $projectName . "\n\nProject: " . $projectName . "\nProject Address: " . $projectAddress . "\nGeneral Contractor: " . $gc . "\n\nThis project was created in Project Checklist.\n";
+                $text = "Great News " . (isset($u['name']) ? $u['name'] : 'user') . ",\n\nWe have won " . $projectName . "\n\nProject: " . $projectName . "\nProject Address: " . $projectAddress . "\nGeneral Contractor: " . $gc . "\n\nThis project was created in Project Checklist.\n";
                 $html = "<div style='font-family: Arial, sans-serif; max-width:600px; color:#0f172a;'>" .
                     "<div style='background:#0b76ef;color:#fff;padding:12px;border-radius:6px;'><h2 style=\"margin:0;font-size:18px;\">Project Won Notification</h2></div>" .
                     "<div style='padding:16px;background:#fff;border:1px solid #eef2f6;border-top:0;border-radius:0 0 6px 6px;'>" .
-                    "<div style=\"font-size:15px;margin-bottom:12px;\">Good morning " . htmlspecialchars(isset($u['name']) ? $u['name'] : 'user') . ",</div>" .
+                    "<div style=\"font-size:15px;margin-bottom:12px;\">Great News " . htmlspecialchars(isset($u['name']) ? $u['name'] : 'user') . ",</div>" .
                     "<div style=\"background:#f1f8ff;border-left:4px solid #0b76ef;padding:12px;border-radius:6px;margin-bottom:12px;\">" .
                     "<div style=\"font-size:16px;color:#0b1726;\">We have won " . htmlspecialchars($projectName) . "</div>" .
                     "<div style=\"color:#475569;margin-top:8px;line-height:1.45;\">" .

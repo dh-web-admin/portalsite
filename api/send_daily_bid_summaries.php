@@ -97,7 +97,7 @@ try {
         $html = "<div style='font-family: Arial, sans-serif; max-width:700px; color:#0f172a; border:1px solid #eef2f6; border-radius:8px; overflow:hidden;'>";
         $html .= "<div style='background:#0b76ef;color:#fff;padding:12px 16px;'><h2 style='margin:0;font-size:18px;'>Daily Bid Summary — 6 Day Outlook</h2></div>";
         $html .= "<div style='padding:16px;background:#fff;'>";
-        $html .= "<div style='font-size:15px;margin-bottom:12px;'>Good morning " . htmlspecialchars($name) . ",</div>";
+        $html .= "<div style='font-size:15px;margin-bottom:12px;'>Great News " . htmlspecialchars($name) . ",</div>";
 
         // Today
         if (!empty($todayBids)) {
@@ -184,7 +184,7 @@ try {
         $html .= "</div>"; // container
 
         // Plain text
-        $text = "Daily Bid Summary — 6 Day Outlook\n\nGood morning " . $name . ",\n\n";
+        $text = "Daily Bid Summary — 6 Day Outlook\n\nGreat News " . $name . ",\n\n";
         if (!empty($todayBids)) {
             $b = $todayBids[0];
             $text .= "DUE TODAY\n- " . ($b['project_name'] ?? '') . "\n";
