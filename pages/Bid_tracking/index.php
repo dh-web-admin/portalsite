@@ -130,6 +130,21 @@ if ($bidTableExists && !empty($gcBlock)) {
     if (!in_array($existing[$i], $newCols, true)) $newCols[] = $existing[$i];
   }
   $bidColumns = array_values(array_unique($newCols));
+  // Force Project Coordinates to always render immediately after Project State,
+  // regardless of where it naturally sits in the DB column order or GC block merge.
+  if ($bidTableExists) {
+    $pcIdx = null;
+    foreach ($bidColumns as $i => $c) {
+      if (strtolower($c) === 'project_coordinates') { $pcIdx = $i; break; }
+    }
+    if ($pcIdx !== null) {
+      array_splice($bidColumns, $pcIdx, 1);
+      $stateIdx = null;
+      foreach ($bidColumns as $i => $c) { if (strtolower($c) === 'project_state') { $stateIdx = $i; break; } }
+      $insertAt = ($stateIdx !== null) ? $stateIdx + 1 : count($bidColumns);
+      array_splice($bidColumns, $insertAt, 0, ['project_coordinates']);
+    }
+  }
 }
 
 // Build a dynamic lookup for GC fields (including any new columns added to general_contractor table)
