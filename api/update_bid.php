@@ -265,20 +265,21 @@ if ($rstmt) {
                 }
             }
 
-                $subject = 'Project Won — ' . ($projectName ? $projectName : 'Project');
-                $text = "Great News " . (isset($u['name']) ? $u['name'] : 'user') . ",\n\nWe have won " . $projectName . "\n\nProject: " . $projectName . "\nProject Address: " . $projectAddress . "\nGeneral Contractor: " . $gc . "\n\nThis project was created in Project Checklist.\n";
+                $subject = 'Project Win — ' . ($projectName ? $projectName : 'Project');
+                // use placeholder %NAME% to personalize per-recipient when sending
+                $text = "%NAME%: We have won " . $projectName . " Project;\n\nProject: " . $projectName . "\nProject Address: " . $projectAddress . "\nGeneral Contractor: " . $gc . "\n\nTHIS PROJECT HAS BEEN ADDED TO YOUR PROJECT CHECKLIST\n";
                 $html = "<div style='font-family: Arial, sans-serif; max-width:600px; color:#0f172a;'>" .
-                    "<div style='background:#0b76ef;color:#fff;padding:12px;border-radius:6px;'><h2 style=\"margin:0;font-size:18px;\">Project Won Notification</h2></div>" .
+                    "<div style='background:#0b76ef;color:#fff;padding:12px;border-radius:6px;'><h2 style=\"margin:0;font-size:18px;\">Project Win Notification</h2></div>" .
                     "<div style='padding:16px;background:#fff;border:1px solid #eef2f6;border-top:0;border-radius:0 0 6px 6px;'>" .
-                    "<div style=\"font-size:15px;margin-bottom:12px;\">Great News " . htmlspecialchars(isset($u['name']) ? $u['name'] : 'user') . ",</div>" .
+                    // Greeting and immediate sentence on one line, personalized when sent
+                    "<div style=\"font-size:15px;margin-bottom:12px;\">%NAME%: We have won " . htmlspecialchars($projectName) . " Project;</div>" .
                     "<div style=\"background:#f1f8ff;border-left:4px solid #0b76ef;padding:12px;border-radius:6px;margin-bottom:12px;\">" .
-                    "<div style=\"font-size:16px;color:#0b1726;\">We have won " . htmlspecialchars($projectName) . "</div>" .
                     "<div style=\"color:#475569;margin-top:8px;line-height:1.45;\">" .
                     "<div><strong>Project:</strong> " . htmlspecialchars($projectName) . "</div>" .
                     "<div><strong>Address:</strong> " . htmlspecialchars($projectAddress) . "</div>" .
                     "<div><strong>General Contractor:</strong> " . htmlspecialchars($gc) . "</div>" .
                     "</div></div>" .
-                    "<div style=\"font-size:13px;color:#334155;\">This project was created in Project Checklist.</div>" .
+                    "<div style=\"font-size:16px;font-weight:700;color:#1f2937;margin-top:8px;\">THIS PROJECT HAS BEEN ADDED TO YOUR PROJECT CHECKLIST</div>" .
                     "<div style=\"margin-top:12px;font-size:13px;color:#6b7280;\">To stop receiving project-win notifications, open the Bid Tracking bell icon → Email Notifications and toggle \"Enable project win notification\".</div>" .
                     "</div></div>";
 
@@ -318,8 +319,10 @@ if ($rstmt) {
                         if ($sendToUser) {
                             // append a short note how to turn off these notifications
                             // already includes note in HTML/text; ensure recipient name in plaintext
-                            $personalText = $text; // uses $u when available below
-                            $resMail = sendMail($to, $subject, $personalText, $html);
+                            $recipientName = !empty($u['name']) ? $u['name'] : 'user';
+                            $personalText = str_replace('%NAME%', $recipientName, $text);
+                            $personalHtml = str_replace('%NAME%', htmlspecialchars($recipientName), $html);
+                            $resMail = sendMail($to, $subject, $personalText, $personalHtml);
                             @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " MAIL_SEND: " . json_encode(['to'=>$to,'res'=>$resMail]) . "\n", FILE_APPEND);
                         } else {
                             @file_put_contents(__DIR__ . '/update_bid_debug.log', date('c') . " SKIP_MAIL_USER_OPT_OUT: " . $to . "\n", FILE_APPEND);

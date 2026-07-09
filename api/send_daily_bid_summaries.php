@@ -97,7 +97,8 @@ try {
         $html = "<div style='font-family: Arial, sans-serif; max-width:700px; color:#0f172a; border:1px solid #eef2f6; border-radius:8px; overflow:hidden;'>";
         $html .= "<div style='background:#0b76ef;color:#fff;padding:16px 20px;'><h2 style='margin:0;font-size:20px;'>Daily Bid Summary</h2></div>";
         $html .= "<div style='padding:16px;background:#fff;'>";
-        $html .= "<div style='font-size:15px;margin-bottom:12px;'>Good morning " . htmlspecialchars($name) . ",</div>";
+        $html .= "<div style='font-size:15px;margin-bottom:6px;'>Good morning " . htmlspecialchars($name) . ",</div>";
+        $html .= "<div style='font-size:15px;margin-bottom:12px;color:#334155;'>Here is your daily bids summary</div>";
 
         // Today
         if (!empty($todayBids)) {
@@ -118,7 +119,10 @@ try {
                 } else { $gc = $cw; }
             }
             $html .= "<div style='background:#f1f8ff;border-left:4px solid #0b76ef;padding:12px;border-radius:6px;margin-bottom:12px;'>";
-            $html .= "<div style='font-size:16px;color:#0b1726;'>" . ($proj ? $proj : '—') . "</div>";
+            $html .= "<div style='font-size:14px;color:#0b1726;font-weight:600;'>Due Today</div>";
+            $html .= "<div style='font-size:16px;color:#0b1726;margin-top:6px;'>";
+            $html .= ($proj ? $proj : '-');
+            $html .= "</div>";
             $html .= "<div style='color:#475569;margin-top:8px;line-height:1.45;'>";
             if ($proj) $html .= "<div><strong>Project:</strong> " . $proj . "</div>";
             if ($addr) $html .= "<div><strong>Address:</strong> " . $addr . "</div>";
@@ -149,12 +153,16 @@ try {
                     if ($gq) { $gq->bind_param('i', $cw); $gq->execute(); $gr = $gq->get_result(); $grow = $gr ? $gr->fetch_assoc() : null; if ($grow) $gc = $grow['name']; $gq->close(); }
                 } else { $gc = $cw; }
             }
+            // Use the same boxed layout as today's entry, with labels for Project and Address
             $html .= "<div style='background:#fff7ed;border-left:4px solid #ff9800;padding:12px;border-radius:6px;margin-bottom:14px;'>";
             $html .= "<div style='font-size:14px;color:#b45309;'>Due Tomorrow</div>";
-            $html .= "<div style='font-size:16px;font-weight:600;margin-top:6px;'>" . ($proj ? $proj : '—') . "</div>";
-            $html .= "<div style='color:#475569;margin-top:6px;'>";
-            if ($addr) $html .= htmlspecialchars($addr);
-            if ($gc) $html .= " — " . htmlspecialchars($gc);
+            $html .= "<div style='font-size:16px;color:#0b1726;font-weight:600;margin-top:6px;'>";
+            $html .= ($proj ? $proj : '-');
+            $html .= "</div>";
+            $html .= "<div style='color:#475569;margin-top:8px;line-height:1.45;'>";
+            if ($proj) $html .= "<div><strong>Project:</strong> " . $proj . "</div>";
+            if ($addr) $html .= "<div><strong>Address:</strong> " . $addr . "</div>";
+            if ($gc) $html .= "<div><strong>General Contractor:</strong> " . htmlspecialchars($gc) . "</div>";
             $html .= "</div></div>";
             $html .= "<div style='height:12px;'></div>";
         } else {
@@ -177,7 +185,7 @@ try {
                 if (!empty($bb['project_county'])) $addrParts[] = $bb['project_county'];
                 if (!empty($bb['project_state'])) $addrParts[] = $bb['project_state'];
                 $addr = htmlspecialchars(implode(', ', $addrParts));
-                $html .= "<li style='margin-bottom:6px;'>" . htmlspecialchars($d) . " — " . ($proj ? $proj . " — " . $addr : ($addr ? $addr : '')) . "</li>";
+                $html .= "<li style='margin-bottom:6px;'>" . htmlspecialchars($d) . " - " . ($proj ? $proj . " - " . $addr : ($addr ? $addr : '')) . "</li>";
             }
             $html .= "</ul>";
         } else {
@@ -190,7 +198,7 @@ try {
         $html .= "</div>"; // container
 
         // Plain text
-        $text = "Daily Bid Summary\n\nGood morning " . $name . ",\n\n";
+        $text = "Daily Bid Summary\n\nGood morning " . $name . ",\n\nHere is your daily bids summary\n\n";
         if (!empty($todayBids)) {
             $b = $todayBids[0];
             $text .= "DUE TODAY\n- " . ($b['project_name'] ?? '') . "\n";
