@@ -59,6 +59,18 @@ try {
   $bidTableExists = false;
 }
 
+// Ensure project_coordinates appears in $bidColumns if the DB returned it in rows
+if ($bidTableExists && !empty($bidRows)) {
+  $first = $bidRows[0];
+  if (!in_array('project_coordinates', $bidColumns, true) && array_key_exists('project_coordinates', $first)) {
+    // attempt to insert after project_state if present
+    $insertAt = null;
+    foreach ($bidColumns as $i => $c) { if (strtolower($c) === 'project_state') { $insertAt = $i + 1; break; } }
+    if ($insertAt === null) $insertAt = count($bidColumns);
+    array_splice($bidColumns, $insertAt, 0, ['project_coordinates']);
+  }
+}
+
 // Dynamically load columns from general_contractor table
 $gcBlock = [];
 try {
@@ -865,6 +877,8 @@ foreach ($bidColumns as $c) {
                           // Build a human-friendly, title-cased label.
                           if ($col === 'dhss_project_number') {
                             $label = 'DHSS Project #';
+                          } elseif ($col === 'project_coordinates') {
+                            $label = 'Project Coordinates';
                           } elseif ($col === 'dh_stabilizer_price') {
                             $label = 'DH Stabilizer Price';
                           } elseif ($col === 'gc_name' || $col === 'general_contractor_name') {
@@ -1049,7 +1063,14 @@ foreach ($bidColumns as $c) {
                             if ($col === 'winner') {
                               $cellVal = ($cellVal == '1') ? 'Yes' : 'No';
                             }
-                            echo '<td data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($cellVal) . '</td>';
+                            // Special formatting for coordinates: make clickable link to Google Maps
+                            if ($col === 'project_coordinates' && trim((string)$cellVal) !== '') {
+                              $coords = trim((string)$cellVal);
+                              $link = 'https://maps.google.com/?q=' . rawurlencode($coords);
+                              echo '<td data-col="' . htmlspecialchars($col) . '"><a href="' . htmlspecialchars($link) . '" target="_blank" rel="noopener noreferrer">' . htmlspecialchars($coords) . '</a></td>';
+                            } else {
+                              echo '<td data-col="' . htmlspecialchars($col) . '">' . htmlspecialchars($cellVal) . '</td>';
+                            }
                           }
                         }
                       ?>
@@ -1318,6 +1339,12 @@ foreach ($bidColumns as $c) {
                         <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
                       </div>
                     <?php } ?>
+                    <?php if (!in_array('project_coordinates', $bidColumns)) { ?>
+                      <div class="field">
+                        <label>Project Coordinates</label>
+                        <input type="text" data-col="project_coordinates" name="project_coordinates" id="edit_project_coordinates" />
+                      </div>
+                    <?php } ?>
                   </div>
                 </div>
 
@@ -1483,6 +1510,10 @@ foreach ($bidColumns as $c) {
                     <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;">Project State</label>
                     <input type="text" id="projectState" name="project_state" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
                   </div>
+                </div>
+                <div style="margin-top:10px;">
+                  <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;">Project Coordinates</label>
+                  <input type="text" id="projectCoordinates" name="project_coordinates" placeholder="e.g. 41.0998,-80.6495" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
                 </div>
                 <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
                   <button type="button" id="cancelAddProject" class="btn">Cancel</button>
