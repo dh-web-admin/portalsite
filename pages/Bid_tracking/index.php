@@ -1354,12 +1354,10 @@ foreach ($bidColumns as $c) {
                         <input type="text" data-col="<?php echo htmlspecialchars($col); ?>" name="<?php echo htmlspecialchars($col); ?>" />
                       </div>
                     <?php } ?>
-                    <?php if (!in_array('project_coordinates', $bidColumns)) { ?>
                       <div class="field">
                         <label>Project Coordinates</label>
                         <input type="text" data-col="project_coordinates" name="project_coordinates" id="edit_project_coordinates" />
                       </div>
-                    <?php } ?>
                   </div>
                 </div>
 
