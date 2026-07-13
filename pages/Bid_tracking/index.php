@@ -758,7 +758,7 @@ foreach ($bidColumns as $c) {
                 if (!empty($cwIds)) {
                   $in = implode(',', array_map('intval', $cwIds));
                   try {
-                    $gres = $conn->query("SELECT id, COALESCE(general_contractor_name, general_contractor, '') AS name FROM general_contractor WHERE id IN (" . $in . ")");
+                    $gres = $conn->query("SELECT id, COALESCE(general_contractor, general_contractor_name, '') AS name FROM general_contractor WHERE id IN (" . $in . ")");
                     if ($gres) {
                       while ($g = $gres->fetch_assoc()) {
                         $gcMap[(int)$g['id']] = $g['name'];

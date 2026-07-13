@@ -114,7 +114,7 @@ try {
             if (!empty($b['client_winner'])) {
                 $cw = $b['client_winner'];
                 if (is_numeric($cw)) {
-                    $gq = $conn->prepare('SELECT COALESCE(general_contractor_name, general_contractor) AS name FROM general_contractor WHERE id = ? LIMIT 1');
+                    $gq = $conn->prepare('SELECT COALESCE(general_contractor, general_contractor_name) AS name FROM general_contractor WHERE id = ? LIMIT 1');
                     if ($gq) { $gq->bind_param('i', $cw); $gq->execute(); $gr = $gq->get_result(); $grow = $gr ? $gr->fetch_assoc() : null; if ($grow) $gc = $grow['name']; $gq->close(); }
                 } else { $gc = $cw; }
             }
@@ -149,7 +149,7 @@ try {
             if (!empty($b['client_winner'])) {
                 $cw = $b['client_winner'];
                 if (is_numeric($cw)) {
-                    $gq = $conn->prepare('SELECT COALESCE(general_contractor_name, general_contractor) AS name FROM general_contractor WHERE id = ? LIMIT 1');
+                    $gq = $conn->prepare('SELECT COALESCE(general_contractor, general_contractor_name) AS name FROM general_contractor WHERE id = ? LIMIT 1');
                     if ($gq) { $gq->bind_param('i', $cw); $gq->execute(); $gr = $gq->get_result(); $grow = $gr ? $gr->fetch_assoc() : null; if ($grow) $gc = $grow['name']; $gq->close(); }
                 } else { $gc = $cw; }
             }

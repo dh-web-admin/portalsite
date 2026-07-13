@@ -1,3 +1,4 @@
+                    
 <?php
 // Temporary debug: log incoming requests to help diagnose HTML responses
 // (Remove this block after debugging)
@@ -202,15 +203,19 @@ if ($rstmt) {
                 $pcounty = isset($row['project_county']) ? $row['project_county'] : '';
                 $pstate = isset($row['project_state']) ? $row['project_state'] : '';
                 // attempt to use a coordinates field if present on bids
+                // prefer the explicit `project_coordinates` column if available
                 $pcoords = '';
-                if (isset($row['coordinates'])) $pcoords = $row['coordinates'];
-                elseif (isset($row['project_coordinates'])) $pcoords = $row['project_coordinates'];
+                if (isset($row['project_coordinates']) && $row['project_coordinates'] !== '') {
+                    $pcoords = $row['project_coordinates'];
+                } elseif (isset($row['coordinates']) && $row['coordinates'] !== '') {
+                    $pcoords = $row['coordinates'];
+                }
 
                 $clientName = '';
                 if (!empty($row['client_winner'])) {
                     $cw = $row['client_winner'];
                     if (is_numeric($cw)) {
-                        $gq = $conn->prepare('SELECT COALESCE(general_contractor_name, general_contractor) AS name FROM general_contractor WHERE id = ? LIMIT 1');
+                        $gq = $conn->prepare('SELECT COALESCE(general_contractor, general_contractor_name) AS name FROM general_contractor WHERE id = ? LIMIT 1');
                         if ($gq) { $gq->bind_param('i', $cw); $gq->execute(); $gr = $gq->get_result(); $grow = $gr ? $gr->fetch_assoc() : null; if ($grow) $clientName = $grow['name']; $gq->close(); }
                     } else {
                         $clientName = $cw;
@@ -258,7 +263,7 @@ if ($rstmt) {
                 // try to resolve client_winner id to name
                 $cw = $row['client_winner'];
                 if (is_numeric($cw)) {
-                    $gq = $conn->prepare('SELECT COALESCE(general_contractor_name, general_contractor) AS name FROM general_contractor WHERE id = ? LIMIT 1');
+                    $gq = $conn->prepare('SELECT COALESCE(general_contractor, general_contractor_name) AS name FROM general_contractor WHERE id = ? LIMIT 1');
                     if ($gq) { $gq->bind_param('i', $cw); $gq->execute(); $gr = $gq->get_result(); $grow = $gr ? $gr->fetch_assoc() : null; if ($grow) $gc = $grow['name']; $gq->close(); }
                 } else {
                     $gc = $row['client_winner'];
