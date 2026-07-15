@@ -1463,6 +1463,12 @@ editBtn.addEventListener('click', function(e){
                     // extract first name
                     var first = (full || '').toString().trim().split(/\s+/)[0] || full;
                     text = first;
+                    // assign a consistent color per user id
+                    var palette = ['#0f172a','#0369a1','#10b981','#7c3aed','#ef4444','#f59e0b','#db2777','#059669','#1e40af','#065f46'];
+                    var idx = 0;
+                    try { idx = Math.abs(parseInt(uid,10)) % palette.length; } catch(e) { idx = (first.length || 1) % palette.length; }
+                    cell.style.color = palette[idx];
+                    cell.style.fontWeight = '700';
                   }
                   cell.textContent = text;
                   container.appendChild(cell);
