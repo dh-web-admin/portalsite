@@ -67,7 +67,7 @@ try {
   ?>";
 
     window.CAN_EDIT_PROJECT_CHECKLIST = <?php echo !empty($canEditProjectChecklist) ? 'true' : 'false'; ?>;
-    window.INITIAL_STATUS_FILTER = "<?php echo htmlspecialchars($status_filter ?? '', ENT_QUOTES, 'UTF-8'); ?>";
+    window.INITIAL_STATUS_FILTER = "";
 </script>
 </head>
 <body class="admin-page">
@@ -204,6 +204,8 @@ try {
                     if (!empty($has_status)) {
                       $columns[] = 'Status';
                     }
+
+                    // (INITIAL_STATUS_FILTER will be set after server computes $status_filter)
                     $columns = array_merge($columns, array('City','County','State','Coordinates','Client','Anticipated_Start_Date','State_License','City_License','Get_Contract','Review_and_Sign_Contract','Get_Tax_Exempt_Form','Complete_Vendor_Form','Send_W9','Send_BWC','Updated_BWC','Request_Certificate_of_INS','Send_Certificate_of_INS','Send_to_Lawyer','Request_NOC','Send_NOF','File_NOC_NOF','Get_Signed_Quote','Complete_Win_Packet','Create_Foreman_Field_Folder','Add_to_Project_Calendar','Soil_Testing','Soil_Sampling','Lab','Mix_Design_Sent','Results','Mix_Design_Approval','Call_OUPS','Schedule_Mobilization','Schedule_Field_Testing','Get_Field_Testing_Results','Send_Submittals','Schedule_Fuel','Fuel_Supplier','Selected_Material_Supplier','Schedule_Material','Selected_Trucking_Company','Schedule_Trucker','Hotel','Find_Water','Water_Semi','Schedule_Men','Grade_File','Cure_Type','Schedule_Cure','Cure_Provider','Turn_in_Paperwork','Process_Field_Paperwork','Review_Processed_Paperwork','Sign_Change_Order','Send_Signed_Change_Order','Invoice','AIA','Supplier_Lein_Waiver','Send_Supplier_Lein_Waiver','DHSS_Lein_Waiver'));
 
                     // Server-side filtering by status.
@@ -851,7 +853,13 @@ try {
       // user preference — see window.INITIAL_STATUS_FILTER) in the button label
       (function reflectSelected(){
         try{
-          var curr = window.INITIAL_STATUS_FILTER || '';
+          // Prefer the server-resolved filter (saved preference or URL param at server-time).
+          var curr = (window.INITIAL_STATUS_FILTER || '').trim();
+          // If server didn't provide a resolved filter, fall back to the live URL param.
+          if (!curr) {
+            try { curr = new URLSearchParams(window.location.search).get('status') || ''; } catch(e) { curr = ''; }
+          }
+          curr = (curr || '').trim();
           if (statusLabelMap.hasOwnProperty(curr) && curr !== ''){
             filterBtn.textContent = statusLabelMap[curr] + ' ▾';
           } else if (statusLabelMap.hasOwnProperty('')){
