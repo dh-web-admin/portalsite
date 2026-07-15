@@ -10,14 +10,17 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
 // Include database configuration
 require_once __DIR__ . '/../../config/config.php';
 
-// Get user role for sidebar
+// Get user role and saved checklist filter for sidebar
 $email = $_SESSION['email'];
-$stmt = $conn->prepare('SELECT role FROM users WHERE email=? LIMIT 1');
+$stmt = $conn->prepare('SELECT role, checklist_status_filter FROM users WHERE email=? LIMIT 1');
 $stmt->bind_param('s', $email);
 $stmt->execute();
 $res = $stmt->get_result();
 $user = $res ? $res->fetch_assoc() : null;
 $actualRole = $user ? $user['role'] : 'laborer';
+$savedFilter = ($user && array_key_exists('checklist_status_filter', $user))
+  ? $user['checklist_status_filter']
+  : null;
 
 $role = $actualRole;
 
@@ -64,6 +67,7 @@ try {
   ?>";
 
     window.CAN_EDIT_PROJECT_CHECKLIST = <?php echo !empty($canEditProjectChecklist) ? 'true' : 'false'; ?>;
+    window.INITIAL_STATUS_FILTER = "<?php echo htmlspecialchars($status_filter ?? '', ENT_QUOTES, 'UTF-8'); ?>";
 </script>
 </head>
 <body class="admin-page">
@@ -202,13 +206,21 @@ try {
                     }
                     $columns = array_merge($columns, array('City','County','State','Coordinates','Client','Anticipated_Start_Date','State_License','City_License','Get_Contract','Review_and_Sign_Contract','Get_Tax_Exempt_Form','Complete_Vendor_Form','Send_W9','Send_BWC','Updated_BWC','Request_Certificate_of_INS','Send_Certificate_of_INS','Send_to_Lawyer','Request_NOC','Send_NOF','File_NOC_NOF','Get_Signed_Quote','Complete_Win_Packet','Create_Foreman_Field_Folder','Add_to_Project_Calendar','Soil_Testing','Soil_Sampling','Lab','Mix_Design_Sent','Results','Mix_Design_Approval','Call_OUPS','Schedule_Mobilization','Schedule_Field_Testing','Get_Field_Testing_Results','Send_Submittals','Schedule_Fuel','Fuel_Supplier','Selected_Material_Supplier','Schedule_Material','Selected_Trucking_Company','Schedule_Trucker','Hotel','Find_Water','Water_Semi','Schedule_Men','Grade_File','Cure_Type','Schedule_Cure','Cure_Provider','Turn_in_Paperwork','Process_Field_Paperwork','Review_Processed_Paperwork','Sign_Change_Order','Send_Signed_Change_Order','Invoice','AIA','Supplier_Lein_Waiver','Send_Supplier_Lein_Waiver','DHSS_Lein_Waiver'));
 
-                    // Server-side filtering by status (if provided and valid AND table has column)
+                    // Server-side filtering by status.
+                    // Priority: explicit ?status= URL param (e.g. shared link) > saved user preference > All.
                     $allowed_statuses = ['Ongoing','Completed','Cancelled'];
                     $status_filter = '';
-                    if (!empty($has_status) && isset($_GET['status']) && $_GET['status'] !== '') {
-                      $candidate = trim($_GET['status']);
-                      if (in_array($candidate, $allowed_statuses, true)) {
-                        $status_filter = $candidate;
+                    if (!empty($has_status)) {
+                      if (isset($_GET['status'])) {
+                        $candidate = trim($_GET['status']);
+                        if (in_array($candidate, $allowed_statuses, true)) {
+                          $status_filter = $candidate;
+                        }
+                        // if candidate is '' or invalid, status_filter stays '' (All) -- this also
+                        // covers the explicit "All Projects" click, which passes no ?status param.
+                      } elseif ($savedFilter !== null && ($savedFilter === '' || in_array($savedFilter, $allowed_statuses, true))) {
+                        // No ?status in URL at all -> fall back to the user's saved preference.
+                        $status_filter = $savedFilter;
                       }
                     }
 
@@ -835,11 +847,11 @@ try {
         statusLabelMap[s] = opt.textContent.trim();
       });
 
-      // On load, reflect current status query param in the button label
+      // On load, reflect the server-resolved filter (URL param OR saved
+      // user preference — see window.INITIAL_STATUS_FILTER) in the button label
       (function reflectSelected(){
         try{
-          var params = new URLSearchParams(window.location.search);
-          var curr = params.get('status') || '';
+          var curr = window.INITIAL_STATUS_FILTER || '';
           if (statusLabelMap.hasOwnProperty(curr) && curr !== ''){
             filterBtn.textContent = statusLabelMap[curr] + ' ▾';
           } else if (statusLabelMap.hasOwnProperty('')){
@@ -892,16 +904,26 @@ try {
         if (isOpen) closeMenu(); else openMenu();
       });
 
-      // option clicks - set label then navigate
+      // option clicks - persist preference server-side, then navigate
       Array.prototype.slice.call(filterMenu.querySelectorAll('.filter-option')).forEach(function(opt){
         opt.addEventListener('click', function(){
           var status = this.getAttribute('data-status') || '';
           var label = this.textContent.trim() || 'Filter';
           // set button label immediately (page will navigate)
           filterBtn.textContent = label + ' ▾';
-          // Navigate with status query
-          var url = window.location.pathname + (status ? ('?status='+encodeURIComponent(status)) : '');
-          window.location.href = url;
+
+          fetch('../../api/save_checklist_filter.php', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'status=' + encodeURIComponent(status)
+          }).catch(function(err){
+            console.warn('Failed to save filter preference', err);
+          }).finally(function(){
+            // Navigate with status query regardless of save success/failure
+            var url = window.location.pathname + (status ? ('?status='+encodeURIComponent(status)) : '');
+            window.location.href = url;
+          });
         });
       });
 
