@@ -241,12 +241,30 @@ if ($rstmt) {
 
             // load mail helper
             require_once __DIR__ . '/../auth/mailjet_helper.php';
-            // fetch all users
-            $usersRes = $conn->query("SELECT email, name FROM users WHERE email IS NOT NULL AND email != ''");
+            // fetch all users (include role so we can default-check page access)
+            $usersRes = $conn->query("SELECT email, name, role FROM users WHERE email IS NOT NULL AND email != ''");
             $emails = [];
             if ($usersRes) {
                 while ($u = $usersRes->fetch_assoc()) {
-                    if (!empty($u['email'])) $emails[] = $u;
+                    if (empty($u['email'])) continue;
+                    // Determine whether this user can access the Bid_tracking page.
+                    $hasAccess = false;
+                    try {
+                        $ovr = get_user_page_override($u['email'], 'Bid_tracking');
+                        if ($ovr !== null) {
+                            $hasAccess = !empty($ovr['can_access']);
+                        } else {
+                            // No per-user override: fall back to role defaults
+                            $role = isset($u['role']) ? $u['role'] : '';
+                            $allowed = allowed_pages_for_role($role);
+                            $hasAccess = in_array('Bid_tracking', $allowed, true);
+                        }
+                    } catch (Throwable $e) {
+                        // If anything goes wrong, be conservative and skip email for this user
+                        $hasAccess = false;
+                    }
+
+                    if ($hasAccess) $emails[] = $u;
                 }
             }
 
