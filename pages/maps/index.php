@@ -628,7 +628,8 @@ $canEditMaps = can_edit_page('maps');
         html += '<div class="supplier-label">Address:</div><div style="grid-column:2 / 5;">' + (supplier.address || '') + '</div>';
         html += '<div class="supplier-label">City:</div><div>' + (supplier.city || '') + '</div>';
         html += '<div class="supplier-label">State:</div><div>' + (supplier.state || '') + '</div>';
-        html += '<div class="supplier-label">Phone:</div><div>' + (supplier.contact_number || '') + '</div>';
+        html += '<div class="supplier-label">Sales Phone:</div><div>' + (supplier.contact_number || '') + '</div>';
+        html += '<div class="supplier-label">Location Phone:</div><div>' + (supplier.location_phone || '') + '</div>';
         html += '<div class="supplier-label">Email:</div><div><a href="mailto:' + (supplier.email || '') + '">' + (supplier.email || '') + '</a></div>';
           html += '</div>'; // supplier-grid
           if (supplier.notes) {
@@ -995,7 +996,8 @@ $canEditMaps = can_edit_page('maps');
                 if (supplier.city) popupContent += '<div><strong>City:</strong> ' + supplier.city + '</div>';
                 if (supplier.state) popupContent += '<div><strong>State:</strong> ' + supplier.state + '</div>';
                 if (supplier.sales_contact) popupContent += '<div><strong>Contact:</strong> ' + supplier.sales_contact + '</div>';
-                if (supplier.contact_number) popupContent += '<div><strong>Phone:</strong> ' + supplier.contact_number + '</div>';
+                if (supplier.contact_number) popupContent += '<div><strong>Sales Phone:</strong> ' + supplier.contact_number + '</div>';
+                if (supplier.location_phone) popupContent += '<div><strong>Location Phone:</strong> ' + supplier.location_phone + '</div>';
                 if (supplier.email) popupContent += '<div><strong>Email:</strong> <a href="mailto:' + supplier.email + '">' + supplier.email + '</a></div>';
                 if (supplier.notes) popupContent += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplier.notes + '</em></div>';
 
@@ -1036,7 +1038,8 @@ $canEditMaps = can_edit_page('maps');
                   if (s.city) popupContent += '<div><strong>City:</strong> ' + s.city + '</div>';
                   if (s.state) popupContent += '<div><strong>State:</strong> ' + s.state + '</div>';
                   if (s.sales_contact) popupContent += '<div><strong>Contact:</strong> ' + s.sales_contact + '</div>';
-                  if (s.contact_number) popupContent += '<div><strong>Phone:</strong> ' + s.contact_number + '</div>';
+                  if (s.contact_number) popupContent += '<div><strong>Sales Phone:</strong> ' + s.contact_number + '</div>';
+                  if (s.location_phone) popupContent += '<div><strong>Location Phone:</strong> ' + s.location_phone + '</div>';
                   if (s.email) popupContent += '<div><strong>Email:</strong> <a href="mailto:' + s.email + '">' + s.email + '</a></div>';
                   if (s.notes) popupContent += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + s.notes + '</em></div>';
                   popupContent += '</div>';
@@ -2511,7 +2514,8 @@ $canEditMaps = can_edit_page('maps');
           (supplier.city?('<div><strong>City:</strong> ' + supplier.city + '</div>'):'') +
           (supplier.state?('<div><strong>State:</strong> ' + supplier.state + '</div>'):'') +
           (supplier.sales_contact?('<div><strong>Contact:</strong> ' + supplier.sales_contact + '</div>'):'') +
-          (supplier.contact_number?('<div><strong>Phone:</strong> ' + supplier.contact_number + '</div>'):'') +
+          (supplier.contact_number?('<div><strong>Sales Phone:</strong> ' + supplier.contact_number + '</div>'):'') +
+          (supplier.location_phone?('<div><strong>Location Phone:</strong> ' + supplier.location_phone + '</div>'):'') +
           (supplier.email?('<div><strong>Email:</strong> <a href="mailto:' + supplier.email + '">' + supplier.email + '</a></div>'):'') +
           (supplier.notes?('<div style="margin-top:6px;padding-top:6px;border-top:1px solid #e2e8f0;"><em>' + supplier.notes + '</em></div>'):'') +
           '</div>';
