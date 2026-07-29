@@ -148,6 +148,13 @@ $canEditMaps = can_edit_page('maps');
               <input id="filterMaterial" type="text" placeholder="Material" style="width:120px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#334155;" />
               <input id="filterCity" type="text" placeholder="City" style="width:110px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#334155;" />
               <input id="filterState" type="text" placeholder="State" style="width:80px; padding:5px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#334155;" />
+              <div style="display:flex; flex-direction:column; gap:4px; min-width:260px; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; background:#f8fafc;">
+                <input id="locationSearchInput" type="text" placeholder="Find suppliers near your job site" style="width:100%; padding:5px 8px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#334155;" />
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input id="locationRadius" type="range" min="1" max="100" value="25" style="flex:1;" />
+                  <span id="locationRadiusValue" style="font-size:11px; color:#64748b; white-space:nowrap;">25 mi</span>
+                </div>
+              </div>
               <button id="clearFiltersBtn" class="btn" title="Clear filters" style="padding:5px 8px; font-size:11px;">Clear</button>
             </div>
 
@@ -612,6 +619,104 @@ $canEditMaps = can_edit_page('maps');
       var currentService = null;
       var activeLegendName = '';
       var legendSuppliersCache = [];
+      var locationSearchInput = document.getElementById('locationSearchInput');
+      var locationRadiusInput = document.getElementById('locationRadius');
+      var locationRadiusValue = document.getElementById('locationRadiusValue');
+      var locationSearchMarker = null;
+      var locationSearchCircle = null;
+      var locationSearchResult = null;
+
+      function getLocationSearchRadiusMiles() {
+        var radius = parseInt(locationRadiusInput ? locationRadiusInput.value : '25', 10);
+        if (isNaN(radius)) radius = 25;
+        return Math.min(100, Math.max(1, radius));
+      }
+
+      function updateLocationRadiusLabel() {
+        if (locationRadiusValue) {
+          var radius = getLocationSearchRadiusMiles();
+          locationRadiusValue.textContent = radius + ' mi';
+        }
+      }
+
+      function clearLocationSearchSelection() {
+        if (locationSearchMarker) {
+          map.removeLayer(locationSearchMarker);
+          locationSearchMarker = null;
+        }
+        if (locationSearchCircle) {
+          map.removeLayer(locationSearchCircle);
+          locationSearchCircle = null;
+        }
+        locationSearchResult = null;
+        applyFilters(true);
+      }
+
+      function updateLocationSearchOverlay(lat, lng, label) {
+        var parsedLat = parseFloat(lat);
+        var parsedLng = parseFloat(lng);
+        if (isNaN(parsedLat) || isNaN(parsedLng)) return;
+
+        if (locationSearchMarker) map.removeLayer(locationSearchMarker);
+        if (locationSearchCircle) map.removeLayer(locationSearchCircle);
+
+        locationSearchMarker = L.marker([parsedLat, parsedLng], {
+          icon: L.divIcon({
+            className: 'custom-marker-icon',
+            html: '<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 8.5 12.5 28.5 12.5 28.5S25 21 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#ef4444" stroke="#fff" stroke-width="1.5"/><circle cx="12.5" cy="12.5" r="5" fill="#fff" opacity="0.9"/></svg>',
+            iconSize: [25, 41],
+            iconAnchor: [12.5, 41],
+            popupAnchor: [0, -41]
+          })
+        });
+        locationSearchMarker.bindPopup(label || 'Search location');
+        locationSearchMarker.addTo(map);
+
+        var radiusMiles = getLocationSearchRadiusMiles();
+        locationSearchCircle = L.circle([parsedLat, parsedLng], {
+          radius: radiusMiles * 1609.34,
+          color: '#2563eb',
+          fillColor: '#60a5fa',
+          fillOpacity: 0.2,
+          weight: 2
+        }).addTo(map);
+      }
+
+      function geocodeLocationQuery(query) {
+        var searchText = (query || '').trim();
+        if (!searchText) {
+          clearLocationSearchSelection();
+          return;
+        }
+
+        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=' + encodeURIComponent(searchText), {
+          method: 'GET'
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+          if (!locationSearchInput || locationSearchInput.value.trim() !== searchText) return;
+          if (data && data.length > 0) {
+            var item = data[0];
+            var lat = parseFloat(item.lat);
+            var lng = parseFloat(item.lon);
+            if (isNaN(lat) || isNaN(lng)) {
+              clearLocationSearchSelection();
+              return;
+            }
+            locationSearchResult = { lat: lat, lng: lng, label: item.display_name || searchText };
+            updateLocationSearchOverlay(lat, lng, item.display_name || searchText);
+            map.setView([lat, lng], Math.max(map.getZoom(), 9));
+            applyFilters(true);
+          } else {
+            clearLocationSearchSelection();
+          }
+        })
+        .catch(function() {
+          if (locationSearchInput && locationSearchInput.value.trim() === searchText) {
+            clearLocationSearchSelection();
+          }
+        });
+      }
       
       function showSupplierDetails(supplier) {
         var detailsBox = document.getElementById('supplierDetailsBox');
@@ -814,7 +919,6 @@ $canEditMaps = can_edit_page('maps');
         
         // Note: action buttons are intentionally only shown in the supplier details box,
         // not in the marker popup. Keep popupContent focused on supplier info.
-
         var marker = L.marker([lat, lng], { icon: customIcon });
         // Add marker to cluster group when available, otherwise add directly to map
         if (markerCluster) {
@@ -2387,6 +2491,16 @@ $canEditMaps = can_edit_page('maps');
         };
       }
 
+      function haversineDistanceMiles(lat1, lng1, lat2, lng2) {
+        var toRad = function(value) { return value * Math.PI / 180; };
+        var earthRadiusMiles = 3958.8;
+        var dLat = toRad(lat2 - lat1);
+        var dLng = toRad(lng2 - lng1);
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusMiles * c;
+      }
+
       function markerMatchesFilters(supplier, filters) {
         if (!supplier) return false;
         if (filters.legendName && (!supplier.name || supplier.name.toLowerCase() !== filters.legendName)) return false;
@@ -2398,6 +2512,16 @@ $canEditMaps = can_edit_page('maps');
         if (filters.city && (!supplier.city || supplier.city.toLowerCase().indexOf(filters.city) === -1)) return false;
         // State
         if (filters.state && (!supplier.state || supplier.state.toLowerCase().indexOf(filters.state) === -1)) return false;
+        if (locationSearchResult && supplier.latitude && supplier.longitude) {
+          var lat = parseFloat(supplier.latitude);
+          var lng = parseFloat(supplier.longitude);
+          if (!isNaN(lat) && !isNaN(lng)) {
+            var distanceMiles = haversineDistanceMiles(locationSearchResult.lat, locationSearchResult.lng, lat, lng);
+            if (distanceMiles > getLocationSearchRadiusMiles()) return false;
+          } else {
+            return false;
+          }
+        }
         return true;
       }
 
@@ -2614,15 +2738,48 @@ $canEditMaps = can_edit_page('maps');
         }
       });
 
+      if (locationSearchInput) {
+        locationSearchInput.addEventListener('input', debounce(function(){
+          var query = locationSearchInput.value.trim();
+          if (!query) {
+            clearLocationSearchSelection();
+            return;
+          }
+          geocodeLocationQuery(query);
+        }, 650));
+
+        locationSearchInput.addEventListener('keydown', function(e){
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            geocodeLocationQuery(locationSearchInput.value);
+          }
+        });
+      }
+
+      if (locationRadiusInput) {
+        locationRadiusInput.addEventListener('input', function(){
+          updateLocationRadiusLabel();
+          if (locationSearchResult) {
+            updateLocationSearchOverlay(locationSearchResult.lat, locationSearchResult.lng, locationSearchResult.label);
+          }
+          applyFilters(true);
+        });
+      }
+
       var clearBtn = document.getElementById('clearFiltersBtn');
       if (clearBtn) {
         clearBtn.addEventListener('click', function(){
           filterInputs.forEach(function(id){ var el = document.getElementById(id); if (el) el.value=''; });
+          if (locationSearchInput) locationSearchInput.value = '';
+          if (locationRadiusInput) locationRadiusInput.value = '25';
+          updateLocationRadiusLabel();
           activeLegendName = '';
           updateSupplierLegend(legendSuppliersCache);
-          applyFilters(true);
+          clearLocationSearchSelection();
         });
       }
+
+      updateLocationRadiusLabel();
 
       // Apply filters when suppliers load initially
       applyFilters(false);
