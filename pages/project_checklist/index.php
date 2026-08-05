@@ -382,6 +382,20 @@ try {
       color: transparent;
       box-shadow: none;
     }
+    /* Ensure the left-most assignment label (above Project Name) appears white */
+    .project-table thead tr.assignments-row th:first-child .assignment-chip {
+      color: #ffffff !important;
+    }
+    /* Separator row between assignment chips and header titles */
+    .project-table thead tr.assignments-separator th { padding: 1px 1px; background: transparent; border: none; }
+    .project-table thead tr.assignments-separator th .header-separator {
+      height: 1px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), rgba(192, 192, 192, 0.45));
+      box-shadow: none;
+      margin: 1px 0 1px 0;
+      width: 100%;
+    }
   </style>
 
   <div id="fieldAssignModal">
@@ -1441,6 +1455,29 @@ editBtn.addEventListener('click', function(e){
                     headerRow.appendChild(th);
                   });
                   thead.insertBefore(headerRow, titleRow);
+                  // create a thin separator row between assignments and header titles
+                  var sepRow = thead.querySelector('tr.assignments-separator');
+                  if (!sepRow) {
+                    sepRow = document.createElement('tr');
+                    sepRow.className = 'assignments-separator';
+                    var sepTh = document.createElement('th');
+                    try { sepTh.setAttribute('colspan', titleRow.children.length); } catch(e) {}
+                    sepTh.innerHTML = '<div class="header-separator" aria-hidden="true"></div>';
+                    sepRow.appendChild(sepTh);
+                    thead.insertBefore(sepRow, titleRow);
+                  }
+                } else {
+                  // ensure separator exists when headerRow already present
+                  var existingSep = thead.querySelector('tr.assignments-separator');
+                  if (!existingSep) {
+                    var sepRow2 = document.createElement('tr');
+                    sepRow2.className = 'assignments-separator';
+                    var sepTh2 = document.createElement('th');
+                    try { sepTh2.setAttribute('colspan', titleRow.children.length); } catch(e) {}
+                    sepTh2.innerHTML = '<div class="header-separator" aria-hidden="true"></div>';
+                    sepRow2.appendChild(sepTh2);
+                    thead.insertBefore(sepRow2, titleRow);
+                  }
                 }
 
                 var aresp = await fetch('../../api/get_field_assignments.php?ts=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' });
@@ -1454,7 +1491,9 @@ editBtn.addEventListener('click', function(e){
                   var headerText = (headerCells[idx] && headerCells[idx].textContent) ? headerCells[idx].textContent.trim() : '';
                   var key = headerText.toLowerCase();
                   var display = '';
-                  if (key !== 'project name' && key !== 'status') {
+                  if (key === 'project name') {
+                    display = 'Field Assignment >>>';
+                  } else if (key !== 'status') {
                     var uid = (assignments && assignments[key]) ? assignments[key] : null;
                     if (uid) {
                       var full = (usersMap && usersMap[uid]) ? usersMap[uid] : ('User #' + uid);
