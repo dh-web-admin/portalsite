@@ -121,10 +121,6 @@ try {
 
               <!-- Top horizontal scrollbar synced with table -->
               <div id="topScrollbar" style="height:20px;overflow-x:scroll;overflow-y:hidden;"><div></div></div>
-              <!-- Assignments row (shows assigned user per column) -->
-              <div id="assignmentsRowWrapper" style="height:44px;overflow-x:auto;overflow-y:hidden;border-bottom:1px solid rgba(15,23,42,0.04);">
-                <div id="assignmentsRowInner" style="height:44px;display:block;"></div>
-              </div>
 
               <div class="table-container" role="region" aria-label="Project checklist table">
                 <table class="project-table" role="table" aria-label="Projects checklist" data-has-status="<?php echo !empty($has_status) ? '1' : '0'; ?>">
@@ -353,6 +349,39 @@ try {
     /* Make the Field Assignment toolbar button bluish (plain color) without altering other button styles */
     #fieldAssignBtn { background-color: #2563eb; color: #ffffff; border: 0; padding:8px 12px; border-radius:8px; box-shadow: 0 8px 20px rgba(37,99,235,0.12); cursor:pointer; }
     #fieldAssignBtn:hover { filter: brightness(0.96); transform: translateY(-1px); }
+    .project-table thead tr.assignments-row th {
+      background: #f8fafc;
+      border-bottom: none;
+      border-right: none;
+      color: transparent;
+      padding: 6px 8px;
+      height: 44px;
+      white-space: normal;
+      vertical-align: middle;
+    }
+    .project-table thead tr.assignments-row th .assignment-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #0f172a;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.2;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: none;
+    }
+    .project-table thead tr.assignments-row th .assignment-chip.empty {
+      background: transparent;
+      border: none;
+      color: transparent;
+      box-shadow: none;
+    }
   </style>
 
   <div id="fieldAssignModal">
@@ -435,7 +464,7 @@ try {
           // fetch existing assignments
           var assignments = {};
           try {
-            var aresp = await fetch('../../api/get_field_assignments.php', { credentials: 'same-origin' });
+            var aresp = await fetch('../../api/get_field_assignments.php?ts=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' });
             var aj = await aresp.json(); if (aj && aj.success && aj.assignments) assignments = aj.assignments;
           } catch(e) { console.warn('fetch assignments failed', e); }
 
@@ -468,8 +497,13 @@ try {
           var fd = new FormData(); fd.append('assignments', JSON.stringify(payload));
           var resp = await fetch('../../api/save_field_assignments.php', { method: 'POST', credentials: 'same-origin', body: fd });
           var j = await resp.json();
-          if (j && j.success) { try { if (typeof showToast === 'function') showToast('Field assignments saved', 'success'); } catch(e){} closeFieldAssign(); }
-          else { try { if (typeof showToast === 'function') showToast((j && j.message) ? j.message : 'Failed to save', 'error'); } catch(e){} }
+          if (j && j.success) {
+            try { if (typeof showToast === 'function') showToast('Field assignments saved', 'success'); } catch(e){}
+            closeFieldAssign();
+            if (typeof window.refreshFieldAssignments === 'function') {
+              window.refreshFieldAssignments();
+            }
+          } else { try { if (typeof showToast === 'function') showToast((j && j.message) ? j.message : 'Failed to save', 'error'); } catch(e){} }
         } catch(e) { console.warn('save failed', e); try { if (typeof showToast === 'function') showToast('Failed to save', 'error'); } catch(ignore){} }
       });
     });
@@ -1080,6 +1114,7 @@ try {
       table.addEventListener('keydown', function(e){
         var td = e.target;
         if (!td || !td.classList) return;
+
         if (!td.classList.contains('editable')) return;
         
         // Enter commits the cell
@@ -1378,11 +1413,7 @@ editBtn.addEventListener('click', function(e){
             }
             // Populate and sync assignments row
             var assignmentsWrapper = document.getElementById('assignmentsRowWrapper');
-            var assignmentsInner = document.getElementById('assignmentsRowInner');
-            function updateAssignmentsWidth(){
-              if (!assignmentsInner) return; assignmentsInner.style.width = table.scrollWidth + 'px';
-            }
-            // two-way sync
+            function updateAssignmentsWidth(){ /* legacy wrapper only */ }
             if (assignmentsWrapper) {
               assignmentsWrapper.addEventListener('scroll', function(){ tableContainer.scrollLeft = assignmentsWrapper.scrollLeft; topScroll.scrollLeft = assignmentsWrapper.scrollLeft; });
               tableContainer.addEventListener('scroll', function(){ if(assignmentsWrapper) assignmentsWrapper.scrollLeft = tableContainer.scrollLeft; });
@@ -1396,95 +1427,64 @@ editBtn.addEventListener('click', function(e){
 
             async function renderAssignments(){
               try {
-                var ths = Array.from(document.querySelectorAll('.project-table thead th')) || [];
-                if (!assignmentsInner) return;
-                // measure header widths - get actual rendered widths INCLUDING borders and padding
-                var widths = ths.map(function(t){ 
-                  var r = t.getBoundingClientRect(); 
-                  return Math.max(48, Math.round(r.width)); 
-                });
-                var fields = ths.map(function(t){ return (t.textContent || '').toString().trim(); }).filter(function(x){ return x; });
+                var thead = table.querySelector('thead');
+                if (!thead) return;
+                var headerRow = thead.querySelector('tr.assignments-row');
+                var titleRow = thead.querySelector('tr:last-child');
+                if (!titleRow) return;
+                if (!headerRow) {
+                  headerRow = document.createElement('tr');
+                  headerRow.className = 'assignments-row';
+                  Array.from(titleRow.children).forEach(function(){
+                    var th = document.createElement('th');
+                    th.innerHTML = '<span class="assignment-chip empty">&nbsp;</span>';
+                    headerRow.appendChild(th);
+                  });
+                  thead.insertBefore(headerRow, titleRow);
+                }
 
-                // fetch assignments and optional user map
-                var assignments = {};
-                var usersMap = {};
-                try {
-                  var aresp = await fetch('../../api/get_field_assignments.php', { credentials: 'same-origin' });
-                  var aj = await aresp.json();
-                  if (aj && aj.success) { assignments = aj.assignments || {}; if (aj.user_map) usersMap = aj.user_map; }
-                } catch(e){ console.warn('assign fetch failed', e); }
+                var aresp = await fetch('../../api/get_field_assignments.php?ts=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' });
+                var aj = await aresp.json();
+                var assignments = {}; var usersMap = {};
+                if (aj && aj.success) { assignments = aj.assignments || {}; if (aj.user_map) usersMap = aj.user_map; }
 
-                // Build flex row with fixed px widths matching headers EXACTLY
-                var container = document.createElement('div'); 
-                container.style.display = 'flex'; 
-                container.style.width = '100%'; 
-                container.style.boxSizing = 'border-box';
-                container.style.alignItems = 'stretch';
-                
-                var total = 0;
-                for (var i = 0; i < widths.length; i++) {
-                  var w = widths[i]; 
-                  total += w;
-                  var cell = document.createElement('div');
-                  
-                  // CRITICAL: Use exact same width as header (no flex-shrink, no flex-grow)
-                  cell.style.flex = '0 0 ' + w + 'px';
-                  cell.style.minWidth = w + 'px';
-                  cell.style.maxWidth = w + 'px';
-                  cell.style.width = w + 'px';
-                  
-                  // Match header padding exactly
-                  cell.style.padding = '6px 8px';
-                  cell.style.boxSizing = 'border-box';
-                  
-                  // Match header borders
-                  cell.style.borderRight = '1px solid rgba(15,23,42,0.03)';
-                  
-                  cell.style.background = '#f8fafc';
-                  cell.style.color = '#0f172a';
-                  cell.style.fontSize = '13px';
-                  cell.style.display = 'flex';
-                  cell.style.alignItems = 'center';
-                  cell.style.justifyContent = 'center';
-                  cell.style.overflow = 'hidden';
-                  cell.style.textOverflow = 'ellipsis';
-                  cell.style.whiteSpace = 'nowrap';
-                  
-                  var f = (ths[i] && ths[i].textContent) ? ths[i].textContent.trim() : '';
-                  var key = (f||'').toString().trim().toLowerCase();
-                  var uid = (assignments && assignments[key]) ? assignments[key] : null;
-                  var text = '--';
-                  
-                  // Hide first two assignment cells visually (leave blank) while preserving alignment
-                  if (i === 0 || i === 1) {
-                    text = '';
-                  } else if (uid) {
-                    var full = (usersMap && usersMap[uid]) ? usersMap[uid] : ('User #' + uid);
-                    // extract first name
-                    var first = (full || '').toString().trim().split(/\s+/)[0] || full;
-                    text = first;
-                    // assign a consistent color per user id
+                var headerCells = Array.from(titleRow.children);
+                var assignCells = Array.from(headerRow.children);
+                assignCells.forEach(function(cell, idx){
+                  var headerText = (headerCells[idx] && headerCells[idx].textContent) ? headerCells[idx].textContent.trim() : '';
+                  var key = headerText.toLowerCase();
+                  var display = '';
+                  if (key !== 'project name' && key !== 'status') {
+                    var uid = (assignments && assignments[key]) ? assignments[key] : null;
+                    if (uid) {
+                      var full = (usersMap && usersMap[uid]) ? usersMap[uid] : ('User #' + uid);
+                      display = (full || '').toString().trim().split(/\s+/)[0] || full;
+                    }
+                  }
+                  var pill = cell.querySelector('.assignment-chip');
+                  if (!pill) {
+                    pill = document.createElement('span');
+                    pill.className = 'assignment-chip';
+                    cell.innerHTML = ''; cell.appendChild(pill);
+                  }
+                  if (display) {
+                    pill.textContent = display;
+                    pill.classList.remove('empty');
                     var palette = ['#0f172a','#0369a1','#10b981','#7c3aed','#ef4444','#f59e0b','#db2777','#059669','#1e40af','#065f46'];
                     var idx = 0;
-                    try { idx = Math.abs(parseInt(uid,10)) % palette.length; } catch(e) { idx = (first.length || 1) % palette.length; }
-                    cell.style.color = palette[idx];
-                    cell.style.fontWeight = '700';
+                    try { idx = Math.abs(parseInt(assignments[key],10)) % palette.length; } catch(e) { idx = (display.length || 1) % palette.length; }
+                    pill.style.color = palette[idx];
+                    pill.style.fontSize = '14px';
+                    pill.style.fontWeight = '700';
+                  } else {
+                    pill.textContent = '';
+                    pill.classList.add('empty');
+                    pill.style.color = 'transparent';
                   }
-                  cell.textContent = text;
-                  container.appendChild(cell);
-                }
-                
-                assignmentsInner.innerHTML = '';
-                
-                // NO padding-left offset - we want exact 1:1 alignment with table headers
-                // The container width must exactly match the table scroll width
-                assignmentsInner.style.width = (table.scrollWidth || total) + 'px';
-                assignmentsInner.style.paddingLeft = '0';
-                
-                assignmentsInner.appendChild(container);
-                updateAssignmentsWidth();
+                });
               } catch(e) { console.warn('renderAssignments error', e); }
             }
+            window.refreshFieldAssignments = renderAssignments;
             renderAssignments();
           })();
           </script>
