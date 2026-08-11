@@ -358,6 +358,10 @@ try {
       height: 44px;
       white-space: normal;
       vertical-align: middle;
+      /* Make the assignments header sticky */
+      position: sticky;
+      top: 0;
+      z-index: 30;
     }
     .project-table thead tr.assignments-row th .assignment-chip {
       display: inline-flex;
@@ -395,6 +399,12 @@ try {
       box-shadow: none;
       margin: 1px 0 1px 0;
       width: 100%;
+    }
+    /* When the assignments row is present, push the main header down so both remain visible */
+    .project-table thead tr.header-with-assignments th {
+      position: sticky;
+      top: 44px; /* height of assignments row */
+      z-index: 20;
     }
   </style>
 
@@ -1851,6 +1861,14 @@ editBtn.addEventListener('click', function(e){
                     thead.insertBefore(sepRow2, titleRow);
                   }
                 }
+                // mark the title header so it can be offset when assignments are visible
+                try {
+                  if (headerRow) {
+                    titleRow.classList.add('header-with-assignments');
+                  } else {
+                    titleRow.classList.remove('header-with-assignments');
+                  }
+                } catch(e) {}
 
                 var aresp = await fetch('../../api/get_field_assignments.php?ts=' + Date.now(), { credentials: 'same-origin', cache: 'no-store' });
                 var aj = await aresp.json();
