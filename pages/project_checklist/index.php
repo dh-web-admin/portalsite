@@ -53,7 +53,7 @@ try {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
   <meta name="theme-color" content="#667eea" />
-  <title>Project Checklist — Maintenance</title>
+  <title>Project Checklist</title>
   <link rel="stylesheet" href="../../assets/css/base.css" />
   <link rel="stylesheet" href="../../assets/css/admin-layout.css" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
