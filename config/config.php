@@ -49,6 +49,15 @@ if ($isProduction) {
 }
 
 // Create database connection
+// Log resolved DB parameters in production (avoid logging password)
+if ($isProduction) {
+    try {
+        error_log(sprintf('DB resolve: host=%s user=%s db=%s port=%s', $host, $user, $database, $port));
+        // Warn when using common unsafe fallback user
+        if ($user === 'root') error_log('DB resolve warning: resolved DB user is "root" in production — check environment variables');
+    } catch (Throwable $e) { /* best-effort logging */ }
+}
+
 $conn = new mysqli($host, $user, $password, $database, $port);
 
 // Check connection
