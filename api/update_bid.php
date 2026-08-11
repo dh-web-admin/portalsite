@@ -199,6 +199,14 @@ if ($rstmt) {
             $createdProject = null;
             try {
                 $pname = isset($row['project_name']) ? $row['project_name'] : '';
+                // If this bid has a DHSS project number, prefix the project name
+                // with just the DHSS number so Projects shows: "<number> - <Project Name>"
+                if (!empty($row['dhss_project_number'])) {
+                    $dhssNum = trim($row['dhss_project_number']);
+                    if ($dhssNum !== '') {
+                        $pname = $dhssNum . ' - ' . $pname;
+                    }
+                }
                 $pcity = isset($row['project_city']) ? $row['project_city'] : '';
                 $pcounty = isset($row['project_county']) ? $row['project_county'] : '';
                 $pstate = isset($row['project_state']) ? $row['project_state'] : '';
