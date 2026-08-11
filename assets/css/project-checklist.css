@@ -677,6 +677,61 @@ body {
 .project-actions .icon-btn:focus {
   outline: 2px solid rgba(255, 255, 255, 0.18);
 }
+.project-table tbody td.project-name {
+  cursor: grab;
+}
+.project-table tbody td.project-name:hover {
+  cursor: grab;
+}
+.project-table td.project-name .drag-handle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  user-select: none;
+  -webkit-user-drag: element;
+}
+.project-table tbody tr.dragging td {
+  opacity: 0.5;
+}
+.project-table tbody tr.drag-placeholder td {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px dashed rgba(59, 130, 246, 0.5);
+  padding: 0;
+}
+.project-table tbody tr.drag-placeholder td .placeholder-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+}
+.project-table tbody tr {
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+}
+.drag-handle {
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.project-table tbody tr.dragging {
+  transform: translateZ(0) scale(0.995);
+  z-index: 40;
+}
+.project-table.saving-project-order {
+  opacity: 0.9;
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-table tbody tr,
+  .drag-handle {
+    transition: none !important;
+  }
+}
+.project-table td.project-name .project-actions {
+  cursor: default;
+}
 .project-table tbody td.project-name.status-ongoing {
   background: #3f78bd !important;
 }
@@ -1070,4 +1125,70 @@ body {
     height: 20px;
     margin-right: 10px;
   }
+}
+
+/* =========================================================
+   PROJECT CHECKLIST - SMOOTH DRAG & DROP ANIMATION
+   ========================================================= */
+
+/* Project row while it is being dragged */
+.project-row.dragging {
+  opacity: 0.65;
+  transform: scale(1.02);
+  cursor: grabbing !important;
+  z-index: 1000;
+  position: relative;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Project name cell */
+.project-name-cell {
+  cursor: grab;
+  position: relative;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* While holding the project */
+.project-name-cell:active {
+  cursor: grabbing;
+}
+
+/* Cell being hovered as a drop target */
+.project-name-cell.drag-over {
+  transform: translateY(2px);
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+/* Smooth placeholder for where the project will be dropped */
+.project-row.drag-placeholder {
+  opacity: 0.35;
+  transform: scale(0.98);
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+/* Give the dragged row a little visual separation */
+.project-row.dragging td {
+  transition: background-color 0.15s ease;
+}
+
+/* Prevent text selection while dragging */
+.project-checklist.dragging,
+.project-checklist.dragging * {
+  user-select: none;
+}
+
+/* Smooth movement for rows */
+.project-row {
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
 }

@@ -223,7 +223,7 @@ try {
                     }
 
                     if ($status_filter !== '') {
-                      $projects_stmt = $conn->prepare('SELECT * FROM Projects WHERE Status = ? ORDER BY Project_ID DESC LIMIT 500');
+                      $projects_stmt = $conn->prepare('SELECT * FROM Projects WHERE Status = ? ORDER BY Display_Order ASC, Project_ID DESC LIMIT 500');
                       if ($projects_stmt) {
                         $projects_stmt->bind_param('s', $status_filter);
                         $projects_stmt->execute();
@@ -232,7 +232,7 @@ try {
                         $projects_res = false;
                       }
                     } else {
-                      $projects_stmt = $conn->prepare('SELECT * FROM Projects ORDER BY Project_ID DESC LIMIT 500');
+                      $projects_stmt = $conn->prepare('SELECT * FROM Projects ORDER BY Display_Order ASC, Project_ID DESC LIMIT 500');
                       if ($projects_stmt) {
                         $projects_stmt->execute();
                         $projects_res = $projects_stmt->get_result();
@@ -277,17 +277,17 @@ try {
                           $actions = '';
                           if ($canEditProjectChecklist) {
                             $actions = "<span class=\"project-actions\" style=\"margin-left:auto\">" .
-                                       "<button class=\"icon-btn clone-btn\" data-project-id=\"{$pid}\" title=\"Clone project\">" .
+                                       "<button draggable=\"false\" class=\"icon-btn clone-btn\" data-project-id=\"{$pid}\" title=\"Clone project\">" .
                                       "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M16 1H4a2 2 0 0 0-2 2v12\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><rect x=\"8\" y=\"7\" width=\"13\" height=\"13\" rx=\"2\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>" .
                                        "</button>" .
-                                       "<button class=\"icon-btn edit-btn\" data-project-id=\"{$pid}\" title=\"Edit project\">" .
+                                       "<button draggable=\"false\" class=\"icon-btn edit-btn\" data-project-id=\"{$pid}\" title=\"Edit project\">" .
                                       "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M3 21l3-1 11-11 1-3-3 1L4 20z\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>" .
                                        "</button>" .
                                        "</span>";
                           }
-                          // wrap the project name in a span so we can flex it and push actions to the right
+                          // wrap the project name in a draggable handle so we can drag the row
                           // CRITICAL: Wrap everything in a div to use flex layout without breaking sticky positioning
-                          echo "<td class=\"project-name{$statusClass}\"><div><span class=\"project-title\">{$name}</span>{$actions}</div></td>\n";
+                          echo "<td class=\"project-name{$statusClass}\"><div class=\"drag-handle\"><span class=\"project-title\">{$name}</span>{$actions}</div></td>\n";
                           foreach (array_slice($columns,1) as $col) {
                             $rawVal = $p[$col] ?? '';
                             $val = htmlspecialchars($rawVal, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -776,6 +776,378 @@ try {
         if (btnComplete) btnComplete.addEventListener('click', function(){ var pid = editMenu.dataset.projectId; if (!pid) return; setStatus(pid, 'Completed'); });
         if (btnContinue) btnContinue.addEventListener('click', function(){ var pid = editMenu.dataset.projectId; if (!pid) return; setStatus(pid, 'Ongoing'); });
       })();
+
+      // ============================================================
+// PROJECT DRAG-AND-DROP REORDERING
+// Pointer-based implementation for smooth, reliable dragging.
+// ============================================================
+(function () {
+    var table = document.querySelector('.project-table');
+    if (!table) return;
+
+    var tbody = table.tBodies[0];
+    if (!tbody) return;
+
+    var dragRow = null;
+    var placeholder = null;
+    var startY = 0;
+    var dragging = false;
+    var originalOrder = null;
+    var pointerId = null;
+
+    function getRows() {
+        return Array.prototype.slice.call(
+            tbody.querySelectorAll('tr[data-project-id]')
+        );
+    }
+
+    function getVisibleIds() {
+        return getRows()
+            .map(function (row) {
+                return parseInt(row.getAttribute('data-project-id'), 10);
+            })
+            .filter(function (id) {
+                return !isNaN(id);
+            });
+    }
+
+    function createPlaceholder(row) {
+        var tr = document.createElement('tr');
+        tr.className = 'drag-placeholder';
+
+        var td = document.createElement('td');
+
+        var columnCount = table.tHead && table.tHead.rows.length
+            ? table.tHead.rows[table.tHead.rows.length - 1].cells.length
+            : row.cells.length;
+
+        td.colSpan = columnCount;
+
+        var height = row.getBoundingClientRect().height || 45;
+
+        tr.style.height = height + 'px';
+        td.style.height = height + 'px';
+        td.innerHTML = '<div class="placeholder-inner">Drop project here</div>';
+
+        tr.appendChild(td);
+
+        return tr;
+    }
+
+    function cleanup() {
+        if (dragRow) {
+            dragRow.classList.remove('dragging');
+            dragRow.style.visibility = '';
+            dragRow.style.opacity = '';
+            dragRow.style.pointerEvents = '';
+        }
+
+        if (placeholder && placeholder.parentNode) {
+            placeholder.parentNode.removeChild(placeholder);
+        }
+
+        dragRow = null;
+        placeholder = null;
+        dragging = false;
+        pointerId = null;
+    }
+
+    function restoreOriginalOrder() {
+        if (!Array.isArray(originalOrder)) return;
+
+        var rows = {};
+        getRows().forEach(function (row) {
+            rows[row.getAttribute('data-project-id')] = row;
+        });
+
+        var spacer = tbody.querySelector('.project-bottom-spacer');
+
+        originalOrder.forEach(function (id) {
+            var row = rows[String(id)];
+            if (row) {
+                tbody.insertBefore(row, spacer || null);
+            }
+        });
+    }
+
+    function saveOrder(ids) {
+        var payload = {
+            order: ids.map(function (id, index) {
+                return {
+                    project_id: id,
+                    position: index
+                };
+            })
+        };
+
+        table.classList.add('saving-project-order');
+
+        return fetch('../../api/save_project_order.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+        })
+        .then(function (response) {
+            return response.text().then(function (text) {
+                var json;
+
+                try {
+                    json = JSON.parse(text);
+                } catch (err) {
+                    throw new Error(
+                        'Invalid server response: ' + text.substring(0, 200)
+                    );
+                }
+
+                if (!response.ok || !json.success) {
+                    throw new Error(
+                        json.message || 'Failed to save project order'
+                    );
+                }
+
+                return json;
+            });
+        })
+        .finally(function () {
+            table.classList.remove('saving-project-order');
+        });
+    }
+
+    function movePlaceholder(clientY) {
+        if (!placeholder || !dragRow) return;
+
+        var rows = getRows().filter(function (row) {
+            return row !== dragRow;
+        });
+
+        var target = null;
+
+        for (var i = 0; i < rows.length; i++) {
+            var rect = rows[i].getBoundingClientRect();
+
+            if (clientY < rect.top + rect.height / 2) {
+                target = rows[i];
+                break;
+            }
+        }
+
+        var spacer = tbody.querySelector('.project-bottom-spacer');
+
+        if (target) {
+            if (placeholder.nextElementSibling !== target) {
+                tbody.insertBefore(placeholder, target);
+            }
+        } else {
+            if (spacer) {
+                if (placeholder.previousElementSibling !== spacer) {
+                    tbody.insertBefore(placeholder, spacer);
+                }
+            } else {
+                tbody.appendChild(placeholder);
+            }
+        }
+    }
+
+    function startDrag(e, handle) {
+        if (!window.CAN_EDIT_PROJECT_CHECKLIST) {
+            return;
+        }
+
+        var row = handle.closest('tr[data-project-id]');
+        if (!row) return;
+
+        if (e.button !== undefined && e.button !== 0) {
+            return;
+        }
+
+        dragRow = row;
+        pointerId = e.pointerId;
+        startY = e.clientY;
+        originalOrder = getVisibleIds();
+
+        placeholder = createPlaceholder(row);
+
+        // Put placeholder where the row currently is.
+        tbody.insertBefore(placeholder, row);
+
+        row.classList.add('dragging');
+
+        // Hide original row while keeping its dimensions.
+        row.style.visibility = 'hidden';
+
+        dragging = true;
+
+        try {
+            handle.setPointerCapture(pointerId);
+        } catch (err) {
+            // Pointer capture isn't supported everywhere.
+        }
+
+        e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+        if (!dragging || !dragRow) return;
+
+        if (pointerId !== null && e.pointerId !== pointerId) {
+            return;
+        }
+
+        var distance = Math.abs(e.clientY - startY);
+
+        // Prevent tiny accidental movements from starting a drag.
+        if (distance < 3) return;
+
+        movePlaceholder(e.clientY);
+
+        e.preventDefault();
+    }
+
+    function finishDrag() {
+        if (!dragging || !dragRow || !placeholder) {
+            cleanup();
+            return;
+        }
+
+        // Put the actual row where the placeholder is.
+        if (placeholder.parentNode) {
+            placeholder.parentNode.insertBefore(
+                dragRow,
+                placeholder
+            );
+        }
+
+        // Remove placeholder.
+        if (placeholder.parentNode) {
+            placeholder.parentNode.removeChild(placeholder);
+        }
+
+        // Restore row visibility.
+        dragRow.style.visibility = '';
+        dragRow.classList.remove('dragging');
+
+        var newOrder = getVisibleIds();
+
+        var changed = JSON.stringify(originalOrder) !== JSON.stringify(newOrder);
+
+        if (!changed) {
+            cleanup();
+            return;
+        }
+
+        // Keep references before cleanup.
+        var previousOrder = originalOrder.slice();
+
+        table.classList.add('saving-project-order');
+
+        saveOrder(newOrder)
+            .then(function () {
+                if (
+                    typeof window.showStatusToast === 'function'
+                ) {
+                    window.showStatusToast(
+                        'Project order saved',
+                        'success'
+                    );
+                }
+            })
+            .catch(function (error) {
+                console.error(
+                    'Project order save failed:',
+                    error
+                );
+
+                restoreOriginalOrderFromArray(previousOrder);
+
+                if (
+                    typeof window.showStatusToast === 'function'
+                ) {
+                    window.showStatusToast(
+                        'Failed to save project order',
+                        'error'
+                    );
+                } else {
+                    alert(
+                        'Failed to save project order.\n\n' +
+                        (error.message || '')
+                    );
+                }
+            })
+            .finally(function () {
+                table.classList.remove('saving-project-order');
+                cleanup();
+            });
+    }
+
+    function restoreOriginalOrderFromArray(order) {
+        if (!Array.isArray(order)) return;
+
+        var rows = {};
+
+        getRows().forEach(function (row) {
+            rows[row.getAttribute('data-project-id')] = row;
+        });
+
+        var spacer = tbody.querySelector('.project-bottom-spacer');
+
+        order.forEach(function (id) {
+            var row = rows[String(id)];
+
+            if (row) {
+                tbody.insertBefore(row, spacer || null);
+            }
+        });
+    }
+
+    // ------------------------------------------------------------
+    // Pointer events
+    // ------------------------------------------------------------
+
+    tbody.addEventListener('pointerdown', function (e) {
+        var handle = e.target.closest('.drag-handle');
+
+        if (!handle) return;
+
+        // Don't start dragging from the project action buttons.
+        if (e.target.closest('.project-actions')) {
+            return;
+        }
+
+        startDrag(e, handle);
+    });
+
+    document.addEventListener('pointermove', onPointerMove, {
+        passive: false
+    });
+
+    document.addEventListener('pointerup', function (e) {
+        if (!dragging) return;
+
+        if (pointerId !== null && e.pointerId !== pointerId) {
+            return;
+        }
+
+        finishDrag();
+    });
+
+    document.addEventListener('pointercancel', function () {
+        if (!dragging) return;
+
+        cleanup();
+    });
+
+    // Prevent the browser's native HTML5 drag system from taking over.
+    tbody.addEventListener('dragstart', function (e) {
+        if (e.target.closest('.drag-handle')) {
+            e.preventDefault();
+        }
+    });
+
+})();
+
     })();
       var usersToggle = document.getElementById('usersToggle');
       var usersGroup = document.getElementById('usersGroup');

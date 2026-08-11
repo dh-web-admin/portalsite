@@ -44,19 +44,35 @@ try {
 }
 
 try {
+    // Check if Display_Order column exists; if so assign MAX(Display_Order)+1 to new project
+    $hasDisplayOrder = false;
+    try {
+        $colRes = $conn->query("SHOW COLUMNS FROM `Projects` LIKE 'Display_Order'");
+        if ($colRes && $colRes->num_rows > 0) $hasDisplayOrder = true;
+    } catch (Exception $e) { $hasDisplayOrder = false; }
+
     if ($hasStatus) {
         $status = 'Ongoing';
-        $stmt = $conn->prepare('INSERT INTO `Projects` (`Project_Name`, `Status`) VALUES (?, ?)');
-        if (!$stmt) {
-            throw new Exception('Database prepare failed: ' . $conn->error);
+        if ($hasDisplayOrder) {
+            // Insert with computed Display_Order = MAX+1
+            $stmt = $conn->prepare('INSERT INTO `Projects` (`Project_Name`, `Status`, `Display_Order`) VALUES (?, ?, (SELECT COALESCE(MAX(Display_Order),0) + 1 FROM Projects))');
+            if (!$stmt) throw new Exception('Database prepare failed: ' . $conn->error);
+            $stmt->bind_param('ss', $projectName, $status);
+        } else {
+            $stmt = $conn->prepare('INSERT INTO `Projects` (`Project_Name`, `Status`) VALUES (?, ?)');
+            if (!$stmt) throw new Exception('Database prepare failed: ' . $conn->error);
+            $stmt->bind_param('ss', $projectName, $status);
         }
-        $stmt->bind_param('ss', $projectName, $status);
     } else {
-        $stmt = $conn->prepare('INSERT INTO `Projects` (`Project_Name`) VALUES (?)');
-        if (!$stmt) {
-            throw new Exception('Database prepare failed: ' . $conn->error);
+        if ($hasDisplayOrder) {
+            $stmt = $conn->prepare('INSERT INTO `Projects` (`Project_Name`, `Display_Order`) VALUES (?, (SELECT COALESCE(MAX(Display_Order),0) + 1 FROM Projects))');
+            if (!$stmt) throw new Exception('Database prepare failed: ' . $conn->error);
+            $stmt->bind_param('s', $projectName);
+        } else {
+            $stmt = $conn->prepare('INSERT INTO `Projects` (`Project_Name`) VALUES (?)');
+            if (!$stmt) throw new Exception('Database prepare failed: ' . $conn->error);
+            $stmt->bind_param('s', $projectName);
         }
-        $stmt->bind_param('s', $projectName);
     }
 
     if (!$stmt->execute()) {
