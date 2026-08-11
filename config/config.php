@@ -1,28 +1,51 @@
 <?php
 /**
  * Database Configuration
- * Works on both Railway (production) and local development
+ * Works on both Railway (production) and local development.
+ *
+ * Improvements:
+ * - Single canonical block (removed accidental duplicate)
+ * - Supports explicit DB_* env vars and a DATABASE_URL fallback
+ * - Keeps existing local XAMPP defaults
  */
 
-// Check if running on Railway (production)
+// Detect production by Railway environment variable presence
 $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 
+// Default (development) settings
+$host = 'localhost';
+$user = 'root';
+$password = '';
+$database = 'dhdatabase';
+$port = 3306;
+
 if ($isProduction) {
-    // Railway production - use environment variables
-    $host = getenv('DB_HOST') ?: 'localhost';
-    $user = getenv('DB_USER') ?: 'root';
-    $password = getenv('DB_PASSWORD') ?: '';
-    // Railway's default managed DB name may be 'MySQL' in some environments.
-    // If DB_NAME isn't set, fall back to 'MySQL' to match Railway's provided DB name.
-    $database = getenv('DB_NAME') ?: 'MySQL';
-    $port = getenv('DB_PORT') ?: 3306;
-} else {
-    // Local development - XAMPP settings
-    $host = 'localhost';
-    $user = 'root';
-    $password = '';
-    $database = 'dhdatabase';
-    $port = 3306;
+    // Prefer explicit DB_* environment variables when provided
+    $envHost = getenv('DB_HOST');
+    $envUser = getenv('DB_USER');
+    $envPass = getenv('DB_PASSWORD');
+    $envName = getenv('DB_NAME');
+    $envPort = getenv('DB_PORT');
+
+    if ($envHost !== false && $envHost !== '') $host = $envHost;
+    if ($envUser !== false && $envUser !== '') $user = $envUser;
+    if ($envPass !== false) $password = $envPass;
+    if ($envName !== false && $envName !== '') $database = $envName;
+    if ($envPort !== false && $envPort !== '') $port = (int)$envPort;
+
+    // If a DATABASE_URL (or similar) is present, parse it and fill any missing parts.
+    // Common platform-provided names: DATABASE_URL, CLEARDB_DATABASE_URL
+    $dbUrl = getenv('DATABASE_URL') ?: getenv('CLEARDB_DATABASE_URL') ?: '';
+    if ($dbUrl) {
+        $parts = parse_url($dbUrl);
+        if ($parts !== false) {
+            if (!empty($parts['host'])) $host = $parts['host'];
+            if (!empty($parts['port'])) $port = (int)$parts['port'];
+            if (!empty($parts['user'])) $user = $parts['user'];
+            if (isset($parts['pass'])) $password = $parts['pass'];
+            if (!empty($parts['path'])) $database = ltrim($parts['path'], '/');
+        }
+    }
 }
 
 // Create database connection
@@ -31,58 +54,15 @@ $conn = new mysqli($host, $user, $password, $database, $port);
 // Check connection
 if ($conn->connect_error) {
     if ($isProduction) {
-        error_log("Database connection failed: " . $conn->connect_error);
-        die("Database connection failed. Please contact support.");
+        error_log('Database connection failed: ' . $conn->connect_error);
+        // Generic message for production
+        die('Database connection failed. Please contact support.');
     } else {
-        die("Connection failed: " . $conn->connect_error);
+        die('Connection failed: ' . $conn->connect_error);
     }
 }
 
 // Set charset to UTF-8
-$conn->set_charset("utf8mb4");
-
-?>
-<?php
-/**
- * Database Configuration
- * Works on both Railway (production) and local development
- */
-
-// Check if running on Railway (production)
-$isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
-
-if ($isProduction) {
-    // Railway production - use environment variables
-    $host = getenv('DB_HOST') ?: 'localhost';
-    $user = getenv('DB_USER') ?: 'root';
-    $password = getenv('DB_PASSWORD') ?: '';
-    // Railway's default managed DB name may be 'MySQL' in some environments.
-    // If DB_NAME isn't set, fall back to 'MySQL' to match Railway's provided DB name.
-    $database = getenv('DB_NAME') ?: 'MySQL';
-    $port = getenv('DB_PORT') ?: 3306;
-} else {
-    // Local development - XAMPP settings
-    $host = 'localhost';
-    $user = 'root';
-    $password = '';
-    $database = 'dhdatabase';
-    $port = 3306;
-}
-
-// Create database connection
-$conn = new mysqli($host, $user, $password, $database, $port);
-
-// Check connection
-if ($conn->connect_error) {
-    if ($isProduction) {
-        error_log("Database connection failed: " . $conn->connect_error);
-        die("Database connection failed. Please contact support.");
-    } else {
-        die("Connection failed: " . $conn->connect_error);
-    }
-}
-
-// Set charset to UTF-8
-$conn->set_charset("utf8mb4");
+$conn->set_charset('utf8mb4');
 
 ?>
