@@ -174,59 +174,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       $day = $projRow && !empty($projRow['start']) ? date('Y-m-d', strtotime($projRow['start'])) : date('Y-m-d');
     }
 
+    $projectDaysStmt = $conn->prepare('SELECT `day` FROM scheduled_project_details WHERE project_id = ? ORDER BY `day` ASC');
+    if (!$projectDaysStmt) {
+      throw new Exception('Unable to fetch project days');
+    }
+    $projectDaysStmt->bind_param('i', $projectId);
+    $projectDaysStmt->execute();
+    $projectDaysRes = $projectDaysStmt->get_result();
+    $projectDays = [];
+    while ($projectDayRow = $projectDaysRes ? $projectDaysRes->fetch_assoc() : null) {
+      $projectDays[] = $projectDayRow['day'];
+    }
+    $projectDaysStmt->close();
+
+    if (empty($projectDays)) {
+      $projRangeStmt = $conn->prepare('SELECT ' . $startColumnSql . ' AS start, ' . $endColumnSql . ' AS end FROM scheduled_projects WHERE project_id = ? LIMIT 1');
+      if (!$projRangeStmt) {
+        throw new Exception('Unable to fetch project date range');
+      }
+      $projRangeStmt->bind_param('i', $projectId);
+      $projRangeStmt->execute();
+      $projRangeRes = $projRangeStmt->get_result();
+      $projRangeRow = $projRangeRes ? $projRangeRes->fetch_assoc() : null;
+      $projRangeStmt->close();
+
+      if ($projRangeRow && !empty($projRangeRow['start']) && !empty($projRangeRow['end'])) {
+        $cursor = new DateTimeImmutable(date('Y-m-d', strtotime($projRangeRow['start'])));
+        $end = new DateTimeImmutable(date('Y-m-d', strtotime($projRangeRow['end'])));
+        while ($cursor <= $end) {
+          $projectDays[] = $cursor->format('Y-m-d');
+          $cursor = $cursor->modify('+1 day');
+        }
+      }
+    }
+
+    if (empty($projectDays)) {
+      $projectDays = [$day];
+    }
+
     $ensureStmt = $conn->prepare('INSERT INTO scheduled_project_details (project_id, `day`, equipments, personnel) VALUES (?, ?, "", "") ON DUPLICATE KEY UPDATE project_id = project_id');
     if (!$ensureStmt) {
       throw new Exception('Unable to ensure project details row');
     }
-    $ensureStmt->bind_param('is', $projectId, $day);
-    $ensureStmt->execute();
+    foreach ($projectDays as $projectDay) {
+      $ensureStmt->bind_param('is', $projectId, $projectDay);
+      $ensureStmt->execute();
+    }
     $ensureStmt->close();
 
-    $detailsStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
-    if (!$detailsStmt) {
-      throw new Exception('Unable to fetch project details');
-    }
-    $detailsStmt->bind_param('is', $projectId, $day);
-    $detailsStmt->execute();
-    $detailsRes = $detailsStmt->get_result();
-    $details = $detailsRes ? $detailsRes->fetch_assoc() : ['equipments' => '', 'personnel' => ''];
-    $detailsStmt->close();
+    $dayResults = [];
+    foreach ($projectDays as $projectDay) {
+      $detailsStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
+      if (!$detailsStmt) {
+        throw new Exception('Unable to fetch project details');
+      }
+      $detailsStmt->bind_param('is', $projectId, $projectDay);
+      $detailsStmt->execute();
+      $detailsRes = $detailsStmt->get_result();
+      $details = $detailsRes ? $detailsRes->fetch_assoc() : ['equipments' => '', 'personnel' => ''];
+      $detailsStmt->close();
 
-    $currentCsv = isset($details[$kind]) ? (string)$details[$kind] : '';
-    $items = array_values(array_filter(array_map('trim', explode(',', $currentCsv)), function ($item) {
-      return $item !== '';
-    }));
-    if (!in_array($value, $items, true)) {
-      $items[] = $value;
-    }
-    $updatedCsv = implode(', ', $items);
+      $currentCsv = isset($details[$kind]) ? (string)$details[$kind] : '';
+      $items = array_values(array_filter(array_map('trim', explode(',', $currentCsv)), function ($item) {
+        return $item !== '';
+      }));
 
-    if ($kind === 'equipments') {
-      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET equipments = ? WHERE project_id = ? AND `day` = ?');
-    } else {
-      $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET personnel = ? WHERE project_id = ? AND `day` = ?');
-    }
-    if (!$updateStmt) {
-      throw new Exception('Unable to update project details');
-    }
-    $updateStmt->bind_param('sis', $updatedCsv, $projectId, $day);
-    $updateStmt->execute();
-    $updateStmt->close();
+      if (!in_array($value, $items, true)) {
+        $items[] = $value;
+      }
+      $updatedCsv = implode(', ', $items);
 
-    $finalStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
-    if (!$finalStmt) {
+      if ($kind === 'equipments') {
+        $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET equipments = ? WHERE project_id = ? AND `day` = ?');
+      } else {
+        $updateStmt = $conn->prepare('UPDATE scheduled_project_details SET personnel = ? WHERE project_id = ? AND `day` = ?');
+      }
+      if (!$updateStmt) {
+        throw new Exception('Unable to update project details');
+      }
+      $updateStmt->bind_param('sis', $updatedCsv, $projectId, $projectDay);
+      $updateStmt->execute();
+      $updateStmt->close();
+
+      $dayResults[] = [
+        'day' => $projectDay,
+        'equipments' => ($kind === 'equipments') ? $updatedCsv : '',
+        'personnel' => ($kind === 'personnel') ? $updatedCsv : ''
+      ];
+    }
+
+    $selectedFinalStmt = $conn->prepare('SELECT COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details WHERE project_id = ? AND `day` = ? LIMIT 1');
+    if (!$selectedFinalStmt) {
       throw new Exception('Unable to fetch updated details');
     }
-    $finalStmt->bind_param('is', $projectId, $day);
-    $finalStmt->execute();
-    $finalRes = $finalStmt->get_result();
-    $finalDetails = $finalRes ? $finalRes->fetch_assoc() : ['equipments' => '', 'personnel' => ''];
-    $finalStmt->close();
+    $selectedFinalStmt->bind_param('is', $projectId, $day);
+    $selectedFinalStmt->execute();
+    $selectedFinalRes = $selectedFinalStmt->get_result();
+    $selectedFinalDetails = $selectedFinalRes ? $selectedFinalRes->fetch_assoc() : ['equipments' => '', 'personnel' => ''];
+    $selectedFinalStmt->close();
 
     echo json_encode([
       'success' => true,
-      'equipments' => (string)($finalDetails['equipments'] ?? ''),
-      'personnel' => (string)($finalDetails['personnel'] ?? '')
+      'equipments' => (string)($selectedFinalDetails['equipments'] ?? ''),
+      'personnel' => (string)($selectedFinalDetails['personnel'] ?? ''),
+      'days' => $dayResults
     ]);
     exit();
   } catch (Throwable $e) {
@@ -568,6 +619,24 @@ if ($projectsRes) {
   }
 }
 
+$existingChecklistProjects = [];
+$projectChecklistTable = $conn->query("SHOW TABLES LIKE 'Projects'");
+if ($projectChecklistTable && $projectChecklistTable->num_rows > 0) {
+  $projectStatusColumn = $conn->query("SHOW COLUMNS FROM Projects LIKE 'Status'");
+  $hasChecklistStatus = $projectStatusColumn && $projectStatusColumn->num_rows > 0;
+
+  $projectListSql = $hasChecklistStatus
+    ? 'SELECT Project_ID, Project_Name, Status FROM Projects ORDER BY CASE LOWER(COALESCE(Status, "")) WHEN "ongoing" THEN 1 WHEN "completed" THEN 2 WHEN "cancelled" THEN 3 ELSE 4 END, Project_Name ASC, Project_ID DESC'
+    : 'SELECT Project_ID, Project_Name FROM Projects ORDER BY Project_Name ASC, Project_ID DESC';
+
+  $projectListRes = $conn->query($projectListSql);
+  if ($projectListRes) {
+    while ($row = $projectListRes->fetch_assoc()) {
+      $existingChecklistProjects[] = $row;
+    }
+  }
+}
+
 // Load per-day details for projects so client can initialize per-day view correctly
 $perDayDetails = [];
 $spdRes = $conn->query('SELECT project_id, `day`, COALESCE(equipments, "") AS equipments, COALESCE(personnel, "") AS personnel FROM scheduled_project_details');
@@ -801,6 +870,47 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         <button type="button" class="modal-close-btn" id="closeAddProjectModal" aria-label="Close add project form">X</button>
       </div>
 
+      <div style="margin-bottom: 12px;">
+        <button type="button" id="toggleExistingProjectPicker" class="secondary-btn" style="padding:8px 12px; font-weight:600;">Add from existing projects</button>
+      </div>
+
+      <div id="existingProjectsPicker" hidden style="margin-bottom: 14px;">
+        <label for="existingProjectSelect" style="display:block; font-weight:700; margin-bottom:6px; color:#0f172a;">Select an existing project</label>
+        <select id="existingProjectSelect" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; font-size:14px; color:#0f172a; box-sizing:border-box;">
+          <option value="">Choose a project...</option>
+          <?php
+            $existingProjectGroups = [
+              'Ongoing' => [],
+              'Completed' => [],
+              'Cancelled' => []
+            ];
+            foreach ($existingChecklistProjects as $existingProject) {
+              $projectName = trim((string)($existingProject['Project_Name'] ?? ''));
+              $projectStatus = trim((string)($existingProject['Status'] ?? ''));
+              if ($projectName === '') {
+                continue;
+              }
+              $statusKey = $projectStatus === 'Completed' ? 'Completed' : ($projectStatus === 'Cancelled' ? 'Cancelled' : 'Ongoing');
+              $existingProjectGroups[$statusKey][] = $existingProject;
+            }
+
+            foreach (['Ongoing', 'Completed', 'Cancelled'] as $statusKey) {
+              $groupItems = $existingProjectGroups[$statusKey] ?? [];
+              if (empty($groupItems)) {
+                continue;
+              }
+              echo '<optgroup label="' . htmlspecialchars($statusKey, ENT_QUOTES, 'UTF-8') . '">';
+              foreach ($groupItems as $existingProject) {
+                $projectName = trim((string)($existingProject['Project_Name'] ?? ''));
+                $projectId = (int)($existingProject['Project_ID'] ?? 0);
+                echo '<option value="' . htmlspecialchars((string)$projectId, ENT_QUOTES, 'UTF-8') . '" data-project-name="' . htmlspecialchars($projectName, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($projectName, ENT_QUOTES, 'UTF-8') . '</option>';
+              }
+              echo '</optgroup>';
+            }
+          ?>
+        </select>
+      </div>
+
       <form method="post" class="project-form" autocomplete="off">
         <input type="hidden" name="action" value="add_scheduled_project" />
 
@@ -938,7 +1048,38 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       }
 
       var saveChangesBtn = document.getElementById('saveChangesBtn');
+      var existingProjectToggle = document.getElementById('toggleExistingProjectPicker');
+      var existingProjectsPicker = document.getElementById('existingProjectsPicker');
+      var existingProjectSelect = document.getElementById('existingProjectSelect');
+      var projectNameInput = document.getElementById('project_name');
       var isDirty = false;
+
+      if (existingProjectToggle && existingProjectsPicker) {
+        existingProjectToggle.addEventListener('click', function(){
+          existingProjectsPicker.hidden = !existingProjectsPicker.hidden;
+          if (!existingProjectsPicker.hidden && existingProjectSelect) {
+            existingProjectSelect.focus();
+          }
+        });
+      }
+
+      if (existingProjectSelect) {
+        existingProjectSelect.addEventListener('change', function(){
+          var selectedOption = this.options[this.selectedIndex];
+          if (!selectedOption || !selectedOption.getAttribute('data-project-name')) {
+            return;
+          }
+          var selectedName = selectedOption.getAttribute('data-project-name') || '';
+          if (projectNameInput && selectedName) {
+            projectNameInput.value = selectedName;
+            projectNameInput.focus();
+          }
+          this.selectedIndex = 0;
+          if (existingProjectsPicker) {
+            existingProjectsPicker.hidden = true;
+          }
+        });
+      }
 
       function setDirty(flag) {
         isDirty = !!flag;
@@ -1084,6 +1225,22 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           });
         });
       }
+
+      function setProjectDayDetails(projectId, dayEntries) {
+        if (!projectId || !dayEntries || !Array.isArray(dayEntries)) {
+          return;
+        }
+        dayEntries.forEach(function(entry){
+          if (!entry || typeof entry.day !== 'string' || !entry.day) {
+            return;
+          }
+          var key = String(projectId) + '|' + entry.day;
+          perDayDetails[key] = {
+            equipments: String(entry.equipments || ''),
+            personnel: String(entry.personnel || '')
+          };
+        });
+      }
         function removeProjectRequirement(projectId, kind, value, day) {
           var params = new URLSearchParams();
           params.set('action', 'remove_project_requirement');
@@ -1184,7 +1341,26 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         return String(value || '').trim().toLowerCase();
       }
 
-      function projectHasAssignment(project, kind, value) {
+      function getProjectAssignmentsForDay(project, kind, dayKey) {
+        if (!project || !kind) {
+          return [];
+        }
+
+        if (typeof dayKey === 'string' && dayKey) {
+          var projectDayKey = String(project.project_id) + '|' + dayKey;
+          var perDay = perDayDetails[projectDayKey];
+          if (perDay) {
+            return kind === 'personnel' ? parseCsvList(perDay.personnel) : parseCsvList(perDay.equipments);
+          }
+
+          // If this day has no stored per-day row yet, it is not assigned to that resource on that date.
+          return [];
+        }
+
+        return kind === 'personnel' ? parseCsvList(project.personnel) : parseCsvList(project.equipments);
+      }
+
+      function projectHasAssignment(project, kind, value, dayKey) {
         if (!project || !kind) {
           return false;
         }
@@ -1192,7 +1368,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         if (!normalizedTarget) {
           return false;
         }
-        var list = kind === 'personnel' ? parseCsvList(project.personnel) : parseCsvList(project.equipments);
+        var list = getProjectAssignmentsForDay(project, kind, dayKey);
         for (var i = 0; i < list.length; i++) {
           if (normalizeAssignmentValue(list[i]) === normalizedTarget) {
             return true;
@@ -1220,7 +1396,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         return rangeA.start.getTime() <= rangeB.end.getTime() && rangeB.start.getTime() <= rangeA.end.getTime();
       }
 
-      function findAssignmentConflicts(targetProject, kind, value) {
+      function findAssignmentConflicts(targetProject, kind, value, dayKey) {
         if (!targetProject) {
           return [];
         }
@@ -1234,7 +1410,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
           if (!existingProject || Number(existingProject.project_id) === targetId) {
             return false;
           }
-          if (!projectHasAssignment(existingProject, kind, value)) {
+          if (!projectHasAssignment(existingProject, kind, value, dayKey)) {
             return false;
           }
           var existingRange = projectDayRange(existingProject);
@@ -1891,21 +2067,21 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
               } catch (e) {}
             }
 
-            if (projectHasAssignment(project, payload.kind, payload.value)) {
+            var dayKey = tile.dataset.day || '';
+            if (projectHasAssignment(project, payload.kind, payload.value, dayKey)) {
               await showInfoModal(
                 'Already Assigned',
-                payload.value + ' is already assigned to project #' + String(project.project_id) + ' (' + (project.project_name || 'Project') + ').'
+                payload.value + ' is already assigned to project #' + String(project.project_id) + ' (' + (project.project_name || 'Project') + ') on ' + dayKey + '. Additions are applied across all project days, so remove it from that day first if you want to change it for a single day.'
               );
               return;
             }
 
-            var dayKey = tile.dataset.day || '';
             var conflicts = findAssignmentConflictsForDay(project, payload.kind, payload.value, dayKey);
             if (conflicts.length > 0) {
               renderConflictVisualization(project, conflicts);
               var confirmMove = await showDecisionModal({
                 title: 'Assignment Conflict',
-                message: payload.value + ' is already assigned to the following project(s) for overlapping day(s).\n\nMove this assignment to ' + (project.project_name || 'Project') + '?',
+                message: payload.value + ' is already assigned to the following project(s) for overlapping day(s).\n\nThis assignment will be added to all days in ' + (project.project_name || 'Project') + '.\n\nMove this assignment to the selected project?',
                 confirmText: 'Move Assignment',
                 cancelText: 'Keep Existing',
                 showCancel: true,
@@ -1945,13 +2121,9 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
                 throw new Error('Save failed');
               }
 
-              // update only the specific day for the target project
               try {
-                var key = String(project.project_id) + '|' + (dayKey || '');
-                perDayDetails[key] = {
-                  equipments: String(result.data.equipments || ''),
-                  personnel: String(result.data.personnel || '')
-                };
+                var projectDayEntries = Array.isArray(result.data.days) ? result.data.days : [{ day: dayKey || '', equipments: String(result.data.equipments || ''), personnel: String(result.data.personnel || '') }];
+                setProjectDayDetails(project.project_id, projectDayEntries);
                 setDirty(true);
               } catch (e) {}
               renderProjectTiles();
