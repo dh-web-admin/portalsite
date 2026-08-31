@@ -36,16 +36,33 @@ $bidColumns = [];
 $bidRows = [];
 $bidTableExists = false;
 
+// Project Address lives in the DB and in the Add/Edit modals, but is intentionally
+// NOT shown as a main-table column. This flag drives the modal field.
+$hasProjectAddress = false;
+
 try {
   $tres = $conn->query("SHOW TABLES LIKE 'bids'");
   if ($tres && $tres->num_rows) {
     $bidTableExists = true;
+
+    // Ensure the project_address column exists (add it once if missing).
+    try {
+      $paCheck = $conn->query("SHOW COLUMNS FROM bids LIKE 'project_address'");
+      if ($paCheck && $paCheck->num_rows === 0) {
+        $conn->query("ALTER TABLE bids ADD COLUMN `project_address` VARCHAR(255) NULL");
+      }
+      $hasProjectAddress = true;
+    } catch (Throwable $e) {
+      $hasProjectAddress = false;
+    }
 
     $colResult = $conn->query("SHOW COLUMNS FROM bids");
     if ($colResult) {
       while ($c = $colResult->fetch_assoc()) {
         // Exclude timestamp metadata and primary id columns from the UI
         if (in_array($c['Field'], ['created_at','updated_at','bid_id'], true)) continue;
+        // Project Address is modal-only: keep it out of the table/column config.
+        if (strtolower($c['Field']) === 'project_address') { $hasProjectAddress = true; continue; }
         $bidColumns[] = $c['Field'];
       }
     }
@@ -646,8 +663,8 @@ foreach ($bidColumns as $c) {
                     <option value="lost">Lost</option>
                     <option value="bidding">Bidding</option>
                     <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                  </select>
+                    <option value="completed">Completed<3/option>
+                  </select> 
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-right:1px solid rgba(15,23,42,0.06);">
                   <label for="yearFilterTop" style="font-weight:700;color:#0f172a;margin-right:6px;font-size:13px;">DHSS Project#</label>
@@ -1341,6 +1358,12 @@ foreach ($bidColumns as $c) {
                     </div>
                   </div>
                   <div class="section-content">
+                    <?php if (!empty($hasProjectAddress)) { ?>
+                      <div class="field" style="grid-column:1/-1;">
+                        <label>Project Address</label>
+                        <input type="text" data-col="project_address" name="project_address" id="edit_project_address" />
+                      </div>
+                    <?php } ?>
                     <?php foreach ($locFields as $col) {
                       if ($col === 'project_city') { $label = 'Project City'; }
                       elseif ($col === 'project_county') { $label = 'Project County'; }
@@ -1510,7 +1533,13 @@ foreach ($bidColumns as $c) {
                   <input type="date" id="bidDate" name="bid_date" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:6px;" />
                 </div>
                 <hr />
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                <?php if (!empty($hasProjectAddress)) { ?>
+                <div>
+                  <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;">Project Address</label>
+                  <input type="text" id="projectAddress" name="project_address" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
+                </div>
+                <?php } ?>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
                   <div>
                     <label style="font-weight:600;color:#475569;display:block;margin-bottom:6px;">Project City</label>
                     <input type="text" id="projectCity" name="project_city" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" />
@@ -2523,6 +2552,14 @@ foreach ($bidColumns as $c) {
           var reasonOtherEl = modal.querySelector('[data-col="reason_other"]');
           if (reasonOtherEl) {
             reasonOtherEl.value = (bidObj.reason_other !== undefined && bidObj.reason_other !== null) ? bidObj.reason_other : '';
+          }
+        } catch(e) {}
+
+        // Project Address is not part of bidColumns (modal-only field) - populate it explicitly.
+        try {
+          var projAddrEl = modal.querySelector('[data-col="project_address"]');
+          if (projAddrEl) {
+            projAddrEl.value = (bidObj.project_address !== undefined && bidObj.project_address !== null) ? bidObj.project_address : '';
           }
         } catch(e) {}
 

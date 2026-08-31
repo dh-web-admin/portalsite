@@ -388,6 +388,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
 .scheduling-page .project-tile-meta {
@@ -403,6 +406,18 @@
   line-height: 1.25;
   opacity: 0.92;
   white-space: pre-line;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.scheduling-page .project-tile:hover .project-tile-name,
+.scheduling-page .project-tile:focus-within .project-tile-name,
+.scheduling-page .project-tile:hover .project-tile-req,
+.scheduling-page .project-tile:focus-within .project-tile-req {
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
 }
 
 .scheduling-page .project-tile.is-drop-target {
@@ -415,6 +430,93 @@
 
 .scheduling-page .project-tile.is-saving {
   opacity: 0.7;
+}
+
+.scheduling-page .project-tile-actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 22, 46, 0.85),
+    rgba(10, 22, 46, 0.92)
+  );
+  opacity: 0;
+  transform: scale(0.97);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+  pointer-events: none;
+  border-radius: 6px;
+}
+
+.scheduling-page .project-tile:hover .project-tile-actions,
+.scheduling-page .project-tile:focus-within .project-tile-actions {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.scheduling-page .project-tile-action {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 7px;
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    5 border-color 150ms ease,
+    transform 120ms ease;
+}
+
+.scheduling-page .project-tile-action:hover,
+.scheduling-page .project-tile-action:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.scheduling-page .project-tile-action:active {
+  transform: translateY(0);
+}
+
+.scheduling-page .edit-project-details-card {
+  width: calc(100vw - 40px);
+}
+
+.scheduling-page .details-summary-panel {
+  background: #f7f9fc;
+}
+
+.scheduling-page .details-project-name,
+.scheduling-page .details-project-day {
+  margin: 18px 0 0;
+  color: #314a70;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.scheduling-page .details-project-day {
+  margin-top: 8px;
+  color: #71819c;
+  font-size: 0.8rem;
+}
+
+.scheduling-page .crew-equipment-placeholder {
+  width: min(560px, calc(100vw - 32px));
+  min-height: 180px;
 }
 
 .scheduling-page .modal-overlay {
@@ -441,6 +543,347 @@
   border: 1px solid #d3deef;
   box-shadow: 0 24px 60px rgba(17, 24, 39, 0.28);
   padding: 14px;
+}
+
+.scheduling-page .add-project-card {
+  width: calc(100vw - 40px);
+  max-width: none;
+  height: calc(100vh - 32px);
+  max-height: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(280px, 1.275fr) minmax(
+      320px,
+      1fr
+    );
+  overflow: hidden;
+}
+
+.scheduling-page .add-project-left,
+.scheduling-page .add-project-notes,
+.scheduling-page .add-project-right {
+  min-width: 0;
+  padding: 28px;
+  overflow-y: auto;
+}
+
+.scheduling-page .add-project-left {
+  border-right: 1px solid #d8e1ef;
+}
+
+.scheduling-page .add-project-notes {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid #d8e1ef;
+  background: #fbfcfe;
+}
+
+.scheduling-page .add-project-notes .project-field-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.scheduling-page .add-project-notes .project-field-group textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  resize: none;
+  overflow-y: auto;
+  padding: 12px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.scheduling-page .add-project-right {
+  background: #f7f9fc;
+  overflow-y: auto;
+}
+
+.scheduling-page .add-project-right .modal-head {
+  margin: 0;
+}
+
+.scheduling-page .add-project-card .modal-head h2 {
+  font-size: 1.5rem;
+}
+
+.scheduling-page .add-project-details {
+  margin-top: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.scheduling-page .project-field-group {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.scheduling-page .project-field-group label,
+.scheduling-page .project-status-fieldset legend {
+  color: #314a70;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.scheduling-page #officeNotes + * {
+  box-sizing: border-box;
+}
+
+.scheduling-page .add-project-right .project-field-group label {
+  color: #1f2d44;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.scheduling-page .add-project-right .project-field-group:first-child label {
+  color: #1f2d44;
+  text-transform: uppercase;
+}
+
+.scheduling-page .project-field-group input,
+.scheduling-page .project-field-group textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd8ed;
+  border-radius: 10px;
+  padding: 9px;
+  background: #ffffff;
+  color: #1f2f49;
+  font: inherit;
+}
+
+.scheduling-page .add-project-right .project-field-group input {
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 0.84rem;
+}
+
+.scheduling-page .project-field-group textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.scheduling-page .project-field-group input:focus,
+.scheduling-page .project-field-group textarea:focus {
+  outline: 2px solid rgba(47, 104, 197, 0.2);
+  outline-offset: 1px;
+  border-color: #8eaddb;
+}
+
+.scheduling-page .project-information {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.scheduling-page .project-information h3 {
+  margin: 0 0 14px;
+  color: #1f2d44;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.scheduling-page .contact-information {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #d8e1ef;
+}
+
+.scheduling-page .contact-information h3 {
+  margin: 0 0 14px;
+  color: #1f2d44;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.scheduling-page
+  .contact-information
+  .project-field-group
+  + .project-field-group {
+  margin-top: 11px;
+}
+
+.scheduling-page .project-information-location {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 0.55fr);
+  gap: 10px;
+  margin-top: 11px;
+}
+
+.scheduling-page .project-status-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.scheduling-page .project-status-fieldset {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.scheduling-page .project-status-fieldset legend {
+  padding: 0;
+}
+
+.scheduling-page .project-status-fieldset .yes-no-toggle {
+  width: 100%;
+}
+
+.scheduling-page .project-status-fieldset .toggle-option {
+  flex: 1;
+  min-width: 0;
+}
+
+.scheduling-page .add-project-right .project-status-fieldset legend {
+  font-size: 0.76rem;
+}
+
+.scheduling-page .yes-no-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid #cbd8ed;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: inset 0 1px 2px rgba(31, 47, 73, 0.04);
+}
+
+.scheduling-page .toggle-option {
+  min-width: 50px;
+  border: 0;
+  border-radius: 0;
+  padding: 7px 10px;
+  background: #ffffff;
+  color: #637491;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.scheduling-page .toggle-option + .toggle-option {
+  border-left: 1px solid #cbd8ed;
+}
+
+.scheduling-page .toggle-option:hover {
+  background: #edf3fc;
+}
+
+.scheduling-page .toggle-option.selected {
+  background: #2f68c5;
+  color: #ffffff;
+  box-shadow: inset 0 -2px 0 rgba(20, 57, 118, 0.25);
+}
+
+.scheduling-page .toggle-option:focus-visible {
+  outline: 2px solid rgba(47, 104, 197, 0.35);
+  outline-offset: -3px;
+}
+
+/* Keep the two choices visually balanced when neither has been selected. */
+.scheduling-page .toggle-option[aria-pressed="false"] {
+  color: #637491;
+}
+
+.scheduling-page .toggle-option[aria-pressed="false"]:active {
+  transform: translateY(1px);
+}
+
+/* Override generic button styling applied by the shared modal controls. */
+.scheduling-page .yes-no-toggle .toggle-option {
+  min-height: 32px;
+  line-height: 1;
+}
+
+.scheduling-page .yes-no-toggle label {
+  min-width: 38px;
+  padding: 5px 8px;
+  color: #637491;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+}
+
+.scheduling-page .accommodation-information {
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.scheduling-page
+  .accommodation-information
+  .project-field-group
+  + .project-field-group {
+  margin-top: 8px;
+}
+
+.scheduling-page .accommodation-information-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.75fr) minmax(0, 1.25fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scheduling-page
+  .accommodation-information-row
+  .project-field-group
+  + .project-field-group {
+  margin-top: 0;
+}
+
+@media (max-width: 950px) {
+  .scheduling-page .add-project-card {
+    width: calc(100vw - 24px);
+    height: auto;
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .scheduling-page .add-project-left,
+  .scheduling-page .add-project-notes,
+  .scheduling-page .add-project-right {
+    overflow: visible;
+  }
+
+  .scheduling-page .add-project-left,
+  .scheduling-page .add-project-notes {
+    border-right: 0;
+    border-bottom: 1px solid #d8e1ef;
+  }
+
+  .scheduling-page .add-project-notes {
+    min-height: 260px;
+  }
+
+  .scheduling-page .add-project-notes .project-field-group textarea {
+    min-height: 210px;
+  }
+
+  .scheduling-page .project-information-location {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduling-page .project-status-options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .scheduling-page .project-view-card {
@@ -703,6 +1146,182 @@
   padding: 8px 9px;
   font-size: 0.84rem;
   background: #ffffff;
+}
+
+.scheduling-page .existing-project-tools,
+.scheduling-page .date-picker-tools {
+  margin-bottom: 2px;
+}
+
+.scheduling-page .existing-project-toggle,
+.scheduling-page .date-picker-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 11px;
+  border: 1px solid #c9d7ef;
+  border-radius: 9px;
+  background: #f5f7fc;
+  color: #2f4161;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scheduling-page .existing-project-toggle:hover,
+.scheduling-page .date-picker-toggle:hover {
+  background: #edf3fc;
+  border-color: #aebfdf;
+}
+
+.scheduling-page .picker-chevron {
+  color: #6f82a2;
+  font-size: 0.7rem;
+  transition: transform 160ms ease;
+}
+
+.scheduling-page .existing-project-toggle[aria-expanded="true"] .picker-chevron,
+.scheduling-page .date-picker-toggle[aria-expanded="true"] .picker-chevron {
+  transform: rotate(180deg);
+}
+
+.scheduling-page .existing-project-picker {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 6px;
+  padding: 10px;
+  border: 1px solid #b8dfd7;
+  border-left: 4px solid #258f7d;
+  border-radius: 9px;
+  background: #effaf7;
+}
+
+.scheduling-page .existing-project-picker[hidden] {
+  display: none !important;
+}
+
+.scheduling-page .existing-project-picker label {
+  color: #247467;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.scheduling-page .existing-project-picker select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #a9d4cb;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #ffffff;
+  color: #1f2f49;
+  font-size: 0.84rem;
+}
+
+.scheduling-page .existing-project-picker select:focus,
+.scheduling-page .existing-project-toggle:focus-visible,
+.scheduling-page .date-picker-toggle:focus-visible {
+  outline: 2px solid rgba(47, 104, 197, 0.25);
+  outline-offset: 2px;
+}
+
+.scheduling-page .project-date-picker {
+  border: 1px solid #cbd8ed;
+  border-radius: 10px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.scheduling-page .project-date-picker[hidden] {
+  display: none;
+}
+
+.scheduling-page .date-picker-header,
+.scheduling-page .calendar-weekdays,
+.scheduling-page .calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.scheduling-page .date-picker-header {
+  grid-template-columns: 34px 1fr 34px;
+  align-items: center;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.scheduling-page .date-picker-header button,
+.scheduling-page .calendar-day {
+  border: 1px solid #d5dfed;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #2f4161;
+  cursor: pointer;
+}
+
+.scheduling-page .date-picker-header button {
+  height: 40px;
+  font-weight: 700;
+}
+
+.scheduling-page .calendar-weekdays {
+  margin-bottom: 8px;
+  color: #8191ac;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.scheduling-page .calendar-day {
+  min-height: 46px;
+  font-size: 0.9rem;
+}
+
+.scheduling-page .calendar-day:hover,
+.scheduling-page .calendar-day.selected {
+  border-color: #2f68c5;
+  background: #2f68c5;
+  color: #ffffff;
+}
+
+.scheduling-page .calendar-day.empty {
+  border-color: transparent;
+  background: transparent;
+  cursor: default;
+}
+
+.scheduling-page .selected-dates-summary {
+  margin: 0;
+  color: #637491;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 700px) {
+  .scheduling-page .add-project-card {
+    width: calc(100vw - 20px);
+    grid-template-columns: 1fr;
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+  }
+
+  .scheduling-page .add-project-left {
+    padding: 18px;
+    border-right: 0;
+    border-bottom: 1px solid #d8e1ef;
+  }
+
+  .scheduling-page .add-project-right {
+    padding: 18px;
+    padding-top: 16px;
+  }
+
+  .scheduling-page .add-project-future-panel {
+    min-height: 120px;
+  }
 }
 
 .scheduling-page .date-time-row {

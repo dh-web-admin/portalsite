@@ -97,7 +97,7 @@ if ($found_sorted !== $ids_sorted) {
     echo json_encode(['success' => false, 'message' => 'One or more project IDs do not exist']);
     exit;
 }
-
+ 
 // Load current global order
 $orderRes = $conn->query('SELECT Project_ID FROM Projects ORDER BY Display_Order ASC, Project_ID DESC');
 if (!$orderRes) {
