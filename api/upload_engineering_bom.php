@@ -63,7 +63,12 @@ $stmt->close();
 $uploadDir = __DIR__ . '/../uploads/engineering_bom/';
 if (!is_dir($uploadDir)) { mkdir($uploadDir, 0755, true); }
 
+require_once __DIR__ . '/../partials/upload_guard.php';
 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+if (upload_extension_is_dangerous($ext)) {
+    echo json_encode(['success' => false, 'message' => 'File type not allowed']);
+    exit();
+}
 $baseFilename = preg_replace('/[^a-z0-9_-]/i', '', str_replace(' ', '_', $documentName));
 $filename = $baseFilename . '_' . $batchVersion . '_' . time() . '.' . $ext;
 $filepath = $uploadDir . $filename;

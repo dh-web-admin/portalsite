@@ -1,0 +1,35 @@
+# P3 — the uploads tree must never execute or interpret anything.
+# This file is the hard backstop behind the per-endpoint validation.
+
+Options -ExecCGI -Indexes
+
+# Disable the PHP engine here. php_flag is valid in .htaccess only under
+# mod_php; the <IfModule> guards keep it from breaking a server that runs
+# PHP via FPM/CGI (there, the deny + handler rules below still apply).
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Strip any handler/type that would run these, and serve them as inert text.
+<IfModule mod_mime.c>
+    RemoveHandler .php .php3 .php4 .php5 .php7 .php8 .pht .phtml .phar .phps .cgi .pl .py .sh .shtml
+    RemoveType .php .php3 .php4 .php5 .php7 .php8 .pht .phtml .phar .phps .cgi .pl .py .sh .shtml
+    AddType text/plain .php .php3 .php4 .php5 .php7 .php8 .pht .phtml .phar .phps .cgi .pl .py .sh .shtml .htaccess
+</IfModule>
+
+# Deny outright as well (Apache 2.4 first, then 2.2 fallback).
+<FilesMatch "(?i)\.(php[0-9]?|pht|phtml|phar|phps|cgi|pl|py|sh|bash|asp|aspx|jsp|jspx|shtml|shtm|htaccess|htpasswd)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

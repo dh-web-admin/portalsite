@@ -88,7 +88,11 @@ function handle_multi_upload($files, $equipment_id, $field, $conn, $upload_dir) 
     $count = is_array($files['tmp_name']) ? count($files['tmp_name']) : 0;
     for ($i = 0; $i < $count; $i++) {
         if (isset($files['tmp_name'][$i]) && is_uploaded_file($files['tmp_name'][$i])) {
+            require_once __DIR__ . '/../partials/upload_guard.php';
             $ext = pathinfo($files['name'][$i], PATHINFO_EXTENSION);
+            if (upload_extension_is_dangerous($ext)) {
+                continue;
+            }
             $safe_name = uniqid($field . '_') . '.' . $ext;
             $target = $upload_dir . DIRECTORY_SEPARATOR . $safe_name;
             if (move_uploaded_file($files['tmp_name'][$i], $target)) {

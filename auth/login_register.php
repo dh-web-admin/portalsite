@@ -4,13 +4,16 @@ require_once '../config/config.php';
 require_once __DIR__ . '/../partials/url.php';
 
 if(isset($_POST['login'])){
-    $email = trim($_POST['email']);  
-    $password = $_POST['password'];
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
     $rememberMe = isset($_POST['remember_me']);
-   
-    $result = $conn->query("SELECT * FROM users WHERE email='$email'");
-   
-    if($result->num_rows > 0){
+
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if($result && $result->num_rows > 0){
         $user = $result->fetch_assoc();
        
         // // DEBUGGING - to check if user is found and password verification
@@ -73,13 +76,9 @@ if(isset($_POST['login'])){
         }
     }
    
-    // Check if email exists at all
-    if($result->num_rows === 0){
-        $_SESSION['login_error'] = 'Email address not found.';
-    } else {
-        $_SESSION['login_error'] = 'Invalid password.';
-    }
-    
+    // Generic message — do not reveal whether the account exists
+    $_SESSION['login_error'] = 'Invalid email or password.';
+
     $_SESSION['active_form'] = 'login';
     // Persist error session data before redirect
     if (function_exists('session_write_close')) {

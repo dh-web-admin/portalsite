@@ -47,8 +47,10 @@ try {
 $email = isset($_SESSION['email']) ? $_SESSION['email'] : '';
 echo "Step 4: Querying for user: " . htmlspecialchars($email) . "<br>";
 
-$query = "SELECT role FROM users WHERE email='$email'";
-$result = $conn->query($query);
+$stmt = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1");
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$result = $stmt->get_result();
 
 if (!$result) {
     echo "Query failed: " . $conn->error . "<br>";

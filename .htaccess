@@ -22,6 +22,47 @@ RewriteCond %{REQUEST_FILENAME} !-d
     Deny from all
 </FilesMatch>
 
+# P5 — never serve credentials, internal notes, DB dumps, backups or logs.
+# .php tools under dev/ and debug/ keep working; only these extensions/names are denied.
+<FilesMatch "(?i)\.(sql|log|md|txt|bak|old|ini|conf|dist|example|sh|py|yml|yaml)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+<FilesMatch "(?i)(secret|token|credential|passwd|password|mysql_access|\.pem|\.key)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+<FilesMatch "(?i)^(config(\.railway|\.example|\.local)?\.php|composer\.(json|lock)|package(-lock)?\.json)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# P5 — the attacker playbook / assessment report must never be web-served if it lands here.
+<FilesMatch "(?i)(portal-breakin|portal-patch-set|security-audit|php-security-audit)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 ErrorDocument 404 /index.php
 ErrorDocument 500 /index.php
 

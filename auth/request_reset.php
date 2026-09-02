@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
         $step = 'verify_code';
     } else {
 
-        $stmt = $conn->prepare("SELECT code, expires_at FROM password_resets WHERE email = ? LIMIT 1");
+        $stmt = $conn->prepare("SELECT code, expires_at, attempts FROM password_resets WHERE email = ? LIMIT 1");
         $stmt->bind_param("s", $reset_email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -118,10 +118,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'verif
                 $message_type = "error";
                 session_destroy();
                 $step = 'email';
-            } elseif ($submitted_code !== $data['code']) {
-                $message = "Invalid code. Please try again.";
+            } elseif (!hash_equals((string)$data['code'], (string)$submitted_code)) {
+                // Count the failed attempt; burn the code after 5 tries
+                $upd = $conn->prepare("UPDATE password_resets SET attempts = attempts + 1 WHERE email = ?");
+                $upd->bind_param("s", $reset_email);
+                $upd->execute();
+                $upd->close();
+
+                if ((int)($data['attempts'] ?? 0) + 1 >= 5) {
+                    $del = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
+                    $del->bind_param("s", $reset_email);
+                    $del->execute();
+                    $del->close();
+                    session_destroy();
+                    $message = "Too many incorrect attempts. Please request a new code.";
+                    $step = 'email';
+                } else {
+                    $message = "Invalid or expired code. Please try again.";
+                    $step = 'verify_code';
+                }
                 $message_type = "error";
-                $step = 'verify_code';
             } else {
                 // Code verified — proceed
                 $_SESSION['reset_code_verified'] = true;

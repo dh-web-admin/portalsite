@@ -21,7 +21,7 @@ function sendResetCode($email, $code) {
     // Fallback if env vars not set (for local testing; use caution)
     if (!$api_key || !$api_secret) {
         $msg = 'Mailjet credentials not configured.';
-        $log($msg . ' Email: ' . $email . ', Code: ' . $code);
+        $log($msg . ' Email: ' . $email);
         return ['success' => false, 'error' => $msg];
     }
 

@@ -121,7 +121,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['item_text'], $_POST['
             for ($i = 0; $i < $fileCount; $i++) {
                 if ($_FILES['attachments']['error'][$i] !== UPLOAD_ERR_OK) continue;
                 $origName = basename($_FILES['attachments']['name'][$i]);
+                require_once __DIR__ . '/../../partials/upload_guard.php';
                 $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+                if (upload_extension_is_dangerous($ext)) continue;
                 $safeBase = 'note_' . $noteId . '_' . uniqid() . '.' . $ext;
                 $safeBase = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $safeBase);
                 $targetPath = rtrim($noteUploadDir, '/') . '/' . $safeBase;

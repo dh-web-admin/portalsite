@@ -144,7 +144,13 @@ function handle_upload($file, $equipment_id, $field, $conn, $upload_dir) {
             echo json_encode(['success' => false, 'message' => 'Upload directory is not writable.']);
             exit();
         }
+        require_once __DIR__ . '/../partials/upload_guard.php';
         $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        if (upload_extension_is_dangerous($ext)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'File type not allowed.']);
+            exit();
+        }
         $safe_name = uniqid($field . '_') . '.' . $ext;
         $target = $upload_dir . DIRECTORY_SEPARATOR . $safe_name;
         if (move_uploaded_file($file['tmp_name'], $target)) {

@@ -63,7 +63,12 @@ try {
 
     $uploadedFilename = basename($file['name']);
     $filename = $logicalFilename ?: $uploadedFilename;
+    require_once __DIR__ . '/../partials/upload_guard.php';
     $ext = pathinfo($filename, PATHINFO_EXTENSION);
+    if (upload_extension_is_dangerous($ext) || upload_extension_is_dangerous(pathinfo($uploadedFilename, PATHINFO_EXTENSION))) {
+        echo json_encode(['success' => false, 'message' => 'File type not allowed']);
+        exit();
+    }
     $baseName = pathinfo($filename, PATHINFO_FILENAME);
     $uniqueName = $baseName . '_' . time() . '_' . uniqid() . '.' . $ext;
     $targetPath = $uploadDir . $uniqueName;

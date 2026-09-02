@@ -111,8 +111,13 @@ $errors = [];
 $uploadedFiles = [];
 
 $seenFiles = [];
+require_once __DIR__ . '/../partials/upload_guard.php';
 foreach ($files as $file) {
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (upload_extension_is_dangerous($ext)) {
+        $errors[] = 'File type not allowed: ' . $file['name'];
+        continue;
+    }
     $baseName = $field . '_' . uniqid() . '.' . $ext;
     // Ensure filename is safe (no directory traversal)
     $baseName = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $baseName);

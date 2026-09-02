@@ -56,6 +56,22 @@ package-lock.json
 .env
 .env.local
 
+# Secrets, tokens and internal notes — never commit (P6)
+dev/*.txt
+dev/*token*
+dev/*secret*
+dev/mysql_Access*
+dev/*.pem
+dev/*.key
+config/config.local.php
+*.pem
+*.key
+
+# Security assessment / patch documents — keep out of the repo and web root
+portal-breakin.html
+portal-patch-set.html
+php-security-audit.sh
+
 # Cache directories
 cache/
 tmp/

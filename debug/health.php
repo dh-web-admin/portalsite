@@ -30,7 +30,7 @@ echo 'extensions_loaded: ' . implode(',', array_slice($ext, 0, min(20, count($ex
 $paths = [
     __DIR__ . '/../auth/login.php',
     __DIR__ . '/../config/config.php',
-    __DIR__ . '/../admin/create_admin.php'
+    __DIR__ . '/../pages/dashboard/index.php'
 ];
 foreach ($paths as $p) {
     echo basename($p) . ': ' . (file_exists($p) ? 'found' : 'missing') . "\n";

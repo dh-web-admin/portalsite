@@ -12,9 +12,11 @@ require_once __DIR__ . '/../partials/permissions.php';
 
 // Get admin information
 $email = $_SESSION['email'];
-$query = "SELECT role FROM users WHERE email='$email'";
-$result = $conn->query($query);
-$user = $result->fetch_assoc();
+$stmt = $conn->prepare("SELECT role FROM users WHERE email = ? LIMIT 1");
+$stmt->bind_param('s', $email);
+$stmt->execute();
+$user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 // Determine role and require Admin Panel access
 $role = (string)($user['role'] ?? 'laborer');
