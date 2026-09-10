@@ -21,7 +21,12 @@ if (isset($_SESSION['email']) && isset($_SESSION['name'])) {
     }
   }
 
-  if (isset($_SESSION['role']) && $_SESSION['role'] === 'developer') {
+  // Already signed in (e.g. remember-me kicked in on the way here) — still
+  // honour a pending destination before falling back to the dashboards.
+  $intendedUrl = take_intended_url();
+  if ($intendedUrl !== null) {
+    header('Location: ' . $intendedUrl);
+  } elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'developer') {
     header('Location: ' . base_url('/dev/index.php'));
   } else {
     header('Location: ' . base_url('/pages/dashboard/'));

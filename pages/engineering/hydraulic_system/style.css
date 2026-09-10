@@ -52,6 +52,50 @@
 }
 .hc-reset-view-btn:hover { background: #f8fafc; border-color: #94a3b8; }
 
+/* Line-colour key, pinned top-center over the canvas. pointer-events:none so
+   it never swallows a pan drag or a component click underneath it. */
+.hc-legend {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 8px 16px;
+  list-style: none;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .1);
+  pointer-events: none;
+}
+
+.hc-legend li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 12.5px "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.hc-legend-swatch {
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  flex: none;
+}
+
+/* swatch colours sampled from the drawing's own hose strokes */
+.hc-legend-swatch--pressure { background: #fb0025; }
+.hc-legend-swatch--return   { background: #006cf8; }
+.hc-legend-swatch--case     { background: #ebd100; }
+.hc-legend-swatch--suction  { background: #279100; }
+
 /* Page-level action buttons, right-aligned in .eng-topbar next to the
    breadcrumb (e.g. "View all components" / "View Inventory" on the
    Hydraulic Systems page). */

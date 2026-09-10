@@ -118,6 +118,12 @@ if (is_readable($hcSvgFile)) {
   <div class="hc-stage">
     <?php if ($hcInline !== ''): ?>
       <button type="button" id="hcResetView" class="hc-reset-view-btn" hidden>Reset view</button>
+      <ul class="hc-legend" aria-label="Line colour key">
+        <li><span class="hc-legend-swatch hc-legend-swatch--pressure"></span>Pressure</li>
+        <li><span class="hc-legend-swatch hc-legend-swatch--return"></span>Return</li>
+        <li><span class="hc-legend-swatch hc-legend-swatch--case"></span>Case drain</li>
+        <li><span class="hc-legend-swatch hc-legend-swatch--suction"></span>Suction</li>
+      </ul>
       <?php echo $hcInline; ?>
     <?php else: ?>
       <p class="eng-panel-placeholder">Diagram source could not be loaded.</p>

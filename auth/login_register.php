@@ -61,13 +61,22 @@ if(isset($_POST['login'])){
                 'samesite' => 'Lax'
             ]);
 
+            // Page this visitor was originally headed for before being sent
+            // to the login screen. Read (and cleared) BEFORE session_write_close(),
+            // or the one-shot clear wouldn't be persisted.
+            $intendedUrl = take_intended_url();
+
             // Ensure session data is written before redirect
             if (function_exists('session_write_close')) {
                 @session_write_close();
             }
 
-            // Redirect developers to Dev Dashboard, others to main dashboard, using base_url for environment compatibility
-            if (isset($_SESSION['role']) && $_SESSION['role'] === 'developer') {
+            // Back to whatever they were trying to reach; otherwise developers
+            // go to the Dev Dashboard and everyone else to the main dashboard,
+            // using base_url for environment compatibility
+            if ($intendedUrl !== null) {
+                header('Location: ' . $intendedUrl);
+            } elseif (isset($_SESSION['role']) && $_SESSION['role'] === 'developer') {
                 header('Location: ' . base_url('/dev/index.php'));
             } else {
                 header('Location: ' . base_url('/pages/dashboard/'));

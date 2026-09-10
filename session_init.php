@@ -92,3 +92,41 @@ if (session_status() === PHP_SESSION_NONE) {
     // update last activity timestamp for inactivity checks
     try { $_SESSION['last_activity'] = time(); } catch (Throwable $e) {}
 }
+
+// ---- Remember where a signed-out visitor was actually headed ----
+// Every page requires this file before running its own auth check, so
+// capturing here covers the whole site at once — no page has to opt in, and
+// each page's existing redirect to the login screen keeps working untouched.
+// Consumed once, after sign-in, by take_intended_url() in partials/url.php.
+if (session_status() === PHP_SESSION_ACTIVE && !isset($_SESSION['email'])) {
+    $hcIsGet = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET';
+
+    // Only real top-level navigations. Sec-Fetch-Dest is absent on older
+    // browsers, so treat "missing" as a navigation and let the path/extension
+    // rules below do the filtering there.
+    $hcDest  = $_SERVER['HTTP_SEC_FETCH_DEST'] ?? '';
+    $hcIsDoc = ($hcDest === '' || $hcDest === 'document')
+        && (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'XMLHttpRequest');
+
+    // Never capture the auth screens themselves (would trap the user in a
+    // loop), the JSON API, or static assets.
+    $hcSkip = $path === ''
+        || preg_match('#^/(PortalSite/)?(auth|api|assets|uploads)/#i', $path)
+        || preg_match('#\.(css|js|map|json|png|jpe?g|gif|svg|ico|webp|woff2?|ttf|eot)$#i', $path);
+
+    if ($hcIsGet && $hcIsDoc && !$hcSkip) {
+        $hcTarget = $path;
+        $hcQuery  = $_SERVER['QUERY_STRING'] ?? '';
+        if ($hcQuery !== '') {
+            $hcTarget .= '?' . $hcQuery;
+        }
+        // Store only a same-site absolute path. Anything starting "//" would
+        // be read by the browser as another origin, so it never gets saved —
+        // that keeps this from becoming an open redirect.
+        if ($hcTarget[0] === '/' && strncmp($hcTarget, '//', 2) !== 0) {
+            $_SESSION['intended_url'] = $hcTarget;
+        }
+    }
+
+    unset($hcIsGet, $hcDest, $hcIsDoc, $hcSkip, $hcTarget, $hcQuery);
+}
