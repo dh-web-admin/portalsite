@@ -1,7 +1,98 @@
-/* engineering Page Styles */
+/* Engineering page styles */
+/* Layout (centered 3-per-row grid, spacing, responsive breakpoints) is
+   inherited as-is from .tiles / .tile in dashboard.css — same as the main
+   dashboard. Here we only change the tile color and the label typography. */
 
-/* This file contains page-specific styles for engineering */
-/* Base styles, admin layout, and dashboard styles are inherited from parent CSS files */
+.eng-tiles .tile {
+  background: #3a4a63;            /* dark slate-blue to carry the white label */
+  border: 1px solid #2f3d52;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, .18);
+}
 
-/* Add any engineering specific overrides or additional styles here */
+.eng-tiles .tile:hover {
+  background: #46597a;
+}
 
+.eng-tiles .tile .tile-label {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 500;              /* present, not heavy */
+  letter-spacing: .3px;
+  line-height: 1.3;
+  color: #ffffff;
+  transition: transform .3s ease;
+}
+
+/* dashboard.css animates ".tile:hover h2"; our label is a <span>, so mirror it */
+.eng-tiles .tile:hover .tile-label {
+  color: #ffffff;
+  transform: translateX(5px);
+}
+
+/* .admin-container sets `text-align: center` globally — keep engineering
+   content (breadcrumb, back button, headings, page content) left-aligned. */
+.main-content {
+  text-align: left;
+}
+
+/* ---------- Top bar: back button + breadcrumb on one line ----------
+   Sticky within .content-area (the actual scrolling container) so it
+   never scrolls out of view. */
+.eng-topbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  background: #ffffff;
+  padding-top: 2px;
+}
+
+.eng-breadcrumb {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin: 0;
+  font-size: 30px;
+  color: #94a3b8;
+}
+
+.eng-breadcrumb a {
+  color: #0f5a8a;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.eng-breadcrumb a:hover { text-decoration: underline; }
+
+.eng-breadcrumb .current { color: #475569; }
+
+.eng-panel-placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.eng-back-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 9px 18px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.eng-back-btn:hover {
+  background: #eef2f7;
+  border-color: #94a3b8;
+}

@@ -1,0 +1,451 @@
+/* Hydraulic Systems feature styles — diagram, all-components list, modal.
+   Loaded only by pages under pages/engineering/hydraulic_system/. Shared
+   engineering chrome (tiles, breadcrumb, back button, panel placeholder)
+   stays in ../style.css and is loaded alongside this file. */
+
+/* ---------- Hydraulic Components interactive diagram ---------- */
+.hc-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.hc-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  background-color: #fafbfc;
+  background-image:
+    linear-gradient(#dfe5ec 1px, transparent 1px),
+    linear-gradient(90deg, #dfe5ec 1px, transparent 1px);
+  background-size: 25px 25px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  /* Zoom/pan moves the SVG's own viewBox, never the stage box itself, so
+     the rest of the page layout never shifts — this just clips the
+     drawing to the frame the way any pannable canvas does. */
+  overflow: hidden;
+}
+
+.hc-svg { cursor: grab; touch-action: none; }
+.hc-stage.hc-panning,
+.hc-stage.hc-panning .hc-svg { cursor: grabbing; }
+
+/* Only shown once the view has actually been zoomed/panned away from the
+   fitted "home" view — hidden via the [hidden] attribute otherwise. */
+.hc-reset-view-btn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font: 600 12.5px "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  padding: 7px 14px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .12);
+  transition: background .15s ease, border-color .15s ease;
+}
+.hc-reset-view-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+
+/* Page-level action buttons, right-aligned in .eng-topbar next to the
+   breadcrumb (e.g. "View all components" / "View Inventory" on the
+   Hydraulic Systems page). */
+.eng-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.eng-action-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 16px;
+  border-radius: 8px;
+  color: #fff;
+  font: 600 13px "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s ease;
+}
+
+.eng-action-btn--components { background: #2f7050; }
+.eng-action-btn--components:hover { background: #285f44; }
+
+.eng-action-btn--inventory { background: #2f5d9f; }
+.eng-action-btn--inventory:hover { background: #274f86; }
+
+/* ---------- All-components list page ---------- */
+.hc-list-wrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+
+.hc-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.hc-list-table th,
+.hc-list-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.hc-list-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  position: sticky;
+  top: 0;
+}
+
+.hc-list-table tbody tr:hover { background: #f8fafc; }
+.hc-list-table tbody tr:last-child td { border-bottom: none; }
+
+/* Manufacturer Description column: fixed width, wraps, clamped to 2 lines */
+.hc-list-table th.hc-col-mfrdesc,
+.hc-list-table td.hc-col-mfrdesc {
+  width: 260px;
+  max-width: 260px;
+  white-space: normal;
+}
+
+.hc-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+/* A data row opens the details/edit modal */
+.hc-data-row { cursor: pointer; }
+.hc-data-row:focus-visible { outline: 2px solid #2f7050; outline-offset: -2px; }
+
+/* Briefly flashed on the row(s) deep-linked from the diagram's side panel
+   (?highlight=<number>) so they're easy to spot in the full list. */
+.hc-data-row.hc-row-highlight {
+  background: #d9f2e3;
+  transition: background 1.6s ease;
+}
+
+.hc-list-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 24px;
+}
+
+/* "+ Add Component" trigger + inline input row */
+.hc-add-trigger-row td { background: #f8fafc; padding: 8px 14px; }
+
+.hc-add-toggle-btn {
+  appearance: none;
+  border: 1px dashed #94a3b8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #2f7050;
+  font: 600 13px "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+}
+.hc-add-toggle-btn:hover { background: #f0fdf6; border-color: #2f7050; }
+
+.hc-add-input-row td {
+  background: #f8fafc;
+  vertical-align: top;
+  padding: 8px 10px;
+}
+
+.hc-add-input-row input {
+  width: 100%;
+  min-width: 70px;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.hc-add-input-row input:focus {
+  outline: none;
+  border-color: #2f7050;
+  box-shadow: 0 0 0 2px rgba(47, 112, 80, .15);
+}
+
+.hc-add-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  white-space: nowrap;
+}
+
+.hc-add-save-btn,
+.hc-add-cancel-btn {
+  appearance: none;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font: 600 12.5px "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  cursor: pointer;
+}
+.hc-add-save-btn { background: #2f7050; color: #fff; }
+.hc-add-save-btn:hover { background: #285f44; }
+.hc-add-save-btn:disabled { background: #94a3b8; cursor: default; }
+.hc-add-cancel-btn { background: #e2e8f0; color: #334155; }
+.hc-add-cancel-btn:hover { background: #cbd5e1; }
+
+.hc-add-error {
+  background: #fef2f2;
+  color: #b42318;
+  font-size: 13px;
+  padding: 8px 14px;
+}
+
+/* ---------- Component details / edit modal ---------- */
+.hc-modal-overlay {
+  /* explicit default so this beats the UA [hidden] rule the same way our
+     own override below needs to beat it — display:flex only applies via
+     the :not([hidden]) rule, so the `hidden` attribute is always respected */
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .45);
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 20px;
+  overflow-y: auto;
+  z-index: 1001; /* .welcome-section header is a fixed bar at z-index:1000 */
+}
+.hc-modal-overlay:not([hidden]) { display: flex; }
+
+.hc-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 720px;
+  box-shadow: 0 20px 50px -12px rgba(15, 23, 42, .35);
+}
+
+.hc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.hc-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hc-modal-close {
+  appearance: none;
+  border: none;
+  background: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+.hc-modal-close:hover { color: #334155; }
+
+.hc-modal-body { padding: 20px 22px; }
+
+.hc-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 16px;
+}
+
+.hc-modal-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.hc-modal-full { grid-column: 1 / -1; }
+
+.hc-modal-grid input,
+.hc-modal-grid textarea {
+  font: 400 14px/1.4 "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.hc-modal-grid input:focus,
+.hc-modal-grid textarea:focus {
+  outline: none;
+  border-color: #2f7050;
+  box-shadow: 0 0 0 2px rgba(47, 112, 80, .15);
+}
+.hc-modal-grid input[readonly],
+.hc-modal-grid textarea[readonly] {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.hc-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 22px;
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .hc-modal-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.hc-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Always fit the viewport — scale down instead of overflowing/clipping.
+     preserveAspectRatio="xMidYMin meet" keeps the whole drawing visible.
+     This calc() is only a pre-JS fallback; _hc_diagram.php measures the
+     real available space (stage position, window height) and sets an
+     exact inline max-height, kept in sync on resize. */
+  max-height: calc(100vh - var(--admin-header-h, 100px) - 140px);
+}
+
+.hc-detail {
+  flex: 0 0 320px;
+  align-self: stretch;
+  min-height: 240px;
+  max-height: calc(100vh - var(--admin-header-h, 100px) - 40px);
+  overflow-y: auto;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 20px;
+  position: sticky;
+  top: 12px;
+}
+
+.hc-detail-empty { color: #94a3b8; font-style: italic; line-height: 1.5; }
+.hc-detail-head {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+}
+.hc-detail-body { color: #475569; line-height: 1.55; }
+.hc-detail-empty-msg { color: #94a3b8; font-style: italic; }
+
+/* Component group panel: one card per part sharing the selected component's
+   leading number (e.g. 8, 8a, 8b, 8c), rather than a plain table. */
+.hc-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hc-group-card {
+  display: block;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.hc-group-card:hover,
+.hc-group-card:focus-visible {
+  border-color: #2f7050;
+  box-shadow: 0 0 0 2px rgba(47, 112, 80, .12);
+}
+
+.hc-group-card-top {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hc-group-card-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #2f7050;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.hc-group-card-items {
+  margin-top: 6px;
+}
+
+.hc-group-card-desc {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.hc-group-card-mfrdesc {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.hc-group-card-sep {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px dashed #e2e8f0;
+}
+
+/* --- interaction: hovering a component dims every OTHER component
+       (opacity only); at rest every component is fully visible. The real
+       SVG carries its own colours/strokes, so we only touch opacity here. --- */
+.hc-piece { transition: opacity .12s ease; }  /* cursor set in JS on interactive pieces only */
+.hc-piece.hc-dim { opacity: .16; }
+.hc-piece:focus-visible { outline: none; }
+
+/* callout markers (component numbers + leader lines) — hidden until hover
+   or click; visibility (not display) keeps their geometry measurable for
+   auto-fit while hidden. */
+.hc-label-item { visibility: hidden; cursor: pointer; }
+
+@media (max-width: 860px) {
+  .hc-layout { flex-direction: column; }
+  .hc-detail { flex-basis: auto; width: 100%; position: static; }
+}
