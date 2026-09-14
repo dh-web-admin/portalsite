@@ -3,6 +3,29 @@
    engineering chrome (tiles, breadcrumb, back button, panel placeholder)
    stays in ../style.css and is loaded alongside this file. */
 
+/* Small "Saved" confirmation toast (Inventory page auto-saves). Hidden via
+   opacity/transform, not [hidden], so the fade transition can animate it. */
+.hc-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2000;
+  background: #1f2937;
+  color: #ffffff;
+  font: 600 13px "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  padding: 9px 16px;
+  border-radius: 8px;
+  box-shadow: 0 10px 24px -8px rgba(15, 23, 42, .4);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .18s ease, transform .18s ease;
+  pointer-events: none;
+}
+.hc-toast.hc-toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* ---------- Hydraulic Components interactive diagram ---------- */
 .hc-layout {
   display: flex;
@@ -141,8 +164,9 @@
 
 .hc-list-table th,
 .hc-list-table td {
-  padding: 10px 14px;
+  padding: 7px 12px;
   text-align: left;
+  vertical-align: top;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -165,6 +189,15 @@
 .hc-list-table td.hc-col-mfrdesc {
   width: 260px;
   max-width: 260px;
+  white-space: normal;
+}
+
+/* Description column (Inventory page) — same wrap/clamp treatment, its own
+   (narrower) width since it's typically the shorter of the two fields. */
+.hc-list-table th.hc-col-desc,
+.hc-list-table td.hc-col-desc {
+  width: 180px;
+  max-width: 180px;
   white-space: normal;
 }
 
@@ -194,6 +227,259 @@
   font-style: italic;
   padding: 24px;
 }
+
+/* ---------- Inventory page ---------- */
+/* "Suppliers" spans Supplier/Unit Price/Total Price/Action as a two-row
+   header. Manufacturer's Description reuses the All Components page's own
+   fixed-width, 2-line-clamped column (.hc-col-mfrdesc / .hc-clamp-2 above)
+   for identical wrapping behavior on both tables.
+
+   This table (unlike the shared .hc-list-table default) is NOT stretched
+   to 100% width — with auto table-layout, forcing a mostly-narrow-content
+   table to fill a wide viewport makes the browser pad out whichever
+   columns aren't otherwise constrained, showing up as visible empty gaps
+   between columns rather than one gap at the end. table-layout: fixed +
+   an explicit <colgroup> (in the markup) makes every column exactly as
+   wide as its content actually needs and nothing more; the wrapper below
+   then shrinks to match so there's no leftover space past the table either. */
+.hc-inv-table {
+  width: auto;
+  table-layout: fixed;
+}
+.hc-inv-wrap {
+  width: fit-content;
+  max-width: 100%;
+  /* A sticky <th> sticks to its nearest scrolling ancestor — .hc-list-wrap's
+     overflow-x:auto alone made this element THAT ancestor (any axis other
+     than the default "visible" turns it into one), but with no height cap
+     it never actually scrolled, so the header just scrolled away with the
+     page instead of sticking. Giving it its own bounded, scrolling region
+     (height set in JS, to the real remaining viewport space) is what makes
+     the header actually stay put while the rows scroll underneath it. */
+  overflow-y: auto;
+}
+
+.hc-inv-table th.hc-inv-subhead {
+  position: sticky;
+  top: 0; /* overridden inline (real measured height of the row above it) */
+}
+
+.hc-supplier-group-header { text-align: center; }
+
+/* Suppliers reads as its own table attached to the right of the part-level
+   columns: a stronger divider, plus a consistent light tint across its own
+   header AND every body cell (not just its first column), so the whole
+   block — not just a thin line — separates from Part Number/Description/
+   Inventory/Needed while still sharing every row. */
+.hc-supplier-group-header,
+.hc-supplier-divider,
+.hc-inv-table td.hc-supplier-name-cell,
+.hc-inv-table td.hc-supplier-empty {
+  border-left: 2px solid #b8c2cf;
+}
+
+/* Row 2 of the header is exclusively the 5 Suppliers sub-headers (Part
+   Number/Description/etc are rowspan'd from row 1), so it — and row 1's
+   "Suppliers" cell — get a faintly deeper tint than the rest of the
+   header, carrying the same "separate panel" look all the way to the top. */
+.hc-supplier-group-header,
+.hc-inv-table thead tr:last-child th {
+  background: #f1f4f8;
+}
+
+.hc-inv-table td.hc-supplier-name-cell,
+.hc-inv-table td.hc-supplier-price-cell,
+.hc-inv-table td.hc-supplier-qty-cell,
+.hc-inv-table td.hc-supplier-total-cell,
+.hc-inv-table td.hc-supplier-action-cell,
+.hc-inv-table td.hc-supplier-empty {
+  background: #fafbfc;
+}
+/* the generic row-hover background is set on <tr>, but these cells paint
+   their own background over it — restore the hover feedback with a
+   slightly deeper version of the same tint instead of losing it. */
+.hc-inv-table tbody tr:hover td.hc-supplier-name-cell,
+.hc-inv-table tbody tr:hover td.hc-supplier-price-cell,
+.hc-inv-table tbody tr:hover td.hc-supplier-qty-cell,
+.hc-inv-table tbody tr:hover td.hc-supplier-total-cell,
+.hc-inv-table tbody tr:hover td.hc-supplier-action-cell,
+.hc-inv-table tbody tr:hover td.hc-supplier-empty {
+  background: #f1f4f8;
+}
+
+/* Inventory + Needed sit directly next to each other — no cell padding
+   between them — while keeping normal padding on every other side. */
+.hc-inv-table td.hc-inv-cell,
+.hc-inv-table th.hc-inv-cell {
+  padding-right: 4px;
+}
+.hc-inv-table td.hc-inv-needed,
+.hc-inv-table th.hc-inv-needed {
+  padding-left: 4px;
+}
+
+.hc-inv-input {
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
+  width: 56px;
+}
+.hc-inv-input:focus {
+  outline: none;
+  border-color: #2f7050;
+  box-shadow: 0 0 0 2px rgba(47, 112, 80, .15);
+}
+.hc-inv-input.hc-inv-saving { border-color: #94a3b8; background: #f8fafc; }
+.hc-inv-input.hc-inv-error { border-color: #b42318; background: #fef2f2; }
+
+/* Needed shows "remaining | total" — only the remaining-shortfall number
+   flags red/bold when it's still > 0; the constant total stays neutral. */
+.hc-inv-needed { color: #64748b; }
+.hc-inv-needed .hc-inv-remaining { color: #334155; font-weight: 600; }
+.hc-inv-needed.hc-inv-short .hc-inv-remaining {
+  color: #b42318;
+  font-weight: 700;
+}
+
+/* ---- Suppliers — deliberately tighter than the rest of the table so
+   several supplier rows for one part don't eat vertical space; a part can
+   have quite a few, and this section is where you're most likely to be
+   entering several rows in a row. ---- */
+.hc-inv-table td.hc-supplier-name-cell,
+.hc-inv-table td.hc-supplier-price-cell,
+.hc-inv-table td.hc-supplier-qty-cell,
+.hc-inv-table td.hc-supplier-total-cell,
+.hc-inv-table td.hc-supplier-action-cell,
+.hc-inv-table td.hc-supplier-empty {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+.hc-inv-table td.hc-supplier-action-cell,
+.hc-inv-table th:last-child {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* "× N" between Unit Price and Total Price — N is the same live "still
+   needed" quantity shown in the Needed column, so it's clear what Total
+   Price is actually multiplying and why it moves when Inventory does. */
+.hc-inv-table td.hc-supplier-qty-cell,
+.hc-inv-table th.hc-supplier-qty-cell {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.hc-supplier-qty-cell {
+  color: #94a3b8;
+  font-size: 12.5px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hc-supplier-empty {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 13px;
+}
+
+.hc-supplier-name-input,
+.hc-supplier-price-input,
+.hc-supplier-add-name,
+.hc-supplier-add-price {
+  box-sizing: border-box;
+  padding: 4px 7px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+.hc-supplier-name-input:focus,
+.hc-supplier-price-input:focus,
+.hc-supplier-add-name:focus,
+.hc-supplier-add-price:focus {
+  outline: none;
+  border-color: #2f7050;
+  box-shadow: 0 0 0 2px rgba(47, 112, 80, .15);
+}
+.hc-supplier-name-input.hc-inv-saving,
+.hc-supplier-price-input.hc-inv-saving { border-color: #94a3b8; background: #f8fafc; }
+.hc-supplier-name-input.hc-inv-error,
+.hc-supplier-price-input.hc-inv-error { border-color: #b42318; background: #fef2f2; }
+
+.hc-supplier-name-input,
+.hc-supplier-add-name { width: 100%; min-width: 100px; }
+.hc-supplier-price-input,
+.hc-supplier-add-price { width: 80px; }
+
+/* When a part has 2+ suppliers, only the cheapest one's row stays
+   visible — this sits under its name input, toggling the rest in/out. */
+.hc-supplier-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.hc-supplier-toggle-btn {
+  align-self: flex-start;
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  color: #2f5d9f;
+  font: 600 11.5px "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  cursor: pointer;
+}
+.hc-supplier-toggle-btn:hover { text-decoration: underline; }
+
+.hc-supplier-total-cell {
+  width: 80px;
+  max-width: 80px;
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
+}
+.hc-supplier-total-placeholder { color: #94a3b8; font-weight: 400; }
+
+/* Action column: up to two controls side by side — × (remove/cancel) is
+   always rightmost; + (add another, primary row only) or ✓ (save, while
+   editing / on a draft row) sits to its left when present. */
+.hc-supplier-action-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.hc-supplier-remove-btn,
+.hc-supplier-add-btn,
+.hc-supplier-confirm-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+button.hc-supplier-remove-btn,
+button.hc-supplier-add-btn,
+button.hc-supplier-confirm-btn { cursor: pointer; }
+
+.hc-supplier-remove-btn { color: #94a3b8; }
+.hc-supplier-remove-btn:hover { color: #b42318; background: #fef2f2; }
+.hc-supplier-add-btn { color: #2f7050; font-weight: 700; }
+.hc-supplier-add-btn:hover { background: #f0fdf6; }
+.hc-supplier-add-btn:disabled { color: #cbd5e1; cursor: default; }
+.hc-supplier-confirm-btn { color: #2f7050; font-weight: 700; }
+button.hc-supplier-confirm-btn:hover { background: #f0fdf6; }
 
 /* "+ Add Component" trigger + inline input row */
 .hc-add-trigger-row td { background: #f8fafc; padding: 8px 14px; }
