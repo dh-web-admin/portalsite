@@ -318,6 +318,12 @@
   padding-left: 4px;
 }
 
+.hc-inv-cell-inner {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .hc-inv-input {
   box-sizing: border-box;
   padding: 6px 8px;
@@ -335,6 +341,38 @@
 }
 .hc-inv-input.hc-inv-saving { border-color: #94a3b8; background: #f8fafc; }
 .hc-inv-input.hc-inv-error { border-color: #b42318; background: #fef2f2; }
+
+/* ✓ (save) / × (cancel) next to the Inventory field — hidden until the
+   value actually differs from what's saved, same "unsaved edit" signal as
+   the supplier rows' ✓ indicator, but clickable here. */
+.hc-inv-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.hc-inv-actions.hc-inv-actions-visible { display: inline-flex; }
+
+.hc-inv-confirm-btn,
+.hc-inv-cancel-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.hc-inv-confirm-btn { color: #2f7050; font-weight: 700; }
+.hc-inv-confirm-btn:hover { background: #f0fdf6; }
+.hc-inv-cancel-btn { color: #94a3b8; }
+.hc-inv-cancel-btn:hover { color: #b42318; background: #fef2f2; }
 
 /* Needed shows "remaining | total" — only the remaining-shortfall number
    flags red/bold when it's still > 0; the constant total stays neutral. */

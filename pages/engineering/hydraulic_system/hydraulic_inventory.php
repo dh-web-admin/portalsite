@@ -184,8 +184,8 @@ usort($parts, function ($a, $b) {
               <colgroup>
                 <col style="width: 170px">
                 <col style="width: 180px">
-                <col style="width: 260px">
-                <col style="width: 72px">
+                <col style="width: 214px">
+                <col style="width: 118px">
                 <col style="width: 82px">
                 <col style="width: 180px">
                 <col style="width: 104px">
@@ -248,11 +248,17 @@ usort($parts, function ($a, $b) {
                         <td rowspan="<?php echo $rowCount; ?>" class="hc-col-mfrdesc"><span class="hc-clamp-2"><?php echo hc_inv_fmt($p['display_desc']); ?></span></td>
                         <td rowspan="<?php echo $rowCount; ?>" class="hc-inv-cell">
                           <?php if ($hasEditPermission): ?>
-                            <input type="number" class="hc-inv-input" min="0" step="1"
-                                   value="<?php echo (int) $p['on_hand']; ?>"
-                                   data-part-key="<?php echo hc_inv_fmt($p['part_key']); ?>"
-                                   data-total="<?php echo $total; ?>"
-                                   aria-label="Inventory on hand for <?php echo hc_inv_fmt($labelFor); ?>">
+                            <div class="hc-inv-cell-inner">
+                              <input type="number" class="hc-inv-input" min="0" step="1"
+                                     value="<?php echo (int) $p['on_hand']; ?>"
+                                     data-part-key="<?php echo hc_inv_fmt($p['part_key']); ?>"
+                                     data-total="<?php echo $total; ?>"
+                                     aria-label="Inventory on hand for <?php echo hc_inv_fmt($labelFor); ?>">
+                              <span class="hc-inv-actions">
+                                <button type="button" class="hc-inv-confirm-btn" title="Save" aria-label="Save">&check;</button>
+                                <button type="button" class="hc-inv-cancel-btn" title="Cancel" aria-label="Cancel">&times;</button>
+                              </span>
+                            </div>
                           <?php else: ?>
                             <?php echo (int) $p['on_hand']; ?>
                           <?php endif; ?>
@@ -449,6 +455,9 @@ usort($parts, function ($a, $b) {
         var neededCell = row ? row.querySelector('.hc-inv-needed') : null;
         var remainingEl = neededCell ? neededCell.querySelector('.hc-inv-remaining') : null;
         var total = parseInt(input.getAttribute('data-total'), 10) || 0;
+        var actions = input.parentNode.querySelector('.hc-inv-actions');
+        var confirmBtn = actions ? actions.querySelector('.hc-inv-confirm-btn') : null;
+        var cancelBtn = actions ? actions.querySelector('.hc-inv-cancel-btn') : null;
 
         function updateNeededDisplay() {
           var onHand = Math.max(0, parseInt(input.value, 10) || 0);
@@ -458,12 +467,24 @@ usort($parts, function ($a, $b) {
           updateSupplierTotals(partKey);
         }
 
-        input.addEventListener('input', updateNeededDisplay);
+        // The ✓/× pair only appears once the field's value actually
+        // differs from what's saved — same "you've made an unsaved edit"
+        // signal as the supplier rows' ✓ indicator, but here it's
+        // clickable: ✓ saves immediately, × reverts without saving.
+        function updateDirtyState() {
+          if (actions) { actions.classList.toggle('hc-inv-actions-visible', input.value !== lastSaved); }
+        }
+
+        input.addEventListener('input', function () {
+          updateNeededDisplay();
+          updateDirtyState();
+        });
 
         function save() {
           var value = String(Math.max(0, parseInt(input.value, 10) || 0));
           input.value = value;
           updateNeededDisplay();
+          updateDirtyState();
 
           if (value === lastSaved) { return; }
 
@@ -482,6 +503,7 @@ usort($parts, function ($a, $b) {
               input.classList.remove('hc-inv-saving');
               if (data && data.success) {
                 lastSaved = value;
+                updateDirtyState();
                 window.hcShowToast('Saved');
               } else {
                 input.classList.add('hc-inv-error');
@@ -498,7 +520,27 @@ usort($parts, function ($a, $b) {
         input.addEventListener('blur', save);
         input.addEventListener('keydown', function (e) {
           if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+          if (e.key === 'Escape' && cancelBtn) { e.preventDefault(); cancelBtn.click(); }
         });
+
+        // mousedown (not click) on either button would otherwise blur the
+        // input first — firing save() with whatever value is currently
+        // there before our own handler runs. Blocking that default is what
+        // lets × truly cancel instead of saving-then-reverting-the-display.
+        [confirmBtn, cancelBtn].forEach(function (btn) {
+          if (btn) { btn.addEventListener('mousedown', function (e) { e.preventDefault(); }); }
+        });
+
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', function () { save(); });
+        }
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', function () {
+            input.value = lastSaved;
+            updateNeededDisplay();
+            updateDirtyState();
+          });
+        }
       });
 
       // ---------- Supplier rows: name / unit price, editable in place.
