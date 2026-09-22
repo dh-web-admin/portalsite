@@ -1231,6 +1231,37 @@
   font-weight: 700;
 }
 
+.scheduling-page .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.scheduling-page .icon-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.scheduling-page .danger-icon-btn {
+  border: 1px solid #ecb6b1;
+  background: #fdeeee;
+  color: #cb3e34;
+}
+
+.scheduling-page .danger-icon-btn:hover:not(:disabled) {
+  background: #f9dcda;
+}
+
+.scheduling-page .danger-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .scheduling-page .decision-modal-card {
   width: min(500px, 100%);
   border-radius: 14px;

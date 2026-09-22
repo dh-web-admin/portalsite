@@ -1051,7 +1051,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
   <link rel="stylesheet" href="../../assets/css/base.css" />
   <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260323e" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
-  <link rel="stylesheet" href="style.css?v=20260922-coordinates" />
+  <link rel="stylesheet" href="style.css?v=20260922-delete-btn" />
   <style>
     /* Auto-save status indicator (replaces the old Save Changes button) */
     .autosave-indicator {
@@ -1848,6 +1848,9 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
       <div class="add-project-right">
         <div class="modal-head">
           <div class="modal-head-actions">
+            <button type="button" class="icon-btn danger-icon-btn" id="deleteProjectDetailsBtn" aria-label="Delete project" title="Delete project">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
+            </button>
             <button type="button" class="secondary-btn edit-crew-equipment-btn" id="openCrewEquipmentFromProjectDetails">Edit Crew/Equipment</button>
             <button type="button" class="secondary-btn project-details-print-btn" id="printProjectDetailsBtn">Print</button>
             <button type="button" class="secondary-btn project-details-post-btn" id="postProjectDetailsBtn">Post</button>
@@ -2992,6 +2995,7 @@ var crewEquipmentModal = document.getElementById('crewEquipmentModal');
 var closeCrewEquipmentModal = document.getElementById('closeCrewEquipmentModal');
 var saveCrewEquipmentAndReturn = document.getElementById('saveCrewEquipmentAndReturn');
 var openCrewEquipmentFromProjectDetails = document.getElementById('openCrewEquipmentFromProjectDetails');
+var deleteProjectDetailsBtn = document.getElementById('deleteProjectDetailsBtn');
 var activeProjectDetailsProject = null;
 var activeProjectDetailsDay = '';
 var editProjectDetailsOriginalDates = [];
@@ -4215,6 +4219,47 @@ var activeCrewEquipmentDay = '';
           var day = activeProjectDetailsDay;
           closeProjectDetailsModalFn();
           openCrewEquipmentModal(project, day);
+        });
+      }
+      if (deleteProjectDetailsBtn) {
+        deleteProjectDetailsBtn.addEventListener('click', async function () {
+          if (!activeProjectDetailsProject) {
+            return;
+          }
+          var projectId = activeProjectDetailsProject.project_id;
+          var projectName = activeProjectDetailsProject.project_name || 'this project';
+
+          var shouldDelete = await showDecisionModal({
+            title: 'Delete Project',
+            message: 'Delete "' + projectName + '"? This removes it from the scheduling calendar and cannot be undone.',
+            confirmText: 'Delete Project',
+            cancelText: 'Cancel',
+            showCancel: true,
+            fallbackValue: false
+          });
+          if (!shouldDelete) {
+            return;
+          }
+
+          deleteProjectDetailsBtn.disabled = true;
+          try {
+            var result = await deleteScheduledProject(projectId);
+            if (!result.ok || !result.data || !result.data.success) {
+              throw new Error('Delete failed');
+            }
+            scheduledProjects = scheduledProjects.filter(function (p) {
+              return Number(p.project_id) !== Number(projectId);
+            });
+            delete projectById[String(projectId)];
+            closeProjectDetailsModalFn();
+            if (typeof rerenderProjects === 'function') {
+              rerenderProjects();
+            }
+          } catch (e) {
+            showInfoModal('Unable To Delete', 'Unable to delete project right now.');
+          } finally {
+            deleteProjectDetailsBtn.disabled = false;
+          }
         });
       }
       if (projectDetailsModal) {
