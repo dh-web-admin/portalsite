@@ -842,6 +842,40 @@
   margin-top: 11px;
 }
 
+.scheduling-page .coordinates-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.scheduling-page .coordinates-input-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scheduling-page .locate-map-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  background: #f5f7fc;
+  border: 1px solid #c9d7ef;
+  border-radius: 8px;
+  color: #2f4161;
+  cursor: pointer;
+  padding: 0;
+}
+
+.scheduling-page .locate-map-btn:hover {
+  background: #e8eefb;
+}
+
+.scheduling-page .locate-map-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .scheduling-page .project-status-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

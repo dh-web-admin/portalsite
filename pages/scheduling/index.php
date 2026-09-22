@@ -88,11 +88,16 @@ if (!isset($projectColumns['details'])) {
   $conn->query("ALTER TABLE scheduled_projects ADD COLUMN details TEXT NULL");
   $projectColumns['details'] = true;
 }
+// Ensure project_coordinates column exists for older schemas
+if (!isset($projectColumns['project_coordinates'])) {
+  $conn->query("ALTER TABLE scheduled_projects ADD COLUMN project_coordinates VARCHAR(120) NULL");
+  $projectColumns['project_coordinates'] = true;
+}
 
 // Optional project-detail columns (Project Information / Owner / Accommodation /
 // General Contractor). Only the ones that exist in the table are read/written.
 $projectMetaTextColumns = array_values(array_filter([
-  'project_address', 'project_city', 'project_state',
+  'project_address', 'project_city', 'project_state', 'project_coordinates',
   'hotel_name', 'hotel_address', 'hotel_confirmation', 'hotel_phone',
   'owner_name', 'owner_email', 'owner_address', 'owner_contact_name', 'owner_phone',
   'contractor_name', 'contractor_email', 'contractor_address', 'contractor_contact_name', 'contractor_phone',
@@ -751,6 +756,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['act
       ['source' => 'Bid Tracking', 'value' => $bl['project_state'] ?? ''],
       ['source' => 'Project Checklist', 'value' => $cl['state'] ?? ''],
     ]);
+    $fields['project_coordinates'] = $mkField([['source' => 'Bid Tracking', 'value' => $bl['project_coordinates'] ?? '']]);
     $fields['contractor_name']   = $mkField([
       ['source' => 'Bid Tracking (winning contractor)', 'value' => $gcName],
       ['source' => 'Project Checklist (Client)', 'value' => $cl['client'] ?? ''],
@@ -1045,7 +1051,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
   <link rel="stylesheet" href="../../assets/css/base.css" />
   <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260323e" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
-  <link rel="stylesheet" href="style.css?v=20260922-notes-images" />
+  <link rel="stylesheet" href="style.css?v=20260922-coordinates" />
   <style>
     /* Auto-save status indicator (replaces the old Save Changes button) */
     .autosave-indicator {
@@ -1716,6 +1722,15 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
               <input id="projectAddress" name="project_address" form="addProjectForm" type="text" placeholder="Project address" aria-label="Address" />
             </div>
 
+            <div class="project-field-group">
+              <div class="coordinates-input-row">
+                <input id="projectCoordinates" name="project_coordinates" form="addProjectForm" type="text" placeholder="Coordinates (lat, lng)" aria-label="Coordinates" />
+                <button type="button" class="locate-map-btn" id="addProjectLocateBtn" aria-label="Open in Google Maps" title="Open in Google Maps">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+                </button>
+              </div>
+            </div>
+
             <div class="project-information-location">
               <div class="project-field-group">
                 <input id="projectCity" name="project_city" form="addProjectForm" type="text" placeholder="City" aria-label="City" />
@@ -1846,6 +1861,15 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
 
             <div class="project-field-group">
               <input id="editProjectAddress" type="text" placeholder="Project address" aria-label="Address" />
+            </div>
+
+            <div class="project-field-group">
+              <div class="coordinates-input-row">
+                <input id="editProjectCoordinates" type="text" placeholder="Coordinates (lat, lng)" aria-label="Coordinates" />
+                <button type="button" class="locate-map-btn" id="editProjectLocateBtn" aria-label="Open in Google Maps" title="Open in Google Maps">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-7.58 7-12a7 7 0 1 0-14 0c0 4.42 7 12 7 12z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+                </button>
+              </div>
             </div>
 
             <div class="project-information-location">
@@ -2102,6 +2126,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
         project_address:   { id: 'projectAddress',   label: 'Project Address' },
         project_city:      { id: 'projectCity',      label: 'City' },
         project_state:     { id: 'projectState',     label: 'State' },
+        project_coordinates: { id: 'projectCoordinates', label: 'Coordinates' },
         contractor_name:   { id: 'contractorName',   label: 'Contractor Name' },
         contractor_email:  { id: 'contractorEmail',  label: 'Contractor Email' },
         contractor_address:{ id: 'contractorAddress', label: 'Contractor Address' },
@@ -3017,6 +3042,7 @@ var activeCrewEquipmentDay = '';
         { col: 'project_address',         editId: 'editProjectAddress',    type: 'text' },
         { col: 'project_city',            editId: 'editProjectCity',       type: 'text' },
         { col: 'project_state',           editId: 'editProjectState',      type: 'text' },
+        { col: 'project_coordinates',     editId: 'editProjectCoordinates', type: 'text' },
         { col: 'taxable',                 toggle: 'edit-taxable',          type: 'bool' },
         { col: 'certified',               toggle: 'edit-certified',        type: 'bool' },
         { col: 'permit',                  toggle: 'edit-permit',           type: 'bool' },
@@ -3937,6 +3963,7 @@ var activeCrewEquipmentDay = '';
               ['Address', fv(meta.project_address)],
               ['City', fv(meta.project_city)],
               ['State', fv(meta.project_state)],
+              ['Coordinates', fv(meta.project_coordinates)],
               ['Taxable', bv(meta.taxable)],
               ['Certified', bv(meta.certified)],
               ['Permit', bv(meta.permit)]
@@ -5463,6 +5490,31 @@ var activeCrewEquipmentDay = '';
         galleryId: 'detailsNotesImageGallery',
         statusId: 'detailsNotesImagesStatus'
       });
+
+      // "Locate" buttons next to the coordinates fields — open the pinned
+      // lat/lng (or, failing that, whatever text is in the field) on Google Maps.
+      function openCoordinatesOnMap(inputId) {
+        var el = document.getElementById(inputId);
+        var raw = el ? String(el.value || '').trim() : '';
+        if (!raw) {
+          alert('Enter coordinates first.');
+          return;
+        }
+        var parts = raw.split(',');
+        var query = raw;
+        if (parts.length === 2 && !isNaN(Number(parts[0])) && !isNaN(Number(parts[1]))) {
+          query = parts[0].trim() + ',' + parts[1].trim();
+        }
+        window.open('https://www.google.com/maps?q=' + encodeURIComponent(query), '_blank', 'noopener');
+      }
+      var addProjectLocateBtn = document.getElementById('addProjectLocateBtn');
+      if (addProjectLocateBtn) {
+        addProjectLocateBtn.addEventListener('click', function () { openCoordinatesOnMap('projectCoordinates'); });
+      }
+      var editProjectLocateBtn = document.getElementById('editProjectLocateBtn');
+      if (editProjectLocateBtn) {
+        editProjectLocateBtn.addEventListener('click', function () { openCoordinatesOnMap('editProjectCoordinates'); });
+      }
     })();
   </script>
 </body>
