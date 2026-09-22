@@ -16,7 +16,7 @@ $isProduction = getenv('RAILWAY_ENVIRONMENT') !== false;
 $host = 'localhost';
 $user = 'root';
 $password = '';
-$database = 'dhdatabase';
+$database = 'railway';
 $port = 3306;
 
 if ($isProduction) {

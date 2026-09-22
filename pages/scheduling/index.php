@@ -45,6 +45,17 @@ $conn->query('CREATE TABLE IF NOT EXISTS scheduled_project_details (
     REFERENCES scheduled_projects(project_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
+require_once __DIR__ . '/../../partials/project_uploads.php';
+project_uploads_ensure_schema($conn);
+// Images staged in the "Add Project" modal hang on this key until the project exists.
+$noteUploadDraftKey = bin2hex(random_bytes(12));
+project_uploads_purge_stale_drafts($conn);
+
+// URL prefix the app is mounted on ('' in production, '/portalsite' under XAMPP),
+// so /api and /uploads links resolve in both environments.
+$appBaseUrl = preg_replace('#/pages/scheduling/[^/]*$#', '', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+if ($appBaseUrl === '/') { $appBaseUrl = ''; }
+
 $startColumnSql = '`start`';
 $endColumnSql = '`end`';
 $projectColumns = [];
@@ -403,6 +414,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
   }
 
   try {
+    // The upload rows go with the project (FK cascade); drop their files too.
+    foreach (project_uploads_list($conn, $projectId) as $noteImage) {
+      project_uploads_unlink((string)$noteImage['filename']);
+    }
+
     $stmtDelete = $conn->prepare('DELETE FROM scheduled_projects WHERE project_id = ? LIMIT 1');
     if (!$stmtDelete) {
       throw new Exception('Unable to prepare delete');
@@ -923,6 +939,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
       }
       $detailsStmt->close();
 
+      // Adopt any note images that were staged before the project existed.
+      $draftKeyPosted = trim((string)($_POST['upload_draft_key'] ?? ''));
+      if ($draftKeyPosted !== '') {
+        project_uploads_claim_draft($conn, $draftKeyPosted, $projectId);
+      }
+
       $conn->commit();
       header('Location: ' . $_SERVER['REQUEST_URI']);
       exit();
@@ -976,7 +998,7 @@ $projectMetaSelectSql = '';
 foreach ($projectMetaAllColumns as $mc) {
   $projectMetaSelectSql .= ', sp.`' . $mc . '` AS `' . $mc . '`';
 }
- $projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel, COALESCE(sp.exclude_weekends, 0) AS exclude_weekends, COALESCE(sp.location, "") AS location, COALESCE(sp.details, "") AS details' . $projectMetaSelectSql . ' FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id AND spd.`day` = DATE(sp.' . $startColumnSql . ') ORDER BY sp.' . $startColumnSql . ' ASC';
+ $projectsSql = 'SELECT sp.project_id, sp.project_name, sp.' . $startColumnSql . ' AS `start`, sp.' . $endColumnSql . ' AS `end`, COALESCE(spd.equipments, "") AS equipments, COALESCE(spd.personnel, "") AS personnel, COALESCE(sp.exclude_weekends, 0) AS exclude_weekends, COALESCE(sp.location, "") AS location, COALESCE(sp.details, "") AS details, COALESCE(sp.note_image_urls, "") AS note_image_urls' . $projectMetaSelectSql . ' FROM scheduled_projects sp LEFT JOIN scheduled_project_details spd ON spd.project_id = sp.project_id AND spd.`day` = DATE(sp.' . $startColumnSql . ') ORDER BY sp.' . $startColumnSql . ' ASC';
 $projectsRes = $conn->query($projectsSql);
 if ($projectsRes) {
   while ($row = $projectsRes->fetch_assoc()) {
@@ -1103,24 +1125,85 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
     #crewEquipmentModal .modal-head-actions { display: flex; align-items: center; gap: 8px; }
     #crewEquipmentModal .crew-save-return-btn { white-space: nowrap; }
 
-    /* Project Details / Add Project modals: header action buttons next to the X */
+    /* Project Details / Add Project modals: header action buttons next to the X.
+       This row must stay on a single line at every width — the buttons scale
+       down with the viewport instead of wrapping the X onto a second row. */
     #projectDetailsModal .add-project-right .modal-head,
     #addProjectModal .add-project-right .modal-head {
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 8px;
       justify-content: flex-end;
       min-height: 40px;
+      /* Pinned to the top of this column so scrolling the fields below never
+         moves the buttons. The shadow paints over the column's top padding,
+         which a sticky element does not cover on its own. */
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: #f7f9fc;
+      padding-bottom: 10px;
+      box-shadow: 0 -32px 0 #f7f9fc;
     }
     #projectDetailsModal .modal-head-actions,
     #addProjectModal .modal-head-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
+      gap: clamp(2px, 0.28vw, 8px);
+      flex-wrap: nowrap;
       justify-content: flex-end;
+      width: 100%;
+      min-width: 0;
     }
     #projectDetailsModal .modal-head-actions .secondary-btn,
-    #addProjectModal .modal-head-actions .secondary-btn { white-space: nowrap; }
+    #addProjectModal .modal-head-actions .secondary-btn {
+      white-space: nowrap;
+      min-width: 0;
+      flex: 0 1 auto;
+      /* Type and padding shrink with the viewport so the full labels keep fitting
+         on one line; the 3-column layout leaves this column ~264px at its
+         narrowest, which is what the lower bounds are sized for. */
+      font-size: clamp(0.5rem, 0.64vw, 0.84rem);
+      padding: 9px clamp(3px, 0.42vw, 12px);
+      /* Last-resort guard so a long label can never force a wrap. */
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* The close button is a fixed 34px box by default, so it is the one item
+       that cannot give back space when the row gets tight. */
+    #projectDetailsModal .modal-head-actions .modal-close-btn,
+    #addProjectModal .modal-head-actions .modal-close-btn {
+      flex: 0 0 auto;
+      width: clamp(26px, 2.2vw, 34px);
+      height: clamp(26px, 2.2vw, 34px);
+      padding: 0;
+      font-size: clamp(0.56rem, 0.66vw, 0.86rem);
+    }
+    /* Tightest band: the 3-column grid is at its minimum track widths here, so
+       this column is at its narrowest while the modal is still 3 columns wide.
+       Trim spacing only here — wider screens keep the roomier defaults. */
+    @media (min-width: 951px) and (max-width: 1200px) {
+      #projectDetailsModal .modal-head-actions,
+      #addProjectModal .modal-head-actions {
+        gap: 2px;
+      }
+      #projectDetailsModal .modal-head-actions .secondary-btn,
+      #addProjectModal .modal-head-actions .secondary-btn {
+        padding-left: 3px;
+        padding-right: 3px;
+      }
+    }
+    /* Smallest phones: the single column is narrower than the row's resting size. */
+    @media (max-width: 400px) {
+      #projectDetailsModal .modal-head-actions,
+      #addProjectModal .modal-head-actions {
+        gap: 1px;
+      }
+      #projectDetailsModal .modal-head-actions .secondary-btn,
+      #addProjectModal .modal-head-actions .secondary-btn {
+        padding-left: 2px;
+        padding-right: 2px;
+      }
+    }
 
     #crewEquipmentModal #crewEquipmentProjectName,
     #crewEquipmentModal .crew-assignments-panel > h3 { margin: 2px 0 0; font-size: 1.05rem; color: #1f2f49; }
@@ -1603,8 +1686,15 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
 
       <div class="add-project-notes">
         <div class="project-field-group">
-          <label for="officeNotes">Notes</label>
+          <div class="notes-field-head">
+            <label for="officeNotes">Notes</label>
+            <button type="button" class="notes-add-images-btn" id="addNotesImagesBtn">Add Images</button>
+          </div>
           <textarea id="officeNotes" name="details" form="addProjectForm" placeholder="Add office notes"></textarea>
+          <input type="hidden" id="addNotesDraftKey" name="upload_draft_key" form="addProjectForm" value="<?= htmlspecialchars($noteUploadDraftKey, ENT_QUOTES, 'UTF-8') ?>" />
+          <input type="file" id="addNotesImageInput" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden />
+          <p class="notes-images-status" id="addNotesImagesStatus" hidden></p>
+          <div class="notes-image-gallery" id="addNotesImageGallery" hidden></div>
         </div>
       </div>
 
@@ -1729,8 +1819,14 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
 
       <div class="add-project-notes">
         <div class="project-field-group">
-          <label for="detailsOfficeNotes">Notes</label>
+          <div class="notes-field-head">
+            <label for="detailsOfficeNotes">Notes</label>
+            <button type="button" class="notes-add-images-btn" id="detailsNotesImagesBtn">Add Images</button>
+          </div>
           <textarea id="detailsOfficeNotes" placeholder="Add office notes"></textarea>
+          <input type="file" id="detailsNotesImageInput" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden />
+          <p class="notes-images-status" id="detailsNotesImagesStatus" hidden></p>
+          <div class="notes-image-gallery" id="detailsNotesImageGallery" hidden></div>
         </div>
       </div>
 
@@ -1940,6 +2036,9 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
 
   <script>
     (function(){
+      // Notes-image managers, built at the bottom of this IIFE.
+      var notesImages = { add: null, details: null };
+      var APP_BASE_URL = <?php echo json_encode($appBaseUrl); ?>;
       var scheduledProjects = <?php echo json_encode($scheduledProjects, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
       // Map of equipment_id => operating_condition (string)
       var equipmentStatus = <?php
@@ -2894,6 +2993,9 @@ var activeCrewEquipmentDay = '';
         if (projectDetailsModal) {
           projectDetailsModal.hidden = true;
         }
+        if (notesImages.details) {
+          notesImages.details.clear();
+        }
       }
 
       function updateEditSelectedDatesSummary() {
@@ -3025,6 +3127,10 @@ var activeCrewEquipmentDay = '';
           editCalendarDate = new Date(focusDate.getFullYear(), focusDate.getMonth(), 1);
         }
         renderEditProjectCalendar();
+        if (notesImages.details) {
+          notesImages.details.setProjectId(project.project_id);
+          notesImages.details.load();
+        }
         projectDetailsModal.hidden = false;
       }
 
@@ -4973,6 +5079,9 @@ var activeCrewEquipmentDay = '';
           addProjectModal.hidden = false;
         }
         resetAddProjectModal();
+        if (notesImages.add) {
+          notesImages.add.load();
+        }
         if (existingProjectsPicker && existingProjectToggle) {
           existingProjectsPicker.hidden = true;
           existingProjectToggle.setAttribute('aria-expanded', 'false');
@@ -5019,12 +5128,17 @@ var activeCrewEquipmentDay = '';
         if (addProjectModal) {
           addProjectModal.hidden = true;
         }
+        // The project was never created, so its staged images have nothing to attach to.
+        if (notesImages.add) {
+          notesImages.add.discardDraft();
+        }
       }
 
       function addProjectHasUnsavedInput() {
         var hasName = false;
         try { hasName = String(projectNameInput && projectNameInput.value || '').trim() !== ''; } catch (e) { hasName = false; }
-        return hasName || selectedDates.length > 0;
+        var hasImages = !!(notesImages.add && notesImages.add.hasImages());
+        return hasName || hasImages || selectedDates.length > 0;
       }
 
       async function handleCloseAddProject() {
@@ -5066,6 +5180,289 @@ var activeCrewEquipmentDay = '';
           }
         });
       }
+
+      /* ---------- Notes images (Add Project + Project Details modals) ----------
+         Files upload as soon as they are picked, using the same mechanism as the
+         equipment dimension page. In the Add modal the project row does not exist
+         yet, so uploads are staged against a draft key and the server attaches
+         them to the project once it is created. */
+
+      function createNotesImageManager(config) {
+        var btn = document.getElementById(config.btnId);
+        var input = document.getElementById(config.inputId);
+        var gallery = document.getElementById(config.galleryId);
+        var status = document.getElementById(config.statusId);
+        var projectId = 0;
+        var replaceTargetId = 0;
+
+        if (!btn || !input || !gallery) {
+          return {
+            load: function () {},
+            clear: function () {},
+            setProjectId: function () {},
+            discardDraft: function () {},
+            hasImages: function () { return false; }
+          };
+        }
+
+        function draftKey() {
+          var field = config.draftKeyId ? document.getElementById(config.draftKeyId) : null;
+          return field ? String(field.value || '') : '';
+        }
+
+        function scopeParams() {
+          var params = new URLSearchParams();
+          if (projectId > 0) {
+            params.set('project_id', String(projectId));
+          } else {
+            params.set('draft_key', draftKey());
+          }
+          return params;
+        }
+
+        function setStatus(message, isError) {
+          if (!status) return;
+          status.textContent = message || '';
+          status.hidden = !message;
+          status.classList.toggle('is-error', !!isError);
+        }
+
+        function render(uploads, scrollToId) {
+          gallery.innerHTML = '';
+          if (!uploads || !uploads.length) {
+            gallery.hidden = true;
+            setStatus('');
+            return;
+          }
+          // Say how many there are — the column scrolls, so later ones start off-screen.
+          setStatus(uploads.length + (uploads.length === 1 ? ' image' : ' images'));
+          var scrollTarget = null;
+          uploads.forEach(function (upload) {
+            var imageUrl = APP_BASE_URL + (upload.file_url || '');
+
+            var card = document.createElement('div');
+            card.className = 'notes-image-card';
+
+            var img = document.createElement('img');
+            img.src = imageUrl;
+            img.alt = upload.original_name || 'Note image';
+            // Eager: these galleries are small, and it avoids blank bars on scroll.
+            card.appendChild(img);
+
+            var actions = document.createElement('div');
+            actions.className = 'notes-image-actions';
+
+            var viewBtn = document.createElement('button');
+            viewBtn.type = 'button';
+            viewBtn.className = 'notes-image-action';
+            viewBtn.textContent = 'View full preview';
+            viewBtn.addEventListener('click', function () {
+              // Opens the raw image on its own, in a new tab.
+              window.open(imageUrl, '_blank', 'noopener');
+            });
+
+            var changeBtn = document.createElement('button');
+            changeBtn.type = 'button';
+            changeBtn.className = 'notes-image-action';
+            changeBtn.textContent = 'Change';
+            changeBtn.addEventListener('click', function () {
+              replaceTargetId = Number(upload.id) || 0;
+              openPicker();
+            });
+
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'notes-image-action';
+            removeBtn.textContent = 'Remove';
+            removeBtn.addEventListener('click', function () {
+              confirmRemove(Number(upload.id) || 0);
+            });
+
+            actions.appendChild(viewBtn);
+            actions.appendChild(changeBtn);
+            actions.appendChild(removeBtn);
+            card.appendChild(actions);
+            gallery.appendChild(card);
+
+            if (scrollToId && Number(upload.id) === Number(scrollToId)) {
+              scrollTarget = card;
+            }
+          });
+          gallery.hidden = false;
+
+          // Bring a just-added image into view once it has laid out.
+          if (scrollTarget) {
+            var target = scrollTarget;
+            var img = target.querySelector('img');
+            var reveal = function () {
+              try { target.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { target.scrollIntoView(); }
+            };
+            if (img && !img.complete) {
+              img.addEventListener('load', reveal, { once: true });
+              img.addEventListener('error', reveal, { once: true });
+            } else {
+              window.setTimeout(reveal, 50);
+            }
+          }
+        }
+
+        function load(scrollToId) {
+          if (projectId <= 0 && draftKey() === '') {
+            render([]);
+            return Promise.resolve();
+          }
+          return fetch(APP_BASE_URL + '/api/get_project_uploads.php?' + scopeParams().toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              render(data && data.success ? (data.uploads || []) : [], scrollToId);
+            })
+            .catch(function () {
+              setStatus('Unable to load images.', true);
+            });
+        }
+
+        function openPicker() {
+          input.multiple = !replaceTargetId;
+          input.value = '';
+          input.click();
+        }
+
+        function upload(files) {
+          if (!files || !files.length) return;
+          var replacing = replaceTargetId;
+          replaceTargetId = 0;
+          var count = files.length;
+
+          var form = new FormData();
+          if (projectId > 0) {
+            form.append('project_id', String(projectId));
+          } else {
+            form.append('draft_key', draftKey());
+          }
+          Array.prototype.forEach.call(files, function (file) { form.append('files[]', file); });
+
+          btn.disabled = true;
+          setStatus(replacing
+            ? 'Replacing image...'
+            : 'Uploading ' + count + ' image' + (count === 1 ? '' : 's') + '...');
+
+          fetch(APP_BASE_URL + '/api/add_project_upload.php', { method: 'POST', body: form })
+            .then(function (res) { return res.json().catch(function () { return { success: false }; }); })
+            .then(function (data) {
+              if (!data || !data.success) {
+                var reason = (data && data.errors && data.errors.length) ? data.errors[0] : 'Upload failed.';
+                setStatus(reason, true);
+                return;
+              }
+              // "Change" swaps the picture: drop the old one only once the new one is stored.
+              if (replacing) {
+                return removeImage(replacing, true);
+              }
+              // Scroll to the first image of this batch so the user sees it land.
+              var stored = (data.uploaded || []).length;
+              var firstNew = stored ? data.uploaded[0].id : 0;
+              return load(firstNew).then(function () {
+                // PHP silently drops files past max_file_uploads, so compare counts
+                // rather than trusting the error list alone.
+                var missed = count - stored;
+                if (missed > 0) {
+                  setStatus(stored + ' of ' + count + ' added — ' + missed + ' could not be uploaded.', true);
+                }
+              });
+            })
+            .catch(function () {
+              setStatus('Upload failed.', true);
+            })
+            .finally(function () {
+              btn.disabled = false;
+              input.value = '';
+            });
+        }
+
+        function removeImage(id, silent) {
+          if (!id) return Promise.resolve();
+          var body = new URLSearchParams();
+          body.set('id', String(id));
+          return fetch(APP_BASE_URL + '/api/delete_project_upload.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body.toString()
+          })
+            .then(function (res) { return res.json().catch(function () { return { success: false }; }); })
+            .then(function (data) {
+              if (!data || !data.success) {
+                setStatus('Unable to remove the image.', true);
+                return;
+              }
+              if (!silent) setStatus('');
+              return load();
+            })
+            .catch(function () {
+              setStatus('Unable to remove the image.', true);
+            });
+        }
+
+        async function confirmRemove(id) {
+          var ok = await showDecisionModal({
+            title: 'Remove Image',
+            message: 'Remove this image from the notes?',
+            confirmText: 'Remove',
+            cancelText: 'Keep',
+            showCancel: true,
+            fallbackValue: false
+          });
+          if (ok) { removeImage(id, false); }
+        }
+
+        // Purge everything staged for an abandoned Add Project modal.
+        function discardDraft() {
+          var key = draftKey();
+          render([]);
+          setStatus('');
+          if (projectId > 0 || key === '') return;
+          var body = new URLSearchParams();
+          body.set('draft_key', key);
+          fetch(APP_BASE_URL + '/api/delete_project_upload.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body.toString()
+          }).catch(function () { /* best effort */ });
+        }
+
+        btn.addEventListener('click', function () {
+          replaceTargetId = 0;
+          openPicker();
+        });
+
+        input.addEventListener('change', function () {
+          upload(input.files);
+        });
+
+        return {
+          load: load,
+          clear: function () { render([]); setStatus(''); },
+          setProjectId: function (id) { projectId = Number(id) || 0; },
+          discardDraft: discardDraft,
+          hasImages: function () { return gallery.children.length > 0; }
+        };
+      }
+
+      notesImages.add = createNotesImageManager({
+        btnId: 'addNotesImagesBtn',
+        inputId: 'addNotesImageInput',
+        galleryId: 'addNotesImageGallery',
+        statusId: 'addNotesImagesStatus',
+        draftKeyId: 'addNotesDraftKey'
+      });
+
+      notesImages.details = createNotesImageManager({
+        btnId: 'detailsNotesImagesBtn',
+        inputId: 'detailsNotesImageInput',
+        galleryId: 'detailsNotesImageGallery',
+        statusId: 'detailsNotesImagesStatus'
+      });
     })();
   </script>
 </body>
