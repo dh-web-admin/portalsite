@@ -1045,7 +1045,7 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
   <link rel="stylesheet" href="../../assets/css/base.css" />
   <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260323e" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
-  <link rel="stylesheet" href="style.css?v=20260826-three-sections" />
+  <link rel="stylesheet" href="style.css?v=20260922-notes-images" />
   <style>
     /* Auto-save status indicator (replaces the old Save Changes button) */
     .autosave-indicator {

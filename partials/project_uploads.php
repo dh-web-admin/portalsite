@@ -52,7 +52,7 @@ function project_uploads_ensure_schema($conn): void
 {
     $conn->query('CREATE TABLE IF NOT EXISTS scheduled_project_uploads (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        project_id INT NULL,
+        project_id INT UNSIGNED NULL,
         draft_key VARCHAR(48) NULL,
         file_url VARCHAR(1024) NOT NULL,
         filename VARCHAR(255) NOT NULL,
