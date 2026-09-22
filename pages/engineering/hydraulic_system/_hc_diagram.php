@@ -362,6 +362,43 @@ if (is_readable($hcSvgFile)) {
       };
     }
 
+    // Grows `vb` (about its own center) on whichever axis is short, so its
+    // aspect ratio matches the box it'll actually be displayed in. Without
+    // this, defaultVB keeps a fixed aspect ratio (from the drawing's own
+    // content) while the on-screen box's aspect ratio changes with every
+    // screen size — under preserveAspectRatio="meet" that mismatch shows up
+    // as a different amount of letterbox margin per screen, which reads as
+    // the drawing being cropped differently (more of it "lost" to margin)
+    // depending on width/height. Matching the aspect ratio up front makes
+    // the same logical view fill the frame edge-to-edge everywhere.
+    function matchAspect(vb, targetAspect) {
+      if (!targetAspect || !isFinite(targetAspect)) { return vb; }
+      var cx = vb.x + vb.width / 2, cy = vb.y + vb.height / 2;
+      var w = vb.width, h = vb.height;
+      if (w / h < targetAspect) { w = h * targetAspect; } else { h = w / targetAspect; }
+      return { x: cx - w / 2, y: cy - h / 2, width: w, height: h };
+    }
+
+    function unionBox(a, b) {
+      var x1 = Math.min(a.x, b.x), y1 = Math.min(a.y, b.y);
+      var x2 = Math.max(a.x + a.width, b.x + b.width), y2 = Math.max(a.y + a.height, b.y + b.height);
+      return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
+    }
+
+    // The actual on-screen box the SVG will fill: width from the stage's
+    // current layout, height from whatever viewport room is left below the
+    // sticky topbar (measured, not guessed — correct at any breakpoint).
+    // Returns null while the page hasn't been laid out yet (top <= 0).
+    function measureBox() {
+      var top = stage.getBoundingClientRect().top;
+      if (top <= 0) { return null; }
+      var avail = window.innerHeight - top - 16;
+      if (avail < 180) { avail = 180; }
+      var width = svg.getBoundingClientRect().width || stage.clientWidth;
+      if (!width || width < 50) { return null; }
+      return { width: width, height: avail };
+    }
+
     // Keep the visible box inside the actual drawing's full extent —
     // panning (or the zoom-out clamp below) can never drag the content off
     // past its own edges into blank space beyond what fit() measured.
@@ -399,35 +436,48 @@ if (is_readable($hcSvgFile)) {
       var padX = b.width * 0.03;
       var padTop = Math.max(b.height * 0.05, b.width * 0.025);
       var padBot = b.height * 0.03;
-      homeVB = {
+      var newHomeVB = {
         x: b.x - padX, y: b.y - padTop,
         width: b.width + padX * 2, height: b.height + padTop + padBot
       };
-      defaultVB = zoomedBox(homeVB, DEFAULT_ZOOM, DEFAULT_V_BIAS);
+      var newDefaultVB = zoomedBox(newHomeVB, DEFAULT_ZOOM, DEFAULT_V_BIAS);
+
+      var box = measureBox();
+      if (box) {
+        // Fix the default view's aspect ratio to the real on-screen box
+        // BEFORE it's ever shown, so it always fills the frame the same
+        // way — the fix for the "cut off / cropped differently per
+        // screen" symptom described above matchAspect().
+        newDefaultVB = matchAspect(newDefaultVB, box.width / box.height);
+        // homeVB (the outer pan/zoom-out limit) must cover at least the
+        // aspect-matched default, or clampToHome would immediately shrink
+        // it back down to the unmatched, content-only aspect ratio.
+        newHomeVB = unionBox(newHomeVB, newDefaultVB);
+        // The stylesheet's max-height is only a rough calc() approximation
+        // for the pre-JS paint; once we have a precise measured height,
+        // let it govern outright instead of potentially re-clamping it.
+        svg.style.maxHeight = 'none';
+        svg.style.height = box.height + 'px';
+      }
+
+      // Was the CURRENT view still the (old) default? If so it should
+      // track the new one; if the user has actively panned/zoomed, leave
+      // their view alone — just keep it clamped inside the new homeVB.
+      var wasDefault = !curVB || isDefaultView(curVB);
+      homeVB = newHomeVB;
+      defaultVB = newDefaultVB;
       vbW = homeVB.width;
-      setViewBox(defaultVB);
+      setViewBox(wasDefault ? defaultVB : curVB);
     }
 
-    // Keep the drawing's height within whatever room is actually left on
-    // screen below the sticky topbar, so it never runs past the viewport
-    // bottom (measured, not guessed — correct at any breakpoint).
-    function applyMaxHeight() {
-      var top = stage.getBoundingClientRect().top;
-      if (top <= 0) { return; }
-      var avail = window.innerHeight - top - 16;
-      if (avail < 180) { avail = 180; }
-      svg.style.maxHeight = avail + 'px';
-    }
-
-    function refresh() { fit(); applyMaxHeight(); }
-    refresh();
-    requestAnimationFrame(refresh);
+    fit();
+    requestAnimationFrame(fit);
 
     var resizeTicking = false;
     window.addEventListener('resize', function () {
       if (resizeTicking) { return; }
       resizeTicking = true;
-      requestAnimationFrame(function () { applyMaxHeight(); resizeTicking = false; });
+      requestAnimationFrame(function () { fit(); resizeTicking = false; });
     });
 
     // ---------- Zoom (wheel) + pan (drag) ----------
