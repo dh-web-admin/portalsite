@@ -485,12 +485,16 @@ body.admin-page.sidebar-collapsed .admin-layout > .side-nav ~ .content-area {
 
 /* Mobile landscape and tablet portrait */
 @media (max-width: 768px) {
+  /* .welcome-section switches to a stacked column below (title+subtitle,
+     logo, then the action-button row), so it needs much more height than
+     the desktop bar. Keep this in sync with that stack or content gets
+     clipped under the fixed header. */
   :root {
-    --admin-header-h: 120px;
+    --admin-header-h: 210px;
   }
 
   body.admin-page {
-    --admin-header-h: 120px;
+    --admin-header-h: 210px;
   }
 
   .welcome-section {
@@ -580,7 +584,7 @@ body.admin-page.sidebar-collapsed .admin-layout > .side-nav ~ .content-area {
 /* Mobile portrait */
 @media (max-width: 600px) {
   body.admin-page {
-    --admin-header-h: 110px;
+    --admin-header-h: 195px;
   }
 
   .welcome-section {
@@ -615,8 +619,14 @@ body.admin-page.sidebar-collapsed .admin-layout > .side-nav ~ .content-area {
   }
 
   .content-area {
-    margin-left: 0;
     padding: 15px 10px;
+  }
+
+  /* Must match the specificity of the ".admin-layout > .side-nav ~ .content-area"
+     rule above (240px/200px margin) or that wider-breakpoint rule wins and the
+     content area stays shifted right with a phantom blank strip on mobile. */
+  .admin-layout > .side-nav ~ .content-area {
+    margin-left: 0;
     width: 100%;
   }
 

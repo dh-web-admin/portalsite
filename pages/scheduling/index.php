@@ -1049,9 +1049,9 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scheduling</title>
   <link rel="stylesheet" href="../../assets/css/base.css" />
-  <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260323e" />
+  <link rel="stylesheet" href="../../assets/css/admin-layout.css?v=20260923-mobile-fix2" />
   <link rel="stylesheet" href="../../assets/css/dashboard.css" />
-  <link rel="stylesheet" href="style.css?v=20260922-delete-btn" />
+  <link rel="stylesheet" href="style.css?v=20260923-sticky-modal-header" />
   <style>
     /* Auto-save status indicator (replaces the old Save Changes button) */
     .autosave-indicator {
@@ -1508,6 +1508,22 @@ $printIconPath = ((isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] === 'lo
     @media (max-width: 720px) {
       .scheduling-page .month-grid { grid-auto-rows: minmax(72px, auto); }
       .scheduling-page .month-event { font-size: 0.62rem; }
+    }
+    @media (max-width: 480px) {
+      .scheduling-page .month-weekday-row .month-weekday {
+        padding: 5px 1px;
+        font-size: 0.56rem;
+        letter-spacing: 0;
+      }
+      .scheduling-page .month-grid { grid-auto-rows: minmax(52px, auto); }
+      .scheduling-page .month-cell { padding: 2px 2px 4px; gap: 2px; }
+      .scheduling-page .month-cell-date { font-size: 0.66rem; }
+      .scheduling-page .month-event {
+        font-size: 0.58rem;
+        padding: 1px 3px;
+        border-radius: 3px;
+      }
+      .scheduling-page .month-event-more { font-size: 0.58rem; padding: 0 3px; }
     }
   </style>
 </head>

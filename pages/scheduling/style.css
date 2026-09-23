@@ -25,9 +25,8 @@
 }
 
 .scheduling-page .scheduling-shell {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
   width: 100%;
   height: 100%;
@@ -1045,6 +1044,44 @@
   .scheduling-page .project-status-options {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  /* Keep the action-button header (Create Project/X, Save-and-Close/Print/X,
+     Save & Go Back/X, ...) pinned to the top of the modal instead of
+     scrolling away wherever it happens to sit in the stacked panels.
+     `display: contents` lets add-project-right's own children join the
+     card's single-column grid directly, so the header can be reordered
+     to the front and stuck there while the rest of that panel scrolls. */
+  .scheduling-page .add-project-right {
+    display: contents;
+  }
+
+  .scheduling-page .add-project-right .modal-head {
+    order: -1;
+    margin: 0;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: 14px 20px;
+    background: #f7f9fc;
+    box-shadow:
+      0 1px 0 rgba(31, 45, 68, 0.1),
+      0 8px 14px -10px rgba(15, 30, 56, 0.25);
+  }
+
+  .scheduling-page .add-project-right > *:not(.modal-head) {
+    box-sizing: border-box;
+    padding-left: 20px;
+    padding-right: 20px;
+    background: #f7f9fc;
+  }
+
+  .scheduling-page .add-project-right .modal-head + * {
+    padding-top: 14px;
+  }
+
+  .scheduling-page .add-project-right > *:last-child {
+    padding-bottom: 24px;
+  }
 }
 
 .scheduling-page .project-view-card {
@@ -1680,15 +1717,6 @@
 }
 
 @media (max-width: 980px) {
-  .scheduling-page .scheduling-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .scheduling-page .resource-sidebar {
-    position: static;
-    max-height: 380px;
-  }
-
   .scheduling-page .weekly-day-columns {
     min-height: 360px;
   }
@@ -1721,6 +1749,97 @@
   .scheduling-page .conflict-project-chip {
     flex: 0 1 calc(50% - 4px);
     min-width: 100px;
+  }
+}
+
+@media (max-width: 600px) {
+  .scheduling-page .scheduling-shell {
+    padding: 8px 8px 12px;
+  }
+
+  .scheduling-page .scheduler-panel {
+    padding: 8px;
+  }
+
+  .scheduling-page .scheduling-title {
+    font-size: 1.4rem;
+    margin-top: 6px;
+  }
+
+  .scheduling-page .scheduler-topbar {
+    gap: 8px;
+  }
+
+  .scheduling-page .week-controls {
+    order: 1;
+  }
+
+  .scheduling-page .calendar-view-toggle {
+    order: 2;
+    white-space: normal;
+    font-size: 0.74rem;
+    padding: 0 10px;
+    margin-left: 0;
+  }
+
+  .scheduling-page .week-range {
+    order: 3;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.86rem;
+  }
+
+  .scheduling-page .scheduler-actions {
+    order: 4;
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .scheduling-page .add-project-btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .scheduling-page .schedule-calendar {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Shrink the week view to fit the screen instead of forcing horizontal
+     scroll — all 7 day columns stay visible, just narrower. */
+  .scheduling-page .weekly-board {
+    min-width: 0;
+  }
+
+  .scheduling-page .weekly-day-columns {
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .scheduling-page .weekly-days-row .dow {
+    font-size: 0.56rem;
+  }
+
+  .scheduling-page .weekly-days-row .dom {
+    font-size: 0.78rem;
+  }
+
+  .scheduling-page .project-tile {
+    padding: 3px 4px;
+    min-height: 50px;
+  }
+
+  .scheduling-page .project-tile-name {
+    font-size: 0.66rem;
+  }
+
+  .scheduling-page .project-tile-meta {
+    font-size: 0.5rem;
+  }
+
+  .scheduling-page .project-tile-req {
+    font-size: 0.58rem;
+    margin-top: 2px;
   }
 }
 
