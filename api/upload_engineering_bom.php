@@ -1,13 +1,12 @@
 <?php
+define('IS_API', true);
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
+require_edit_api('engineering');
 
 if (!isset($_POST['item_id']) || !is_numeric($_POST['item_id'])) {
     echo json_encode(['success' => false, 'message' => 'Invalid item ID']);
@@ -64,8 +63,8 @@ $uploadDir = __DIR__ . '/../uploads/engineering_bom/';
 if (!is_dir($uploadDir)) { mkdir($uploadDir, 0755, true); }
 
 require_once __DIR__ . '/../partials/upload_guard.php';
-$ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-if (upload_extension_is_dangerous($ext)) {
+$ext = safe_upload_extension($file);
+if ($ext === null) {
     echo json_encode(['success' => false, 'message' => 'File type not allowed']);
     exit();
 }

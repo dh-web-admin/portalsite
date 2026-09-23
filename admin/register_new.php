@@ -25,6 +25,10 @@ if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel'))
     exit();
 }
 
+// Sensitive area: require a fresh password confirmation.
+require_once __DIR__ . '/../partials/reauth.php';
+require_reauth();
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Trim and sanitize inputs

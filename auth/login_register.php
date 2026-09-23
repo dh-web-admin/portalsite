@@ -3,10 +3,32 @@ require_once __DIR__ . '/../session_init.php';
 require_once '../config/config.php';
 require_once __DIR__ . '/../partials/url.php';
 
+// Bounce back to the login page carrying an error message.
+function login_reject(string $message): void {
+    $_SESSION['login_error'] = $message;
+    $_SESSION['active_form'] = 'login';
+    if (function_exists('session_write_close')) {
+        @session_write_close();
+    }
+    header('Location: ' . base_url('/auth/login.php'));
+    exit();
+}
+
 if(isset($_POST['login'])){
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $rememberMe = isset($_POST['remember_me']);
+
+    $MAX_LOGIN_ATTEMPTS = 5;
+
+    // Ensure lockout columns exist for older schemas.
+    $col = $conn->query("SHOW COLUMNS FROM users LIKE 'failed_login_attempts'");
+    if ($col && $col->num_rows === 0) {
+        $conn->query("ALTER TABLE users ADD COLUMN failed_login_attempts INT UNSIGNED NOT NULL DEFAULT 0");
+    }
+    $col = $conn->query("SHOW COLUMNS FROM users LIKE 'locked_at'");
+    if ($col && $col->num_rows === 0) {
+        $conn->query("ALTER TABLE users ADD COLUMN locked_at DATETIME NULL DEFAULT NULL");
+    }
 
     $stmt = $conn->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
     $stmt->bind_param("s", $email);
@@ -15,14 +37,22 @@ if(isset($_POST['login'])){
 
     if($result && $result->num_rows > 0){
         $user = $result->fetch_assoc();
-       
-        // // DEBUGGING - to check if user is found and password verification
-        // echo "User found: " . $user['email'] . "<br>";
-        // echo "Role: " . $user['role'] . "<br>";
-        // echo "Password verify: " . (password_verify($password, $user['password']) ? 'SUCCESS' : 'FAILED') . "<br>";
-        // die(); // Stop here to see the output
-       
-    if(password_verify($password, $user['password'])){
+
+        // Locked accounts are rejected outright, even with the right password —
+        // that's the point of a lockout. Only a password reset clears it.
+        if (!empty($user['locked_at'])) {
+            login_reject('This account has been locked after too many failed login attempts. Reset your password to regain access.');
+        }
+
+        if(password_verify($password, $user['password'])){
+            // Successful login clears any accumulated failed attempts.
+            if ((int)($user['failed_login_attempts'] ?? 0) !== 0) {
+                $resetStmt = $conn->prepare("UPDATE users SET failed_login_attempts = 0 WHERE email = ?");
+                $resetStmt->bind_param("s", $email);
+                $resetStmt->execute();
+                $resetStmt->close();
+            }
+
             // Strengthen session handling to persist reliably on Railway
             // Regenerate session ID to prevent fixation and force cookie set
             if (function_exists('session_regenerate_id')) {
@@ -36,30 +66,6 @@ if(isset($_POST['login'])){
             if (isset($user['id'])) {
                 $_SESSION['user_id'] = intval($user['id']);
             }
-            
-            // Issue Remember Me token unconditionally to persist login across browser restarts
-            // Generate secure random token
-            $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', time() + 86400); // 24 hours
-            
-            // Store token in database
-            $stmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
-            $stmt->bind_param("sss", $token, $expires, $email);
-            $stmt->execute();
-            $stmt->close();
-            
-            // Set cookie
-            $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
-            
-            setcookie('remember_token', $token, [
-                'expires' => time() + 86400, // 24 hours
-                'path' => '/',
-                'domain' => '',
-                'secure' => $isHttps,
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]);
 
             // Page this visitor was originally headed for before being sent
             // to the login screen. Read (and cleared) BEFORE session_write_close(),
@@ -83,18 +89,26 @@ if(isset($_POST['login'])){
             }
             exit();
         }
-    }
-   
-    // Generic message — do not reveal whether the account exists
-    $_SESSION['login_error'] = 'Invalid email or password.';
 
-    $_SESSION['active_form'] = 'login';
-    // Persist error session data before redirect
-    if (function_exists('session_write_close')) {
-        @session_write_close();
+        // Wrong password — count the failed attempt, locking the account once
+        // it reaches the limit.
+        $newCount = (int)($user['failed_login_attempts'] ?? 0) + 1;
+        if ($newCount >= $MAX_LOGIN_ATTEMPTS) {
+            $upd = $conn->prepare("UPDATE users SET failed_login_attempts = ?, locked_at = NOW() WHERE email = ?");
+            $upd->bind_param("is", $newCount, $email);
+            $upd->execute();
+            $upd->close();
+            login_reject('This account has been locked after too many failed login attempts. Reset your password to regain access.');
+        }
+
+        $upd = $conn->prepare("UPDATE users SET failed_login_attempts = ? WHERE email = ?");
+        $upd->bind_param("is", $newCount, $email);
+        $upd->execute();
+        $upd->close();
     }
-    header('Location: ' . base_url('/auth/login.php'));
-    exit();
+
+    // Generic message — do not reveal whether the account exists
+    login_reject('Invalid email or password.');
 }
 ?>
  

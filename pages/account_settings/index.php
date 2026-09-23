@@ -6,6 +6,10 @@ if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
     exit();
 }
 
+// Sensitive area: require a fresh password confirmation.
+require_once __DIR__ . '/../../partials/reauth.php';
+require_reauth();
+
 require_once __DIR__ . '/../../config/config.php';
 
 $email = $_SESSION['email'];

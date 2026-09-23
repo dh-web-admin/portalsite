@@ -30,6 +30,10 @@ if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel'))
     exit();
 }
 
+// Sensitive area: require a fresh password confirmation.
+require_once __DIR__ . '/../partials/reauth.php';
+require_reauth();
+
 // Fetch users
 $sql = "SELECT id, name, role FROM users ORDER BY name ASC";
 $result = $conn->query($sql);

@@ -1,6 +1,17 @@
 <?php
 // session_init.php
 
+// Absolute session lifetime (cookie + server GC) and idle-inactivity limit.
+// The JS idle-warning timer (assets/js/idle-timeout.js) reads
+// SESSION_IDLE_LIMIT_SECONDS via an inline value set in portalheader.php —
+// change it here only, not in the JS, so the two can't drift apart.
+if (!defined('SESSION_ABSOLUTE_LIFETIME_SECONDS')) {
+    define('SESSION_ABSOLUTE_LIFETIME_SECONDS', 36000); // 10 hours
+}
+if (!defined('SESSION_IDLE_LIMIT_SECONDS')) {
+    define('SESSION_IDLE_LIMIT_SECONDS', 1800); // 30 minutes
+}
+
 // ✅ Bypass auth/session for static uploads so images never redirect to login
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
 if (preg_match('#^/(PortalSite/)?uploads/#i', $path)) {
@@ -20,7 +31,7 @@ if (session_status() === PHP_SESSION_NONE) {
         || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 
     @session_set_cookie_params([
-        'lifetime' => 21600,
+        'lifetime' => SESSION_ABSOLUTE_LIFETIME_SECONDS,
         'path' => '/',
         'domain' => '',
         'secure' => $isHttps,
@@ -28,13 +39,13 @@ if (session_status() === PHP_SESSION_NONE) {
         'samesite' => 'Lax',
     ]);
 
-    // Ensure server-side session GC matches cookie lifetime (6 hours)
-    @ini_set('session.gc_maxlifetime', '21600');
+    // Ensure server-side session GC matches the cookie's absolute lifetime
+    @ini_set('session.gc_maxlifetime', (string)SESSION_ABSOLUTE_LIFETIME_SECONDS);
     @session_start();
 
-    // expire session after 30 minutes of inactivity
+    // expire session after SESSION_IDLE_LIMIT_SECONDS of inactivity
     try {
-        $inactiveLimit = 1800; // seconds (30 minutes)
+        $inactiveLimit = SESSION_IDLE_LIMIT_SECONDS;
         if (isset($_SESSION['last_activity']) && (time() - (int)$_SESSION['last_activity'] > $inactiveLimit)) {
             // clear session and remove session cookie
             $_SESSION = [];
@@ -50,44 +61,6 @@ if (session_status() === PHP_SESSION_NONE) {
             @session_start();
         }
     } catch (Throwable $e) {}
-
-    // remember-me auto login
-    if (!isset($_SESSION['email']) && isset($_COOKIE['remember_token'])) {
-        require_once __DIR__ . '/config/config.php';
-        $token = $_COOKIE['remember_token'];
-
-        $stmt = $conn->prepare("SELECT id, email, name, role FROM users WHERE remember_token = ? AND remember_token_expires > NOW()");
-        $stmt->bind_param("s", $token);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result && $result->num_rows > 0) {
-            $user = $result->fetch_assoc();
-            $_SESSION['email'] = $user['email'];
-            $_SESSION['name']  = $user['name'];
-            $_SESSION['role']  = $user['role'] ?? null;
-            if (isset($user['id'])) $_SESSION['user_id'] = (int)$user['id'];
-
-            $newToken = bin2hex(random_bytes(32));
-            $expires  = date('Y-m-d H:i:s', time() + 86400);
-
-            $updateStmt = $conn->prepare("UPDATE users SET remember_token = ?, remember_token_expires = ? WHERE email = ?");
-            $updateStmt->bind_param("sss", $newToken, $expires, $user['email']);
-            $updateStmt->execute();
-            $updateStmt->close();
-
-            setcookie('remember_token', $newToken, [
-                'expires'  => time() + 86400,
-                'path'     => '/',
-                'domain'   => '',
-                'secure'   => $isHttps,
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]);
-        }
-
-        $stmt->close();
-    }
 
     // update last activity timestamp for inactivity checks
     try { $_SESSION['last_activity'] = time(); } catch (Throwable $e) {}

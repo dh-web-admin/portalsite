@@ -4,7 +4,7 @@ define('IS_API', true);
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../partials/permissions.php';
-require_once __DIR__ . '/../partials/project_uploads.php';
+require_once __DIR__ . '/../pages/scheduling/project_uploads.php';
 
 ini_set('display_errors', '0');
 while (ob_get_level()) { ob_end_clean(); }

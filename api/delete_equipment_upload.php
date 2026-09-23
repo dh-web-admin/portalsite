@@ -6,6 +6,24 @@ header('Content-Type: application/json');
 
 require_edit_api('equipments');
 
+// Self-healing schema — see api/add_equipment_upload.php for the full definition.
+$conn->query("CREATE TABLE IF NOT EXISTS `uploads` (
+    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `upload_key` VARCHAR(48) NOT NULL,
+    `equipment_id` INT(10) UNSIGNED DEFAULT NULL,
+    `field` VARCHAR(64) DEFAULT NULL,
+    `file_url` VARCHAR(1024) NOT NULL,
+    `filename` VARCHAR(255) DEFAULT NULL,
+    `original_name` VARCHAR(255) DEFAULT NULL,
+    `mime_type` VARCHAR(255) DEFAULT NULL,
+    `size_bytes` INT(10) UNSIGNED DEFAULT 0,
+    `uploaded_by` INT(11) DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `u_upload_key` (`upload_key`),
+    KEY `idx_equipment` (`equipment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Method not allowed']);

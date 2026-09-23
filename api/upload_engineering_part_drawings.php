@@ -1,13 +1,12 @@
 <?php
+define('IS_API', true);
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../partials/permissions.php';
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['email']) || !isset($_SESSION['name'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
+require_edit_api('engineering');
 
 $itemId = isset($_POST['item_id']) ? (int) $_POST['item_id'] : 0;
 $partId = isset($_POST['part_id']) ? (int) $_POST['part_id'] : 0;
@@ -34,10 +33,34 @@ if (!is_dir($uploadDir)) {
 }
 
 try {
-    $tableCheck = $conn->query("SHOW TABLES LIKE 'engineering_drawings'");
-    if (!$tableCheck || $tableCheck->num_rows === 0) {
-        throw new Exception('Table engineering_drawings does not exist. Please create it first.');
-    }
+    // Self-healing schema: this table previously existed only out-of-band in
+    // the live database, with no CREATE TABLE anywhere in the codebase.
+    $conn->query("CREATE TABLE IF NOT EXISTS `engineering_drawings` (
+        `id` INT(11) NOT NULL AUTO_INCREMENT,
+        `item_id` INT(11) NOT NULL,
+        `part_id` INT(11) DEFAULT NULL,
+        `file_url` VARCHAR(500) NOT NULL,
+        `filename` VARCHAR(255) NOT NULL,
+        `version` VARCHAR(20) NOT NULL DEFAULT 'v1',
+        `file_size` INT(11) DEFAULT NULL COMMENT 'File size in bytes',
+        `file_type` VARCHAR(50) DEFAULT NULL COMMENT 'File extension/type',
+        `description` TEXT DEFAULT NULL COMMENT 'Optional description of the drawing',
+        `uploaded_by` VARCHAR(255) NOT NULL,
+        `uploaded_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+        `status` ENUM('active','archived','deleted') DEFAULT 'active',
+        PRIMARY KEY (`id`),
+        KEY `idx_item_id` (`item_id`),
+        KEY `idx_version` (`version`),
+        KEY `idx_status` (`status`),
+        KEY `idx_uploaded_at` (`uploaded_at`),
+        KEY `idx_item_version` (`item_id`,`version`),
+        KEY `idx_uploaded_by` (`uploaded_by`),
+        KEY `idx_part_id` (`part_id`),
+        KEY `idx_item_part_version` (`item_id`,`part_id`,`version`),
+        CONSTRAINT `fk_engineering_drawings_item` FOREIGN KEY (`item_id`) REFERENCES `engineering_items` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT `fk_engineering_drawings_part` FOREIGN KEY (`part_id`) REFERENCES `engineering_item_parts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $partColumnCheck = $conn->query("SHOW COLUMNS FROM engineering_drawings LIKE 'part_id'");
     if (!$partColumnCheck || $partColumnCheck->num_rows === 0) {
@@ -70,8 +93,8 @@ try {
         $tmpName = $files['tmp_name'][$i];
         $fileSize = (int) $files['size'][$i];
         require_once __DIR__ . '/../partials/upload_guard.php';
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        if (upload_extension_is_dangerous($ext)) {
+        $ext = safe_upload_extension(['tmp_name' => $tmpName, 'name' => $filename]);
+        if ($ext === null) {
             echo json_encode(['success' => false, 'message' => 'File type not allowed: ' . $filename]);
             exit();
         }

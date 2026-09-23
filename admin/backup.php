@@ -20,6 +20,10 @@ if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel'))
     exit();
 }
 
+// Sensitive area: require a fresh password confirmation.
+require_once __DIR__ . '/../partials/reauth.php';
+require_reauth();
+
 $mysqli = $conn; // config.php provides $conn
 
 $show_hidden = isset($_GET['show_hidden']) && $_GET['show_hidden'] === '1';

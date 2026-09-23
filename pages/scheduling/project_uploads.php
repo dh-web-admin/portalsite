@@ -10,7 +10,7 @@
  * project_id once the project is created.
  */
 
-require_once __DIR__ . '/upload_guard.php';
+require_once __DIR__ . '/../../partials/upload_guard.php';
 
 const PROJECT_UPLOAD_ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 
@@ -22,7 +22,7 @@ function project_uploads_dir(): string
         $mount = getenv('UPLOADS_MOUNT_PATH') ?: '/portalsite/uploads';
         return rtrim($mount, '/') . '/scheduling/';
     }
-    return __DIR__ . '/../uploads/scheduling/';
+    return __DIR__ . '/../../uploads/scheduling/';
 }
 
 /** Canonical public URL for a stored filename. */

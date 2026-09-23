@@ -45,7 +45,7 @@ $conn->query('CREATE TABLE IF NOT EXISTS scheduled_project_details (
     REFERENCES scheduled_projects(project_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 
-require_once __DIR__ . '/../../partials/project_uploads.php';
+require_once __DIR__ . '/project_uploads.php';
 project_uploads_ensure_schema($conn);
 // Images staged in the "Add Project" modal hang on this key until the project exists.
 $noteUploadDraftKey = bin2hex(random_bytes(12));

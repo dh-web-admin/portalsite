@@ -2,17 +2,30 @@
 <?php
 define('IS_API', true);
 
-// Debug log function
-function log_upload_debug($msg) {
-    $logfile = __DIR__ . '/../uploads/equipment/upload_debug.log';
-    @file_put_contents($logfile, date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND);
-}
-
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../session_init.php';
 require_once __DIR__ . '/../partials/permissions.php';
 
 require_edit_api('equipments');
+
+// Self-healing schema: this table previously existed only out-of-band in the
+// live database, with no CREATE TABLE anywhere in the codebase.
+$conn->query("CREATE TABLE IF NOT EXISTS `uploads` (
+    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `upload_key` VARCHAR(48) NOT NULL,
+    `equipment_id` INT(10) UNSIGNED DEFAULT NULL,
+    `field` VARCHAR(64) DEFAULT NULL,
+    `file_url` VARCHAR(1024) NOT NULL,
+    `filename` VARCHAR(255) DEFAULT NULL,
+    `original_name` VARCHAR(255) DEFAULT NULL,
+    `mime_type` VARCHAR(255) DEFAULT NULL,
+    `size_bytes` INT(10) UNSIGNED DEFAULT 0,
+    `uploaded_by` INT(11) DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `u_upload_key` (`upload_key`),
+    KEY `idx_equipment` (`equipment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 // Do not expose PHP warnings in the JSON response
 ini_set('display_errors', '0');
@@ -88,21 +101,19 @@ if ($isProduction) {
 
 // Ensure upload directory exists and is writable
 if (!is_dir($uploadDir)) {
-    log_upload_debug('Upload directory does not exist, attempting to create: ' . $uploadDir);
     // Create with recursive flag
     if (!@mkdir($uploadDir, 0777, true)) {
         $err = error_get_last();
-        log_upload_debug('Failed to create uploadDir: ' . $uploadDir . ' err: ' . json_encode($err));
+        error_log('add_equipment_upload: unable to create ' . $uploadDir . ' - ' . json_encode($err));
         http_response_code(500);
-        echo json_encode(['success' => false, 'error' => 'Unable to create upload directory', 'dir' => $uploadDir, 'details' => $err]);
+        echo json_encode(['success' => false, 'error' => 'Unable to create upload directory']);
         exit;
     }
-    log_upload_debug('Successfully created directory: ' . $uploadDir);
 }
 if (!is_writable($uploadDir)) {
-    log_upload_debug('Upload directory not writable: ' . $uploadDir);
+    error_log('add_equipment_upload: directory not writable: ' . $uploadDir);
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Upload directory not writable', 'dir' => $uploadDir]);
+    echo json_encode(['success' => false, 'error' => 'Upload directory not writable']);
     exit;
 }
 
@@ -113,8 +124,8 @@ $uploadedFiles = [];
 $seenFiles = [];
 require_once __DIR__ . '/../partials/upload_guard.php';
 foreach ($files as $file) {
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if (upload_extension_is_dangerous($ext)) {
+    $ext = safe_upload_extension($file);
+    if ($ext === null) {
         $errors[] = 'File type not allowed: ' . $file['name'];
         continue;
     }
@@ -135,16 +146,13 @@ foreach ($files as $file) {
     if (is_uploaded_file($file['tmp_name'])) {
         if (move_uploaded_file($file['tmp_name'], $targetPath)) {
             $moved = true;
-            log_upload_debug("File moved (move_uploaded_file): $targetPath for equipment_id=$equipment_id, field=$field");
         } else {
             // Try fallback copy (some container setups disallow move_uploaded_file)
             if (@copy($file['tmp_name'], $targetPath)) {
                 $moved = true;
                 @unlink($file['tmp_name']);
-                log_upload_debug("File copied (fallback): $targetPath for equipment_id=$equipment_id, field=$field");
             } else {
-                $errInfo = error_get_last();
-                log_upload_debug("move_uploaded_file failed and copy fallback failed for tmp:" . $file['tmp_name'] . ' target:' . $targetPath . ' err:' . json_encode($errInfo));
+                error_log('add_equipment_upload: move/copy failed for ' . $file['tmp_name'] . ' -> ' . $targetPath);
             }
         }
         if ($moved) {
@@ -159,26 +167,23 @@ foreach ($files as $file) {
         $uploaded_by = isset($_SESSION['user_id']) ? intval($_SESSION['user_id']) : 0;
         $stmt = $conn->prepare('INSERT INTO uploads (upload_key, equipment_id, field, file_url, filename, original_name, mime_type, size_bytes, uploaded_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())');
         if (!$stmt) {
-            log_upload_debug("DB prepare failed: " . $conn->error);
+            error_log('add_equipment_upload: DB prepare failed: ' . $conn->error);
             $errors[] = 'DB prepare failed: ' . $conn->error;
             continue;
         }
         // bind types: s (upload_key), i (equipment_id), s (field), s (file_url), s (filename), s (original_name), s (mime_type), i (size_bytes), i (uploaded_by)
         $stmt->bind_param('sisssssii', $upload_key, $equipment_id, $field, $fileUrl, $baseName, $file['name'], $file['type'], $file['size'], $uploaded_by);
         if (!$stmt->execute()) {
-            log_upload_debug("DB error: " . $stmt->error);
+            error_log('add_equipment_upload: DB error: ' . $stmt->error);
             $errors[] = 'DB error: ' . $stmt->error;
             $stmt->close();
             continue;
         }
         $stmt->close();
-        log_upload_debug("DB insert success for $fileUrl (file: $targetPath)");
         $uploadedFiles[] = $fileUrl;
         $successCount++;
     } else {
-        $errInfo = error_get_last();
-        log_upload_debug("Failed to move uploaded file: $targetPath tmp:" . $file['tmp_name'] . ' err:' . json_encode($errInfo));
-        $errors[] = 'Failed to move uploaded file: ' . $file['name'] . ' - ' . ($errInfo['message'] ?? 'unknown');
+        $errors[] = 'Failed to move uploaded file: ' . $file['name'];
     }
 }
 

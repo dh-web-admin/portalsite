@@ -33,7 +33,11 @@ RewriteCond %{REQUEST_FILENAME} !-d
         Deny from all
     </IfModule>
 </FilesMatch>
-<FilesMatch "(?i)(secret|token|credential|passwd|password|mysql_access|\.pem|\.key)">
+# Only for files that AREN'T normal served application code (.php/.css/.js) —
+# those substrings are common in legitimate filenames (password_reset.css,
+# change_own_password.php, etc). This block is for stray leaked secrets:
+# db_credentials.txt, a .pem/.key, mysql_access.log.
+<FilesMatch "(?i)^(?!.*\.(php|css|js)$).*(secret|token|credential|passwd|password|mysql_access|\.pem|\.key).*$">
     <IfModule mod_authz_core.c>
         Require all denied
     </IfModule>

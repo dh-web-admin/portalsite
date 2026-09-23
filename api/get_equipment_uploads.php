@@ -1,6 +1,39 @@
 <?php
+define('IS_API', true);
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../session_init.php';
+require_once __DIR__ . '/../partials/permissions.php';
 header('Content-Type: application/json');
+
+if (empty($_SESSION['email'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+    exit;
+}
+$role = get_current_role();
+if (!$role || !can_access((string)$role, 'equipments')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Forbidden']);
+    exit;
+}
+
+// Self-healing schema — see api/add_equipment_upload.php for the full definition.
+$conn->query("CREATE TABLE IF NOT EXISTS `uploads` (
+    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `upload_key` VARCHAR(48) NOT NULL,
+    `equipment_id` INT(10) UNSIGNED DEFAULT NULL,
+    `field` VARCHAR(64) DEFAULT NULL,
+    `file_url` VARCHAR(1024) NOT NULL,
+    `filename` VARCHAR(255) DEFAULT NULL,
+    `original_name` VARCHAR(255) DEFAULT NULL,
+    `mime_type` VARCHAR(255) DEFAULT NULL,
+    `size_bytes` INT(10) UNSIGNED DEFAULT 0,
+    `uploaded_by` INT(11) DEFAULT NULL,
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `u_upload_key` (`upload_key`),
+    KEY `idx_equipment` (`equipment_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 $equipment_id = isset($_GET['equipment_id']) ? (int)$_GET['equipment_id'] : 0;
 if (!$equipment_id) {
@@ -37,14 +70,6 @@ while ($row = $res->fetch_assoc()) {
     // If the physical file doesn't exist, skip
     if (!file_exists($filePath)) {
         continue;
-    }
-
-    // If the DB contains a legacy path (e.g., /PortalSite/...), log it for diagnostics
-    $stored = isset($row['file_url']) ? $row['file_url'] : '';
-    if (strpos($stored, '/uploads/') !== 0) {
-        // log mismatch
-        $logfile = __DIR__ . '/../uploads/equipment/upload_debug.log';
-        @file_put_contents($logfile, date('Y-m-d H:i:s') . " DB path mismatch for id={$row['id']} stored='{$stored}' expected='{$publicUrl}'\n", FILE_APPEND);
     }
 
     // Return canonical public URL regardless of what is stored

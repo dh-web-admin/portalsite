@@ -116,6 +116,11 @@ if (!empty($_SESSION['profile_image'])) {
 <script src="<?php echo htmlspecialchars(base_url('/assets/js/unsaved-guard.js')); ?>" defer></script>
 <!-- Global logout confirmation (ensures consistent prompt on all pages) -->
 <script src="<?php echo htmlspecialchars(base_url('/assets/js/logout-confirm.js')); ?>" defer></script>
+<!-- Idle session warning + auto-logout. The limit here must stay in sync with
+     SESSION_IDLE_LIMIT_SECONDS in session_init.php, which is why it's read
+     from that constant rather than duplicated as a literal. -->
+<script>window.IDLE_TIMEOUT_MS = <?php echo (int)SESSION_IDLE_LIMIT_SECONDS * 1000; ?>;</script>
+<script src="<?php echo htmlspecialchars(base_url('/assets/js/idle-timeout.js')); ?>" defer></script>
 
 
 <?php // Dev preview mode removed ?>
