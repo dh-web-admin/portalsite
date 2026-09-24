@@ -34,7 +34,10 @@ if (!function_exists('can_access') || !can_access((string)$role, 'admin_panel'))
 require_once __DIR__ . '/../partials/reauth.php';
 require_reauth();
 
-$sql = "SELECT id, name, email, role FROM users ORDER BY id DESC";
+require_once __DIR__ . '/../partials/account_lock.php';
+account_lock_ensure_columns($conn);
+
+$sql = "SELECT id, name, email, role, locked_at, lock_reason, failed_login_attempts FROM users ORDER BY id DESC";
 $result = $conn->query($sql);
 $users = [];
 if ($result) {
@@ -51,6 +54,19 @@ if ($result) {
     <link rel="stylesheet" href="../assets/css/base.css">
     <link rel="stylesheet" href="../assets/css/admin-layout.css">
     <link rel="stylesheet" href="../assets/css/user-list.css">
+    <style>
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+        .status-active { background: #e8f5ee; color: #14804a; }
+        .status-locked { background: #fdecea; color: #b42318; }
+        .user-actions { display: flex; gap: 8px; align-items: center; }
+    </style>
 </head>
 <body class="admin-page">
     <div class="admin-container">
@@ -74,20 +90,44 @@ if ($result) {
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Role</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                         <?php foreach ($users as $u): ?>
-                            <tr data-user-id="<?php echo htmlspecialchars($u['id']); ?>">
+                            <?php
+                                $isLocked = !empty($u['locked_at']);
+                                $lockReason = (string)($u['lock_reason'] ?? '');
+                                $isSelf = strcasecmp((string)$u['email'], (string)($_SESSION['email'] ?? '')) === 0;
+                                if ($isLocked) {
+                                    $lockTitle = $lockReason === 'admin'
+                                        ? 'Locked by an administrator on ' . $u['locked_at']
+                                        : 'Locked after ' . (int)$u['failed_login_attempts'] . ' failed sign-in attempts on ' . $u['locked_at'];
+                                    $lockText = $lockReason === 'admin' ? 'Locked (admin)' : 'Locked';
+                                }
+                            ?>
+                            <tr data-user-id="<?php echo htmlspecialchars($u['id']); ?>"<?php echo $isLocked ? ' data-locked="1"' : ''; ?>>
                                 <td class="col-id"><?php echo htmlspecialchars($u['id']); ?></td>
                                 <td class="col-name"><span class="view-name"><?php echo htmlspecialchars($u['name']); ?></span></td>
                                 <td class="col-email"><?php echo htmlspecialchars($u['email']); ?></td>
                                 <td class="col-role">
                                     <span class="view-role"><?php echo htmlspecialchars($u['role']); ?></span>
                                 </td>
+                                <td class="col-status">
+                                    <?php if ($isLocked): ?>
+                                        <span class="status-badge status-locked" title="<?php echo htmlspecialchars($lockTitle); ?>"><?php echo htmlspecialchars($lockText); ?></span>
+                                    <?php else: ?>
+                                        <span class="status-badge status-active">Active</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <div class="user-actions">
                                         <button class="nav-btn btn-edit-all" data-user-id="<?php echo htmlspecialchars($u['id']); ?>" data-user-email="<?php echo htmlspecialchars($u['email']); ?>" data-user-name="<?php echo htmlspecialchars($u['name']); ?>" data-user-role="<?php echo htmlspecialchars($u['role']); ?>" style="padding:8px 12px; background:#667eea; color:#fff; border:none; border-radius:6px;">Edit</button>
+                                        <?php if ($isLocked): ?>
+                                            <button class="nav-btn btn-unlock-user" data-user-id="<?php echo htmlspecialchars($u['id']); ?>" data-user-name="<?php echo htmlspecialchars($u['name']); ?>" style="padding:8px 12px; background:#10b981; color:#fff; border:none; border-radius:6px;">Unlock</button>
+                                        <?php elseif (!$isSelf): ?>
+                                            <button class="nav-btn btn-lock-user" data-user-id="<?php echo htmlspecialchars($u['id']); ?>" data-user-name="<?php echo htmlspecialchars($u['name']); ?>" style="padding:8px 12px; background:#b42318; color:#fff; border:none; border-radius:6px;">Lock</button>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -186,6 +226,75 @@ if ($result) {
             document.body.appendChild(t);
             setTimeout(function(){ t.remove(); }, 3000);
         }
+
+        // Unlock a locked account. Clears the failed-attempt lockout only —
+        // the user keeps their existing password.
+        document.addEventListener('click', function(e){
+            var btn = e.target.closest('.btn-unlock-user');
+            if (!btn) return;
+
+            var userId = btn.getAttribute('data-user-id');
+            var userName = btn.getAttribute('data-user-name') || 'this user';
+            if (!userId) return;
+            if (!window.confirm('Unlock ' + userName + '?\n\nThey will be able to sign in again with their current password.')) return;
+
+            btn.disabled = true;
+            var form = new FormData();
+            form.append('user_id', userId);
+
+            fetch('../api/unlock_user.php', { method: 'POST', body: form, credentials: 'same-origin' })
+                .then(function(r){ return r.json(); })
+                .then(function(json){
+                    if (!json || !json.success) {
+                        throw new Error((json && json.error) || 'Unlock failed');
+                    }
+                    toasts('Account unlocked');
+                    var row = btn.closest('tr');
+                    var badge = row ? row.querySelector('.status-badge') : null;
+                    if (badge) {
+                        badge.textContent = 'Active';
+                        badge.classList.remove('status-locked');
+                        badge.classList.add('status-active');
+                        badge.removeAttribute('title');
+                    }
+                    if (row) row.removeAttribute('data-locked');
+                    btn.remove();
+                })
+                .catch(function(err){
+                    toasts(err.message || 'Unlock failed', true);
+                    btn.disabled = false;
+                });
+        });
+
+        // Lock an active account. Keeps their password; they just cannot sign
+        // in, and their current session is dropped on its next request.
+        document.addEventListener('click', function(e){
+            var btn = e.target.closest('.btn-lock-user');
+            if (!btn) return;
+
+            var userId = btn.getAttribute('data-user-id');
+            var userName = btn.getAttribute('data-user-name') || 'this user';
+            if (!userId) return;
+            if (!window.confirm('Lock ' + userName + '?\n\nThey will be signed out and unable to log in. Their password is unchanged, and a password reset will NOT let them back in — only an admin can unlock them.')) return;
+
+            btn.disabled = true;
+            var form = new FormData();
+            form.append('user_id', userId);
+
+            fetch('../api/lock_user.php', { method: 'POST', body: form, credentials: 'same-origin' })
+                .then(function(r){ return r.json(); })
+                .then(function(json){
+                    if (!json || !json.success) {
+                        throw new Error((json && json.error) || 'Lock failed');
+                    }
+                    toasts('Account locked');
+                    setTimeout(function(){ window.location.reload(); }, 600);
+                })
+                .catch(function(err){
+                    toasts(err.message || 'Lock failed', true);
+                    btn.disabled = false;
+                });
+        });
 
         // Unified Edit modal handlers
         var editModal = document.getElementById('userEditModal');

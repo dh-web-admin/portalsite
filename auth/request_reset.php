@@ -203,20 +203,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'set_p
             $stmt->execute();
             $stmt->close();
 
-            // A successful reset also lifts a login-attempt lockout — that's
-            // the account's only way out of one (auth/login_register.php).
-            $col = $conn->query("SHOW COLUMNS FROM users LIKE 'failed_login_attempts'");
-            if ($col && $col->num_rows === 0) {
-                $conn->query("ALTER TABLE users ADD COLUMN failed_login_attempts INT UNSIGNED NOT NULL DEFAULT 0");
-            }
-            $col = $conn->query("SHOW COLUMNS FROM users LIKE 'locked_at'");
-            if ($col && $col->num_rows === 0) {
-                $conn->query("ALTER TABLE users ADD COLUMN locked_at DATETIME NULL DEFAULT NULL");
-            }
-            $stmt = $conn->prepare("UPDATE users SET failed_login_attempts = 0, locked_at = NULL WHERE email = ?");
-            $stmt->bind_param("s", $reset_email);
-            $stmt->execute();
-            $stmt->close();
+            // A successful reset also lifts a login-attempt lockout; an admin
+            // can alternatively unlock from the user list without a reset.
+            require_once __DIR__ . '/../partials/account_lock.php';
+            account_lock_clear_after_reset($conn, $reset_email);
 
             // Clear remember_token cookie in browser (if set)
             if (isset($_COOKIE['remember_token'])) {

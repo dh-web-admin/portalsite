@@ -103,3 +103,9 @@ if (session_status() === PHP_SESSION_ACTIVE && !isset($_SESSION['email'])) {
 
     unset($hcIsGet, $hcDest, $hcIsDoc, $hcSkip, $hcTarget, $hcQuery);
 }
+
+// ---- Central page access gate ----
+// Last, so intended_url above is already stored before it can redirect to the
+// login screen. Every entry point loads this file, so no page can skip the
+// permission check by forgetting to add one.
+require_once __DIR__ . '/partials/access_gate.php';

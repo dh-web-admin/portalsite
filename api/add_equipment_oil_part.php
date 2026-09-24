@@ -110,7 +110,7 @@ if (!$stmt) {
 }
 
 // Changed bind_param types: use 's' for nullable numeric fields instead of 'd'
-$stmt->bind_param('issssssssssssdds', $equipment_id, $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $equipment_hours, $oil_life, $oil_hours, $now, $now);
+$stmt->bind_param('issssssssssssdss', $equipment_id, $part, $approx_capacity, $fluid_type, $weight, $mfg, $supplier, $unit_cost, $unit, $total, $notes, $equipment_hours, $oil_life, $oil_hours, $now, $now);
 $ok = $stmt->execute();
 $err = null;
 if (!$ok) {

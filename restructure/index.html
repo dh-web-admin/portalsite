@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portal Restructure Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap" />
+<style>
+  /* ── Tokens: light (complete set defined here) ───────────────────── */
+  :root {
+    --ground:   #fbfbfd;
+    --surface:  #ffffff;
+    --sunken:   #f4f5fa;
+    --ink:      #1a1c2b;
+    --ink-soft: #494d66;
+    --muted:    #6b6f85;
+    --rule:     #e3e4ee;
+    --rule-firm:#cfd1e2;
+
+    /* accent is the portal's own theme-color (#667eea), deepened for contrast */
+    --accent:     #4f53c9;
+    --accent-soft:#ecedfb;
+
+    --new:      #17795a;
+    --new-bg:   #e2f4ed;
+    --move:     #97620f;
+    --move-bg:  #fbeedb;
+    --split:    #2f5fa8;
+    --split-bg: #e5eefb;
+    --del:      #b0332a;
+    --del-bg:   #fbe7e5;
+    --keep:     #6b6f85;
+    --keep-bg:  #eef0f5;
+
+    --shadow: 0 1px 2px rgba(26,28,43,.05), 0 8px 24px -16px rgba(26,28,43,.22);
+
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --serif:"IBM Plex Serif", Georgia, "Times New Roman", serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #14151f;
+      --surface:  #1b1d2a;
+      --sunken:   #202232;
+      --ink:      #eceef8;
+      --ink-soft: #b9bdd4;
+      --muted:    #8e93ad;
+      --rule:     #2c2f42;
+      --rule-firm:#3d415a;
+
+      --accent:     #a2a6ff;
+      --accent-soft:#272a46;
+
+      --new:      #5fd3a8;
+      --new-bg:   #17332a;
+      --move:     #e2ae62;
+      --move-bg:  #382c18;
+      --split:    #85b3f0;
+      --split-bg: #1b2a40;
+      --del:      #f08e84;
+      --del-bg:   #391f1d;
+      --keep:     #8e93ad;
+      --keep-bg:  #262939;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #14151f;
+    --surface:  #1b1d2a;
+    --sunken:   #202232;
+    --ink:      #eceef8;
+    --ink-soft: #b9bdd4;
+    --muted:    #8e93ad;
+    --rule:     #2c2f42;
+    --rule-firm:#3d415a;
+    --accent:     #a2a6ff;
+    --accent-soft:#272a46;
+    --new:      #5fd3a8;
+    --new-bg:   #17332a;
+    --move:     #e2ae62;
+    --move-bg:  #382c18;
+    --split:    #85b3f0;
+    --split-bg: #1b2a40;
+    --del:      #f08e84;
+    --del-bg:   #391f1d;
+    --keep:     #8e93ad;
+    --keep-bg:  #262939;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { max-width: 100%; }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 0 96px;
+  }
+
+  /* ── Masthead ─────────────────────────────────────────────────────── */
+  .masthead { padding-block: 56px 36px; border-bottom: 2px solid var(--ink); }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(30px, 6vw, 46px);
+    font-weight: 600;
+    letter-spacing: -.022em;
+    line-height: 1.08;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+  .standfirst code { font-family: var(--mono); font-size: .88em; }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 34px;
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+  }
+  .fact { display: flex; flex-direction: column; gap: 2px; }
+  .fact b {
+    font-family: var(--mono);
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .fact span {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Sections ─────────────────────────────────────────────────────── */
+  section { margin-top: 56px; scroll-margin-top: 80px; }
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  h2::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--rule);
+  }
+  .lede {
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--ink-soft);
+    max-width: 66ch;
+    margin: 0 0 22px;
+  }
+  .lede code, p code, li code, td code {
+    font-family: var(--mono);
+    font-size: .86em;
+    background: var(--sunken);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 1px 4px;
+  }
+
+  /* ── Step sequence (a real ordered migration) ─────────────────────── */
+  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  ol.steps li {
+    counter-increment: s;
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 0 14px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+  }
+  ol.steps li::before {
+    content: counter(s, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  ol.steps .what { font-weight: 600; font-size: 15px; }
+  ol.steps .why { grid-column: 2; color: var(--muted); font-size: 13.5px; }
+  ol.steps li[data-here] {
+    background: var(--accent-soft);
+    border-radius: 6px;
+    padding-inline: 12px;
+    margin-inline: -12px;
+    border-bottom-color: transparent;
+  }
+  .here-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-left: 8px;
+  }
+
+  /* ── Legend + filters ─────────────────────────────────────────────── */
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--ground);
+    padding-block: 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .controls .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 2px;
+  }
+  button.f {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .05em;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--rule-firm);
+    background: var(--surface);
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background .12s, color .12s, border-color .12s;
+  }
+  button.f:hover { border-color: var(--accent); color: var(--accent); }
+  button.f:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.f[aria-pressed="true"] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--ground);
+  }
+
+  /* ── The tree ─────────────────────────────────────────────────────── */
+  .tree {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.75;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 18px 0;
+    overflow-x: auto;
+  }
+  .ln {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 0 18px;
+    min-width: max-content;
+    transition: opacity .15s;
+  }
+  .ln:hover { background: var(--sunken); }
+  .path { white-space: pre; flex: 0 0 auto; }
+  .g { color: var(--rule-firm); }
+  .dir { color: var(--accent); font-weight: 600; }
+  .file { color: var(--ink); }
+  .note {
+    color: var(--muted);
+    font-size: 11.5px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .ln.gap { height: 9px; }
+
+  /* dim non-matching rows when a filter is on */
+  .tree.filtered .ln:not(.match):not(.gap) { opacity: .2; }
+
+  .b {
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .07em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    flex: 0 0 auto;
+    text-transform: uppercase;
+  }
+  .b-new   { color: var(--new);   background: var(--new-bg); }
+  .b-move  { color: var(--move);  background: var(--move-bg); }
+  .b-split { color: var(--split); background: var(--split-bg); }
+  .b-del   { color: var(--del);   background: var(--del-bg); }
+  .b-edit  { color: var(--accent);background: var(--accent-soft); }
+  .b-keep  { color: var(--keep);  background: var(--keep-bg); }
+
+  .ln[data-s="del"] .path { text-decoration: line-through; text-decoration-color: var(--del); }
+
+  /* ── Endpoint disclosure ──────────────────────────────────────────── */
+  details.eps { margin: 2px 0 2px 18px; }
+  details.eps > summary {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 2px 0;
+    list-style: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  details.eps > summary::-webkit-details-marker { display: none; }
+  details.eps > summary::before { content: "▸"; font-size: 9px; transition: transform .15s; display: inline-block; }
+  details.eps[open] > summary::before { transform: rotate(90deg); }
+  details.eps > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  .eplist {
+    columns: 260px 3;
+    column-gap: 26px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding: 8px 0 8px 16px;
+    margin: 0;
+    list-style: none;
+    border-left: 2px solid var(--rule);
+  }
+  .eplist li { break-inside: avoid; padding: 1px 0; }
+  .eplist li.q { color: var(--move); }
+  .eplist li.q::after { content: " ?"; font-weight: 600; }
+
+  /* ── Tables ───────────────────────────────────────────────────────── */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; min-width: 520px; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    background: var(--sunken);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+  td.mono { font-family: var(--mono); font-size: 12px; }
+
+  /* ── Notes ────────────────────────────────────────────────────────── */
+  .notes { display: grid; gap: 14px; }
+  .note-item {
+    border-left: 3px solid var(--rule-firm);
+    padding: 2px 0 2px 16px;
+  }
+  .note-item.warn { border-left-color: var(--move); }
+  .note-item.ask  { border-left-color: var(--accent); }
+  .note-item h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .note-item p {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  @media (max-width: 620px) {
+    .ln { gap: 7px; }
+    .note { display: none; }
+    .facts { gap: 10px 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">PortalSite · target structure</p>
+    <h1>Portal Restructure Map</h1>
+    <p class="standfirst">
+      Where every file ends up after the eight-step reorganization. Each page becomes a
+      self-contained folder — <code>view.php</code> for logic and markup, its own
+      <code>style.css</code>, <code>script.js</code>, <code>api/</code> and
+      <code>assets/</code> — rendered through one shared layout in
+      <code>layouts/</code>. Nothing here is applied yet.
+    </p>
+    <div class="facts">
+      <div class="fact"><b>342</b><span>files tracked</span></div>
+      <div class="fact"><b>75,731</b><span>lines php/js/css</span></div>
+      <div class="fact"><b>147</b><span>api endpoints</span></div>
+      <div class="fact"><b>141</b><span>get a page owner</span></div>
+      <div class="fact"><b>6</b><span>stay shared</span></div>
+      <div class="fact"><b>~6,200</b><span>lines deleted</span></div>
+    </div>
+  </header>
+
+  <!-- ── Steps ──────────────────────────────────────────────────────── -->
+  <section id="steps">
+    <h2>Migration sequence</h2>
+    <p class="lede">
+      Ordered so each step makes the next one safer. Steps 1–3 are reversible and touch
+      few files; step 7 is the only one that changes public URLs.
+    </p>
+    <ol class="steps">
+      <li data-here>
+        <span class="what">Dead code removal<span class="here-tag">you are here → next</span></span>
+        <span class="why">Two <code>(old)</code> engineering files, a <code>.bak</code>, three stray <code>.log</code> files, and the request-logging block at the top of <code>api/update_bid.php</code>. ~6,200 lines git already remembers.</span>
+      </li>
+      <li>
+        <span class="what">Composer autoload + <code>src/</code></span>
+        <span class="why">PSR-4 <code>App\</code> → <code>src/</code>, plus <code>bootstrap.php</code> with <code>ob_start()</code> and a role resolved once per request.</span>
+      </li>
+      <li>
+        <span class="what">Build <code>layouts/portal.php</code>, migrate one page</span>
+        <span class="why">Prove the template on <code>employee_information</code> (474 lines) before touching anything large.</span>
+      </li>
+      <li>
+        <span class="what">Roll the layout across all pages</span>
+        <span class="why">Delete the redundant auth block from each as you go — <code>access_gate.php</code> already ran it.</span>
+      </li>
+      <li>
+        <span class="what">Split JS and CSS out of the pages</span>
+        <span class="why">Largest first: Bid_tracking, scheduling, maps. Mechanical once <code>page_data</code> exists.</span>
+      </li>
+      <li>
+        <span class="what"><code>config/pages.php</code> manifest</span>
+        <span class="why">One declaration read by the dashboard, sidebar and permissions instead of five edit sites.</span>
+      </li>
+      <li>
+        <span class="what">Per-page <code>api/</code> folders</span>
+        <span class="why">One page at a time — this changes endpoint URLs, so every <code>fetch()</code> moves with it.</span>
+      </li>
+      <li>
+        <span class="what">Naming cleanup</span>
+        <span class="why">One rename commit at the end: <code>Bid_tracking</code> → <code>bid_tracking</code>, <code>whishlist</code> → <code>wishlist</code>, <code>all_warrenties</code> → <code>all_warranties</code>.</span>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ── Tree ───────────────────────────────────────────────────────── -->
+  <section id="tree">
+    <h2>Target tree</h2>
+    <p class="lede">
+      Filter to see only what changes. A <b>?</b> beside an endpoint means no caller was
+      found anywhere in the codebase — confirm before moving or deleting it.
+    </p>
+
+    <div class="controls">
+      <span class="label">Show</span>
+      <button class="f" data-filter="all" aria-pressed="true">Everything</button>
+      <button class="f" data-filter="new" aria-pressed="false">New</button>
+      <button class="f" data-filter="move" aria-pressed="false">Moved</button>
+      <button class="f" data-filter="split" aria-pressed="false">Split</button>
+      <button class="f" data-filter="del" aria-pressed="false">Deleted</button>
+      <button class="f" data-filter="edit" aria-pressed="false">Edited</button>
+      <span style="flex:1 1 auto"></span>
+      <button class="f" id="expandAll" aria-pressed="false">Expand endpoints</button>
+    </div>
+
+    <div class="tree" id="tree">
+
+      <div class="ln" data-s="keep"><span class="path"><span class="dir">PortalSite/</span></span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="file">index.php</span></span><span class="b b-keep">keep</span><span class="note">front controller + uploads passthrough</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="file">session_init.php</span></span><span class="b b-keep">keep</span><span class="note">requires access_gate.php at line 111</span></div>
+      <div class="ln" data-s="edit"><span class="path"><span class="g">├─ </span><span class="file">composer.json</span></span><span class="b b-edit">edit</span><span class="note">add PSR-4 autoload: App\ → src/</span></div>
+      <div class="ln" data-s="edit"><span class="path"><span class="g">├─ </span><span class="file">.htaccess</span></span><span class="b b-edit">edit</span><span class="note">deny /src/, /layouts/, /restructure/</span></div>
+      <div class="ln" data-s="edit"><span class="path"><span class="g">├─ </span><span class="file">.gitignore</span></span><span class="b b-edit">edit</span><span class="note">add .venv/ explicitly</span></div>
+      <div class="ln" data-s="edit"><span class="path"><span class="g">└─ </span><span class="file">README.md</span></span><span class="b b-edit">edit</span><span class="note">structure section is out of date</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- src -->
+      <div class="ln" data-s="new"><span class="path"><span class="g">├─ </span><span class="dir">src/</span></span><span class="b b-new">new</span><span class="note">autoloaded shared PHP — never web-served</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="file">bootstrap.php</span></span><span class="b b-new">new</span><span class="note">ob_start, autoload, common requires</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="file">auth.php</span></span><span class="b b-new">new</span><span class="note">current_role() — cached, fixes the double query</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="file">db.php</span></span><span class="b b-new">new</span><span class="note">connection + column-exists helpers</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="file">http.php</span></span><span class="b b-new">new</span><span class="note">api_boot(), json_ok(), json_fail()</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="file">page.php</span></span><span class="b b-new">new</span><span class="note">portal_start() / portal_end()</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  └─ </span><span class="file">mail.php</span></span><span class="b b-move">move</span><span class="note">← auth/mailjet_helper.php</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- layouts -->
+      <div class="ln" data-s="new"><span class="path"><span class="g">├─ </span><span class="dir">layouts/</span></span><span class="b b-new">new</span><span class="note">the one page shell</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="file">portal.php</span></span><span class="b b-new">new</span><span class="note">head + header + sidebar + content slot</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="file">blank.php</span></span><span class="b b-new">new</span><span class="note">login, logout, print — no chrome</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  └─ </span><span class="dir">parts/</span></span><span class="b b-new">new</span><span class="note"></span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│     ├─ </span><span class="file">head.php</span></span><span class="b b-new">new</span><span class="note">meta, CSS chain, cache-busting</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     ├─ </span><span class="file">header.php</span></span><span class="b b-move">move</span><span class="note">← partials/portalheader.php, minus role query</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     ├─ </span><span class="file">sidebar.php</span></span><span class="b b-move">move</span><span class="note">← partials/sidebar.php</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│     └─ </span><span class="file">admin_panel.php</span></span><span class="b b-new">new</span><span class="note">split out of sidebar.php</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- config -->
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">config/</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="file">config.php</span> · <span class="file">config.example.php</span> · <span class="file">config.railway.php</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="file">email_config.php</span> · <span class="file">security.php</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  └─ </span><span class="file">pages.php</span></span><span class="b b-new">new</span><span class="note">key, label, roles, icon — one manifest</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- partials -->
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">partials/</span></span><span class="b b-keep">keep</span><span class="note">shrinks to guards + helpers only</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="file">access_gate.php</span></span><span class="b b-keep">keep</span><span class="note">already centralizes login + permission checks</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="file">account_lock.php</span> · <span class="file">permissions.php</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="file">reauth.php</span> · <span class="file">upload_guard.php</span> · <span class="file">url.php</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  ├─ </span><span class="file">portalheader.php</span></span><span class="b b-move">move</span><span class="note">→ layouts/parts/header.php</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  └─ </span><span class="file">sidebar.php</span></span><span class="b b-move">move</span><span class="note">→ layouts/parts/sidebar.php</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- assets -->
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">assets/</span></span><span class="b b-keep">keep</span><span class="note">truly global only</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="dir">css/</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  ├─ </span><span class="file">base.css</span> · <span class="file">admin-layout.css</span> · <span class="file">dashboard.css</span></span><span class="b b-keep">keep</span><span class="note">the only three the layout loads</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">project-checklist.css</span></span><span class="b b-move">move</span><span class="note">→ pages/project_checklist/style.css (1,194 ln)</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">user-list.css</span></span><span class="b b-move">move</span><span class="note">→ admin/user_list/style.css</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">register-user.css</span></span><span class="b b-move">move</span><span class="note">→ admin/register_new/style.css</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">edit-user.css</span></span><span class="b b-move">move</span><span class="note">→ admin/edit_user/style.css</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">remove-user.css</span></span><span class="b b-move">move</span><span class="note">→ admin/remove_user/style.css</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">login.css</span></span><span class="b b-move">move</span><span class="note">→ auth/login/style.css</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">forgot-password.css</span></span><span class="b b-move">move</span><span class="note">→ auth/request_reset/style.css</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  │  ├─ </span><span class="file">stylesheet.css</span></span><span class="b b-del">del</span><span class="note">legacy, 515 ln — already in .gitignore</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="file">.CSS_ORGANIZATION.md</span></span><span class="b b-move">move</span><span class="note">→ docs/css-organization.md</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="dir">js/</span></span><span class="b b-keep">keep</span><span class="note">idle-timeout, logout-confirm, mobile-menu, unsaved-guard</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  └─ </span><span class="dir">images/</span></span><span class="b b-keep">keep</span><span class="note">logo, eportal, bell, user-icon, maintenance, bg…</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- api -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">├─ </span><span class="dir">api/</span></span><span class="b b-split">split</span><span class="note">147 flat files → 141 to pages, 6 stay</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  └─ </span><span class="dir">_shared/</span></span><span class="b b-new">new</span><span class="note">only endpoints with more than one caller</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     ├─ </span><span class="file">add_client.php</span></span><span class="b b-move">move</span><span class="note">client_profile + maps</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     ├─ </span><span class="file">add_equipment_upload.php</span></span><span class="b b-move">move</span><span class="note">equipments + scheduling</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     ├─ </span><span class="file">delete_part_specification.php</span></span><span class="b b-move">move</span><span class="note">engineering + equipments</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     ├─ </span><span class="file">get_parts_suppliers.php</span></span><span class="b b-move">move</span><span class="note">engineering + equipments</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     ├─ </span><span class="file">save_parts_suppliers.php</span></span><span class="b b-move">move</span><span class="note">engineering + equipments</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│     └─ </span><span class="file">session_ping.php</span></span><span class="b b-move">move</span><span class="note">global — called by idle-timeout.js</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  </span><span class="file">✗ test_json_echo.php</span></span><span class="b b-del">del</span><span class="note">test scaffold, no callers</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  </span><span class="file">✗ add_general_contractor.log</span></span><span class="b b-del">del</span><span class="note">stray log in web root</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  </span><span class="file">✗ update_bid_access.log</span></span><span class="b b-del">del</span><span class="note">logs cookies + headers of every request</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  </span><span class="file">✗ update_bid_debug.log</span></span><span class="b b-del">del</span><span class="note">stray log in web root</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- PAGES -->
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">pages/</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  ├─ </span><span class="dir">_new_page/</span></span><span class="b b-new">new</span><span class="note">scaffold — replaces pages/_template.php</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  │  </span><span class="file">✗ ../_template.php</span></span><span class="b b-del">del</span><span class="note">still uses pre-2025 single-../ paths</span></div>
+
+      <!-- dashboard -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">dashboard/</span></span><span class="b b-split">split</span><span class="note">273 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-keep">keep</span><span class="note">275 ln</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 108 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">dev/</span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← dev/index.php</span></div>
+
+      <!-- bid_tracking -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">bid_tracking/</span></span><span class="b b-split">split</span><span class="note">← Bid_tracking/ · 5,647 ln, the biggest file</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php, 5,647 → ~1,100 ln</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-split">split</span><span class="note">7-ln stub ← 494 inline lines</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 4,009 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">21 endpoints</span></div>
+      <details class="eps"><summary>21 endpoints → pages/bid_tracking/api/</summary>
+        <ul class="eplist">
+          <li>add_general_contractor</li><li class="q">clone_bid_with_gc</li><li>create_project</li>
+          <li>delete_bid</li><li>delete_general_contractor</li><li>delete_project_by_dhss</li>
+          <li class="q">get_bid_columns</li><li class="q">get_bid_reasons</li><li>get_email_preferences</li>
+          <li>get_gc_clients</li><li>get_general_contractors</li><li>get_next_project_number</li>
+          <li>save_bid_reason</li><li>save_email_preferences</li><li>save_gc_clients</li>
+          <li class="q">search_bids</li><li>send_daily_bid_summaries</li><li>set_winner_general_contractor</li>
+          <li>update_bid</li><li class="q">update_bid_statuses</li><li>update_general_contractor</li>
+        </ul>
+      </details>
+
+      <!-- equipments -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">equipments/</span></span><span class="b b-split">split</span><span class="note">22 loose .php siblings today</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php, 2,163 ln</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-split">split</span><span class="note">671 ln ← + 313 inline</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 923 inline lines</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="dir">sections/</span></span><span class="b b-new">new</span><span class="note">19 sub-pages, flat today</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">equipment.php</span> · <span class="file">edit_equipment.php</span> · <span class="file">parts.php</span></span><span class="b b-move">move</span><span class="note">1,970 · 1,234 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">notes.php</span> · <span class="file">oil_status.php</span> · <span class="file">addhours.php</span></span><span class="b b-move">move</span><span class="note">903 · 961 · 497 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">air_filters.php</span></span><span class="b b-move">move</span><span class="note">← Airfilters.php</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">tires.php</span> · <span class="file">warranty.php</span></span><span class="b b-move">move</span><span class="note">← Tires.php · Warranty.php</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">all_dimensions.php</span> · <span class="file">all_engine.php</span> · <span class="file">all_filters.php</span> · <span class="file">all_tires.php</span></span><span class="b b-move">move</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">all_engine_reports.php</span> · <span class="file">all_filter_change_reports.php</span> · <span class="file">all_oil_change_reports.php</span></span><span class="b b-move">move</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">all_warranties.php</span></span><span class="b b-move">move</span><span class="note">← all_warrenties.php (typo)</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  └─ </span><span class="file">wishlist.php</span></span><span class="b b-move">move</span><span class="note">← whishlist.php (typo)</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">29 endpoints + 2 lifted from the page folder</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">fetch_all_filter_names.php</span></span><span class="b b-move">move</span><span class="note">← pages/equipments/ root — it's an endpoint</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  └─ </span><span class="file">fetch_equipment_filters.php</span></span><span class="b b-move">move</span><span class="note">⚠ two divergent copies — reconcile first</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="dir">assets/images/</span></span><span class="b b-move">move</span><span class="note">18 svg ← pages/equipments/images/</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="file">✗ debug_uploads.php</span></span><span class="b b-move">move</span><span class="note">→ debug/ — not a page</span></div>
+      <details class="eps"><summary>29 endpoints → pages/equipments/api/</summary>
+        <ul class="eplist">
+          <li>add_equipment</li><li>add_equipment_issue</li><li>add_equipment_oil_part</li>
+          <li>add_equipment_part</li><li>add_filter_info</li><li>add_filter_report</li>
+          <li>add_fluid_report</li><li class="q">add_tire_info</li><li>delete_equipment</li>
+          <li>delete_equipment_issue</li><li>delete_equipment_oil_part</li><li>delete_equipment_part</li>
+          <li>delete_equipment_upload</li><li>delete_filter_info</li><li>fetch_equipment_filters</li>
+          <li class="q">fetch_equipment_tires</li><li class="q">get_equipment_parts</li><li>get_equipment_uploads</li>
+          <li>get_note</li><li>reset_equipment_oil_part_hours</li><li class="q">reset_filter_hours</li>
+          <li>save_addhours_changes</li><li>save_note</li><li>update_dimension</li>
+          <li>update_equipment</li><li>update_equipment_issue</li><li>update_equipment_oil_part</li>
+          <li>update_filter_info</li><li>update_tire_info</li>
+        </ul>
+      </details>
+
+      <!-- engineering -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">engineering/</span></span><span class="b b-split">split</span><span class="note">largest deletion lives here</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php, 99 ln</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-keep">keep</span><span class="note">98 ln</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note"></span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="dir">sections/</span></span><span class="b b-new">new</span><span class="note">15 component pages, flat today</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">_sections.php</span> · <span class="file">_section_top.php</span> · <span class="file">_section_bottom.php</span></span><span class="b b-move">move</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">catwalk.php</span> · <span class="file">dust_collector.php</span> · <span class="file">fender.php</span> · <span class="file">fill_pipe.php</span></span><span class="b b-move">move</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">hydraulic_tank.php</span> · <span class="file">main_auger.php</span> · <span class="file">rear_auger.php</span></span><span class="b b-move">move</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">misc_items.php</span> · <span class="file">slidegate.php</span> · <span class="file">trough.php</span></span><span class="b b-move">move</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  └─ </span><span class="file">screw_conveyor_box_240.php</span> · <span class="file">weight_deflectors.php</span></span><span class="b b-move">move</span><span class="note"></span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  │  ├─ </span><span class="dir">hydraulic_system/</span></span><span class="b b-split">split</span><span class="note">sub-page with its own assets</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← hydraulic_systems.php</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">inventory.php</span></span><span class="b b-move">move</span><span class="note">← hydraulic_inventory.php, 956 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">components_list.php</span></span><span class="b b-move">move</span><span class="note">← hydraulic_components_list.php</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">_hc_diagram.php</span></span><span class="b b-keep">keep</span><span class="note">563 ln, 426 of them inline JS</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">style.css</span></span><span class="b b-keep">keep</span><span class="note">819 ln</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 629 + 426 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  │  └─ </span><span class="dir">assets/images/</span></span><span class="b b-move">move</span><span class="note">← images/ (2 svg)</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">40 endpoints — the largest group</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="dir">assets/images/</span></span><span class="b b-move">move</span><span class="note">← images/pencil.svg</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  │  ├─ </span><span class="file">✗ index(old).php</span></span><span class="b b-del">del</span><span class="note">4,375 ln, zero references</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  │  └─ </span><span class="file">✗ build_new(old).php</span></span><span class="b b-del">del</span><span class="note">1,760 ln, zero references</span></div>
+      <details class="eps"><summary>40 endpoints → pages/engineering/api/</summary>
+        <ul class="eplist">
+          <li>add_engineering_item</li><li>add_engineering_item_part</li><li>add_engineering_material</li>
+          <li>add_hydraulic_component_spec</li><li>add_hydraulic_inventory_supplier</li><li>add_material_part</li>
+          <li class="q">audit_engineering_drawings_missing</li><li>delete_engineering_bom</li><li class="q">delete_engineering_drawing</li>
+          <li>delete_engineering_drawings_versions</li><li>delete_engineering_item</li><li>delete_engineering_item_part</li>
+          <li>delete_engineering_material</li><li>delete_equipment_draft</li><li>delete_hydraulic_inventory_supplier</li>
+          <li>delete_material_part</li><li>deploy_engineering_build</li><li class="q">download_engineering_drawings_zip</li>
+          <li>get_draft_engineering_items</li><li>get_engineering_bom</li><li>get_engineering_drawings</li>
+          <li>get_engineering_item_parts</li><li>get_engineering_items</li><li>get_engineering_materials</li>
+          <li>get_engineering_part_drawings</li><li>get_equipment_drafts</li><li>get_hydraulic_component_group</li>
+          <li>get_material_parts</li><li>replace_engineering_drawing</li><li class="q">save_complete_equipment_build</li>
+          <li>save_draft_engineering_items</li><li>save_equipment_draft</li><li>update_engineering_item</li>
+          <li>update_hydraulic_component_spec</li><li>update_hydraulic_inventory_stock</li><li>update_hydraulic_inventory_supplier</li>
+          <li>update_material_part</li><li>upload_engineering_bom</li><li>upload_engineering_drawings</li>
+          <li>upload_engineering_part_drawings</li>
+        </ul>
+      </details>
+
+      <!-- maps -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">maps/</span></span><span class="b b-split">split</span><span class="note">2,791 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">table.php</span></span><span class="b b-move">move</span><span class="note">← maps.php, 617 ln</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-split">split</span><span class="note">196 ln ← + 71 inline</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 2,285 inline lines (Leaflet)</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  ├─ </span><span class="file">maps.csv</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">17 endpoints</span></div>
+      <details class="eps"><summary>17 endpoints → pages/maps/api/</summary>
+        <ul class="eplist">
+          <li>add_service</li><li>add_supplier</li><li>delete_service</li><li>delete_supplier</li>
+          <li class="q">geocode_address</li><li class="q">geocode_missing_suppliers</li><li>get_clients_by_type</li>
+          <li class="q">get_missing_coordinates</li><li>get_services</li><li>get_supplier_field_values</li>
+          <li>get_suppliers</li><li class="q">link_supplier_to_client</li><li>rename_service</li>
+          <li>set_supplier_color</li><li>update_service_order</li><li>update_supplier</li>
+          <li>update_supplier_coordinates</li>
+        </ul>
+      </details>
+
+      <!-- project_checklist -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">project_checklist/</span></span><span class="b b-split">split</span><span class="note">1,921 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  ├─ </span><span class="file">events.php</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-move">move</span><span class="note">6-ln stub ← assets/css/project-checklist.css (1,194)</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 1,455 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">12 endpoints</span></div>
+      <details class="eps"><summary>12 endpoints → pages/project_checklist/api/</summary>
+        <ul class="eplist">
+          <li>check_project_name</li><li>clone_project</li><li>create_project_checklist</li>
+          <li>delete_project</li><li>get_assignable_users</li><li>get_field_assignments</li>
+          <li>rename_project</li><li>save_checklist_filter</li><li>save_field_assignments</li>
+          <li>save_project_order</li><li>update_project_cell</li><li>update_project_cells</li>
+        </ul>
+      </details>
+
+      <!-- scheduling -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">scheduling/</span></span><span class="b b-split">split</span><span class="note">5,582 ln — second biggest</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  ├─ </span><span class="file">project_uploads.php</span></span><span class="b b-keep">keep</span><span class="note"></span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-split">split</span><span class="note">1,862 ln ← + 475 inline</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 3,501 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">add_project_upload · delete_project_upload · get_project_uploads</span></div>
+
+      <!-- account_settings -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">account_settings/</span></span><span class="b b-split">split</span><span class="note">836 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-keep">keep</span><span class="note">963 ln</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 408 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">change_own_password · save_user_details · upload_profile_image?</span></div>
+
+      <!-- client_profile -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">client_profile/</span></span><span class="b b-split">split</span><span class="note">1,440 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-new">new</span><span class="note">← 61 inline lines · no style.css today</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 822 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">delete_client · update_client</span></div>
+
+      <!-- employee_information -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">employee_information/</span></span><span class="b b-split">split</span><span class="note">474 ln — migrate this one first</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  ├─ </span><span class="file">view.php</span></span><span class="b b-move">move</span><span class="note">← index.php</span></div>
+      <div class="ln" data-s="edit"><span class="path"><span class="g">│  │  ├─ </span><span class="file">style.css</span></span><span class="b b-edit">edit</span><span class="note">123 ln · ⚠ drop the ../scheduling/style.css link</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">│  │  ├─ </span><span class="file">script.js</span></span><span class="b b-new">new</span><span class="note">← 304 inline lines</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  │  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">get_employee_details · get_employee_field_suggestions · save_employee_details</span></div>
+
+      <!-- small pages -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">company_policies/</span> · <span class="dir">for_sale/</span> · <span class="dir">forms/</span> · <span class="dir">sops/</span></span><span class="b b-split">split</span><span class="note">view.php + style.css each · no api</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  └─ </span><span class="dir">coordinate_entry/</span></span><span class="b b-split">split</span><span class="note">redirect stub → maps/table.php</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- admin -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">├─ </span><span class="dir">admin/</span></span><span class="b b-split">split</span><span class="note">flat .php files → folder per page</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">user_list/</span></span><span class="b b-split">split</span><span class="note">view.php + style.css + script.js ← 510 inline ln</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">permissions/</span></span><span class="b b-split">split</span><span class="note">1,082 ln → 452 js + 446 css out</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">register_new/</span> · <span class="dir">edit_user/</span> · <span class="dir">remove_user/</span></span><span class="b b-split">split</span><span class="note">view.php + style.css each</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">backup/</span></span><span class="b b-split">split</span><span class="note">377 ln</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  └─ </span><span class="dir">api/</span></span><span class="b b-move">move</span><span class="note">9 endpoints</span></div>
+      <details class="eps"><summary>9 endpoints → admin/api/</summary>
+        <ul class="eplist">
+          <li>get_role_permissions</li><li>get_user_permissions</li><li>lock_user</li>
+          <li>remove_user</li><li>save_role_permissions</li><li>save_user_permissions</li>
+          <li>unlock_user</li><li>update_user</li><li>update_user_password</li>
+        </ul>
+      </details>
+
+      <div class="ln gap"></div>
+
+      <!-- auth -->
+      <div class="ln" data-s="split"><span class="path"><span class="g">├─ </span><span class="dir">auth/</span></span><span class="b b-split">split</span><span class="note">views get folders, handlers stay flat</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">login/</span></span><span class="b b-split">split</span><span class="note">view.php ← login.php · style.css ← assets/css/login.css</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">logout/</span></span><span class="b b-split">split</span><span class="note">view.php ← logout.php</span></div>
+      <div class="ln" data-s="split"><span class="path"><span class="g">│  ├─ </span><span class="dir">request_reset/</span></span><span class="b b-split">split</span><span class="note">style.css ← password_reset.css + forgot-password.css</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">│  ├─ </span><span class="file">login_register.php</span> · <span class="file">create_sso.php</span> · <span class="file">reauth.php</span></span><span class="b b-keep">keep</span><span class="note">handlers, no view</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  ├─ </span><span class="file">mailjet_helper.php</span></span><span class="b b-move">move</span><span class="note">→ src/mail.php — it's a library</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  └─ </span><span class="dir">api/</span><span class="file">validate_sso.php</span></span><span class="b b-move">move</span><span class="note">⚠ no caller found — verify first</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- docs -->
+      <div class="ln" data-s="new"><span class="path"><span class="g">├─ </span><span class="dir">docs/</span></span><span class="b b-new">new</span><span class="note">markdown out of dev/, which is PHP tooling</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  ├─ </span><span class="file">portal-organization.md</span></span><span class="b b-move">move</span><span class="note">← dev/Readme-Portal-Organization.md</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  ├─ </span><span class="file">pages-reorganization.md</span></span><span class="b b-move">move</span><span class="note">← dev/PAGES_REORGANIZATION.md</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  ├─ </span><span class="file">css-organization.md</span></span><span class="b b-move">move</span><span class="note">← assets/css/.CSS_ORGANIZATION.md</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  ├─ </span><span class="file">responsive-design.md</span> · <span class="file">railway-deployment.md</span></span><span class="b b-move">move</span><span class="note">← dev/</span></div>
+      <div class="ln" data-s="move"><span class="path"><span class="g">│  └─ </span><span class="file">daily-workflow.md</span> · <span class="file">github-setup.md</span></span><span class="b b-move">move</span><span class="note">← dev/</span></div>
+
+      <div class="ln gap"></div>
+
+      <!-- remaining -->
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">dev/</span></span><span class="b b-keep">keep</span><span class="note">PHP tooling only once the .md files leave</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">debug/</span></span><span class="b b-keep">keep</span><span class="note">+ debug_uploads.php from pages/equipments/</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  └─ </span><span class="file">✗ mailjet_send.log</span> · <span class="file">✗ password_reset_mail.log</span></span><span class="b b-del">del</span><span class="note">logs in the web root</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">scripts/</span></span><span class="b b-keep">keep</span><span class="note">cron + mail jobs</span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  ├─ </span><span class="file">✗ send_email_notifications.php.bak</span></span><span class="b b-del">del</span><span class="note"></span></div>
+      <div class="ln" data-s="del"><span class="path"><span class="g">│  └─ </span><span class="file">✗ daily_send.log</span></span><span class="b b-del">del</span><span class="note"></span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">├─ </span><span class="dir">migrations/</span></span><span class="b b-keep">keep</span><span class="note">README only — no migration files yet</span></div>
+      <div class="ln" data-s="new"><span class="path"><span class="g">├─ </span><span class="dir">restructure/</span></span><span class="b b-new">new</span><span class="note">this page</span></div>
+      <div class="ln" data-s="keep"><span class="path"><span class="g">└─ </span><span class="dir">uploads/</span></span><span class="b b-keep">keep</span><span class="note">mounted volume, untracked</span></div>
+
+    </div>
+  </section>
+
+  <!-- ── Ownership table ────────────────────────────────────────────── -->
+  <section id="ownership">
+    <h2>Endpoint ownership</h2>
+    <p class="lede">
+      Every one of the 147 endpoints in <code>api/</code> mapped to exactly one owner —
+      verified with no duplicates and no gaps. The <b>unverified</b> column counts
+      endpoints with no caller found anywhere; check each before it moves.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Destination</th><th class="num">Endpoints</th><th class="num">Unverified</th><th>Why it owns them</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">pages/engineering/api/</td><td class="num">40</td><td class="num">4</td><td>Engineering items, materials, BOM, drawings, hydraulics</td></tr>
+          <tr><td class="mono">pages/equipments/api/</td><td class="num">29</td><td class="num">4</td><td>Equipment, filters, oil, tires, notes, hours</td></tr>
+          <tr><td class="mono">pages/bid_tracking/api/</td><td class="num">21</td><td class="num">4</td><td>Bids, general contractors, projects, summaries</td></tr>
+          <tr><td class="mono">pages/maps/api/</td><td class="num">17</td><td class="num">4</td><td>Suppliers, services, geocoding, coordinates</td></tr>
+          <tr><td class="mono">pages/project_checklist/api/</td><td class="num">12</td><td class="num">0</td><td>Projects, cells, field assignments</td></tr>
+          <tr><td class="mono">admin/api/</td><td class="num">9</td><td class="num">0</td><td>Users, roles, permissions, locks</td></tr>
+          <tr><td class="mono">api/_shared/</td><td class="num">6</td><td class="num">0</td><td>More than one calling page</td></tr>
+          <tr><td class="mono">pages/scheduling/api/</td><td class="num">3</td><td class="num">0</td><td>Project uploads</td></tr>
+          <tr><td class="mono">pages/employee_information/api/</td><td class="num">3</td><td class="num">0</td><td>Employee details</td></tr>
+          <tr><td class="mono">pages/account_settings/api/</td><td class="num">3</td><td class="num">1</td><td>Own password, own details, avatar</td></tr>
+          <tr><td class="mono">pages/client_profile/api/</td><td class="num">2</td><td class="num">0</td><td>Client records</td></tr>
+          <tr><td class="mono">auth/api/</td><td class="num">1</td><td class="num">1</td><td>SSO validation</td></tr>
+          <tr><td class="mono">— deleted</td><td class="num">1</td><td class="num">1</td><td><code>test_json_echo.php</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Decisions ──────────────────────────────────────────────────── -->
+  <section id="decisions">
+    <h2>Decisions behind the tree</h2>
+    <div class="notes">
+      <div class="note-item">
+        <h3>Pages keep <code>view.php</code>, not <code>index.php</code></h3>
+        <p>
+          A directory-index filename invites the server to serve it; naming it
+          <code>view.php</code> makes it explicit that the layout renders it, and keeps
+          the <code>/pages/&lt;key&gt;/</code> URL shape that <code>access_gate.php</code> parses.
+          Directory URLs keep working through <code>DirectoryIndex</code>.
+        </p>
+      </div>
+      <div class="note-item">
+        <h3>No page implements its own auth</h3>
+        <p>
+          <code>access_gate.php</code> already runs the login check, permission check and
+          account-lock check before any page code executes. The ~30-line auth block
+          copied into 68 files is redundant, not merely duplicated — deleting it is
+          step 4, one page at a time.
+        </p>
+      </div>
+      <div class="note-item warn">
+        <h3>Two copies of <code>fetch_equipment_filters.php</code></h3>
+        <p>
+          One in <code>api/</code>, one in <code>pages/equipments/</code>, with different
+          contents. Reconcile them into a single file before the equipments page moves,
+          or the merge silently picks a winner.
+        </p>
+      </div>
+      <div class="note-item warn">
+        <h3>Step 7 changes public URLs</h3>
+        <p>
+          There is no router — physical paths are URLs. Moving an endpoint moves its URL,
+          so every <code>fetch()</code> that names it has to move in the same commit.
+          This is why it is one page at a time and why it comes last but one.
+        </p>
+      </div>
+      <div class="note-item ask">
+        <h3>Nineteen endpoints have no caller</h3>
+        <p>
+          Marked <b>?</b> in the tree. Some are genuinely dead; others were reached from
+          the two <code>(old)</code> engineering files through a computed
+          <code>apiBase + '/name.php'</code>, so deleting those files in step 1 truly
+          orphans them. Decide each one deliberately rather than moving dead code into a
+          tidier folder.
+        </p>
+      </div>
+      <div class="note-item ask">
+        <h3>This folder is served without authentication</h3>
+        <p>
+          <code>.htaccess</code> gates PHP, not static HTML, so this page is readable by
+          anyone who can reach the host. Add <code>restructure/</code> to the deny rules
+          before deploying, or keep it local.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    PortalSite restructure map · planning only, nothing applied · 24 Sep 2026
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var tree = document.getElementById('tree');
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('button.f[data-filter]'));
+
+  function apply(filter) {
+    buttons.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.filter === filter));
+    });
+    var rows = tree.querySelectorAll('.ln');
+    if (filter === 'all') {
+      tree.classList.remove('filtered');
+      rows.forEach(function (r) { r.classList.remove('match'); });
+      return;
+    }
+    tree.classList.add('filtered');
+    rows.forEach(function (r) {
+      r.classList.toggle('match', r.dataset.s === filter);
+    });
+  }
+
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () { apply(b.dataset.filter); });
+  });
+
+  var expand = document.getElementById('expandAll');
+  expand.addEventListener('click', function () {
+    var open = expand.getAttribute('aria-pressed') !== 'true';
+    expand.setAttribute('aria-pressed', String(open));
+    expand.textContent = open ? 'Collapse endpoints' : 'Expand endpoints';
+    document.querySelectorAll('details.eps').forEach(function (d) { d.open = open; });
+  });
+})();
+</script>
+</body>
+</html>

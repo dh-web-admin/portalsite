@@ -43,6 +43,13 @@ if ($result) {
 }
 
 $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
+$allRoles = function_exists('portal_all_roles') ? portal_all_roles() : [];
+
+// How many pages each role can currently reach, for the summary column.
+$roleAccessCounts = [];
+foreach ($allRoles as $r) {
+    $roleAccessCounts[$r] = count(allowed_pages_for_role($r));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -54,12 +61,20 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
     <link rel="stylesheet" href="../assets/css/admin-layout.css">
     <link rel="stylesheet" href="../assets/css/user-list.css">
     <style>
-        .perm-help { 
-            color: #64748b; 
-            margin: 8px 0 24px; 
-            font-size: 14px; 
+        .perm-help {
+            color: #64748b;
+            margin: 8px 0 24px;
+            font-size: 14px;
             line-height: 1.5;
         }
+
+        .perm-section-title {
+            margin: 32px 0 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .perm-section-title:first-of-type { margin-top: 16px; }
         
         .user-table {
             background: #ffffff;
@@ -503,6 +518,37 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
             <main class="content-area">
                 <div class="main-content">
                     <h1>Permissions Management</h1>
+
+                    <h2 class="perm-section-title">By Role</h2>
+                    <div class="perm-help">Defaults applied to everyone with that role. A per-employee setting below always wins over these.</div>
+
+                    <table class="user-table" id="permRoleTable">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th>Pages Accessible</th>
+                                <th>Manage Access</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($allRoles as $r): ?>
+                            <tr data-role="<?php echo htmlspecialchars((string)$r); ?>">
+                                <td><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', (string)$r))); ?></td>
+                                <td><?php echo (int)($roleAccessCounts[$r] ?? 0); ?> of <?php echo count($allPages); ?></td>
+                                <td>
+                                    <button type="button" class="perm-btn btn-manage-role">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                        Edit Role Defaults
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+
+                    <h2 class="perm-section-title">By Employee</h2>
                     <div class="perm-help">Control page access and editing privileges for each employee .</div>
 
                     <table class="user-table" id="permUserTable">
@@ -635,12 +681,21 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
         return String(key).replace(/_/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
     }
 
+    // 'user' edits one employee's overrides; 'role' edits the defaults for a
+    // whole role. Both drive the same grid, so only the endpoints differ.
+    var permMode = 'user';
+    var permRole = '';
+
     function openModal(userId, name) {
         if (!modal) return;
+        permMode = 'user';
+        permRole = '';
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
         userIdInput.value = userId;
         employeeNameEl.textContent = name;
+        var labelEl = document.querySelector('.perm-employee-label');
+        if (labelEl) labelEl.textContent = 'Employee:';
         titleEl.textContent = 'Manage Access Permissions';
         if (statusEl) statusEl.textContent = 'Loading...';
         if (pagesBody) pagesBody.innerHTML = '';
@@ -663,8 +718,41 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
             });
     }
 
+    function openRoleModal(role, label) {
+        if (!modal) return;
+        permMode = 'role';
+        permRole = role;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        userIdInput.value = '';
+        employeeNameEl.textContent = label;
+        var labelEl = document.querySelector('.perm-employee-label');
+        if (labelEl) labelEl.textContent = 'Role:';
+        titleEl.textContent = 'Role Default Permissions';
+        if (statusEl) statusEl.textContent = 'Loading...';
+        if (pagesBody) pagesBody.innerHTML = '';
+        if (selectAllAccess) { selectAllAccess.checked = false; selectAllAccess.indeterminate = false; }
+        if (selectAllEdit) { selectAllEdit.checked = false; selectAllEdit.indeterminate = false; }
+
+        fetch('../api/get_role_permissions.php?role=' + encodeURIComponent(role), { credentials: 'same-origin' })
+            .then(function(r){ return r.json(); })
+            .then(function(json){
+                if (!json || !json.success) {
+                    throw new Error((json && (json.error || json.message)) || 'Failed to load role permissions');
+                }
+                if (statusEl) statusEl.textContent = '';
+                renderRows(json.pages || []);
+                syncSelectAllStates();
+            })
+            .catch(function(err){
+                if (statusEl) statusEl.textContent = err.message || 'Failed to load role permissions';
+            });
+    }
+
     function closeModal() {
         if (!modal) return;
+        permMode = 'user';
+        permRole = '';
         modal.classList.remove('is-open');
         modal.setAttribute('aria-hidden', 'true');
         if (statusEl) statusEl.textContent = '';
@@ -912,6 +1000,17 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
         openModal(row.getAttribute('data-user-id'), row.getAttribute('data-user-name') || '');
     });
 
+    var roleTable = document.getElementById('permRoleTable');
+    if (roleTable) roleTable.addEventListener('click', function(e){
+        var btn = e.target.closest('.btn-manage-role');
+        if (!btn) return;
+        var row = btn.closest('tr[data-role]');
+        if (!row) return;
+        var roleKey = row.getAttribute('data-role');
+        var cell = row.querySelector('td');
+        openRoleModal(roleKey, cell ? cell.textContent.trim() : roleKey);
+    });
+
     // Select-all handlers are attached when rows are rendered.
 
     function gatherPayload() {
@@ -931,16 +1030,24 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
     }
 
     if (saveBtn) saveBtn.addEventListener('click', function(){
-        var userId = userIdInput.value;
-        if (!userId) return;
+        var fd = new FormData();
+        var url;
+
+        if (permMode === 'role') {
+            if (!permRole) return;
+            url = '../api/save_role_permissions.php';
+            fd.append('role', permRole);
+        } else {
+            var userId = userIdInput.value;
+            if (!userId) return;
+            url = '../api/save_user_permissions.php';
+            fd.append('user_id', userId);
+        }
+
         if (statusEl) statusEl.textContent = 'Saving...';
         saveBtn.disabled = true;
-
-        var fd = new FormData();
-        fd.append('user_id', userId);
         fd.append('permissions', JSON.stringify(gatherPayload()));
 
-        var url = '../api/save_user_permissions.php';
         fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function(r){ return r.json(); })
             .then(function(json){
@@ -948,7 +1055,12 @@ $allPages = function_exists('portal_all_pages') ? portal_all_pages() : [];
                     throw new Error((json && (json.error || json.message)) || 'Save failed');
                 }
                 if (statusEl) statusEl.textContent = 'Saved successfully';
-                setTimeout(function(){ closeModal(); }, 500);
+                // Role changes alter the counts in the table behind the modal.
+                var wasRole = permMode === 'role';
+                setTimeout(function(){
+                    closeModal();
+                    if (wasRole) window.location.reload();
+                }, 500);
             })
             .catch(function(err){
                 if (statusEl) statusEl.textContent = err.message || 'Save failed';

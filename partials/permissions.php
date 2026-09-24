@@ -1,6 +1,6 @@
 <?php
-// Minimal permissions helper for equipments pages
-// Keep lightweight so it can be included anywhere.
+// Minimal permissions helper for  pages
+
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 // Best-effort: make DB connection visible to permission helpers.
@@ -117,10 +117,17 @@ function can_edit_page(string $pageKey): bool {
         return true;
     }
 
-    // Otherwise, require an explicit per-user override AND access.
+    // A per-user override, when present, decides on its own.
     $ovr = get_user_page_override((string)$_SESSION['email'], $pageKey);
     if ($ovr !== null) {
         return !empty($ovr['can_access']) && !empty($ovr['can_edit']);
+    }
+
+    // Otherwise fall back to the role's default for this page. These are all
+    // seeded off, so behaviour only changes once an admin grants edit to a role.
+    $rolePerms = portal_role_permissions((string)$role);
+    if (isset($rolePerms[$pageKey])) {
+        return !empty($rolePerms[$pageKey]['can_access']) && !empty($rolePerms[$pageKey]['can_edit']);
     }
 
     // Default: no edits
@@ -165,7 +172,22 @@ function role_has($cap) {
 // Role-based page access rules
 // Usage: can_access($role, $pageKey) where $pageKey is the filename without .php
 
-function portal_all_pages(): array {
+/**
+ * The page list and per-role defaults used to be hardcoded here. They now live
+ * in two tables so admins can change them without a code deploy, and so pages
+ * that didn't exist when this file was written still get governed:
+ *
+ *   portal_pages           - registry of every known page key (+ display label).
+ *                            partials/access_gate.php auto-registers new keys
+ *                            the first time anyone requests them.
+ *   role_page_permissions  - per-role access/edit defaults.
+ *
+ * Per-user rows in user_page_permissions still override both, exactly as before.
+ * The legacy arrays below survive only as the one-time seed for a database that
+ * has never had these tables, and as a fallback when there is no connection.
+ */
+
+function portal_legacy_pages(): array {
     return [
         'admin_panel',
         'equipments',
@@ -183,8 +205,8 @@ function portal_all_pages(): array {
     ];
 }
 
-function allowed_pages_for_role(string $role): array {
-    $allWithAdminPanel = portal_all_pages();
+function portal_legacy_allowed_pages_for_role(string $role): array {
+    $allWithAdminPanel = portal_legacy_pages();
     $all = array_values(array_diff($allWithAdminPanel, ['admin_panel']));
     switch ($role) {
         case 'developer':
@@ -216,18 +238,203 @@ function allowed_pages_for_role(string $role): array {
     }
 }
 
+/** Every role the portal assigns, used when seeding role defaults. */
+function portal_all_roles(): array {
+    return [
+        'admin', 'developer', 'projectmanager', 'estimator', 'accounting',
+        'superintendent', 'foreman', 'mechanic', 'operator', 'laborer',
+        'data_entry', 'guest',
+    ];
+}
+
+/** "client_profile" -> "Client Profile" (mirrors prettyLabel() in the admin UI). */
+function portal_page_label(string $pageKey): string {
+    return ucwords(trim(str_replace(['_', '-'], ' ', $pageKey)));
+}
+
+function portal_perm_conn() {
+    if (!empty($GLOBALS['conn'])) return $GLOBALS['conn'];
+    global $conn;
+    if (!empty($conn)) {
+        $GLOBALS['conn'] = $conn;
+        return $conn;
+    }
+    return null;
+}
+
+/**
+ * Create the two tables on demand and, only when role_page_permissions has
+ * never been populated, seed it from the legacy hardcoded defaults so that
+ * nobody's access changes the moment this ships.
+ */
+function portal_ensure_permission_schema(): bool {
+    static $done = null;
+    if ($done !== null) return $done;
+
+    $conn = portal_perm_conn();
+    if (!$conn) { $done = false; return false; }
+
+    try {
+        $conn->query("CREATE TABLE IF NOT EXISTS `portal_pages` (
+            `page_key` VARCHAR(100) NOT NULL,
+            `label` VARCHAR(150) NOT NULL,
+            `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`page_key`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        $conn->query("CREATE TABLE IF NOT EXISTS `role_page_permissions` (
+            `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+            `role` VARCHAR(50) NOT NULL,
+            `page_key` VARCHAR(100) NOT NULL,
+            `can_access` TINYINT(1) NOT NULL DEFAULT 0,
+            `can_edit` TINYINT(1) NOT NULL DEFAULT 0,
+            `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uniq_role_page` (`role`, `page_key`),
+            KEY `idx_role` (`role`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Seed once: an empty role table means this database predates the move.
+        $res = $conn->query('SELECT COUNT(*) AS c FROM role_page_permissions');
+        $row = $res ? $res->fetch_assoc() : null;
+        if ($row && (int)$row['c'] === 0) {
+            $pageIns = $conn->prepare('INSERT IGNORE INTO portal_pages (page_key, label) VALUES (?, ?)');
+            foreach (portal_legacy_pages() as $pageKey) {
+                $label = portal_page_label($pageKey);
+                $pageIns->bind_param('ss', $pageKey, $label);
+                $pageIns->execute();
+            }
+            $pageIns->close();
+
+            $roleIns = $conn->prepare('INSERT IGNORE INTO role_page_permissions (role, page_key, can_access, can_edit) VALUES (?, ?, ?, ?)');
+            foreach (portal_all_roles() as $role) {
+                $allowed = portal_legacy_allowed_pages_for_role($role);
+                foreach (portal_legacy_pages() as $pageKey) {
+                    $canAccess = in_array($pageKey, $allowed, true) ? 1 : 0;
+                    // admin_panel was narrowed to admin/developer by a hardcoded
+                    // branch in can_access(), regardless of what the role array
+                    // said. Seed the EFFECTIVE permission, or roles like
+                    // projectmanager would silently gain the admin panel here.
+                    if ($pageKey === 'admin_panel') {
+                        $canAccess = in_array($role, ['admin', 'developer'], true) ? 1 : 0;
+                    }
+                    // Matches the old can_edit_page(): only admin/developer
+                    // (the admin_panel holders) had edit rights by default.
+                    $canEdit = ($canAccess === 1 && in_array($role, ['admin', 'developer'], true) && $pageKey !== 'admin_panel') ? 1 : 0;
+                    $roleIns->bind_param('ssii', $role, $pageKey, $canAccess, $canEdit);
+                    $roleIns->execute();
+                }
+            }
+            $roleIns->close();
+        }
+
+        $done = true;
+    } catch (Throwable $e) {
+        error_log('portal_ensure_permission_schema: ' . $e->getMessage());
+        $done = false;
+    }
+    return $done;
+}
+
+/**
+ * Record a page key the first time it is seen. New pages land here denied for
+ * every role, so they show up in the admin permissions screen ready to be
+ * granted rather than being silently reachable.
+ */
+function portal_register_page(string $pageKey): void {
+    if ($pageKey === '') return;
+    if (!portal_ensure_permission_schema()) return;
+    $conn = portal_perm_conn();
+    if (!$conn) return;
+
+    try {
+        $stmt = $conn->prepare('INSERT IGNORE INTO portal_pages (page_key, label) VALUES (?, ?)');
+        if (!$stmt) return;
+        $label = portal_page_label($pageKey);
+        $stmt->bind_param('ss', $pageKey, $label);
+        $stmt->execute();
+        $stmt->close();
+    } catch (Throwable $e) {
+        error_log('portal_register_page: ' . $e->getMessage());
+    }
+}
+
+/** Every known page key, newest registrations included. */
+function portal_all_pages(): array {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+
+    if (portal_ensure_permission_schema()) {
+        $conn = portal_perm_conn();
+        try {
+            $res = $conn->query('SELECT page_key FROM portal_pages ORDER BY (page_key = "admin_panel") DESC, label ASC');
+            if ($res) {
+                $out = [];
+                while ($r = $res->fetch_assoc()) $out[] = (string)$r['page_key'];
+                if ($out) { $cache = $out; return $cache; }
+            }
+        } catch (Throwable $e) {
+            error_log('portal_all_pages: ' . $e->getMessage());
+        }
+    }
+
+    $cache = portal_legacy_pages();
+    return $cache;
+}
+
+/** Role defaults straight from the table: [page_key => ['can_access','can_edit']]. */
+function portal_role_permissions(string $role): array {
+    static $cache = [];
+    if (isset($cache[$role])) return $cache[$role];
+
+    $out = [];
+    if (portal_ensure_permission_schema()) {
+        $conn = portal_perm_conn();
+        try {
+            $stmt = $conn->prepare('SELECT page_key, can_access, can_edit FROM role_page_permissions WHERE role = ?');
+            if ($stmt) {
+                $stmt->bind_param('s', $role);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                while ($res && ($r = $res->fetch_assoc())) {
+                    $out[(string)$r['page_key']] = [
+                        'can_access' => (int)$r['can_access'] === 1,
+                        'can_edit' => (int)$r['can_edit'] === 1,
+                    ];
+                }
+                $stmt->close();
+                $cache[$role] = $out;
+                return $out;
+            }
+        } catch (Throwable $e) {
+            error_log('portal_role_permissions: ' . $e->getMessage());
+        }
+    }
+
+    foreach (portal_legacy_allowed_pages_for_role($role) as $pageKey) {
+        $out[$pageKey] = ['can_access' => true, 'can_edit' => false];
+    }
+    $cache[$role] = $out;
+    return $out;
+}
+
+function allowed_pages_for_role(string $role): array {
+    $out = [];
+    foreach (portal_role_permissions($role) as $pageKey => $perm) {
+        if (!empty($perm['can_access'])) $out[] = $pageKey;
+    }
+    return $out;
+}
+
 function can_access(string $role, string $pageKey): bool {
     // Per-user override (if configured)
     if (!empty($_SESSION['email'])) {
         $ovr = get_user_page_override((string)$_SESSION['email'], $pageKey);
         if ($ovr !== null) return (bool)$ovr['can_access'];
 
-        // Special-case: admin_panel should only be available by default to
-        // the `admin` and `developer` roles. Explicit per-user overrides
-        // (checked above) still apply and will be returned.
-        if ($pageKey === 'admin_panel') {
-            return in_array($role, ['admin', 'developer'], true);
-        }
+        // admin_panel used to be hardcoded to admin/developer here. It is now
+        // just another row in role_page_permissions (seeded to match exactly
+        // that), so admins can grant it without a code change.
 
         // If Admin Panel is enabled for this user via the per-user admin_panel
         // flag, treat them as having the admin role's default access for other
